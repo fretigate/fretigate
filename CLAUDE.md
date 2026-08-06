@@ -76,6 +76,25 @@ registro da empresa B, o produto acaba — o setor é competitivo e a notícia c
 
 Na dúvida sobre como garantir isso num caso específico: **pare e pergunte**.
 
+### Como o isolamento é provado
+
+A regra acima vira boa intenção se nada a medir. A suíte de testes permanente
+precisa incluir estas três coisas. Nenhuma é opcional, e nenhuma pode ser
+substituída pelas outras.
+
+1. **O contraste.** Um caso que demonstra o vazamento **com a proteção
+   desligada**. Sem ele não há como saber se o teste está medindo alguma coisa:
+   um teste de isolamento que passaria de qualquer jeito não prova nada, e é o
+   modo mais comum de ter cobertura no papel e nenhuma na prática.
+2. **Concorrência real.** Pedidos simultâneos compartilhando conexão do pool,
+   com zero leituras cruzadas. Isolamento que só funciona com um pedido por vez
+   não é isolamento — em produção nunca é um por vez.
+3. **Os três jeitos de não ter contexto.** A política negando com nulo, com
+   string vazia e com valor inválido (ver §9).
+
+Isso vale para sempre, não para a primeira vez. Teste que prova o isolamento
+hoje e não roda amanhã não protege contra a regressão de amanhã.
+
 ---
 
 ## 4. Segurança — baseline obrigatório
@@ -270,6 +289,30 @@ municípios e guardado em `DistanciaRota`.
 A tabela fixa de 20 municípios do Ceará que aparece em `docs/navegacao.md` é
 dado de protótipo, não a solução de produção. A base real é a do IBGE, com os
 ~5.570 municípios, conforme a decisão de município acima.
+
+**A política de RLS falha fechada.** O contexto de empresa chega ao banco por
+`set_config('app.empresa_id', $1, true)`, uma vez por transação. A política
+**não pode confiar** que esse contexto exista ou seja válido. Os três casos
+negam, sem exceção:
+
+- **nulo** — contexto nunca definido.
+- **string vazia** — este é o estado real, e o mais comum. No Postgres, uma
+  variável personalizada como `app.empresa_id`, depois de usada uma vez na
+  sessão, **não deixa de existir: ela volta a valer `''`**. Toda conexão
+  reaproveitada do pool chega assim. Medido, não suposto.
+- **valor inválido** — texto que não é um identificador.
+
+A forma: `nullif(current_setting('app.empresa_id', true), '')::uuid`. O `nullif`
+existe por causa do segundo caso; sem ele, `''::uuid` levantaria erro. Erro
+também fecha, mas o que se quer é zero linhas.
+
+**Nunca** entra na política um `OR current_setting(...) IS NULL`. É a alteração
+de uma linha que transforma falha fechada em falha aberta, e é exatamente o
+atalho que alguém faz para "consertar" um teste que está devolvendo vazio.
+
+Toda política tem `USING` **e** `WITH CHECK`. Sem o segundo, a leitura fica
+travada e a escrita não: um `INSERT` gravaria linha com o `empresa_id` de outra
+empresa.
 
 **Extração por IA é isolada em `/src/lib/importacao`.** Trocar de fornecedor tem
 que ser trocar uma peça. O modelo ainda não está decidido (ver §14).

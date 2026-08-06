@@ -46,6 +46,11 @@ fechada com string vazia**, não só com nulo. Uma política que só teste `IS N
 deixa passar o estado "sem empresa" mais comum que existe em produção — o de
 uma conexão reaproveitada. Isso não é detalhe de teste, é requisito da política.
 
+> Este requisito **subiu para o `CLAUDE.md` §9**, junto das demais decisões de
+> arquitetura, e as exigências da suíte de testes permanente subiram para o §3.
+> A fonte da regra é o `CLAUDE.md`, que é lido em toda sessão. O que está aqui é
+> só o registro de onde ela veio.
+
 ### O que ficou no repositório
 
 Prisma 7.9.1 com `@prisma/adapter-pg`, `prisma/schema.prisma` (só a conexão,
