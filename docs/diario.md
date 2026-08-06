@@ -52,14 +52,47 @@ tarefa 7 para a migration da tarefa 3 funcionar.
 cadastro, então não existe `Empresa` sem aceite. A regra fica no banco, não só
 na tela.
 
-### Duas coisas que ficaram em aberto de propósito
+### As duas pendências foram fechadas no mesmo dia
 
-**`plano` e `status_assinatura` são texto, não enumeração.** O conjunto de
-valores não está decidido em lugar nenhum dos documentos, e enumerar seria
-inventar decisão de produto. Viram enumeração quando os valores existirem.
+Migration `20260806213650_planos_status_e_cnpj_unico`. Os valores vieram do
+fundador e estão em `docs/especificacao.md` §6.
 
-**`cnpj` não é único.** "Uma empresa por CNPJ" é regra de negócio, e não está
-escrita em lugar nenhum. Fica sem restrição até ser decidido.
+- `plano` — `gratuito` | `pago`
+- `periodicidade` — `mensal` | `anual`, nula no gratuito. **Campo novo**, que o
+  §6 não previa: é preciso saber quem está no mensal para oferecer o anual e
+  para a comissão do afiliado.
+- `status_assinatura` — `ativa` | `inadimplente` | `vencida` | `encerrada`
+- `cnpj` — único, nulo permitido
+
+**Duas restrições no banco, não só no documento.** `empresa_plano_coerente`
+(gratuito sempre ativa e sem periodicidade; pago sempre com periodicidade) e
+`empresa_cnpj_key`. Escritas à mão na migration — o Prisma não modela `CHECK`.
+
+**Decisão que o fundador delegou: empresa arquivada NÃO libera o CNPJ.** Índice
+parcial por `arquivado_em` reabriria o buraco que a restrição existe para
+fechar — bastaria arquivar e cadastrar de novo para zerar o plano gratuito.
+Restrição simples também não tem significado que muda com o estado de outra
+coluna. Quem volta desarquiva a linha que já existe.
+
+### Conferido que as restrições recusam, não só que existem
+
+Todos os casos, dentro de uma transação desfeita no fim — a tabela continua com
+zero linhas. Gratuito com periodicidade, gratuito inadimplente, gratuito
+vencida e pago sem periodicidade: recusados. CNPJ repetido: recusado. CNPJ da
+empresa arquivada: recusado. Duas empresas sem CNPJ: aceitas.
+
+**A primeira versão desse teste passou pelo motivo errado** — as recusas vinham
+de um erro de digitação no próprio teste (`42703`, coluna inexistente), não das
+restrições. Foi corrigido para exigir que a recusa venha da restrição
+**esperada**, pelo nome. É exatamente o defeito que o `CLAUDE.md` §3 manda
+evitar, e apareceu no mesmo dia em que a regra foi escrita.
+
+### Achado para a tarefa 4
+
+**`atualizado_em` não tem valor padrão no banco** — quem preenche é o Prisma, na
+aplicação. Todo `INSERT` em SQL cru precisa informar a coluna, ou falha com
+violação de não-nulo. Vale para as migrations e para os testes de isolamento.
+Candidato a ganhar `@default(now())` junto do `@updatedAt` na tarefa 4.
 
 ### Fora desta fatia, de propósito
 

@@ -30,10 +30,24 @@ model Empresa {
 
   nome_fantasia String
   razao_social  String?
-  cnpj          String?
-  telefone      String?
-  email         String?
-  endereco      String?
+
+  /// Único no produto inteiro, **arquivadas incluídas**. É trava anti-abuso:
+  /// sem isso, dá para abrir várias contas gratuitas e driblar o limite de 1
+  /// caminhão (§10). Índice parcial por `arquivado_em` reabriria o buraco —
+  /// bastaria arquivar e cadastrar de novo. Quem volta desarquiva a linha que
+  /// já existe, que é o que o §7 manda.
+  ///
+  /// Nulo é permitido e não colide: o CNPJ é preenchido depois, na Conta da
+  /// empresa. Guardar `''` em vez de nulo QUEBRA isso — duas contas vazias
+  /// colidiriam. Grave nulo.
+  ///
+  /// Guardado **só com dígitos**. Sem normalizar, `12.345.678/0001-90` e
+  /// `12345678000190` passam as duas pela restrição e a trava não vale nada.
+  cnpj String? @unique
+
+  telefone String?
+  email    String?
+  endereco String?
 
   /// Referência ao município. Fica sem chave estrangeira por enquanto: a
   /// tabela `Municipio` (base do IBGE, ~5.570 registros) chega no item 2.
@@ -41,11 +55,13 @@ model Empresa {
 
   logo_url String?
 
-  /// O conjunto de valores destes dois campos ainda NÃO está decidido, então
-  /// são texto e não enumeração — enumeração aqui seria inventar decisão de
-  /// produto. Viram enumeração quando os valores forem definidos.
-  plano             String?
-  status_assinatura String?
+  plano PlanoEmpresa @default(gratuito)
+
+  /// Nulo no gratuito. Existe separado do plano porque é preciso saber quem
+  /// está no mensal para oferecer o anual, e para a comissão do afiliado.
+  periodicidade PeriodicidadePlano?
+
+  status_assinatura StatusAssinatura @default(ativa)
 
   /// §11 — a única pergunta declarada do produto, mais a origem por primeiro
   /// toque. Nenhum outro campo de pesquisa existe em lugar nenhum.
@@ -65,6 +81,41 @@ model Empresa {
   usuarios Usuario[]
 
   @@map("empresa")
+}
+
+enum PlanoEmpresa {
+  gratuito
+  pago
+
+  @@map("plano_empresa")
+}
+
+enum PeriodicidadePlano {
+  mensal
+  anual
+
+  @@map("periodicidade_plano")
+}
+
+/// O acesso muda por estado, e a diferença entre `inadimplente` e `vencida` é
+/// deliberada: bloquear no primeiro empurra para fora quem não escolheu sair.
+///
+/// - `ativa`         acesso completo
+/// - `inadimplente`  pagamento falhou, em retentativa. Acesso continua
+///                   liberado, com aviso para atualizar a forma de pagamento
+/// - `vencida`       retentativa esgotada. Escrita bloqueada; leitura e
+///                   exportação mantidas por 90 dias (§10)
+/// - `encerrada`     passados os 90 dias
+/// Nome do tipo diferente do nome da coluna de propósito: as políticas e
+/// restrições da tarefa 4 são SQL escrito à mão, e tipo e coluna com o mesmo
+/// nome é confusão gratuita na hora de ler.
+enum StatusAssinatura {
+  ativa
+  inadimplente
+  vencida
+  encerrada
+
+  @@map("status_assinatura_empresa")
 }
 
 enum PapelUsuario {

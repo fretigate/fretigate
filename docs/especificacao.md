@@ -328,7 +328,47 @@ Dinheiro em **centavos**; distância em **metros**.
 `municipio_id` · `logo_url` · `chave_pix` · `dados_bancarios` ·
 `patio_endereco` · `patio_municipio_id` · `prazo_padrao_dias` ·
 `modelo_mensagem_cobranca` · `modelo_mensagem_ordem` · `plano` ·
-`status_assinatura` · `afiliado_id` · `origem_cadastro` · `origem_declarada`
+`periodicidade` · `status_assinatura` · `afiliado_id` · `origem_cadastro` ·
+`origem_declarada` · `termos_aceitos_em` · `termos_versao`
+
+**`plano`** — `gratuito` | `pago`.
+
+**`periodicidade`** — `mensal` | `anual`. **Nula no gratuito.** Existe separada
+do plano porque é preciso saber quem está no mensal para oferecer o anual, e
+para a comissão do afiliado.
+
+**`status_assinatura`** — quatro valores, e a diferença entre os dois do meio é
+deliberada:
+
+| Valor | O que acontece |
+|---|---|
+| `ativa` | Acesso completo. |
+| `inadimplente` | O pagamento falhou e está em retentativa. **Acesso continua liberado**, com aviso para atualizar a forma de pagamento. Bloquear aqui empurra para fora quem não escolheu sair. |
+| `vencida` | Retentativa esgotada. **Escrita bloqueada**; leitura e exportação mantidas por 90 dias (§10 do `CLAUDE.md`). |
+| `encerrada` | Passados os 90 dias. |
+
+**Plano gratuito fica sempre `ativa`.** Isso não é convenção: é restrição no
+banco (`empresa_plano_coerente`), junto com "gratuito não tem periodicidade" e
+"pago tem periodicidade". Empresa gratuita inadimplente não quer dizer nada, e
+a tela de cobrança não saberia desenhar.
+
+**`cnpj` é único no produto**, e nulo é permitido porque o CNPJ é preenchido
+depois, na Conta da empresa. É trava anti-abuso: sem ela, dá para abrir várias
+contas gratuitas e driblar o limite de 1 caminhão.
+
+- **Empresa arquivada NÃO libera o CNPJ.** A restrição vale sobre todas as
+  linhas. Liberar no arquivamento reabriria exatamente o buraco — bastaria
+  arquivar e cadastrar de novo. Quem volta **desarquiva** a linha que já existe,
+  que é o que o §7 do `CLAUDE.md` já manda ao dizer que nada é apagado.
+- **Guardar só os dígitos.** Sem normalizar, `12.345.678/0001-90` e
+  `12345678000190` passam as duas e a trava não vale nada.
+- **Guardar nulo, nunca `''`.** Vazio colide com vazio; nulo não colide com
+  nulo. Duas empresas sem CNPJ preenchido são normais.
+- Mensagem de erro: **"já existe uma conta com esse CNPJ"**. Nunca o erro do
+  banco.
+
+**`termos_aceitos_em` e `termos_versao`** são obrigatórios — o aceite acontece
+no cadastro, então não existe Empresa sem aceite.
 
 ### Usuario
 `nome` · `email` · `senha_hash` · `papel` (`dono` | `operador`) ·
