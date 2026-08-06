@@ -6,6 +6,78 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 06/08/2026 — tarefa 4 (parte 2): papel da autenticação, e um buraco fechado
+
+Migrations `20260806222818_papel_da_autenticacao` e
+`20260806223138_fecha_acesso_pela_api_publica`.
+
+### 🔴 O buraco encontrado no caminho
+
+O Supabase concede, por **privilégio padrão**, todos os privilégios em toda
+tabela nova de `public` aos papéis `anon`, `authenticated` e `service_role`.
+`anon` é o papel da API REST pública, usada com a chave que **por desenho fica
+no navegador**.
+
+Tabela criada por migration do Prisma **não ganha RLS sozinha**. Resultado:
+`session`, `account` e `verification` — token de sessão e hash de senha —
+estavam alcançáveis por quem tivesse a chave pública do projeto.
+
+Isso não foi procurado: apareceu ao listar quem tinha privilégio em cada tabela,
+durante outra verificação. Vale como lição — **conferir o estado real do banco
+encontra coisa que ler o próprio código nunca encontraria**.
+
+Fechado em duas camadas, de propósito:
+
+1. `REVOKE` nas tabelas que já existem, e `USAGE` no schema também.
+2. `ALTER DEFAULT PRIVILEGES` para as que **ainda não existem** — sem isso, a
+   próxima migration recriaria o buraco em silêncio, e o produto inteiro ainda
+   está por ser escrito.
+3. RLS `ENABLE` + `FORCE` também em `session`, `account` e `verification`, com
+   política nomeada só para `fretigate_auth`.
+
+`service_role` continua com privilégio. É o papel da chave secreta, que nunca
+vai ao navegador, e tem `BYPASSRLS` de qualquer forma — quem tem essa chave já
+tem o banco. Não é o mesmo risco.
+
+### Os três papéis
+
+| Papel | Enxerga | Não enxerga |
+|---|---|---|
+| `fretigate_app` | `empresa` e `usuario`, **só do contexto**, sem `DELETE` | `session`, `account`, `verification` |
+| `fretigate_auth` | tabelas do Better Auth e `usuario` (qualquer empresa) | **nenhuma** tabela de domínio |
+| `postgres` | tudo | — por isso **só migrations** |
+
+`fretigate_auth` tem política **nomeada** em `usuario` em vez de `BYPASSRLS`,
+porque no login não existe contexto de empresa: só se sabe de que empresa a
+pessoa é depois de achá-la pelo e-mail. A diferença prática é auditoria — a
+permissão aparece em `pg_policies` em vez de ser um atributo invisível que
+desliga o motor para tudo.
+
+### Provado
+
+Papel por papel, em transação desfeita, tabela terminando com zero linhas: o
+`app` não lê hash de senha nem sessão; o `auth` acha usuário pelo e-mail sem
+contexto mas **não lê `empresa`** e não apaga usuário; e a política do `auth`
+**não afrouxou nada** para o `app`, que continua enxergando um usuário e não
+dois. O padrão de criar empresa foi provado nos três casos: sem contexto
+recusa, com o contexto do id que vai nascer passa, com o contexto de outra
+empresa recusa.
+
+**O teste falhou duas vezes antes, e nas duas a culpa era dele.** Da segunda,
+por não saber que no Postgres um comando que falha aborta a transação inteira —
+todas as negações seguintes voltavam `25P02` em vez do código real, e o teste
+reprovava coisa certa. Corrigido com ponto salvo por tentativa. Fica anotado
+para a tarefa 6: **teste de negação precisa isolar cada tentativa**, senão mede
+o próprio estrago.
+
+### O que subiu para o `CLAUDE.md` §9
+
+A armadilha de criar empresa com `WITH CHECK`, com o atalho errado escrito por
+extenso, e a tabela dos três papéis. Não fica só aqui: quem construir a tarefa 8
+lê o §9, não o diário.
+
+---
+
 ## 06/08/2026 — tarefa 4: RLS, papel da aplicação e políticas
 
 Migrations `20260806214555_rls_papel_da_aplicacao` e

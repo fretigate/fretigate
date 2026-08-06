@@ -314,6 +314,41 @@ Toda política tem `USING` **e** `WITH CHECK`. Sem o segundo, a leitura fica
 travada e a escrita não: um `INSERT` gravaria linha com o `empresa_id` de outra
 empresa.
 
+**Criar uma empresa exige definir o contexto ANTES de inserir.** Como a política
+de `empresa` tem `WITH CHECK (id = ...)`, o `INSERT` só passa se o contexto já
+apontar para o identificador que está sendo criado. A ordem, tudo na mesma
+transação:
+
+1. gerar o `uuid` na aplicação;
+2. `set_config('app.empresa_id', <esse uuid>, true)`;
+3. inserir a empresa com esse `id`.
+
+Não é contorno: quem cria a empresa já sabe qual é, e o banco confirma que a
+linha gravada é a da empresa do contexto. Vale para o cadastro e para qualquer
+semente de teste.
+
+> **O atalho errado, que é o motivo desta regra existir.** Ao ver o `INSERT`
+> recusado, a correção tentadora é afrouxar a política com
+> `OR current_setting(...) IS NULL`. Isso faria **toda** conexão sem contexto
+> enxergar e gravar em **qualquer** empresa — falha aberta, no produto inteiro,
+> para sempre, por causa de uma linha. Se o `INSERT` de empresa foi recusado,
+> **falta o `set_config`**, não sobra política.
+
+**Nenhuma conexão em execução ignora RLS.** São três papéis, e a separação é
+parte do desenho:
+
+| Papel | Para quê | Enxerga |
+|---|---|---|
+| `fretigate_app` | todo o domínio | só a empresa do contexto. Sem `DELETE` — arquivar é `UPDATE` (§7) |
+| `fretigate_auth` | só o Better Auth | `session`, `account`, `verification` e `usuario`. **Nada** de domínio |
+| `postgres` | **só migrations** | tudo — por isso não roda no produto |
+
+`fretigate_auth` precisa de política própria em `usuario` porque, no login, não
+existe contexto de empresa: só se sabe de que empresa a pessoa é depois de
+achá-la pelo e-mail. Essa permissão é uma **política nomeada**, visível em
+`pg_policies` — nunca `BYPASSRLS`, que é atributo invisível e desliga o motor
+para todas as tabelas de uma vez.
+
 **Extração por IA é isolada em `/src/lib/importacao`.** Trocar de fornecedor tem
 que ser trocar uma peça. O modelo ainda não está decidido (ver §14).
 
