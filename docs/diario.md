@@ -6,6 +6,100 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 06/08/2026 — tarefa 4: RLS, papel da aplicação e políticas
+
+Migrations `20260806214555_rls_papel_da_aplicacao` e
+`20260806214755_permite_assumir_o_papel_da_aplicacao`.
+
+### 🔴 FALTA UM PASSO MANUAL, e sem ele nada disso vale
+
+**A aplicação ainda conecta como `postgres`, e `postgres` tem
+`rolbypassrls = true`.** Papel com esse atributo **ignora** política de RLS —
+nem `ENABLE` nem `FORCE` mudam isso. Foi medido antes de escrever qualquer
+política, e é a razão de existir um papel dedicado.
+
+O papel `fretigate_app` já existe, com `NOBYPASSRLS`, e as políticas já
+funcionam com ele (provado abaixo). Falta só ele ganhar senha e a aplicação
+passar a usá-lo. **Isso não está no repositório de propósito: senha não entra
+em migration versionada (§4).**
+
+Dois passos, do fundador:
+
+1. No editor de SQL do Supabase, com uma senha escolhida por ele:
+
+   ```sql
+   ALTER ROLE fretigate_app WITH LOGIN PASSWORD 'a-senha-escolhida';
+   ```
+
+2. No `.env`, trocar **só o usuário e a senha** de `DATABASE_URL` — host, porta
+   e banco continuam iguais:
+
+   ```
+   postgresql://fretigate_app.ysldmzvszjxdgcbtaurh:SENHA@aws-0-sa-east-1.pooler.supabase.com:6543/postgres
+   ```
+
+   `DIRECT_URL` **continua como `postgres`**: migration precisa criar tabela, e
+   o papel da aplicação não pode ter esse poder.
+
+Enquanto isso não acontecer, o banco está protegido no papel e desprotegido na
+prática.
+
+### O que a migration fez
+
+**Papel `fretigate_app`** — `NOBYPASSRLS`, `NOLOGIN`, não é dono das tabelas.
+
+**Privilégios deliberadamente estreitos:**
+
+- `SELECT, INSERT, UPDATE` em `empresa` e `usuario`. **Sem `DELETE`** — o §7 diz
+  que nada é apagado, e arquivar é `UPDATE`. Não conceder o privilégio
+  transforma a regra em impossibilidade.
+- **Nenhum privilégio** em `session`, `account` e `verification`. Elas guardam
+  hash de senha e token, não têm `empresa_id`, e nenhuma política de empresa faz
+  sentido nelas. Quem fala com elas é o Better Auth, por conexão separada — a
+  saída de emergência da tarefa 5, restrita a `lib/auth`. Efeito: o papel da
+  aplicação **não consegue ler hash de senha**, mesmo que alguém escreva a
+  consulta.
+
+**RLS `ENABLE` + `FORCE`** em `empresa` e `usuario`, com política de falha
+fechada usando `nullif(current_setting('app.empresa_id', true), '')::uuid`, com
+`USING` **e** `WITH CHECK`.
+
+**`atualizado_em` ganhou valor padrão no banco.** Sem isso, todo `INSERT` em SQL
+cru falhava com violação de não-nulo — o das migrations e o dos testes.
+
+### Provado, não suposto
+
+Tudo dentro de uma transação desfeita no fim; a tabela terminou com zero linhas.
+
+| Verificação | Resultado |
+|---|---|
+| **O contraste** — como `postgres`, que ignora RLS | enxerga as **2** empresas. O vazamento existe sem a proteção |
+| Com o papel da aplicação, contexto da empresa A | enxerga **1** empresa e **1** usuário, os próprios |
+| Pedir a empresa B pelo id | **zero** linhas |
+| Gravar usuário na empresa B (`WITH CHECK`) | recusado, `42501` |
+| Alterar a empresa B | **zero** linhas afetadas |
+| Contexto nulo | **zero** linhas |
+| Contexto string vazia | **zero** linhas |
+| Contexto inválido | erro `22P02` — fecha |
+| `DELETE` na própria empresa | recusado, `42501` |
+| Ler `account` com o papel da aplicação | recusado, `42501` |
+
+O contraste é o item que dá sentido aos outros: sem ele não haveria como saber
+se o teste mede alguma coisa (§3).
+
+### Percalço
+
+`postgres` não conseguia assumir `fretigate_app` com `SET ROLE` — sem isso, os
+testes rodariam como `postgres` e passariam sempre, medindo nada. Resolvido pela
+segunda migration. Migration aplicada não se edita, por isso são duas.
+
+### Próximo passo — tarefa 5
+
+`lib/db`: cliente escopado, extensão que injeta o filtro, `set_config` por
+transação e a saída de emergência para `lib/auth`.
+
+---
+
 ## 06/08/2026 — tarefa 3: schema de Empresa, Usuario e Better Auth
 
 Migration `20260806212753_base_empresa_usuario_auth` aplicada. Seis tabelas no

@@ -1,0 +1,13 @@
+-- Permite que `postgres` assuma o papel `fretigate_app` com SET ROLE.
+--
+-- POR QUE PRECISA
+-- Os testes de isolamento (tarefa 6) precisam consultar COMO A APLICACAO
+-- consulta. Sem isto eles rodariam como `postgres`, que ignora RLS — ou seja,
+-- passariam sempre, medindo nada. E exatamente o defeito que o CLAUDE.md
+-- secao 3 manda evitar.
+--
+-- POR QUE NAO ABRE BURACO
+-- `postgres` e dono das tabelas e ja pode tudo. Poder virar um papel MENOS
+-- privilegiado nao acrescenta permissao nenhuma. O caminho contrario e que
+-- seria problema, e nao existe: `fretigate_app` nao e membro de ninguem.
+GRANT "fretigate_app" TO "postgres";

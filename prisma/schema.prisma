@@ -3,9 +3,14 @@
 // As URLs de conexão NÃO ficam aqui. A partir do Prisma 7 elas moram em
 // `prisma.config.ts`, na raiz — é lá que está a explicação das duas.
 //
-// ATENÇÃO — ESTAS TABELAS AINDA NÃO TÊM RLS. A proteção do banco é a tarefa 4,
-// e o teste que a prova é a tarefa 6. Até lá, o isolamento do `CLAUDE.md` §3
-// não está garantido pelo banco. Não colocar dado real aqui antes disso.
+// ATENÇÃO — O PRISMA NÃO MODELA RLS. `empresa` e `usuario` têm Row-Level
+// Security ativada e forçada, com política de falha fechada, e isso vive em SQL
+// dentro das migrations, não aqui. Tabela nova com `empresa_id` precisa de
+// `ENABLE`, `FORCE`, política e `GRANT` **no mesmo commit** (`CLAUDE.md` §3).
+// Este arquivo não avisa quando você esquece — o teste da tarefa 6 avisa.
+//
+// ATENÇÃO 2 — enquanto `DATABASE_URL` apontar para o papel `postgres`, a
+// política não vale nada: esse papel ignora RLS. Ver `docs/diario.md`.
 
 generator client {
   provider = "prisma-client"
@@ -74,7 +79,7 @@ model Empresa {
   termos_versao     String
 
   criado_em     DateTime  @default(now()) @db.Timestamptz(6)
-  atualizado_em DateTime  @updatedAt @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
   /// §7 — nada é apagado. Preenchido = arquivado.
   arquivado_em  DateTime? @db.Timestamptz(6)
 
@@ -106,9 +111,10 @@ enum PeriodicidadePlano {
 /// - `vencida`       retentativa esgotada. Escrita bloqueada; leitura e
 ///                   exportação mantidas por 90 dias (§10)
 /// - `encerrada`     passados os 90 dias
+///
 /// Nome do tipo diferente do nome da coluna de propósito: as políticas e
-/// restrições da tarefa 4 são SQL escrito à mão, e tipo e coluna com o mesmo
-/// nome é confusão gratuita na hora de ler.
+/// restrições são SQL escrito à mão, e tipo e coluna com o mesmo nome é
+/// confusão gratuita na hora de ler.
 enum StatusAssinatura {
   ativa
   inadimplente
@@ -156,7 +162,7 @@ model Usuario {
   empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
 
   criado_em     DateTime  @default(now()) @db.Timestamptz(6)
-  atualizado_em DateTime  @updatedAt @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
   arquivado_em  DateTime? @db.Timestamptz(6)
 
   sessions Session[]
@@ -181,7 +187,7 @@ model Session {
   expiresAt DateTime
   token     String   @unique
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   /// §4 diz que log não contém dado pessoal. Estes dois campos são do Better
   /// Auth e existem para o usuário poder encerrar sessão de outro aparelho.
@@ -215,7 +221,7 @@ model Account {
   password String?
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@index([userId])
   @@map("account")
@@ -228,7 +234,7 @@ model Verification {
   value      String
   expiresAt  DateTime
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt  DateTime @default(now()) @updatedAt
 
   @@index([identifier])
   @@map("verification")
