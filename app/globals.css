@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+/* ===========================================================================
+   FretiGate — sistema visual
+   ---------------------------------------------------------------------------
+   Fonte única de verdade: docs/estilo.md. Nada aqui foi inventado.
+   O CLAUDE.md §8 diz: "Nenhum valor fora do sistema. Cor, altura, raio,
+   tamanho e peso de fonte saem de docs/estilo.md. Se precisar de valor novo,
+   pergunte." Este arquivo é a forma executável dessa regra.
+
+   Os nomes dos tokens estão em português, iguais aos de docs/estilo.md, para
+   que a busca por um nome caia no documento e no código. Traduzir criaria um
+   passo onde a divergência nasce.
+
+   ATENÇÃO — A ESCALA DE ESPAÇAMENTO É EM PIXEL.
+   `--spacing: 1px` faz `p-16` valer 16px e `h-60` valer 60px, exatamente como
+   docs/estilo.md escreve. Isso NÃO é o padrão do Tailwind, onde `p-4` vale
+   16px. Aqui `p-4` vale 4px. A troca é deliberada: a folha de estilo lista
+   valores em pixel, e converter 22px para `p-5.5` de cabeça é onde o valor
+   errado entra sem ninguém notar.
+
+   NÃO EXISTE TEMA ESCURO. O §8 diz "Interface clara, não escura — o app é
+   usado no pátio, sob sol forte". Superfície escura é significado (mensagem do
+   sistema), não preferência do aparelho. Nenhum `prefers-color-scheme` aqui.
+   =========================================================================== */
+
+@theme {
+  --spacing: 1px;
+
+  --font-sans: var(--fonte-interface);
+  --font-mono: var(--fonte-placa);
+
+  /* --- Cores — docs/estilo.md § Cores ------------------------------------ */
+
+  /* Superfície clara = dado do usuário */
+  --color-papel: #faf8f4;
+  --color-separacao: #f0ede6;
+  --color-separacao-variante: #edeae3;
+
+  /* Verde de ação. Sólido é exclusivo da ação principal, do (+) da barra e do
+     círculo de iniciais da empresa. Nenhum chip usa verde sólido. */
+  --color-acao: #1b6b3a;
+  --color-acao-pressionada: #14522c;
+
+  /* Pílula em linha, pílula de cabeçalho e todo chip selecionado */
+  --color-pilula: #e4e9e5;
+  --color-pilula-pressionada: #d0e1d7;
+
+  /* Tintas */
+  --color-tinta: #141a17;
+  --color-tinta-apoio-forte: #3c443e;
+  --color-tinta-apoio: #6e7770;
+  --color-tinta-fraca: #a8afa9;
+  --color-tinta-desabilitada: #5c6660;
+  --color-tinta-previa-mensagem: #22402f;
+
+  /* Desabilitado */
+  --color-principal-desabilitado: #e4e0d6;
+  --color-secundario-desabilitado: #f4f1eb;
+
+  /* Situações financeiras */
+  --color-a-faturar: #8a6206;
+  --color-parcial-fundo: #fbf1df;
+  --color-parcial-apoio: #7a5a0b;
+  --color-vencido: #b3401a;
+  --color-vencido-fundo: #f6e6dd;
+  --color-vencido-apoio: #8a5237;
+  --color-destrutiva-pressionada: #8a3314;
+
+  /* Só sobre superfície escura */
+  --color-verde-claro: #7fcb9b;
+  --color-amarelo: #f4b723;
+
+  /* Gráfico de 6 meses */
+  --color-grafico-mes-anterior: #d6d1c5;
+
+  /* Alça de arraste no topo de toda folha inferior */
+  --color-alca: #dad5ca;
+
+  /* Família FretiNews — comunicação da plataforma. Três tons, só. */
+  --color-fretinews-fundo: #edebfa;
+  --color-fretinews-titulo: #2c2555;
+  --color-fretinews-apoio: #5b4fa8;
+
+  /* --- Raios — docs/estilo.md § Formas ----------------------------------- */
+  --radius-cartao-escuro: 28px;
+  --radius-pastilha: 22px;
+  --radius-linha: 20px;
+  --radius-campo: 18px;
+  --radius-tecla: 14px;
+  --radius-etiqueta: 12px;
+  --radius-pilula: 999px;
+
+  /* --- Tipografia — docs/estilo.md § Tipografia -------------------------- */
+  /* Só tamanho e entrelinha. Os papéis que também pedem largura variável e
+     rastreio (número-herói, títulos) viram classe de componente junto com as
+     telas — token de tamanho não carrega `wdth` nem `letter-spacing`. */
+  --text-heroi: 60px;
+  --text-heroi--line-height: 1;
+  --text-heroi-detalhe: 46px;
+  --text-heroi-detalhe--line-height: 1;
+  --text-nome-destaque: 26px;
+  --text-nome-destaque--line-height: 1.1;
+  --text-titulo-modelo: 24px;
+  --text-titulo-modelo--line-height: 1.15;
+  --text-titulo-vazio: 22px;
+  --text-titulo-vazio--line-height: 1.25;
+  --text-titulo-folha: 21px;
+  --text-titulo-folha--line-height: 1.1;
+  --text-titulo-tela: 20px;
+  --text-titulo-tela--line-height: 1.1;
+  --text-valor-lista: 20px;
+  --text-valor-lista--line-height: 1;
+  --text-nome-empresa: 19px;
+  --text-nome-empresa--line-height: 1.15;
+  --text-botao-principal: 17px;
+  --text-botao-principal--line-height: 1;
+  --text-nome-linha: 17px;
+  --text-nome-linha--line-height: 1.15;
+  --text-nome-recolhida: 16.5px;
+  --text-nome-recolhida--line-height: 1.2;
+  --text-campo: 16px;
+  --text-campo--line-height: 1;
+  --text-botao-secundario: 15px;
+  --text-botao-secundario--line-height: 1;
+  --text-busca: 14px;
+  --text-busca--line-height: 1;
+  --text-apoio: 13px;
+  --text-apoio--line-height: 1.4;
+  --text-chip-filtro: 13px;
+  --text-chip-filtro--line-height: 1;
+  --text-total-contextual: 12px;
+  --text-total-contextual--line-height: 1;
+  --text-eyebrow: 11px;
+  --text-eyebrow--line-height: 1;
+  --text-placa: 11px;
+  --text-placa--line-height: 1;
+  --text-etiqueta: 10.5px;
+  --text-etiqueta--line-height: 1;
+
+  /* --- Sombra — existe em um lugar só: o aviso do sistema ---------------- */
+  --shadow-aviso:
+    0 14px 34px rgba(20, 26, 23, 0.3), 0 3px 10px rgba(20, 26, 23, 0.16);
+}
+
+/* ===========================================================================
+   Âncoras de área segura — docs/estilo.md § Barra de navegação
+   ---------------------------------------------------------------------------
+   O padrão é `max()`, nunca o segundo argumento do `env()`. Num navegador
+   comum `env(safe-area-inset-bottom)` vale 0px, então
+   `calc(env(safe-area-inset-bottom, 6px) + 20px)` daria 20px, não 26px — o
+   fallback só entra se o NOME for desconhecido. O `max()` garante o piso e o
+   inset apenas acrescenta em quem tem indicador de home.
+   =========================================================================== */
+:root {
+  --area-segura-topo: 66px;
+  --margem-lateral: max(16px, calc(env(safe-area-inset-left) + 16px));
+  --ancora-barra: max(26px, calc(env(safe-area-inset-bottom) + 20px));
+  --ancora-aviso: max(112px, calc(env(safe-area-inset-bottom) + 106px));
+  --ancora-rodape-acoes: max(132px, calc(env(safe-area-inset-bottom) + 126px));
+  --folga-rolagem: max(138px, calc(env(safe-area-inset-bottom) + 132px));
+}
+
+body {
+  background-color: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+}
