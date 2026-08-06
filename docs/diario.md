@@ -6,6 +6,34 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 06/08/2026 — backup do banco virou pendência aberta
+
+O banco existe a partir de hoje. O `CLAUDE.md` §4 exige **backup do banco
+configurado antes do primeiro cliente pagante**, e até agora essa exigência
+estava adormecida por falta de banco. Agora está correndo.
+
+**Não está resolvido. Não bloqueia a tarefa 2**, mas bloqueia cobrar o primeiro
+cliente.
+
+### O que precisa ser decidido
+
+- **O que o plano atual do Supabase já dá**, de fato — retenção e frequência.
+  Conferir no painel, não supor.
+- **Se a retenção padrão basta.** O dado aqui é o faturamento da transportadora.
+  Perder uma semana de lançamento é perder dinheiro que o cliente não consegue
+  reconstruir — ele lança justamente porque não lembra.
+- **Se vale point-in-time recovery.** Backup diário só recupera até o último
+  retrato; PITR recupera até o minuto. A diferença aparece no dia em que uma
+  migration errada apaga dado às 15h e o retrato é das 3h da manhã.
+
+### O que não conta como resolvido
+
+**Backup que nunca foi restaurado não é backup.** A pendência só fecha depois
+de uma restauração de teste, feita e conferida uma vez. Configurar e confiar é
+o modo mais comum de descobrir que não funciona no pior dia possível.
+
+---
+
 ## 06/08/2026 — acesso de leitura ao Supabase pelo MCP
 
 O MCP do Supabase está ligado nesta máquina para que o assistente consiga
@@ -190,9 +218,8 @@ cor do texto.
 
 ### Pendências fora do item 1
 
-- **Backup do banco**, exigido pelo `CLAUDE.md` §4 antes do primeiro cliente
-  pagante. Passa a valer no momento em que o banco existir — ou seja, a partir
-  da tarefa 2.
+- **Backup do banco** — ~~passa a valer quando o banco existir~~. **Já está
+  correndo.** Ver a entrada de 06/08/2026 no topo deste arquivo.
 - **Isolamento do Storage** (item 5, quando entrar upload): balde privado,
   caminho não é autorização, URL assinada gerada no servidor depois de conferir
   a posse, RLS em `storage.objects` com falha fechada. Vai para o `CLAUDE.md`

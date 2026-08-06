@@ -271,8 +271,8 @@ A tabela fixa de 20 municípios do Ceará que aparece em `docs/navegacao.md` é
 dado de protótipo, não a solução de produção. A base real é a do IBGE, com os
 ~5.570 municípios, conforme a decisão de município acima.
 
-**Extração por IA é isolada em `/src/lib/importacao`.** Trocar de fornecedor tem que
-ser trocar uma peça. O modelo ainda não está decidido (ver §13).
+**Extração por IA é isolada em `/src/lib/importacao`.** Trocar de fornecedor tem
+que ser trocar uma peça. O modelo ainda não está decidido (ver §14).
 
 **Integração fiscal isolada**, quando entrar.
 
