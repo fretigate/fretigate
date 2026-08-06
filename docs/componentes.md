@@ -6,8 +6,14 @@ Seis variantes de botão, mais o estado carregando e a especificação de ícone
 
 - **Verde sólido.** `#1B6B3A` preenchido é exclusivo da **ação principal** — mais o (+) da barra e o círculo de iniciais da empresa. Nenhum chip, de filtro ou de escolha, usa verde sólido: selecionado é sempre `#E4E9E5` com texto `#1B6B3A`.
 - **Hierarquia.** Uma principal por tela, sempre a ação que avança o dinheiro ou o estado. Nunca duas verdes na mesma tela. Telas de consulta (dashboard, listas) não têm principal — o (+) da barra é chrome global, não ação de tela.
-- **Nome.** Uma ação, um nome: **Gerar relatório** quando cria, **Ver relatório** quando já existe. Nunca “Relatório” sozinho. Igual para Faturar frete · Marcar recebido · Receber o resto · Cobrar no WhatsApp · Editar frete · Arquivar frete.
-- **Posição.** O bloco de ações fica ancorado no rodapé, acima da barra de navegação, nesta ordem: principal → secundárias lado a lado → destrutiva em texto. Nunca no meio do conteúdo rolável.
+- **Nome.** Uma ação, um nome: **Gerar relatório** quando cria, **Ver relatório** quando já existe. Nunca “Relatório” sozinho. Igual para Faturar frete · Marcar recebido · Receber o resto · Cobrar no WhatsApp · Editar frete · Arquivar frete · Enviar ordem no WhatsApp · Marcar como finalizado.
+- **Posição.** Nenhuma tela tem barra de ação fixa. **Só a barra de navegação flutua sobre o conteúdo** — ela é escura, fina e permanente, então funciona como camada. Um bloco de botões claros flutuando sobre fundo claro corta o texto de trás e lê como defeito.
+  - **Telas de detalhe** (frete, cobrança, cliente, caminhão, motorista): o bloco de ações fica **dentro do conteúdo rolável**, depois do bloco de resumo e dos campos, e **antes** de qualquer lista ou histórico. Rola junto com a página.
+  - **Formulários** (novo/editar cadastro, configurações, conta): a ação de salvar fica **no fim do formulário**, rolando junto. Destrutiva logo abaixo, em texto.
+  - **Listas** (Fretes, Cobranças, Clientes, Caminhões, Motoristas, Despesas): sem bloco de ação. Criar é o (+) da barra ou a pílula de cabeçalho.
+  - **Estados vazios:** ação principal dentro do conteúdo.
+  - **Exceção:** o teclado numérico é sobreposição, e o botão salvar nunca fica coberto por ele.
+- **Ordem dentro do bloco:** principal → secundárias lado a lado → destrutiva em texto.
 
 
 ## 01 — Principal
@@ -122,8 +128,18 @@ Um componente só, usado pelo “Frete salvo” e pelo “Cobrou o Frigorífico 
 
 Uma família só: traçado, sem preenchimento, cantos arredondados — desenhados à mão no próprio SVG (sem biblioteca externa, para não misturar espessura de traço).
 
+> **Falta preencher.** As medidas de ícone foram definidas no Design mas não
+> chegaram a este documento: tamanho por contexto (isolado vs. ao lado de
+> texto), espessura de traço, gap entre ícone e rótulo, alinhamento, e a regra
+> de que o traço herda sempre a cor do texto do botão. Sem isso, quem construir
+> vai inventar.
+>
+> Falta também a **tabela dos ícones em uso** (nome do arquivo, onde é usado,
+> tamanho e espessura) — os SVG existem em `docs/icones/`, mas sem essa tabela
+> não há como saber qual usar onde.
 
-## 07 — Família FretiNews
+
+## 09 — Família FretiNews
 
 A terceira superfície do produto. **Superfície clara = dado do usuário · superfície escura = mensagem do sistema · lilás = comunicação da plataforma.** Escopo fechado: cartão FretiNews na dashboard, lista de Novidades e detalhe da mensagem. Nunca em dado, ação, cobrança ou frete.
 
@@ -141,13 +157,18 @@ A terceira superfície do produto. **Superfície clara = dado do usuário · sup
 
 Controles de estado, não ações. Não entram na regra de hierarquia e nunca ficam no bloco de ações do rodapé.
 
-| Item | Definição |
+| Chip | Definição |
 |---|---|
 | Filtro | 40px · raio 999 · `13px/600` · largura máx. `148px`, uma linha só com reticências — neutro `#F0EDE6`/`#6E7770`, selecionado `#E4E9E5`/`#1B6B3A` em 700, mostrando o valor escolhido. **Nunca verde sólido** — esse é exclusivo da ação principal. |
 | Escolha | 48px · raio 999 · `15px/600` — não escolhido `#F0EDE6`/`#141A17`, escolhido `#E4E9E5`/`#1B6B3A` em 700. **Nunca verde sólido** — nenhum chip usa. |
 | Variável | 44px · raio 999 · `13.5px/700` · `#E4E9E5`/`#1B6B3A` |
 
-| Item | Definição |
+
+## Onde cada tela usa o quê
+
+Consultar antes de construir qualquer tela. Se a tela não estiver aqui, **pergunte** — não deduza por semelhança.
+
+| Tela | Componentes usados |
 |---|---|
 | Dashboard | sem principal · 2× pílula sobre escuro (Gerar relatório · Importar fretes) · pastilhas e pendências são superfícies tocáveis, não botões |
 | Meus fretes | sem principal · aviso do sistema depois de salvar · (+) da barra é chrome |
@@ -159,3 +180,11 @@ Controles de estado, não ações. Não entram na regra de hierarquia e nunca fi
 | Modelo de mensagem | principal **Salvar modelo** · chips de variável |
 | Lançar frete | principal **Salvar frete** · chips de escolha · pílula de cabeçalho na folha de busca · aviso do sistema depois de salvar (com **Já recebi** / **Novo frete**) — não existe segunda verde na tela |
 
+> **Falta preencher.** Esta tabela cobre só as telas da primeira leva. Faltam:
+> Relatório (montagem e documento A4) · Clientes (lista, perfil, formulário) ·
+> Caminhões · Motoristas · Despesas (lista e cadastro) · Importar fretes ·
+> Mais · Ajustes · Conta da empresa · Usuários · Novidades · Planos e limite ·
+> Primeiro acesso · Entrar e criar conta · Termos.
+>
+> Enquanto não estiverem aqui, **pergunte antes de construir qualquer uma
+> delas** — o `CLAUDE.md` §8 proíbe usar botão fora deste inventário.
