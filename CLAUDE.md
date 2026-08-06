@@ -134,29 +134,53 @@ troque no meio da tarefa.
 
 ## 6. Estrutura de pastas
 
+**Todo o código do produto mora em `/src`.** A raiz guarda só configuração,
+documentação e material de consulta.
+
 ```
-/app
-  /(auth)               login, cadastro, recuperação, aceitar convite
-  /(app)                área logada
-  /api                  endpoints
-/lib
-  /db                   cliente do banco + filtro de empresa
-  /auth                 sessão e permissão
-  /servicos             regras de negócio, por domínio
-  /documentos           gerador de PDF (ver §9)
-  /importacao           extração por IA, isolada do resto
-  /utils
-/components
-  /ui                   componentes base — fonte única de verdade
-  /<dominio>            componentes específicos
+/src
+  /app
+    /(auth)             login, cadastro, recuperação, aceitar convite
+    /(app)              área logada
+    /api                endpoints
+  /lib
+    /db                 cliente do banco + filtro de empresa
+    /auth               sessão e permissão
+    /servicos           regras de negócio, por domínio
+    /documentos         gerador de PDF (ver §9)
+    /importacao         extração por IA, isolada do resto
+    /utils
+  /components
+    /ui                 componentes base — fonte única de verdade
+    /<dominio>          componentes específicos
 /prisma
 /docs                   especificação, navegação, estilo, componentes, ícones
+/referencia             marca e protótipo — material de consulta, nada roda
+/public                 arquivos estáticos — fica na raiz, nunca dentro de /src
 ```
 
-- Regra de negócio mora em `/lib/servicos`, nunca dentro de componente de tela.
+- Regra de negócio mora em `/src/lib/servicos`, nunca dentro de componente de
+  tela.
 - **Nada de arquivo "para depois".** Sem abstração especulativa, sem camada sem
   dois casos de uso reais.
 - Se um arquivo passa de ~200 linhas ou junta coisas sem relação, separe.
+- **`@/` aponta para `/src`.** `@/lib/db` é `/src/lib/db`.
+
+### O que fica na raiz, e por quê
+
+O Next.js só reconhece `/src/app` **se não existir `/app` na raiz**. Se as duas
+existirem, ele usa a da raiz e ignora a de `/src` **sem avisar** — você editaria
+arquivo que não está no ar. Pasta `app` na raiz é erro, nunca alternativa.
+
+Estes precisam estar na raiz porque a ferramenta os procura lá, e não em outro
+lugar: `package.json`, `package-lock.json`, `next.config.ts`, `tsconfig.json`,
+`next-env.d.ts` (reescrito a cada `next dev`), `.env*`, `eslint.config.mjs`,
+`postcss.config.mjs`, `.gitignore` e a pasta `/public`.
+
+Caminho de código citado em arquivo de configuração é caminho que envelhece
+calado. Ao mover pasta, conferir `tsconfig.json` (`paths`), `.gitignore`
+(caminhos que começam com `/` são presos à raiz) e `eslint.config.mjs`
+(`globalIgnores`).
 
 ---
 
@@ -178,7 +202,7 @@ troque no meio da tarefa.
 Vieram de defeitos reais encontrados nos protótipos. São obrigatórias.
 
 - **Componente existe uma vez.** Botão, linha de lista, campo e chip vivem em
-  `/components/ui` e são reutilizados. **Proibido copiar componente.**
+  `/src/components/ui` e são reutilizados. **Proibido copiar componente.**
 - **Nenhum valor fora do sistema.** Cor, altura, raio, tamanho e peso de fonte
   saem de `docs/estilo.md`. Se precisar de valor novo, **pergunte**.
 - **Nenhum botão fora do inventário** de `docs/componentes.md`. Uma ação
@@ -247,7 +271,7 @@ A tabela fixa de 20 municípios do Ceará que aparece em `docs/navegacao.md` é
 dado de protótipo, não a solução de produção. A base real é a do IBGE, com os
 ~5.570 municípios, conforme a decisão de município acima.
 
-**Extração por IA é isolada em `/lib/importacao`.** Trocar de fornecedor tem que
+**Extração por IA é isolada em `/src/lib/importacao`.** Trocar de fornecedor tem que
 ser trocar uma peça. O modelo ainda não está decidido (ver §13).
 
 **Integração fiscal isolada**, quando entrar.

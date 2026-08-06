@@ -36,7 +36,7 @@ next-env.d.ts
 /prisma/*.db
 /prisma/*.db-journal
 /prisma/migrations/dev.db*
-/lib/generated/
+/src/lib/generated/
 
 # ---------------------------------------------------------------------------
 # Testes e ferramentas
@@ -106,9 +106,9 @@ desktop.ini
 *(offline).html
 *(standalone).html
 
-# Arquivo de trabalho do Photoshop. Continua na pasta LOGO/ no disco, fora do
-# controle de versao: o Git nao compara PSD, entao cada alteracao salva
-# gravaria o arquivo inteiro de novo no historico, para sempre.
+# Arquivo de trabalho do Photoshop. Continua na pasta referencia/marca/ no
+# disco, fora do controle de versao: o Git nao compara PSD, entao cada
+# alteracao salva gravaria o arquivo inteiro de novo no historico, para sempre.
 # O que o app usa sao os .png exportados, que ficam versionados.
 *.psd
 
@@ -121,10 +121,10 @@ FretiGate - Folha de estilo.html
 
 # Rascunho e versao antiga da marca.
 # ATENCAO: a lista e por nome de pasta. Pasta nova de rascunho dentro de
-# LOGO/ que nao use um destes nomes entra no repositorio.
-/LOGO/**/_old/
-/LOGO/**/_rascunho/
-/LOGO/**/rascunho/
-/LOGO/**/antigo/
-/LOGO/**/antigos/
-/LOGO/**/old/
+# referencia/marca/ que nao use um destes nomes entra no repositorio.
+/referencia/marca/**/_old/
+/referencia/marca/**/_rascunho/
+/referencia/marca/**/rascunho/
+/referencia/marca/**/antigo/
+/referencia/marca/**/antigos/
+/referencia/marca/**/old/

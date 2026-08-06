@@ -6,6 +6,59 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 06/08/2026 — reorganização das pastas
+
+Fora da ordem de construção. Feito agora justamente porque quase não existe
+código: mover três arquivos custa nada, mover trinta custa uma tarde.
+
+**Estado:** concluído. `next build`, `eslint` e `next dev` passando. Árvore
+limpa. O próximo passo continua sendo a **tarefa 2**, descrita abaixo.
+
+### O que mudou
+
+| Antes | Depois |
+|---|---|
+| `app/` | `src/app/` |
+| `LOGO/` | `referencia/marca/` |
+| `@/` apontava para a raiz | aponta para `src/` |
+
+Junto: `referencia/LEIA-ME.md` novo, dizendo que ali nada roda; `CLAUDE.md` §6
+reescrito com a árvore nova e com a lista do que é obrigado a ficar na raiz.
+
+### O que foi conferido, e como
+
+**A pasta fantasma.** O Next.js só lê `src/app` **se não existir `app/` na
+raiz** — se as duas existirem ele usa a da raiz e ignora a de `src/` sem dar
+erro nenhum. Conferir que a pasta sumiu prova pouco. O que foi feito: uma linha
+visível foi acrescentada em `src/app/page.tsx`, o servidor subiu e a linha
+apareceu no navegador. Isso prova qual pasta está no ar. A linha foi removida
+em seguida.
+
+**As regras de ignorar.** Os caminhos do `.gitignore` que começam com `/` são
+presos à raiz, então `/lib/generated/` deixou de valer no instante em que a
+pasta virou `src/lib/`. Sem correção, o cliente que o Prisma vai gerar na
+tarefa 5 — dezenas de MB — entraria no repositório. Foram criados
+`src/lib/generated/teste.txt` e `referencia/marca/_old/teste.png`; o
+`git add -A` em ensaio não enxergou nenhum dos dois. Os arquivos de teste foram
+apagados.
+
+**Nenhum `.env` no commit.** Conferido na lista de arquivos antes de gravar.
+
+**O Tailwind não precisou de nada.** Ele varre o projeto a partir da raiz, não
+a partir de onde o arquivo CSS está — conferido no pacote instalado
+(`@tailwindcss/postcss`, opção `base`, padrão = diretório de trabalho). A nota
+da documentação do Next sobre ajustar `tailwind.config.js` ao usar `src/` é da
+versão 3, que nem tem esse arquivo aqui.
+
+### O que ficou na raiz, e por quê
+
+Ferramenta procura configuração na raiz e em nenhum outro lugar. `next.config.ts`
+fora da raiz é ignorado **em silêncio**, que é o pior tipo de quebra. A lista
+completa está no `CLAUDE.md` §6. O caso que ainda vai aparecer: **`public/` fica
+na raiz, nunca dentro de `src/`** — a documentação do Next é explícita.
+
+---
+
 ## 06/08/2026 — item 1 da ordem de construção
 
 **Estado:** tarefa 1 de 10 concluída. Nada pela metade. Árvore limpa.
@@ -20,7 +73,7 @@ O plano completo do item 1 está aprovado e descrito em
 | `6acee37` | Commit inicial: documentação, marca e referência (78 arquivos, 16,6 MB) |
 | `b9cca09` | `docs/navegacao.md` e `docs/componentes.md` |
 | `9a60ca0` | Decisão da distância entre municípios (§9 e §14 do `CLAUDE.md`) |
-| `1afcf49` | **Tarefa 1** — Next 16.3, React 19.2, TypeScript, Tailwind 4 e o sistema visual de `docs/estilo.md` em `app/globals.css` |
+| `1afcf49` | **Tarefa 1** — Next 16.3, React 19.2, TypeScript, Tailwind 4 e o sistema visual de `docs/estilo.md` em `app/globals.css` (hoje `src/app/globals.css`) |
 | `f316f60` | Correção do inventário de componentes e as duas lacunas marcadas |
 
 ### Próximo passo — tarefa 2

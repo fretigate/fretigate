@@ -19,7 +19,7 @@ const eslintConfig = defineConfig([
     "referencia/**",
     "docs/**",
     // Cliente gerado pelo Prisma (a partir da tarefa 2).
-    "lib/generated/**",
+    "src/lib/generated/**",
     "prisma/generated/**",
   ]),
 ]);
