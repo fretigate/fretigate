@@ -235,6 +235,18 @@ original. Sem isso não existe comparação de rota entre empresas.
 frete. Transportadora repete rota, então o cache resolve quase tudo depois das
 primeiras semanas.
 
+A distância é estimada por cálculo geodésico entre os centros dos municípios,
+com fator de correção rodoviário — sem API externa, sem custo por consulta. O
+erro esperado é da ordem de 15%, aceitável porque o km serve à análise de R$/km
+e nunca ao faturamento, e o campo é editável pelo usuário. A origem do número
+fica isolada atrás de uma única função, para trocar por API de rotas depois sem
+mexer em mais nada. O valor continua sendo calculado uma vez por par de
+municípios e guardado em `DistanciaRota`.
+
+A tabela fixa de 20 municípios do Ceará que aparece em `docs/navegacao.md` é
+dado de protótipo, não a solução de produção. A base real é a do IBGE, com os
+~5.570 municípios, conforme a decisão de município acima.
+
 **Extração por IA é isolada em `/lib/importacao`.** Trocar de fornecedor tem que
 ser trocar uma peça. O modelo ainda não está decidido (ver §13).
 
@@ -336,3 +348,6 @@ Não invente resposta. Pergunte.
 - Valor à vista no Pix do plano anual
 - Percentual e regra de comissão do afiliado
 - Política de desconto
+- **Trocar a estimativa geodésica por API de rotas** — só quando a imprecisão
+  aparecer no uso real. Se acontecer, decidir o fornecedor e medir o custo por
+  par novo.
