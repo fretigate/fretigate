@@ -1,0 +1,17 @@
+// Schema do FretiGate.
+//
+// Neste momento existe SÓ a conexão. Nenhuma tabela ainda: a tarefa 2 é
+// conectar e derrubar o risco técnico do isolamento antes de qualquer modelo
+// existir. As tabelas entram na tarefa 3.
+//
+// As URLs de conexão NÃO ficam aqui. A partir do Prisma 7 elas moram em
+// `prisma.config.ts`, na raiz — é lá que está a explicação das duas.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

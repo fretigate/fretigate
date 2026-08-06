@@ -6,6 +6,75 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 06/08/2026 — tarefa 2: risco técnico do isolamento derrubado
+
+**A pergunta que travava o plano foi respondida: sim, funciona.** O
+`$transaction([set_config, consulta])` mantém as duas instruções na mesma
+conexão do pool de transação do Supabase, e o valor **não** sobrevive ao fim do
+pedido. A camada 2 do isolamento (RLS) segue como estava desenhada.
+
+### Como foi provado
+
+Ler depois e ver vazio não provaria nada — a leitura seguinte pode cair em
+outra conexão física. A prova identificou a conexão pelo `pg_backend_pid()` e
+foi procurar leituras **no mesmo pid**.
+
+| | Resultado |
+|---|---|
+| As duas instruções na mesma conexão | a consulta leu o que o `set_config` gravou |
+| Valor sobrevive ao pedido? | 60 leituras soltas, **todas as 60 na mesma conexão física**, nenhuma enxergou empresa_id |
+| Concorrência | 40 pedidos simultâneos em 10 conexões físicas, **zero** leram a empresa de outro |
+| Contraste com `local=false` | vazou nas 60 leituras seguintes |
+
+O contraste importa: ele mostra que o terceiro parâmetro `true` é o que faz o
+trabalho, não enfeite. Com `false` o valor vira estado de sessão, e sessão no
+pool é reaproveitada pelo pedido de outra empresa. O resíduo desse teste foi
+limpo e conferido.
+
+### A armadilha que quase virou conclusão errada
+
+Na primeira execução a prova **reprovou**, e a culpa era da prova, não do banco.
+
+No Postgres, uma variável personalizada como `app.empresa_id`, depois de usada
+uma vez na sessão, **não deixa de existir: ela volta a valer string vazia**.
+A verificação estava escrita como "tem que ser nulo", e string vazia não é
+nulo. Conferido com uma variável de nome inédito: antes de tudo lê `NULL`,
+dentro da transação lê o valor, depois do commit lê `''`.
+
+**Consequência direta para a tarefa 4:** a política de RLS precisa **falhar
+fechada com string vazia**, não só com nulo. Uma política que só teste `IS NULL`
+deixa passar o estado "sem empresa" mais comum que existe em produção — o de
+uma conexão reaproveitada. Isso não é detalhe de teste, é requisito da política.
+
+### O que ficou no repositório
+
+Prisma 7.9.1 com `@prisma/adapter-pg`, `prisma/schema.prisma` (só a conexão,
+nenhuma tabela ainda) e `prisma.config.ts`.
+
+**O Prisma 7 mudou de forma relevante em relação ao 6:** as URLs de conexão
+saíram do schema e foram para `prisma.config.ts`, o cliente passou a exigir um
+adaptador de driver, e o `.env` não é mais lido sozinho — daí o
+`process.loadEnvFile()` no início do arquivo de configuração.
+
+Os roteiros da prova eram temporários e foram apagados. Viram teste de verdade
+na **tarefa 6**, e o desenho a repetir é: identificar a conexão pelo
+`pg_backend_pid()`, procurar leituras no mesmo pid, incluir o contraste com
+`local=false`, e tratar `''` e `NULL` como o mesmo estado "sem empresa".
+
+### Percalço no caminho, para não repetir
+
+As duas strings de conexão vieram do painel do Supabase com a senha ainda entre
+colchetes — `[senha]`. Os colchetes são a marcação de "preencha aqui" e não
+fazem parte da senha; com eles, o Postgres recusa com
+`password authentication failed`. O usuário do pool também não é `postgres`, e
+sim `postgres.<project_ref>` — esse já veio certo.
+
+### Próximo passo — tarefa 3
+
+Schema de `Empresa`, `Usuario` e as tabelas do Better Auth. Nada mais bloqueia.
+
+---
+
 ## 06/08/2026 — backup do banco virou pendência aberta
 
 O banco existe a partir de hoje. O `CLAUDE.md` §4 exige **backup do banco
@@ -157,24 +226,15 @@ O plano completo do item 1 está aprovado e descrito em
 | `1afcf49` | **Tarefa 1** — Next 16.3, React 19.2, TypeScript, Tailwind 4 e o sistema visual de `docs/estilo.md` em `app/globals.css` (hoje `src/app/globals.css`) |
 | `f316f60` | Correção do inventário de componentes e as duas lacunas marcadas |
 
-### Próximo passo — tarefa 2
+### ~~Próximo passo — tarefa 2~~ — CONCLUÍDA
 
-Conectar o Prisma ao Supabase e **derrubar o risco técnico do plano**: provar
-que `$transaction([set_config, consulta])` funciona no pool de transação do
-Supabase e que o valor de `app.empresa_id` **não sobrevive entre pedidos**.
+Era conectar o Prisma ao Supabase e derrubar o risco técnico do plano: provar
+que `$transaction([set_config, consulta])` funciona no pool de transação e que
+o valor de `app.empresa_id` não sobrevive entre pedidos.
 
-Se isso não funcionar, a camada 2 do isolamento (Row-Level Security) muda de
-forma. As camadas 0, 1, 3 e 4 seguem iguais. É por isso que essa prova vem
-antes de qualquer código depender dela.
-
-**Bloqueado esperando credenciais do Supabase.** O fundador precisa criar o
-projeto e pegar, em Project Settings › Database, duas strings de conexão:
-
-- **Transaction pooler**, porta 6543 → `DATABASE_URL`
-- **Direct connection**, porta 5432 → `DIRECT_URL`
-
-Vão num arquivo `.env` na raiz, usando `.env.example` como modelo. O `.env`
-está no `.gitignore` e nunca é commitado.
+**Feito, e a resposta foi sim.** O bloqueio das credenciais também caiu. Ver a
+entrada de 06/08/2026 no topo deste arquivo, com os números da prova e com o
+achado sobre string vazia que muda a política de RLS da tarefa 4.
 
 ### Tarefas restantes do item 1
 
