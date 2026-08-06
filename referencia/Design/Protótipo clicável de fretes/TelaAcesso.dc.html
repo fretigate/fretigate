@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+@keyframes fg-spin{to{transform:rotate(360deg)}}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+    <sc-if value="{{ temVoltar }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ voltar }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+        <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+    </sc-if>
+    <span style="flex:1;min-width:0;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">FRETIGATE</span>
+  </div>
+
+  <div style="flex:1;min-height:0;overflow:auto;padding:24px 20px 40px;display:flex;flex-direction:column;gap:6px">
+    <span style="font:800 30px/1.1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.025em;text-wrap:pretty">{{ titulo }}</span>
+    <span style="padding:10px 2px 18px;font:500 15px/1.5 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">{{ subtitulo }}</span>
+
+    <sc-for list="{{ campos }}" as="c" hint-placeholder-count="2">
+      <div style="flex:none;display:flex;flex-direction:column;gap:8px;min-height:78px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+        <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ c.rotulo }}</span>
+        <input value="{{ c.valor }}" onChange="{{ c.set }}" type="{{ c.tipo }}" placeholder="{{ c.dica }}" style="width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;border:none;outline:none;background:none;font:600 17px/1.3 Archivo,sans-serif;color:#141A17"></input>
+      </div>
+    </sc-for>
+
+    <sc-if value="{{ ehCriar }}" hint-placeholder-val="{{ false }}">
+      <span style="padding:22px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">COMO VOCÊ CONHECEU O FRETIGATE?</span>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 0 4px">
+        <sc-for list="{{ origens }}" as="o" hint-placeholder-count="5">
+          <span style="display:flex">
+            <sc-if value="{{ o.sel }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ o.pick }}" style="flex:none;height:48px;padding:0 18px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 15px/1 Archivo,sans-serif">{{ o.nome }}</button>
+            </sc-if>
+            <sc-if value="{{ o.off }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ o.pick }}" style="flex:none;height:48px;padding:0 18px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#141A17;font:600 15px/1 Archivo,sans-serif" style-active="background:#E4E0D6">{{ o.nome }}</button>
+            </sc-if>
+          </span>
+        </sc-for>
+      </div>
+      <div style="flex:none;display:flex;flex-direction:column;gap:8px;min-height:78px;margin-top:6px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+        <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">SE QUISER CONTAR MAIS</span>
+        <input value="{{ origemLivre }}" onChange="{{ setOrigemLivre }}" placeholder="Quem indicou, qual vídeo, qual grupo" style="width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;border:none;outline:none;background:none;font:600 17px/1.3 Archivo,sans-serif;color:#141A17"></input>
+      </div>
+      <span style="padding:10px 4px 0;font:500 12px/1.45 Archivo,sans-serif;color:#6E7770;text-wrap:pretty">Essa é a única pergunta de pesquisa do FretiGate. Não vem outra em nenhum lugar do app.</span>
+
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:22px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+        <span style="font:500 12.5px/1.5 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">Criando a conta você aceita os termos de uso e a política de privacidade. São curtos e sem juridiquês.</span>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button onClick="{{ verTermos }}" style="flex:none;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 12.5px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">Termos de uso</button>
+          <button onClick="{{ verPrivacidade }}" style="flex:none;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 12.5px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">Política de privacidade</button>
+        </div>
+      </div>
+    </sc-if>
+
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:24px">
+      <sc-if value="{{ carregando }}" hint-placeholder-val="{{ false }}">
+        <button disabled="disabled" style="flex:none;display:flex;align-items:center;justify-content:center;gap:10px;height:60px;border:none;border-radius:999px;background:#1B6B3A;font:700 17px/1 Archivo,sans-serif;color:#fff;cursor:wait">
+          <span style="display:inline-block;width:17px;height:17px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:999px;animation:fg-spin .7s linear infinite"></span>
+          {{ labelPrincipal }}
+        </button>
+      </sc-if>
+      <sc-if value="{{ podeEnviar }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ enviar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">{{ labelPrincipal }}</button>
+      </sc-if>
+      <sc-if value="{{ bloqueado }}" hint-placeholder-val="{{ false }}">
+        <button disabled="disabled" style="flex:none;height:60px;border:none;border-radius:999px;background:#E4E0D6;color:#5C6660;font:700 17px/1 Archivo,sans-serif;cursor:not-allowed">{{ labelPrincipal }}</button>
+      </sc-if>
+
+      <sc-if value="{{ temSecundaria }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ secundaria }}" style="flex:none;height:52px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#141A17" style-active="background:#E4E0D6">{{ labelSecundaria }}</button>
+      </sc-if>
+      <sc-if value="{{ temTexto }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ acaoTexto }}" style="flex:none;height:44px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#6E7770" style-active="color:#141A17">{{ labelTexto }}</button>
+      </sc-if>
+    </div>
+  </div>
+
+  <sc-if value="{{ temAviso }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(40px, calc(env(safe-area-inset-bottom) + 34px));z-index:70">
+      <dc-import name="AvisoSistema" texto="{{ aviso }}" hint-size="100%,74px"></dc-import>
+    </div>
+  </sc-if>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;estadoInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;entrar&quot;,&quot;criar&quot;,&quot;recuperar&quot;],&quot;default&quot;:&quot;entrar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;onEntrou&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onVoltar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onTermos&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(aba: string) =&gt; void&quot;}}">
+const ORIGENS = ['Indicação de outro dono', 'Instagram', 'YouTube', 'Grupo de WhatsApp', 'Busca no Google', 'Outro'];
+const TEXTOS = {
+  entrar: { titulo: 'Entrar na sua conta', subtitulo: 'Use o telefone que você cadastrou. Mandamos um código no WhatsApp — sem senha pra decorar.', principal: 'Receber código no WhatsApp', secundaria: 'Criar conta', texto: 'Não lembro qual telefone usei' },
+  criar: { titulo: 'Criar a conta da sua transportadora', subtitulo: 'Dois campos e você já está lançando frete. O resto do cadastro dá pra fazer depois.', principal: 'Criar conta', secundaria: 'Já tenho conta', texto: '' },
+  recuperar: { titulo: 'Recuperar o acesso', subtitulo: 'Diga o CNPJ da transportadora e a gente encontra em qual telefone a conta está.', principal: 'Procurar minha conta', secundaria: 'Voltar pra entrada', texto: '' },
+};
+
+class Component extends DCLogic {
+  state = { tela: null, tel: '', nome: '', empresa: '', cnpj: '', origem: '', origemLivre: '', carregando: false, aviso: null };
+
+  componentDidMount() {
+    this.setState({ tela: this.props.estadoInicial || 'entrar' });
+  }
+
+  avisar(txt) {
+    this.setState({ aviso: txt });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ aviso: null }), 6000);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const t = s.tela || 'entrar';
+    const cfg = TEXTOS[t] || TEXTOS.entrar;
+    const set = k => e => this.setState({ [k]: e.target.value });
+    const campos = {
+      entrar: [{ rotulo: 'TELEFONE', valor: s.tel, dica: '(88) 99999-0000', tipo: 'tel', set: set('tel') }],
+      criar: [
+        { rotulo: 'NOME DA TRANSPORTADORA', valor: s.empresa, dica: 'Como aparece no relatório', tipo: 'text', set: set('empresa') },
+        { rotulo: 'SEU TELEFONE', valor: s.tel, dica: '(88) 99999-0000', tipo: 'tel', set: set('tel') },
+      ],
+      recuperar: [{ rotulo: 'CNPJ DA TRANSPORTADORA', valor: s.cnpj, dica: '00.000.000/0000-00', tipo: 'text', set: set('cnpj') }],
+    }[t];
+    const preenchido = campos.every(c => !!String(c.valor).trim());
+    const nada = () => { };
+    const ir = tela => () => this.setState({ tela, aviso: null });
+    return {
+      titulo: cfg.titulo,
+      subtitulo: cfg.subtitulo,
+      campos,
+      ehCriar: t === 'criar',
+      origens: ORIGENS.map(o => ({ nome: o, sel: s.origem === o, off: s.origem !== o, pick: () => this.setState({ origem: o }) })),
+      origemLivre: s.origemLivre,
+      setOrigemLivre: set('origemLivre'),
+      verTermos: () => { if (this.props.onTermos) this.props.onTermos('termos'); else this.avisar('Abre os termos de uso.'); },
+      verPrivacidade: () => { if (this.props.onTermos) this.props.onTermos('privacidade'); else this.avisar('Abre a política de privacidade.'); },
+      labelPrincipal: cfg.principal,
+      carregando: s.carregando,
+      podeEnviar: preenchido && !s.carregando,
+      bloqueado: !preenchido && !s.carregando,
+      enviar: () => {
+        if (s.carregando) return;
+        this.setState({ carregando: true });
+        setTimeout(() => {
+          this.setState({ carregando: false });
+          if (t === 'criar') (this.props.onEntrou || (() => this.avisar('Conta criada. Vai para o primeiro acesso.')))();
+          else if (t === 'entrar') (this.props.onEntrou || (() => this.avisar('Código enviado no WhatsApp.')))();
+          else if (t === 'recuperar') this.avisar('Achamos a conta no telefone (88) 99612-4400.');
+          else this.avisar('Conta criada. Bem-vindo ao FretiGate.');
+        }, 1400);
+      },
+      temSecundaria: !!cfg.secundaria,
+      labelSecundaria: cfg.secundaria,
+      secundaria: t === 'entrar' ? ir('criar') : t === 'criar' ? ir('entrar') : ir('entrar'),
+      temTexto: !!cfg.texto,
+      labelTexto: cfg.texto,
+      acaoTexto: ir('recuperar'),
+      temVoltar: t !== 'entrar',
+      voltar: this.props.onVoltar || ir('entrar'),
+      temAviso: !!s.aviso,
+      aviso: s.aviso,
+    };
+  }
+}
+</script>
+</body>
+</html>

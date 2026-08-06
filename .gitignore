@@ -1,0 +1,130 @@
+# ---------------------------------------------------------------------------
+# Dependencias
+# ---------------------------------------------------------------------------
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# ---------------------------------------------------------------------------
+# Build do Next.js
+# ---------------------------------------------------------------------------
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+
+# ---------------------------------------------------------------------------
+# Segredos — regra 4 do CLAUDE.md: nenhum segredo no repositorio.
+# Ignora todo .env, com excecao do .env.example (que nao contem valor real).
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------------------
+# Prisma
+# As migrations SAO versionadas — elas sao o historico do banco.
+# So o que a maquina gera fica de fora.
+# ---------------------------------------------------------------------------
+/prisma/generated/
+/prisma/*.db
+/prisma/*.db-journal
+/prisma/migrations/dev.db*
+/lib/generated/
+
+# ---------------------------------------------------------------------------
+# Testes e ferramentas
+# ---------------------------------------------------------------------------
+coverage/
+.nyc_output/
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/
+.eslintcache
+*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Hospedagem
+# ---------------------------------------------------------------------------
+.vercel/
+
+# ---------------------------------------------------------------------------
+# Cache de ferramentas locais
+# ---------------------------------------------------------------------------
+.turbo/
+.cache/
+.swc/
+.parcel-cache/
+
+# ---------------------------------------------------------------------------
+# Logs
+# ---------------------------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ---------------------------------------------------------------------------
+# Sistema operacional e editor
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ---------------------------------------------------------------------------
+# Arquivos de upload em desenvolvimento
+# Comprovante e logo do cliente ficam no storage do provedor, nunca no repo.
+# ---------------------------------------------------------------------------
+/uploads/
+/public/uploads/
+/tmp/
+
+# ---------------------------------------------------------------------------
+# Material de referencia e marca: versiona o fonte, ignora o gerado.
+# ---------------------------------------------------------------------------
+
+# Pacote compactado. O Git nao compara o conteudo de um .zip — cada versao
+# nova pesa inteira de novo no historico.
+*.zip
+
+# Bundles exportados do prototipo: trazem CSS, JS e imagem embutidos no
+# proprio arquivo, com centenas de KB ou mais. O fonte de cada tela e o
+# .dc.html correspondente, que continua versionado.
+*(offline).html
+*(standalone).html
+
+# Arquivo de trabalho do Photoshop. Continua na pasta LOGO/ no disco, fora do
+# controle de versao: o Git nao compara PSD, entao cada alteracao salva
+# gravaria o arquivo inteiro de novo no historico, para sempre.
+# O que o app usa sao os .png exportados, que ficam versionados.
+*.psd
+
+# Miniatura gerada pela ferramenta do prototipo.
+.thumbnail
+
+# Versao empacotada da folha de estilo. A fonte de verdade e docs/estilo.md
+# (e docs/estilo.html), ambos versionados. Fonte de verdade unica.
+FretiGate - Folha de estilo.html
+
+# Rascunho e versao antiga da marca.
+# ATENCAO: a lista e por nome de pasta. Pasta nova de rascunho dentro de
+# LOGO/ que nao use um destes nomes entra no repositorio.
+/LOGO/**/_old/
+/LOGO/**/_rascunho/
+/LOGO/**/rascunho/
+/LOGO/**/antigo/
+/LOGO/**/antigos/
+/LOGO/**/old/

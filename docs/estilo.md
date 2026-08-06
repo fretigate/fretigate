@@ -1,0 +1,390 @@
+# FretiGate — folha de estilo (consolidado)
+
+Extraído das telas já feitas: dashboard, Meus fretes, detalhe do frete,
+Cobranças, detalhe da cobrança, folhas, estados vazios, modelo de mensagem,
+lançar frete, e da página de componentes. Nada aqui foi inventado — é o que
+já está implementado. Os quatro elementos que saíam com valores diferentes
+entre telas estão na seção **Conflitos resolvidos**, com a decisão aplicada.
+
+---
+
+## Cores
+
+| Cor | Uso |
+|---|---|
+| `#FAF8F4` | Papel — fundo de toda tela |
+| `#F0EDE6` | Separação — campo, chip não escolhido, linha de lista, cartão de pendência, fundo do teclado numérico |
+| `#EDEAE3` | Separação (variante) — fundo de pílula desabilitada |
+| `#E4E9E5` | Pílula em linha, pílula de cabeçalho e **todo chip selecionado** — filtro e escolha, com texto `#1B6B3A` |
+| `#D0E1D7` | Pílula em linha/cabeçalho, pressionada |
+| `#E4E0D6` | Fundo de botão principal desabilitado; também a barra mais antiga do gráfico de 6 meses |
+| `#D6D1C5` | Barra do mês anterior no gráfico de 6 meses |
+| `#F4F1EB` | Fundo de botão secundário desabilitado |
+| `#141A17` | Tinta principal (texto) · superfície escura (cartão de faturamento, aviso do sistema) |
+| `#3C443E` | Tinta de apoio forte — corpo de texto, texto sobre `#F6E6DD`/`#E4E9E5`, chip de sugestão |
+| `#6E7770` | Rótulo de seção, texto de apoio, subtítulo, placeholder |
+| `#A8AFA9` | Ponto de origem (mapa textual), seta de linha, rótulo interno da página de componentes |
+| `#5C6660` | Texto desabilitado — único tom, testado ≥4.5:1 em todos os fundos claros onde aparece |
+| `#22402F` | Texto sobre a prévia da mensagem (`#E4E9E5`) no modelo de cobrança — é conteúdo do usuário, não mensagem do sistema |
+| `#1B6B3A` | **Ação** — verde rodovia. **Verde sólido é exclusivo da ação principal**: botão principal, o (+) da barra, o círculo de iniciais da empresa e a tinta de link/valor "Quitado". **Nenhum chip usa verde sólido** — selecionado é sempre `#E4E9E5` + texto `#1B6B3A` |
+| `#14522C` | Ação pressionada |
+| `#7FCB9B` | Único verde claro do sistema — só sobre fundo escuro (comparação de mês no cartão, item ativo da barra de navegação) |
+| `#F4B723` | Amarelo faixa-de-pista — só sobre escuro: "TROCAR", sugestão de valor, aviso de offline |
+| `#8A6206` | Situação "A faturar" / "vence hoje", sobre fundo claro |
+| `#7A5A0B` | Texto de apoio dentro da etiqueta "Parcial" (sobre `#FBF1DF`) |
+| `#FBF1DF` | Fundo da etiqueta "Parcial" na lista de cobranças; também o campo vazio em Importar fretes |
+| `#B3401A` | Situação "Vencido" / destrutiva (Arquivar) |
+| `#8A3314` | Destrutiva pressionada |
+| `#F6E6DD` | Fundo da pastilha "Vencido" (dashboard e Cobranças) |
+| `#8A5237` | Texto de apoio sobre a pastilha "Vencido" |
+| `#DAD5CA` | Alça de arraste no topo de toda folha inferior |
+| `#E8E4DB` | Fundo fora do celular — só na prancheta de design, nunca no app |
+| `#EDEBFA` `#2C2555` `#5B4FA8` | Família FretiNews — comunicação da plataforma. Ver seção própria abaixo |
+| `rgba(20,26,23,.06–.42)` | Escurecimento: fundo do overlay de folha (.42), sombra do aviso do sistema (.16/.30) |
+| `rgba(255,255,255,.06–.82)` | Texto/fundo sobre a superfície escura, em opacidades crescentes conforme a hierarquia (rótulo .45 → nome da empresa .82 → texto pleno 1) |
+
+Nenhuma cor além destas e das três da família FretiNews aparece no produto.
+
+---
+
+## Tipografia
+
+**Archivo** variável (`wdth 75..125`, `wght 400..800`) em toda a interface.
+**Azeret Mono** (`wght 400..600`) só na placa do caminhão — nunca em preço,
+nunca em nome, nunca em corpo de texto.
+
+### Três níveis por tela
+
+Cada tela tem no máximo três níveis visíveis, e a diferença entre vizinhos é
+óbvia num relance:
+
+| Nível | O que é | Tinta | Peso |
+|---|---|---|---|
+| **Primário** | o que a pessoa veio ver: valor, nome do cliente, número-herói | `#141A17` | 700–800 |
+| **Secundário** | contexto do dado: rota, referência, vencimento | `#3C443E` | 500–600 |
+| **Terciário** | rótulo e apoio, mais o **cromo** | `#6E7770` | 500–700 |
+
+**Cromo é mais quieto que conteúdo.** Título de tela, campo de busca, chip de
+filtro e total contextual são ferramenta e vivem no terciário — nunca
+competem com o dado do usuário. O que recua é ferramenta, nunca dado: valor em
+dinheiro, nome do cliente e número-herói não perdem peso em nenhuma tela.
+
+| Papel | Tamanho/entrelinha | Peso | Largura/rastreio | Onde |
+|---|---|---|---|---|
+| Número-herói — principal da tela | 60/1 | 800 | `wdth 92%`, `ls -.035em` | Valor do frete em Lançar frete; faturamento do mês na dashboard |
+| Número-herói — leitura em detalhe | 46/1 | 800 | `wdth 94%`, `ls -.03em` | Valor no detalhe do frete e da cobrança |
+| Nome em destaque (detalhe) | 26/1.1 | 800 | `wdth 96%`, `ls -.015em` | Nome do cliente no detalhe do frete/cobrança/perfil |
+| Título de modelo/config | 24/1.15 | 800 | `wdth 96%` | "Modelo de cobrança" |
+| Título de estado vazio | 22/1.25 | 800 | `ls -.01em` | "Ninguém te deve nada agora." |
+| Título de folha | 21/1.1 | 800 | — | "Escolher cliente", "Ordenar por", "Período" |
+| **Título de tela (cromo)** | **20/1.1** | **700** | `wdth 96%`, `ls -.01em`, tinta `#3C443E` | "Meus fretes", "Cobranças", "Clientes", "Novo relatório" — recuado: é ferramenta, não dado |
+| Nome em linha de lista | 17/1.15 | 700 | — | Cliente em Meus fretes/Cobranças/Clientes |
+| Nome em linha recolhida | 16.5/1.2 | 700 | — | Valor da linha em Lançar frete; título de pendência; linha do Mais |
+| Valor em lista/detalhe (número) | 20/1 · 46/1 (herói) | 800 | tabular-nums | Valor por frete/cobrança na lista; valor no detalhe |
+| Texto de campo | 16–17/1 | 600 | — | Input de origem, destino, carga, cadastro |
+| Botão principal | 17/1 | 700 | — | Ver inventário de botões · com ícone: 18px, traço 1.6, gap 10 |
+| Botão secundário / chip de escolha | 15/1 | 600–700 | — | Chip escolhido em 700, não-escolhido em 600 |
+| **Campo de busca (cromo)** | **14/1** | **500** | — | Placeholder curto: "Buscar frete", "Buscar cliente" — abaixo do nome na lista |
+| Corpo de apoio | 13–15/1.2–1.5 | 400–500 | — | Rota, subtítulo, texto de estado vazio |
+| **Chip de filtro (cromo)** | **13/1** | **600–700** | — | Situação · Cliente · Período · Ordenar — abaixo do nome na lista |
+| **Total contextual (cromo)** | **12/1** | **500** | tinta `#6E7770` | "12 fretes · R$ 38.420" — informação de apoio |
+| Rótulo de seção (eyebrow) | 11/1, `ls .16em` | 700 | maiúsculas | "PRECISA DE VOCÊ", rótulo de linha recolhida, cabeçalho de grupo de data, rótulo de pastilha/detalhe |
+| Etiqueta de situação | 10.5/1, `ls .1em` | 700 | maiúsculas | "A FATURAR", "FATURADO", "PARCIAL", "QUITADO", "VENCIDO", "BOLETO" — todas iguais |
+| Placa (mono) | 11/1 | 500 | `ls .06em` | Só a placa do caminhão, branco sobre `#141A17` |
+
+### Onde cada nível cai, tela por tela
+
+| Tela | Primário | Secundário | Terciário (recuado) |
+|---|---|---|---|
+| Dashboard | faturamento 60px no cartão escuro | valores das pastilhas (25px), título de pendência | rótulos, notas das pastilhas, rótulos do gráfico |
+| Meus fretes | nome do cliente (17/700) + valor (20/800) | rota, etiqueta de situação | **título, busca, chips, total** |
+| Detalhe do frete | valor 46px + nome 26px | linhas de cadastro (16/600) | rótulos das linhas, "FRETE · data" |
+| Lançar frete | valor 60px no cartão escuro | linha de resumo / linhas recolhidas (16.5/700) | rótulos das linhas, chip da última vez |
+| Cobranças | nome do cliente + valor | referência, vencimento, etiqueta | **título, chips, total, frase de resumo** |
+| Detalhe da cobrança | valor 46px + nome 26px | linhas, fretes incluídos | rótulos, histórico de envios |
+| Clientes | nome do cliente + valor da ordenação | cidade, dado de contexto | **título, busca, chip de ordem, total** |
+| Perfil do cliente | nome 26px + os quatro números (17/800) | linhas de cadastro | rótulos, notas, frase de resumo, chip de período |
+| Perfil do caminhão | apelido 26px + números do período | placa, tipo, linhas | rótulos, notas, chip de período |
+| Formulários | valor digitado (17/600) | — | rótulo do campo, texto explicativo, cabeçalho de seção |
+| Mais | nome da empresa (19/800), nome de cada linha (16.5/700) | plano | subtítulos, cabeçalho de grupo |
+
+---
+
+## Espaçamento
+
+Escala: **4 · 6 · 7 · 8 · 9 · 10 · 12 · 14 · 16 · 18 · 20 · 22 · 24 · 26 · 40**
+
+- Margem lateral do conteúdo: **16–20px** (16 nas telas com cartão de topo, 20 nas com título de página)
+- Entre seções verticais: **22–26px**
+- Entre linhas de lista: **6px**
+- Entre chips/pílulas: **7–8px**
+- Padding interno de cartão/linha: **13–18px**
+- Respiro do rodapé fixo (abaixo do último botão): **40px**
+
+---
+
+## Formas
+
+| Raio | Elemento |
+|---|---|
+| `28px` | Cartão escuro de faturamento/valor |
+| `22px` | Pastilha da dashboard, aviso do sistema, folha inferior (topo) |
+| `20px` | Linha de lista, linha recolhida de cobrança |
+| `18px` | Campo de texto, linha recolhida (Lançar frete), item de folha |
+| `14px` | Tecla do teclado numérico |
+| `12px` | Etiqueta "Parcial" |
+| `999px` (pílula) | Todo botão/chip/pílula — principal, secundário, pílula em linha, pílula de cabeçalho, chip de filtro/escolha |
+
+**Sombra** — só existe em um lugar: o aviso do sistema.
+`box-shadow: 0 14px 34px rgba(20,26,23,.30), 0 3px 10px rgba(20,26,23,.16)`.
+Nenhum outro elemento tem sombra.
+
+---
+
+## Barra de navegação — âncora responsiva
+
+A barra fica fixa no rodapé, mas **não por um número fixo de pixels**: ela
+ancora na área segura do aparelho, para cair no mesmo lugar em qualquer
+tamanho de celular.
+
+**O padrão é `max()`, nunca o fallback do `env()`.** `env(safe-area-inset-*)`
+é uma variável *definida* — num navegador comum ela vale `0px`, e o segundo
+argumento (`, 6px`) só entraria em cena se o nome fosse desconhecido. Então
+`calc(env(safe-area-inset-bottom, 6px) + 20px)` resulta em **20px**, não em
+26px. O `max()` garante o piso do valor original, e o inset apenas **acrescenta**
+em quem tem indicador de home.
+
+| Medida | Valor |
+|---|---|
+| Distância do rodapé | `bottom: max(26px, calc(env(safe-area-inset-bottom) + 20px))` |
+| Margem lateral | `left/right: max(16px, calc(env(safe-area-inset-left/right) + 16px))` — evita recorte por notch quando o aparelho gira |
+| Aviso do sistema | `max(112px, calc(env(safe-area-inset-bottom) + 106px))` — empilha acima da barra pela mesma âncora |
+| Rodapé de ações ancorado (Relatório) | `max(132px, calc(env(safe-area-inset-bottom) + 126px))` |
+| Folga do fim da rolagem | `max(138px, calc(env(safe-area-inset-bottom) + 132px))` — cresce com a área segura, então o último item da lista nunca fica sob a barra em nenhum aparelho |
+
+A barra em si é fluida: `display:flex` com os cinco itens em `flex:1`, então
+ela ocupa a largura disponível e distribui igual de 320px a 430px sem nenhum
+valor específico por modelo.
+
+---
+
+## Alturas fixas
+
+| Elemento | Altura |
+|---|---|
+| Campo de texto | 56–60px (ver conflito de área segura não se aplica aqui — variação é por tela, ambas em uso) |
+| Linha recolhida (Lançar frete) | 60px |
+| Item de folha (lista de escolha) | mín. 64px |
+| Chip de escolha grande | 48px |
+| Chip de filtro (cromo) | 40px · largura máx. 148px · uma linha só, com reticências |
+| Campo de busca | 48px |
+| Cabeçalho de tela (barra de status) | ver **área segura** abaixo |
+| Barra de navegação | **57px** de altura, respiro interno de **11px** em cima e embaixo (igual), raio `999`. **Não usa distância fixa do rodapé** — ver âncora abaixo |
+| (+) central | **48px**, elevado **17,5px** acima da linha da barra (31% da altura da pílula, mesma proporção de antes) |
+| Botão principal | 60px |
+| Botão secundário | 52px |
+| Botão texto | 44px |
+| Pílula em linha | 38px |
+
+**Folga de rolagem.** Todo conteúdo rolável reserva **138px** no fim — medidos
+a partir do topo do (+), que fica a 100,5px do fundo da tela (26 da margem +
+57 da pílula + 17,5 de saliência), com ~37px de respiro. A pílula de navegação
+flutua sobre o conteúdo durante a rolagem; a folga garante que o último item
+chegue a ficar totalmente acima dela. O aviso do sistema ancora em **112px** — acima do topo do (+), com espaço para o deslocamento de 18px da animação de entrada.
+
+---
+
+## Área segura
+
+**Resolvido.** Valor único em toda tela: **66px** do topo (área segura do
+dispositivo + 8px de respiro, com referência no iPhone com ilha dinâmica).
+Aplica-se com ou sem cartão no topo. Não existe mais 52px nem 56px em
+nenhuma tela.
+
+---
+
+## Superfícies: as três categorias
+
+O produto tem **três** superfícies, e cada uma diz de quem é a voz:
+
+| Superfície | De quem é a voz | Cor |
+|---|---|---|
+| **Clara** | dado do usuário — o frete dele, o cliente dele, o dinheiro dele | `#FAF8F4` / `#F0EDE6` |
+| **Escura** | mensagem do sistema — confirmação do que ele acabou de fazer | `#141A17` |
+| **Lilás** | comunicação da plataforma — o FretiGate falando com ele | família FretiNews |
+
+As três nunca compartilham tratamento. É por isso que o aviso "Frete salvo"
+não pode ser claro (viraria mais uma linha da lista) e o recado do FretiNews
+não pode ser escuro (viraria confirmação de ação dele).
+
+**Só são escuros:**
+- O cartão de faturamento no topo da dashboard (`#141A17`)
+- O componente único de aviso do sistema — "Frete salvo", "Cobrou o
+  Frigorífico São Luiz?" (`#141A17`, com sombra)
+- A barra de navegação (`#141A17`)
+
+Nada mais é escuro. Cartões de dado (linhas de lista, campos, folhas,
+pastilhas de resumo) são sempre claros, mesmo quando mostram uma situação de
+alerta (Vencido usa `#F6E6DD` claro com tinta `#B3401A`, nunca um fundo
+escuro).
+
+---
+
+## Família FretiNews — comunicação da plataforma
+
+Três tons. **Escopo fechado:** usados exclusivamente quando o FretiGate
+fala com o usuário — o cartão FretiNews na dashboard, a lista de Novidades e
+o detalhe da mensagem. **Nunca** em dado do usuário, **nunca** em ação do
+produto, **nunca** em estado de cobrança ou de frete.
+
+| Cor | Uso | Contraste sobre `#EDEBFA` |
+|---|---|---|
+| `#EDEBFA` | Superfície — fundo do cartão FretiNews e da linha não lida | 1.11:1 sobre o papel `#FAF8F4` — diferença de superfície, nunca portadora de informação sozinha |
+| `#2C2555` | Tinta principal — título da mensagem | **11.89:1** ✅ |
+| `#5B4FA8` | Tinta de apoio — rótulo "FRETINEWS", texto de apoio, ponto de não lida e o traço do × de dispensar | **5.71:1** ✅ |
+
+Medidos no navegador pela fórmula WCAG, mesmo padrão do texto desabilitado.
+
+A razão de o lilás existir: sem ele, aviso do produto e recado da plataforma
+dividiriam a mesma superfície escura, e o usuário não teria como saber se a
+mensagem é consequência do que ele fez ou notícia de fora.
+
+**Removidos por não terem uso real:** `#3F3580`, `#CBC5EF` e `#DCD8F5` foram
+desenhados junto com a família mas não aparecem em nenhuma tela.
+
+**Removido por reprovar em contraste:** `#8B82C4` fazia o traço do × de
+dispensar a 2.93:1 — abaixo do mínimo de **3:1** que a WCAG exige para
+componente de interface não textual, e o × é controle, não decoração. O traço
+passou a usar `#5B4FA8` (5.71:1), que já existia na família — nenhum tom novo
+foi criado. **A família tem três tons.**
+
+**Cores soltas eliminadas:** `#DCEDE2` (pisca-pisca do frete salvo) virou
+`#E4E9E5`, e `#F6EEDA` (campo vazio em Importar) virou `#FBF1DF` — as duas
+não pertenciam a nenhuma família e agora usam o tom equivalente que já
+existia.
+
+---
+
+## Conflitos resolvidos
+
+Quatro elementos que saíam com valores diferentes entre telas — decisão
+aplicada em todas elas:
+
+1. **Área segura:** único valor, 66px do topo, em toda tela.
+2. **Número-herói:** 60px para o principal da tela (edição ou não —
+   Lançar frete e dashboard); 46px para leitura em detalhe (frete e
+   cobrança). O tamanho de 56px deixou de existir. Mantida a regra de
+   encolhimento por faixa de dígitos para valores muito altos (ver
+   Componentes — botões e avisos / Cobranças `5i`).
+3. **Rótulo de seção:** único valor, 11px/700/`.16em`. Mantida a exceção
+   de 9px/`.09em` nos três números do topo de Cobranças (só ali, para caber
+   três rótulos numa grade de 1/3 de tela).
+4. **Etiqueta de situação:** único valor, 10.5px/700/`.1em`, incluindo
+   "Parcial" — que mantém o fundo próprio (`#FBF1DF`), só igualou a
+   tipografia.
+
+---
+
+---
+
+## Ícones exportados
+
+Arquivos em `icons/*.svg` — desenhados à mão, um traçado só (sem
+biblioteca externa). Cada arquivo: viewBox quadrado `0 0 24 24`, sem
+`width`/`height` fixos, `stroke="currentColor"` no grupo (herda a cor do
+texto do botão), `fill="none"`, cantos e junções arredondados. A espessura de
+traço listada abaixo já é a do desenho original — o grupo interno tem
+`transform="translate(...) scale(...)"` para caber no quadrado sem distorcer
+a proporção nem a espessura visual.
+
+| Arquivo | Usado em | Tamanho no app | Espessura final |
+|---|---|---|---|
+| `seta-linha.svg` | Seta de linha recolhida (Lançar frete), seta de pendência (dashboard), seta de "Conta" no cabeçalho do cartão | 7–8×12–14px | 2px |
+| `seta-chip.svg` | Seta de chip de filtro (Meus fretes, Cobranças) | 11×7px | 1.8px |
+| `voltar.svg` | Topo de folha, detalhe do frete, detalhe da cobrança, modelo de mensagem | 12×20px | 2.2px |
+| `busca.svg` | Campo de busca (Meus fretes, folha de busca em Lançar frete) | 15–17px | 1.9px |
+| `whatsapp.svg` | Pílula em linha "Cobrar no WhatsApp" | 14px | 1.6px |
+| `confirmar.svg` | Painel verde ao deslizar uma linha ("Marcar recebido") | 19×15px | 2.4px |
+| `tendencia.svg` | Seta de comparação com o mês anterior, no cartão da dashboard | 13×13px | 2px |
+| `barra-inicio.svg` | Item "Início" da barra de navegação | 19×19px | **1.8px** (unificado) |
+| `barra-fretes.svg` | Item "Fretes" da barra de navegação | 21×19px | **1.8px** (unificado — era 1.7) |
+| `barra-novo.svg` | Item central "+" da barra de navegação | 26×26px | 2.8px — maior, isolado no círculo, sem mudança |
+| `barra-cobrancas.svg` | Item "Cobranças" da barra de navegação | 20×19px | **1.8px** (unificado — era 1.7) |
+| `barra-mais.svg` | Item "Mais" da barra de navegação | 20×19px | **1.8px** (unificado) |
+
+---
+
+## Impresso — só o documento A4
+
+**Estas medidas valem exclusivamente para o relatório impresso**
+(`DocumentoA4`). Não são exceções à folha de estilo: são um contexto
+diferente. O A4 é papel, sai da impressora comum do cliente e precisa ser
+legível em preto e branco. Nada abaixo se aplica a tela; nada da escala de
+tela se aplica ao impresso.
+
+### Página
+| Medida | Valor |
+|---|---|
+| Formato | A4 retrato — `794 × 1123px` a 96 dpi (210 × 297 mm) |
+| Margens | `64px` topo/rodapé (≈17 mm) · `56px` laterais (≈15 mm) |
+| Área útil | `682px` (≈180 mm) |
+| Fundo | **`#FFFFFF` puro** — exclusivo do impresso; o app usa `#FAF8F4` |
+| Exibição no app | A4 em `scale(0.466)` → `370 × 523px`, página inteira visível |
+
+### Espaçamento (referência em milímetro, não na escala de 4)
+`22px` entre blocos do cabeçalho · `26px` antes da tabela · `13px` de padding
+vertical por linha de frete · `20–22px` acima do total e do bloco de cobrança.
+
+### Tipografia do impresso
+| Nível | Valor |
+|---|---|
+| Razão social | `21px/700`, `wdth 96%` (≈16 pt) |
+| Dados da empresa | `12px/400` (≈9 pt) |
+| Título do documento | `13px/700`, `ls .16em`, maiúsculas |
+| Nome do cliente | `22px/700`, `wdth 96%` |
+| Rótulo de coluna e de bloco | `11px/700`, `ls .14–.16em`, maiúsculas |
+| Corpo da tabela | `14–15px/500` (≈11 pt) |
+| Total | `34px/800`, `wdth 94%`, tabular |
+| Vencimento | `22px/700` |
+| Chave Pix | Azeret Mono `15px/600` dentro de fio de `1.5px` |
+| Nota de pé | `11px/400` · marca FretiGate `10px/500`, `ls .14em`, `#A8AFA9` |
+
+### Colunas da tabela
+| Coluna | Largura | Tratamento |
+|---|---|---|
+| Data | `86px` | Azeret Mono `14px/500` |
+| Rota | flexível (≈306px) | `15px/500` |
+| Carga | `170px` | `14px/400` em `#3C443E` |
+| Valor | `120px` | alinhado à direita, `15px/600`, tabular |
+
+### Fios de separação
+O app não tem borda nenhuma — separa por fundo. **No impresso é o contrário**,
+porque fundo colorido não sobrevive à impressão em preto e branco:
+
+| Fio | Valor | Onde |
+|---|---|---|
+| Forte | `1.5px solid #141A17` | Abaixo do cabeçalho, topo e base da tabela, acima do bloco de cobrança |
+| De linha | `1px solid rgba(20,26,23,.16)` | Entre fretes |
+| Moldura | `1.5px solid #141A17`, sem preenchimento | Chave Pix e o círculo de iniciais |
+
+Nenhum bloco de cor, nenhuma sombra, nenhum raio de canto no impresso.
+
+**Correção nos arquivos.** A versão anterior envolvia os traçados num
+`<g transform="translate(...) scale(...)">`, então a espessura real
+renderizada era `scale × stroke-width` — diferente do valor escrito no
+próprio atributo. Reexportado: o transform foi incorporado nas coordenadas
+de cada traçado (path/circle recalculados ponto a ponto), sem nenhum
+`transform` no arquivo final, e `stroke-width` já é o valor visual correto
+— o que está escrito é exatamente o que renderiza.
+
+Os quatro ícones da barra de navegação (Início · Fretes · Cobranças · Mais)
+saíam em 1.8 / 1.7 / 1.7 / 1.8 lado a lado no mesmo tamanho — agora todos em
+**1.8px**. O "+" central manteve 2.8px por ser maior e isolado no círculo.
+
+**Não existe mais ícone de microfone** — o botão "Ditar" foi removido do
+Lançar frete a pedido, sem substituto. Se voltar, desenhar como 13º arquivo
+seguindo a mesma convenção.
+
+Cor do traço: sempre herdada do texto do botão via `currentColor` — nunca uma
+cor de ícone independente. Alinhamento sempre `align-items:center` com o
+rótulo; gap `7px` (ícone ≤14px ao lado de texto) ou `10px` (ícone >17px).

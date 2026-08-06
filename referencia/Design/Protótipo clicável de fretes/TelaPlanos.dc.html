@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+@keyframes fg-spin{to{transform:rotate(360deg)}}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+    <button onClick="{{ voltar }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+      <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+    <span style="flex:1;min-width:0;font:700 20px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.01em;color:#3C443E">{{ titulo }}</span>
+  </div>
+
+  <sc-if value="{{ ehPlanos }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;min-height:0;overflow:auto;padding:14px 16px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:10px">
+      <span style="padding:0 4px 8px;font:500 15px/1.5 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">Um plano só, com tudo liberado: frota inteira, relatório, cobrança e o segundo acesso pro administrativo.</span>
+
+      <div style="display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:28px;background:#141A17">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.45)">ANUAL</span>
+          <span style="display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;background:#F4B723;font:700 10px/1 Archivo,sans-serif;letter-spacing:.1em;color:#141A17">2 MESES GRÁTIS</span>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font:700 20px/1 Archivo,sans-serif;color:rgba(255,255,255,.45)">R$</span>
+          <span style="font:800 46px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;color:#fff;font-variant-numeric:tabular-nums">990</span>
+          <span style="font:600 15px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">por ano</span>
+        </div>
+        <span style="font:600 14px/1.4 Archivo,sans-serif;color:#7FCB9B">12x de R$ 82,50 no cartão</span>
+        <span style="font:500 13px/1.45 Archivo,sans-serif;color:rgba(255,255,255,.5);text-wrap:pretty">No mensal daria R$ 1.788 no ano. Você economiza R$ 798 — dois meses de assinatura.</span>
+        <button onClick="{{ assinarAnual }}" style="flex:none;height:60px;margin-top:6px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Assinar o anual</button>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;padding:20px;border-radius:28px;background:#F0EDE6">
+        <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">MENSAL</span>
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font:700 17px/1 Archivo,sans-serif;color:#6E7770">R$</span>
+          <span style="font:800 34px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;font-variant-numeric:tabular-nums">149</span>
+          <span style="font:600 14px/1 Archivo,sans-serif;color:#6E7770">por mês</span>
+        </div>
+        <span style="font:500 13px/1.45 Archivo,sans-serif;color:#6E7770;text-wrap:pretty">Mesmas funções do anual. Cancela quando quiser, sem multa.</span>
+        <button onClick="{{ assinarMensal }}" style="flex:none;height:52px;margin-top:4px;border:none;border-radius:999px;background:#FAF8F4;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#141A17" style-active="background:#E4E0D6">Assinar o mensal</button>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">
+        <span style="padding:0 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">OS DOIS INCLUEM</span>
+        <sc-for list="{{ inclui }}" as="i" hint-placeholder-count="5">
+          <div style="display:flex;align-items:flex-start;gap:12px;padding:13px 18px;border-radius:14px;background:#F0EDE6">
+            <svg width="15" height="12" viewBox="0 0 19 15" fill="none" style="flex:none;margin-top:3px"><path d="M1.6 7.6 6.9 12.9 17.4 2.2" stroke="#1B6B3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <span style="flex:1;min-width:0;font:600 14.5px/1.4 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">{{ i }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehAssinatura }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;min-height:0;overflow:auto;padding:14px 16px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;flex-direction:column;gap:10px;padding:20px;border-radius:28px;background:#141A17">
+        <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.45)">SEU PLANO</span>
+        <span style="font:800 30px/1.1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.02em;color:#fff">{{ assinatura.plano }}</span>
+        <span style="font:600 14px/1.4 Archivo,sans-serif;color:#7FCB9B">{{ assinatura.status }}</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:4px;margin-top:18px">
+        <sc-for list="{{ assinatura.linhas }}" as="l" hint-placeholder-count="3">
+          <div style="display:flex;align-items:flex-start;gap:12px;min-height:56px;padding:14px 18px;border-radius:14px;background:#F0EDE6">
+            <span style="flex:none;width:110px;padding-top:2px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ l.rotulo }}</span>
+            <span style="flex:1;min-width:0;overflow-wrap:anywhere;font:600 16px/1.35 Archivo,sans-serif">{{ l.valor }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:26px">
+        <button onClick="{{ assinatura.trocar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">{{ assinatura.labelTrocar }}</button>
+        <button onClick="{{ assinatura.trocarCartao }}" style="flex:none;height:52px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#141A17" style-active="background:#E4E0D6">Trocar forma de pagamento</button>
+        <button onClick="{{ assinatura.cancelar }}" style="flex:none;height:44px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#B3401A" style-active="color:#8A3314">Cancelar assinatura</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehLimite }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;min-height:0;overflow:auto;padding:14px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:14px">
+      <span style="font:800 26px/1.2 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.015em;text-wrap:pretty">O gratuito vai até um caminhão.</span>
+      <span style="font:500 15px/1.5 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">Você está cadastrando o segundo. <strong>Nada do que já existe foi bloqueado</strong> — seus fretes, clientes e relatórios continuam funcionando igual.</span>
+      <span style="font:500 15px/1.5 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">Assinando, o que muda é isto:</span>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ limite }}" as="l" hint-placeholder-count="4">
+          <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+            <svg width="15" height="12" viewBox="0 0 19 15" fill="none" style="flex:none;margin-top:4px"><path d="M1.6 7.6 6.9 12.9 17.4 2.2" stroke="#1B6B3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <span style="flex:1;min-width:0;font:600 14.5px/1.4 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">{{ l }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+        <button onClick="{{ verPlanos }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Ver os planos</button>
+        <button onClick="{{ voltar }}" style="flex:none;height:44px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#6E7770" style-active="color:#141A17">Continuar com um caminhão</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehVencida }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;min-height:0;overflow:auto;padding:14px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;flex-direction:column;gap:8px;padding:18px;border-radius:22px;background:#F6E6DD">
+        <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#B3401A">ASSINATURA VENCIDA</span>
+        <span style="font:700 16.5px/1.3 Archivo,sans-serif;color:#B3401A;text-wrap:pretty">A cobrança de 12/08 não passou no cartão.</span>
+        <span style="font:500 13px/1.45 Archivo,sans-serif;color:#8A5237;text-wrap:pretty">Tentamos três vezes. Nada foi apagado.</span>
+      </div>
+
+      <span style="font:500 15px/1.5 Archivo,sans-serif;color:#3C443E;text-wrap:pretty"><strong>Seus dados continuam aqui.</strong> Você segue vendo tudo e pode baixar os relatórios — só não dá pra lançar coisa nova enquanto a assinatura não voltar.</span>
+
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="padding:8px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">O QUE DÁ E O QUE NÃO DÁ</span>
+        <sc-for list="{{ vencida }}" as="v" hint-placeholder-count="4">
+          <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+            <sc-if value="{{ v.pode }}" hint-placeholder-val="{{ true }}">
+              <svg width="15" height="12" viewBox="0 0 19 15" fill="none" style="flex:none;margin-top:4px"><path d="M1.6 7.6 6.9 12.9 17.4 2.2" stroke="#1B6B3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </sc-if>
+            <sc-if value="{{ v.naoPode }}" hint-placeholder-val="{{ false }}">
+              <svg width="13" height="13" viewBox="0 0 12 12" fill="none" style="flex:none;margin-top:4px"><path d="M1.6 1.6l8.8 8.8M10.4 1.6l-8.8 8.8" stroke="#B3401A" stroke-width="2" stroke-linecap="round"></path></svg>
+            </sc-if>
+            <span style="flex:1;min-width:0;font:600 14.5px/1.4 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">{{ v.texto }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+        <button onClick="{{ regularizar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Atualizar o cartão</button>
+        <button onClick="{{ baixarTudo }}" style="flex:none;height:52px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#141A17" style-active="background:#E4E0D6">Baixar meus relatórios</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ temAviso }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(112px, calc(env(safe-area-inset-bottom) + 106px));z-index:70">
+      <dc-import name="AvisoSistema" texto="{{ aviso }}" hint-size="100%,74px"></dc-import>
+    </div>
+  </sc-if>
+
+  <dc-import name="BarraFG" ativo="mais" onInicio="{{ onInicio }}" onFretes="{{ onFretes }}" onNovo="{{ onNovo }}" onCobrancas="{{ onCobrancas }}" onMais="{{ onMais }}" hint-size="100%,100px"></dc-import>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;estadoInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;planos&quot;,&quot;assinatura&quot;,&quot;limite&quot;,&quot;vencida&quot;],&quot;default&quot;:&quot;planos&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;planoAtual&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;anual&quot;,&quot;mensal&quot;],&quot;default&quot;:&quot;anual&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;onPlanos&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onVoltar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onInicio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onFretes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onNovo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onCobrancas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMais&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const INCLUI = [
+  'Caminhões, motoristas e clientes sem limite de quantidade',
+  'Relatório em PDF com a sua logo e a sua chave Pix',
+  'Cobrança pelo WhatsApp com o texto pronto',
+  'Segundo acesso pro administrativo, sem custo a mais',
+  'Importar os fretes que você já tem no WhatsApp ou no caderno',
+];
+const LIMITE = [
+  'Cadastrar a frota inteira, não só um caminhão',
+  'Dar acesso pra quem cuida da cobrança',
+  'Gerar relatório com a sua logo, sem marca do FretiGate',
+  'Importar os fretes antigos de uma vez',
+];
+const VENCIDA = [
+  { texto: 'Ver todos os fretes, clientes e cobranças', pode: true, naoPode: false },
+  { texto: 'Baixar e mandar os relatórios que já existem', pode: true, naoPode: false },
+  { texto: 'Lançar frete novo, despesa ou cobrança', pode: false, naoPode: true },
+  { texto: 'Gerar relatório novo', pode: false, naoPode: true },
+];
+
+class Component extends DCLogic {
+  state = { aviso: null };
+
+  avisar(txt) {
+    this.setState({ aviso: txt });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ aviso: null }), 6000);
+  }
+
+  renderVals() {
+    const t = this.props.estadoInicial || 'planos';
+    const anual = this.props.planoAtual !== 'mensal';
+    const nada = () => { };
+    const titulos = { planos: 'Planos', assinatura: 'Minha assinatura', limite: 'Assinar o FretiGate', vencida: 'Minha assinatura' };
+    return {
+      titulo: titulos[t],
+      ehPlanos: t === 'planos',
+      ehAssinatura: t === 'assinatura',
+      ehLimite: t === 'limite',
+      ehVencida: t === 'vencida',
+      inclui: INCLUI,
+      limite: LIMITE,
+      vencida: VENCIDA,
+      assinarAnual: () => this.avisar('Abre o pagamento do plano anual — R$ 990 ou 12x de R$ 82,50.'),
+      assinarMensal: () => this.avisar('Abre o pagamento do plano mensal — R$ 149/mês.'),
+      assinatura: {
+        plano: anual ? 'Anual' : 'Mensal',
+        status: anual ? 'Ativo · renova 12/09/2027' : 'Ativo · renova 12/09/2026',
+        linhas: [
+          { rotulo: 'VALOR', valor: anual ? 'R$ 990,00 por ano · 12x de R$ 82,50' : 'R$ 149,00 por mês' },
+          { rotulo: 'PRÓXIMA COBRANÇA', valor: anual ? '12/09/2027' : '12/09/2026' },
+          { rotulo: 'PAGAMENTO', valor: 'Cartão Mastercard •••• 4408' },
+          { rotulo: 'ACESSOS', valor: 'Antônio e Fátima' },
+        ],
+        labelTrocar: anual ? 'Trocar para o mensal' : 'Trocar para o anual e economizar R$ 798',
+        trocar: () => this.avisar(anual ? 'Abre a troca para o mensal.' : 'Abre a troca para o anual.'),
+        trocarCartao: () => this.avisar('Abre a troca de cartão.'),
+        cancelar: () => this.avisar('Cancelar mantém o acesso até o fim do período pago.'),
+      },
+      verPlanos: this.props.onPlanos || (() => this.avisar('Abre os planos.')),
+      regularizar: () => this.avisar('Abre a atualização do cartão.'),
+      baixarTudo: () => this.avisar('Baixa todos os relatórios já gerados em PDF.'),
+      temAviso: !!this.state.aviso,
+      aviso: this.state.aviso,
+      voltar: this.props.onVoltar || nada,
+      onInicio: this.props.onInicio || nada,
+      onFretes: this.props.onFretes || nada,
+      onNovo: this.props.onNovo || nada,
+      onCobrancas: this.props.onCobrancas || nada,
+      onMais: this.props.onMais || nada,
+    };
+  }
+}
+</script>
+</body>
+</html>

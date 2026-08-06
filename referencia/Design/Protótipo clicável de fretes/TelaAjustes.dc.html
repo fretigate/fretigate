@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+@keyframes fg-spin{to{transform:rotate(360deg)}}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+    <button onClick="{{ voltar }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+      <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+    <span style="flex:1;min-width:0;font:700 20px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.01em;color:#3C443E">{{ titulo }}</span>
+  </div>
+
+  <sc-if value="{{ ehConfig }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;min-height:0;overflow:auto;padding:14px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+      <span style="padding:0 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">OPERAÇÃO</span>
+      <div style="flex:none;display:flex;flex-direction:column;gap:8px;min-height:78px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+        <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">ENDEREÇO PADRÃO DO PÁTIO</span>
+        <input value="{{ patio }}" onChange="{{ setPatio }}" placeholder="Onde os fretes costumam sair" style="width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;border:none;outline:none;background:none;font:600 17px/1.3 Archivo,sans-serif;color:#141A17"></input>
+        <span style="font:500 12.5px/1.4 Archivo,sans-serif;color:#6E7770">Entra preenchido na origem de todo frete novo, editável num toque.</span>
+      </div>
+      <div style="flex:none;display:flex;flex-direction:column;gap:8px;min-height:78px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+        <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">PRAZO PADRÃO DE VENCIMENTO</span>
+        <input value="{{ prazo }}" onChange="{{ setPrazo }}" placeholder="15 dias" style="width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;border:none;outline:none;background:none;font:600 17px/1.3 Archivo,sans-serif;color:#141A17"></input>
+        <span style="font:500 12.5px/1.4 Archivo,sans-serif;color:#6E7770">Vale para o cliente que não tem prazo próprio no cadastro.</span>
+      </div>
+      <span style="padding:20px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">MENSAGENS</span>
+      <button onClick="{{ irModeloCobranca }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:14px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+          <span style="font:700 16.5px/1.2 Archivo,sans-serif">Modelo de cobrança</span>
+          <span style="font:400 12px/1.3 Archivo,sans-serif;color:#6E7770">O texto que abre na conversa com o cliente</span>
+        </span>
+        <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+      <button onClick="{{ irModeloOrdem }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:14px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+          <span style="font:700 16.5px/1.2 Archivo,sans-serif">Modelo de ordem de serviço</span>
+          <span style="font:400 12px/1.3 Archivo,sans-serif;color:#6E7770">O texto que vai pro motorista, sem o valor</span>
+        </span>
+        <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:24px">
+        <sc-if value="{{ salvando }}" hint-placeholder-val="{{ false }}">
+          <button disabled="disabled" style="flex:none;display:flex;align-items:center;justify-content:center;gap:10px;height:60px;border:none;border-radius:999px;background:#1B6B3A;font:700 17px/1 Archivo,sans-serif;color:#fff;cursor:wait">
+            <span style="display:inline-block;width:17px;height:17px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:999px;animation:fg-spin .7s linear infinite"></span>
+            Salvar configurações
+          </button>
+        </sc-if>
+        <sc-if value="{{ podeSalvar }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ salvar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Salvar configurações</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehConta }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;min-height:0;overflow:auto;padding:14px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:center;gap:14px;padding:18px;border-radius:22px;background:#F0EDE6">
+        <span style="flex:none;display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:999px;background:#1B6B3A;font:700 17px/1 Archivo,sans-serif;letter-spacing:.02em;color:#fff">{{ iniciais }}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+          <span style="font:700 15px/1.25 Archivo,sans-serif;text-wrap:pretty">Sem logo cadastrada</span>
+          <span style="font:400 12.5px/1.35 Archivo,sans-serif;color:#6E7770;text-wrap:pretty">O relatório usa as iniciais. Nunca a marca do FretiGate.</span>
+        </span>
+        <button onClick="{{ subirLogo }}" style="flex:none;display:flex;align-items:center;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 12.5px/1 Archivo,sans-serif" style-active="background:#D0E1D7">Subir</button>
+      </div>
+
+      <span style="padding:20px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">DADOS DA TRANSPORTADORA</span>
+      <sc-for list="{{ campos }}" as="c" hint-placeholder-count="5">
+        <div style="flex:none;display:flex;flex-direction:column;gap:8px;min-height:78px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+          <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ c.rotulo }}</span>
+          <input value="{{ c.valor }}" onChange="{{ c.set }}" placeholder="{{ c.dica }}" style="width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;border:none;outline:none;background:none;font:600 17px/1.3 Archivo,sans-serif;color:#141A17"></input>
+        </div>
+      </sc-for>
+
+      <span style="padding:20px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">PARA RECEBER</span>
+      <sc-for list="{{ camposPix }}" as="c" hint-placeholder-count="3">
+        <div style="flex:none;display:flex;flex-direction:column;gap:8px;min-height:78px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+          <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ c.rotulo }}</span>
+          <input value="{{ c.valor }}" onChange="{{ c.set }}" placeholder="{{ c.dica }}" style="width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;border:none;outline:none;background:none;font:600 17px/1.3 Archivo,sans-serif;color:#141A17"></input>
+        </div>
+      </sc-for>
+
+      <span style="padding:22px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">É ASSIM QUE O CLIENTE VÊ</span>
+      <span style="padding:0 4px 10px;font:500 12.5px/1.45 Archivo,sans-serif;color:#6E7770;text-wrap:pretty">Esses dados saem impressos no cabeçalho e no rodapé do relatório que você manda pro seu cliente.</span>
+      <div style="padding:18px 20px;border-radius:18px;background:#fff;display:flex;align-items:flex-start;gap:14px">
+        <span style="flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:6px;background:#1B6B3A;font:700 14px/1 Archivo,sans-serif;color:#fff">{{ iniciais }}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+          <span style="font:800 15px/1.2 Archivo,sans-serif;font-stretch:96%;color:#000">{{ previa.razao }}</span>
+          <span style="font:400 10.5px/1.45 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">{{ previa.linha1 }}</span>
+          <span style="font:400 10.5px/1.45 Archivo,sans-serif;color:#3C443E">{{ previa.linha2 }}</span>
+          <span style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(0,0,0,.14);font:700 9.5px/1 Archivo,sans-serif;letter-spacing:.12em;color:#3C443E">RELATÓRIO DE SERVIÇOS Nº {{ previa.numero }}</span>
+        </span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:24px">
+        <sc-if value="{{ salvando }}" hint-placeholder-val="{{ false }}">
+          <button disabled="disabled" style="flex:none;display:flex;align-items:center;justify-content:center;gap:10px;height:60px;border:none;border-radius:999px;background:#1B6B3A;font:700 17px/1 Archivo,sans-serif;color:#fff;cursor:wait">
+            <span style="display:inline-block;width:17px;height:17px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:999px;animation:fg-spin .7s linear infinite"></span>
+            Salvar dados da empresa
+          </button>
+        </sc-if>
+        <sc-if value="{{ podeSalvar }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ salvar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Salvar dados da empresa</button>
+        </sc-if>
+        <button onClick="{{ irAssinatura }}" style="width:100%;height:52px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#141A17" style-active="background:#E4E0D6">Minha assinatura</button>
+        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:8px">
+          <button onClick="{{ irTermos }}" style="flex:none;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 12.5px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">Termos de uso</button>
+          <button onClick="{{ irPrivacidade }}" style="flex:none;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 12.5px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">Política de privacidade</button>
+        </div>
+        <button onClick="{{ sair }}" style="flex:none;height:44px;margin-top:8px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#B3401A" style-active="color:#8A3314">Sair da conta</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ temAviso }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(112px, calc(env(safe-area-inset-bottom) + 106px));z-index:70">
+      <dc-import name="AvisoSistema" texto="{{ aviso }}" hint-size="100%,74px"></dc-import>
+    </div>
+  </sc-if>
+
+  <dc-import name="BarraFG" ativo="mais" onInicio="{{ onInicio }}" onFretes="{{ onFretes }}" onNovo="{{ onNovo }}" onCobrancas="{{ onCobrancas }}" onMais="{{ onMais }}" hint-size="100%,100px"></dc-import>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;estadoInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;config&quot;,&quot;conta&quot;],&quot;default&quot;:&quot;config&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;onModeloCobranca&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onModeloOrdem&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onAssinatura&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onVoltar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onInicio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onFretes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onNovo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onCobrancas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMais&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  state = {
+    patio: 'Pátio AP — Av. Dom José, 1240, Sobral/CE',
+    prazo: '15 dias',
+    numero: '0143',
+    razao: 'AP Transportes Rodoviários Ltda',
+    cnpj: '12.345.678/0001-90',
+    endereco: 'Av. Dom José, 1240 — Centro, Sobral/CE',
+    tel: '(88) 99612-4400',
+    email: 'financeiro@aptransportes.com.br',
+    pix: '12.345.678/0001-90',
+    banco: 'Banco do Nordeste · Ag. 0142 · C/C 88.421-0',
+    titular: 'AP Transportes Rodoviários Ltda',
+    salvando: false, aviso: null,
+  };
+
+  avisar(txt) {
+    this.setState({ aviso: txt });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ aviso: null }), 6000);
+  }
+
+  salvarAgora(msg) {
+    if (this.state.salvando) return;
+    this.setState({ salvando: true });
+    setTimeout(() => { this.setState({ salvando: false }); this.avisar(msg); }, 1200);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const set = k => e => this.setState({ [k]: e.target.value });
+    const ehConta = this.props.estadoInicial === 'conta';
+    const palavras = s.razao.trim().split(/\s+/);
+    const nada = () => { };
+    return {
+      titulo: ehConta ? 'Conta da empresa' : 'Configurações',
+      ehConfig: !ehConta,
+      ehConta,
+      patio: s.patio, setPatio: set('patio'),
+      prazo: s.prazo, setPrazo: set('prazo'),
+      numero: s.numero, setNumero: set('numero'),
+      notaNumero: 'O próximo relatório sai como nº ' + s.numero + '. Serve para continuar a numeração que você já usava no Canva.',
+      iniciais: palavras.slice(0, 2).map(w => w[0]).join('').toUpperCase(),
+      subirLogo: () => this.avisar('Escolher a logo da galeria.'),
+      campos: [
+        { rotulo: 'RAZÃO SOCIAL', valor: s.razao, dica: 'Nome que sai no documento', set: set('razao') },
+        { rotulo: 'CNPJ', valor: s.cnpj, dica: 'Só números', set: set('cnpj') },
+        { rotulo: 'ENDEREÇO', valor: s.endereco, dica: 'Rua, número, cidade', set: set('endereco') },
+        { rotulo: 'TELEFONE', valor: s.tel, dica: 'Com DDD', set: set('tel') },
+        { rotulo: 'E-MAIL', valor: s.email, dica: 'Para o cliente responder', set: set('email') },
+      ],
+      camposPix: [
+        { rotulo: 'CHAVE PIX', valor: s.pix, dica: 'CNPJ, telefone ou e-mail', set: set('pix') },
+        { rotulo: 'TITULAR', valor: s.titular, dica: 'Quem recebe', set: set('titular') },
+        { rotulo: 'BANCO', valor: s.banco, dica: 'Banco, agência e conta', set: set('banco') },
+      ],
+      previa: {
+        razao: s.razao,
+        linha1: 'CNPJ ' + s.cnpj + ' · ' + s.endereco,
+        linha2: s.tel + ' · ' + s.email,
+        numero: s.numero,
+      },
+      salvando: s.salvando,
+      podeSalvar: !s.salvando,
+      salvar: () => this.salvarAgora(ehConta ? 'Dados salvos. Já valem no próximo relatório.' : 'Configurações salvas.'),
+      irModeloCobranca: this.props.onModeloCobranca || nada,
+      irModeloOrdem: this.props.onModeloOrdem || nada,
+      irAssinatura: this.props.onAssinatura || nada,
+      irUsuarios: this.props.onUsuarios || (() => this.avisar('Abre Usuários: quem tem acesso a esta conta.')),
+      irTermos: () => { if (this.props.onTermos) this.props.onTermos('termos'); else this.avisar('Abre os termos de uso.'); },
+      irPrivacidade: () => { if (this.props.onTermos) this.props.onTermos('privacidade'); else this.avisar('Abre a política de privacidade.'); },
+      sair: () => this.avisar('Sai da conta. Os dados ficam guardados no servidor.'),
+      temAviso: !!s.aviso,
+      aviso: s.aviso,
+      voltar: this.props.onVoltar || nada,
+      onInicio: this.props.onInicio || nada,
+      onFretes: this.props.onFretes || nada,
+      onNovo: this.props.onNovo || nada,
+      onCobrancas: this.props.onCobrancas || nada,
+      onMais: this.props.onMais || nada,
+    };
+  }
+}
+</script>
+</body>
+</html>

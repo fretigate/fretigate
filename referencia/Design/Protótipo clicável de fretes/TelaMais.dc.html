@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <div style="flex:1;min-height:0;overflow:auto;padding:66px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+
+    <button onClick="{{ abrirConta }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;padding:18px;border:none;border-radius:22px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <span style="flex:none;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:999px;background:#1B6B3A;font:700 15px/1 Archivo,sans-serif;letter-spacing:.02em;color:#fff">{{ iniciais }}</span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:800 19px/1.15 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.01em">{{ empresa }}</span>
+        <span style="font:500 13px/1.3 Archivo,sans-serif;color:#6E7770">{{ planoTexto }}</span>
+      </span>
+      <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+
+    <sc-if value="{{ ehGratuito }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ assinar }}" style="flex:none;align-self:flex-start;display:flex;align-items:center;height:38px;margin:6px 0 2px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 12.5px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">Assinar e liberar a frota</button>
+    </sc-if>
+
+    <span style="padding:22px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">CADASTROS</span>
+
+    <button onClick="{{ irClientes }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:14px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex:none"><circle cx="7.6" cy="6.4" r="3.2" stroke="#141A17" stroke-width="1.8"></circle><path d="M2 16.4c.6-2.8 2.9-4.4 5.6-4.4s5 1.6 5.6 4.4M13.4 3.6a3.2 3.2 0 0 1 0 5.6M15.2 12.4c1.6.7 2.6 2.1 2.9 4" stroke="#141A17" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+        <span style="font:700 16.5px/1.2 Archivo,sans-serif">Clientes</span>
+        <span style="font:400 12px/1.3 Archivo,sans-serif;color:#6E7770">{{ subClientes }}</span>
+      </span>
+      <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+
+    <button onClick="{{ irCaminhoes }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:14px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <svg width="21" height="19" viewBox="0 0 22 20" fill="none" style="flex:none"><path d="M1.6 4.2h11.2v9.4H1.6zM12.8 7.4h4l3.6 3.4v2.8h-7.6z" stroke="#141A17" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="5.8" cy="15.8" r="2" stroke="#141A17" stroke-width="1.8"></circle><circle cx="16.2" cy="15.8" r="2" stroke="#141A17" stroke-width="1.8"></circle></svg>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+        <span style="font:700 16.5px/1.2 Archivo,sans-serif">Caminhões</span>
+        <span style="font:400 12px/1.3 Archivo,sans-serif;color:#6E7770">{{ subCaminhoes }}</span>
+      </span>
+      <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+
+    <button onClick="{{ irMotoristas }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:14px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex:none"><circle cx="10" cy="6" r="3.4" stroke="#141A17" stroke-width="1.8"></circle><path d="M3.8 17c.5-3.2 3-5 6.2-5s5.7 1.8 6.2 5" stroke="#141A17" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+        <span style="font:700 16.5px/1.2 Archivo,sans-serif">Motoristas</span>
+        <span style="font:400 12px/1.3 Archivo,sans-serif;color:#6E7770">{{ subMotoristas }}</span>
+      </span>
+      <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+
+    <span style="padding:22px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">FERRAMENTAS</span>
+
+    <button onClick="{{ irRelatorio }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:14px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <svg width="20" height="19" viewBox="0 0 20 20" fill="none" style="flex:none"><path d="M2.4 3.6h15.2v10.2a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V3.6Z" stroke="#141A17" stroke-width="1.8" stroke-linejoin="round"></path><path d="M5.6 7h8.8M5.6 10.4h5" stroke="#141A17" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+        <span style="font:700 16.5px/1.2 Archivo,sans-serif">Relatório do cliente</span>
+        <span style="font:400 12px/1.3 Archivo,sans-serif;color:#6E7770">{{ subRelatorio }}</span>
+      </span>
+      <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+
+    <button onClick="{{ irDespesas }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:14px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex:none"><path d="M10 2.6v14.8M6.4 5.8h5.4a2.4 2.4 0 0 1 0 4.8H8.2a2.4 2.4 0 0 0 0 4.8h5.4" stroke="#141A17" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+        <span style="font:700 16.5px/1.2 Archivo,sans-serif">Despesas</span>
+        <span style="font:400 12px/1.3 Archivo,sans-serif;color:#6E7770">{{ subDespesas }}</span>
+      </span>
+      <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+
+    <button onClick="{{ irImportar }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:14px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex:none"><path d="M10 2.6v9.8M6.1 8.5 10 12.4l3.9-3.9M3 15.4v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1" stroke="#141A17" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span style="flex:1;min-width:0;font:700 16.5px/1.2 Archivo,sans-serif">Importar fretes</span>
+      <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+
+    <span style="padding:22px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">AJUSTES</span>
+
+    <button onClick="{{ irNovidades }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:14px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex:none"><path d="M3 6.6a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8.8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6.6Z" stroke="#141A17" stroke-width="1.8" stroke-linejoin="round"></path><path d="M6.2 9.4h7.6M6.2 12.6h4.4" stroke="#141A17" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+        <span style="font:700 16.5px/1.2 Archivo,sans-serif">Novidades</span>
+        <span style="font:400 12px/1.3 Archivo,sans-serif;color:#6E7770">{{ subNovidades }}</span>
+      </span>
+      <sc-if value="{{ temNaoLidas }}" hint-placeholder-val="{{ true }}">
+        <span style="flex:none;display:flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:#E4E9E5;font:700 12px/1 Archivo,sans-serif;color:#1B6B3A">{{ naoLidas }}</span>
+      </sc-if>
+      <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+
+    <button onClick="{{ irConfiguracoes }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:14px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex:none"><path d="M2.6 5.6h14.8M2.6 10h14.8M2.6 14.4h14.8" stroke="#141A17" stroke-width="1.8" stroke-linecap="round"></path><circle cx="7" cy="5.6" r="2" fill="#F0EDE6" stroke="#141A17" stroke-width="1.8"></circle><circle cx="13" cy="10" r="2" fill="#F0EDE6" stroke="#141A17" stroke-width="1.8"></circle><circle cx="7" cy="14.4" r="2" fill="#F0EDE6" stroke="#141A17" stroke-width="1.8"></circle></svg>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+        <span style="font:700 16.5px/1.2 Archivo,sans-serif">Configurações</span>
+        <span style="font:400 12px/1.3 Archivo,sans-serif;color:#6E7770">{{ subConfig }}</span>
+      </span>
+      <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+
+    <button onClick="{{ irUsuarios }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:14px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex:none"><circle cx="7.6" cy="6.4" r="3.2" stroke="#141A17" stroke-width="1.8"></circle><path d="M2 16.4c.6-2.8 2.9-4.4 5.6-4.4s5 1.6 5.6 4.4M13.4 3.6a3.2 3.2 0 0 1 0 5.6M15.2 12.4c1.6.7 2.6 2.1 2.9 4" stroke="#141A17" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+        <span style="font:700 16.5px/1.2 Archivo,sans-serif">Usuários</span>
+        <span style="font:400 12.5px/1.3 Archivo,sans-serif;color:#6E7770">{{ subUsuarios }}</span>
+      </span>
+      <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+
+    <button onClick="{{ abrirConta }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:14px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex:none"><path d="M2.6 8 10 2.6 17.4 8v9a.4.4 0 0 1-.4.4H3a.4.4 0 0 1-.4-.4V8Z" stroke="#141A17" stroke-width="1.8" stroke-linejoin="round"></path><path d="M7.6 17.4v-5.2h4.8v5.2" stroke="#141A17" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+        <span style="font:700 16.5px/1.2 Archivo,sans-serif">Conta da empresa</span>
+        <span style="font:400 12px/1.3 Archivo,sans-serif;color:#6E7770">{{ subConta }}</span>
+      </span>
+      <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+
+    <button onClick="{{ sair }}" style="flex:none;height:44px;margin-top:22px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#B3401A" style-active="color:#8A3314">Sair da conta</button>
+  </div>
+
+  <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(26px, calc(env(safe-area-inset-bottom) + 20px));z-index:40;display:flex;align-items:flex-end;height:57px;padding:0 4px;border-radius:999px;background:#141A17">
+    <button onClick="{{ onInicio }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="19" height="19" viewBox="0 0 20 20" fill="none"><path d="M2.6 8.4 10 2.4l7.4 6v8.2a1 1 0 0 1-1 1h-3.6v-5.2H7.2v5.2H3.6a1 1 0 0 1-1-1V8.4Z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+      <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Início</span>
+    </button>
+    <button onClick="{{ onFretes }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="21" height="19" viewBox="0 0 22 20" fill="none"><path d="M1.6 4.2h11.2v9.4H1.6zM12.8 7.4h4l3.6 3.4v2.8h-7.6z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="5.8" cy="15.8" r="2" stroke="rgba(255,255,255,.5)" stroke-width="1.8"></circle><circle cx="16.2" cy="15.8" r="2" stroke="rgba(255,255,255,.5)" stroke-width="1.8"></circle></svg>
+      <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Fretes</span>
+    </button>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px">
+      <button onClick="{{ onNovo }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin-top:-18px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer">
+        <svg width="24" height="24" viewBox="0 0 26 26" fill="none"><path d="M13 4.5v17M4.5 13h17" stroke="#fff" stroke-width="2.8" stroke-linecap="round"></path></svg>
+      </button>
+      <span style="font:700 10.5px/1 Archivo,sans-serif;color:#fff">Novo</span>
+    </div>
+    <button onClick="{{ onCobrancas }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="20" height="19" viewBox="0 0 20 20" fill="none"><path d="M2.4 3.6h15.2v10.2a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V3.6Z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path><path d="M5.6 7h8.8M5.6 10.4h5" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Cobranças</span>
+    </button>
+    <button onClick="{{ onMais }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="20" height="19" viewBox="0 0 20 20" fill="none"><path d="M3.4 6h13.2M3.4 10h13.2M3.4 14h8.4" stroke="#7FCB9B" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span style="font:700 10.5px/1 Archivo,sans-serif;color:#7FCB9B">Mais</span>
+    </button>
+  </div>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;plano&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;frota&quot;,&quot;gratuito&quot;],&quot;default&quot;:&quot;frota&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;empresa&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;AP Transportes&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Identidade&quot;},&quot;onConta&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onAssinar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onClientes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onCaminhoes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMotoristas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onRelatorio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onImportar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onConfiguracoes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onUsuarios&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onSair&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onInicio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onFretes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onNovo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onCobrancas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMais&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const empresa = this.props.empresa || 'AP Transportes';
+    const palavras = empresa.trim().split(/\s+/);
+    const sigla = palavras[0] && palavras[0] === palavras[0].toUpperCase() && palavras[0].length <= 3;
+    const gratuito = this.props.plano === 'gratuito';
+    const nada = () => { };
+    return {
+      empresa,
+      iniciais: (sigla ? palavras[0] : palavras.slice(0, 2).map(w => w[0]).join('')).toUpperCase(),
+      ehGratuito: gratuito,
+      planoTexto: gratuito ? 'Plano gratuito · 1 caminhão' : 'Plano frota · 7 caminhões · renova 12/09',
+      // subtítulo só onde há dado; os números vêm dos mesmos cadastros das outras telas
+      subClientes: '7 cadastrados · R$ 12.080 em aberto',
+      subCaminhoes: gratuito ? '1 de 1 usado no plano gratuito' : '7 cadastrados · 4 rodando hoje',
+      subMotoristas: '8 cadastrados',
+      subRelatorio: 'Agro Vale Verde tem 9 fretes de julho sem cobrança',
+      subDespesas: 'R$ 24.780 em agosto · alimenta o lucro',
+      irDespesas: this.props.onDespesas || nada,
+      subNovidades: 'Mensagens e ofertas do FretiGate',
+      naoLidas: String(this.props.naoLidas ?? 2),
+      temNaoLidas: (this.props.naoLidas ?? 2) > 0,
+      irNovidades: this.props.onNovidades || nada,
+      subConfig: 'Pátio, prazo padrão, numeração, modelos de mensagem',
+      subConta: 'Pix e dados que saem no relatório',
+      subUsuarios: '3 com acesso · 1 convite aguardando',
+      irUsuarios: this.props.onUsuarios || nada,
+      abrirConta: this.props.onConta || nada,
+      assinar: this.props.onAssinar || nada,
+      irClientes: this.props.onClientes || nada,
+      irCaminhoes: this.props.onCaminhoes || nada,
+      irMotoristas: this.props.onMotoristas || nada,
+      irRelatorio: this.props.onRelatorio || nada,
+      irImportar: this.props.onImportar || nada,
+      irConfiguracoes: this.props.onConfiguracoes || nada,
+      sair: this.props.onSair || nada,
+      onInicio: this.props.onInicio || nada,
+      onFretes: this.props.onFretes || nada,
+      onNovo: this.props.onNovo || nada,
+      onCobrancas: this.props.onCobrancas || nada,
+      onMais: this.props.onMais || nada,
+    };
+  }
+}
+</script>
+</body>
+</html>

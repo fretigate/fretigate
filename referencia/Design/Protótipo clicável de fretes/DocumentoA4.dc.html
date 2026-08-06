@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"></helmet>
+
+<div style="width:794px;height:1123px;box-sizing:border-box;padding:64px 56px;background:#fff;color:#141A17;font-family:Archivo,sans-serif;display:flex;flex-direction:column">
+
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:32px;padding-bottom:22px;border-bottom:1.5px solid #141A17">
+    <div style="display:flex;align-items:center;gap:14px;min-width:0">
+      <span style="display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:999px;border:1.5px solid #141A17;flex:none;font:700 16px/1 Archivo,sans-serif;letter-spacing:.02em">AP</span>
+      <div style="min-width:0;display:flex;flex-direction:column;gap:5px">
+        <span style="font:700 21px/1.15 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.01em">AP Transportes Rodoviários Ltda</span>
+        <span style="font:400 12px/1.45 Archivo,sans-serif;color:#3C443E">CNPJ 12.345.678/0001-90 · Av. Dom José, 1240 — Centro, Sobral/CE<br>(88) 99612-4400 · financeiro@aptransportes.com.br</span>
+      </div>
+    </div>
+    <div style="flex:none;text-align:right;display:flex;flex-direction:column;gap:6px">
+      <span style="font:700 13px/1 Archivo,sans-serif;letter-spacing:.16em">RELATÓRIO DE SERVIÇOS</span>
+      <span style="font:500 13px/1.4 'Azeret Mono',monospace;color:#3C443E">Nº {{ numero }}</span>
+      <span style="font:400 12px/1.4 Archivo,sans-serif;color:#3C443E">Emitido em {{ emissao }}</span>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:32px;padding:22px 0 26px">
+    <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+      <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#3C443E">CLIENTE</span>
+      <span style="font:700 22px/1.15 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.01em">{{ cliente }}</span>
+      <span style="font:400 13px/1.4 Archivo,sans-serif;color:#3C443E">{{ clienteDoc }}</span>
+    </div>
+    <div style="flex:none;text-align:right;display:flex;flex-direction:column;gap:6px">
+      <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#3C443E">PERÍODO</span>
+      <span style="font:600 15px/1.3 Archivo,sans-serif">{{ periodo }}</span>
+      <span style="font:400 13px/1.4 Archivo,sans-serif;color:#3C443E">{{ contagem }}</span>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column">
+    <div style="display:flex;gap:0;padding:0 0 9px;border-bottom:1.5px solid #141A17">
+      <span style="flex:none;width:86px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.14em;color:#3C443E">DATA</span>
+      <span style="flex:1;min-width:0;font:700 11px/1 Archivo,sans-serif;letter-spacing:.14em;color:#3C443E">ROTA</span>
+      <span style="flex:none;width:170px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.14em;color:#3C443E">CARGA</span>
+      <span style="flex:none;width:120px;text-align:right;font:700 11px/1 Archivo,sans-serif;letter-spacing:.14em;color:#3C443E">VALOR</span>
+    </div>
+    <sc-for list="{{ fretes }}" as="f" hint-placeholder-count="9">
+      <div style="display:flex;gap:0;align-items:baseline;padding:13px 0;border-bottom:1px solid rgba(20,26,23,.16)">
+        <span style="flex:none;width:86px;font:500 14px/1.3 'Azeret Mono',monospace">{{ f.data }}</span>
+        <span style="flex:1;min-width:0;font:500 15px/1.3 Archivo,sans-serif">{{ f.rota }}</span>
+        <span style="flex:none;width:170px;font:400 14px/1.3 Archivo,sans-serif;color:#3C443E">{{ f.carga }}</span>
+        <span style="flex:none;width:120px;text-align:right;font:600 15px/1.3 Archivo,sans-serif;font-variant-numeric:tabular-nums">{{ f.valor }}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display:flex;align-items:baseline;justify-content:flex-end;gap:20px;padding:22px 0 0;border-top:1.5px solid #141A17;margin-top:-1px">
+    <span style="font:700 13px/1 Archivo,sans-serif;letter-spacing:.16em">TOTAL DO PERÍODO</span>
+    <span style="font:800 34px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;font-variant-numeric:tabular-nums">{{ total }}</span>
+  </div>
+
+  <div style="flex:1"></div>
+
+  <sc-if value="{{ comCobranca }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;gap:40px;padding:22px 0 0;border-top:1.5px solid #141A17">
+      <div style="flex:none;display:flex;flex-direction:column;gap:7px">
+        <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#3C443E">VENCIMENTO</span>
+        <span style="font:700 22px/1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.01em">{{ vencimento }}</span>
+        <span style="font:400 12.5px/1.4 Archivo,sans-serif;color:#3C443E">Prazo acordado: {{ prazo }}</span>
+      </div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
+        <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#3C443E">PAGAMENTO VIA PIX</span>
+        <span style="display:inline-flex;align-self:flex-start;padding:9px 13px;border:1.5px solid #141A17;font:600 15px/1.2 'Azeret Mono',monospace;letter-spacing:.02em">12.345.678/0001-90</span>
+        <span style="font:400 12.5px/1.45 Archivo,sans-serif;color:#3C443E">Chave CNPJ · AP Transportes Rodoviários Ltda<br>Banco do Nordeste · Ag. 0142 · C/C 88.421-0</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:24px;padding-top:20px">
+    <span style="font:400 11px/1.4 Archivo,sans-serif;color:#6E7770">Documento emitido por AP Transportes Rodoviários Ltda · confira os valores e fale com a gente em caso de divergência.</span>
+    <span style="flex:none;font:500 10px/1 Archivo,sans-serif;letter-spacing:.14em;color:#A8AFA9">FRETIGATE</span>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:794,&quot;height&quot;:1123},&quot;comCobranca&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;numero&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;0142&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;cliente&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Agro Vale Verde Ltda&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;periodo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;1 a 31 de julho de 2026&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;vencimento&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;20/08/2026&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;emissao&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;clienteDoc&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;prazo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;fretes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;Array&lt;{data:string,rota:string,carga:string,valor:string}&gt;&quot;}}">
+const FRETES = [
+  { data: '02/07', rota: 'Sobral → Fortaleza/CE', carga: 'Ração ensacada', valor: '420,00' },
+  { data: '05/07', rota: 'Sobral → Teresina/PI', carga: 'Milho a granel', valor: '520,00' },
+  { data: '09/07', rota: 'Sobral → Fortaleza/CE', carga: 'Ração ensacada', valor: '380,00' },
+  { data: '12/07', rota: 'Sobral → Juazeiro do Norte/CE', carga: 'Ração ensacada', valor: '480,00' },
+  { data: '16/07', rota: 'Sobral → Teresina/PI', carga: 'Milho a granel', valor: '520,00' },
+  { data: '19/07', rota: 'Sobral → Fortaleza/CE', carga: 'Ração ensacada', valor: '380,00' },
+  { data: '23/07', rota: 'Sobral → Picos/PI', carga: 'Ração ensacada', valor: '420,00' },
+  { data: '26/07', rota: 'Sobral → Fortaleza/CE', carga: 'Ração ensacada', valor: '380,00' },
+  { data: '30/07', rota: 'Sobral → Teresina/PI', carga: 'Milho a granel', valor: '480,00' },
+];
+
+class Component extends DCLogic {
+  renderVals() {
+    const fretes = this.props.fretes || FRETES;
+    const soma = fretes.reduce((a, f) => a + Number(String(f.valor).replace('.', '').replace(',', '.')), 0);
+    return {
+      fretes,
+      numero: this.props.numero ?? '0142',
+      emissao: this.props.emissao ?? '5 de agosto de 2026',
+      cliente: this.props.cliente ?? 'Agro Vale Verde Ltda',
+      clienteDoc: this.props.clienteDoc ?? 'CNPJ 08.771.203/0001-44 · Sobral/CE',
+      periodo: this.props.periodo ?? '1 a 31 de julho de 2026',
+      contagem: fretes.length + (fretes.length === 1 ? ' frete' : ' fretes'),
+      total: 'R$ ' + soma.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      comCobranca: this.props.comCobranca ?? false,
+      vencimento: this.props.vencimento ?? '20/08/2026',
+      prazo: this.props.prazo ?? '15 dias após a emissão',
+    };
+  }
+}
+</script>
+</body>
+</html>

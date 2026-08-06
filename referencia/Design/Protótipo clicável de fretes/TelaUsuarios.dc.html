@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <sc-if value="{{ ehLista }}" hint-placeholder-val="{{ true }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ voltar }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 20px/1.15 Archivo,sans-serif;color:#3C443E">Usuários</span>
+        <button onClick="{{ convidar }}" style="flex:none;display:flex;align-items:center;height:40px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13px/1 Archivo,sans-serif" style-active="background:#D0E1D7">+ Convidar</button>
+      </div>
+
+      <div style="flex:none;padding:14px 20px 12px">
+        <span style="font:500 12px/1.5 Archivo,sans-serif;color:#6E7770">Quem tem acesso ao FretiGate da {{ empresa }}. Todo mundo vê os mesmos fretes e cobranças — o que muda é quem pode remover acesso.</span>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:0 16px 138px;display:flex;flex-direction:column;gap:6px">
+        <span style="padding:8px 6px 4px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">COM ACESSO</span>
+        <sc-for list="{{ ativos }}" as="u" hint-placeholder-count="3">
+          <button onClick="{{ u.abrir }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:72px;padding:14px 18px;border:none;border-radius:20px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+            <span style="flex:none;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:#E4E9E5;font:700 13px/1 Archivo,sans-serif;color:#1B6B3A">{{ u.iniciais }}</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 17px/1.15 Archivo,sans-serif">{{ u.nome }}</span>
+              <span style="font:400 12.5px/1.3 Archivo,sans-serif;color:#6E7770">{{ u.apoio }}</span>
+            </span>
+            <sc-if value="{{ u.ehDono }}" hint-placeholder-val="{{ false }}">
+              <span style="flex:none;font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.1em;color:#1B6B3A">DONO</span>
+            </sc-if>
+            <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+        </sc-for>
+
+        <sc-if value="{{ temPendentes }}" hint-placeholder-val="{{ true }}">
+          <span style="padding:20px 6px 4px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">CONVITE ENVIADO</span>
+          <sc-for list="{{ pendentes }}" as="u" hint-placeholder-count="1">
+            <div style="flex:none;display:flex;flex-direction:column;gap:12px;padding:14px 18px;border-radius:20px;background:#F0EDE6">
+              <div style="display:flex;align-items:center;gap:14px">
+                <span style="flex:none;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:#E4E0D6;font:700 13px/1 Archivo,sans-serif;color:#5C6660">{{ u.iniciais }}</span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                  <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 17px/1.15 Archivo,sans-serif;color:#3C443E">{{ u.nome }}</span>
+                  <span style="font:400 12.5px/1.3 Archivo,sans-serif;color:#6E7770">{{ u.apoio }}</span>
+                </span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button onClick="{{ u.reenviar }}" style="flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13.5px/1 Archivo,sans-serif" style-active="background:#D0E1D7">
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style="flex:none"><path d="M8 1.6a6.4 6.4 0 0 0-5.5 9.7L1.6 14.4l3.2-.9A6.4 6.4 0 1 0 8 1.6Z" stroke="#1B6B3A" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+                  Reenviar convite
+                </button>
+                <sc-if value="{{ ehDonoAtual }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ u.cancelar }}" style="flex:none;height:44px;padding:0 14px;border:none;border-radius:999px;background:#FAF8F4;cursor:pointer;font:600 13.5px/1 Archivo,sans-serif;color:#B3401A" style-active="color:#8A3314">Cancelar</button>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+
+          <button onClick="{{ verConviteDemo }}" style="flex:none;display:flex;align-items:center;gap:9px;width:100%;height:44px;margin-top:2px;padding:0 8px;border:none;background:none;cursor:pointer;text-align:left" style-active="opacity:.6">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style="flex:none"><circle cx="8" cy="8" r="6.4" stroke="#A8AFA9" stroke-width="1.5"></circle><path d="M8 7.2v4M8 4.9v.9" stroke="#A8AFA9" stroke-width="1.6" stroke-linecap="round"></path></svg>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 12.5px/1 Archivo,sans-serif;color:#6E7770">Ver o convite como ela recebe</span>
+            <svg width="7" height="12" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehConvite }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ voltarLista }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 20px/1.15 Archivo,sans-serif;color:#3C443E">Convidar alguém</span>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:16px 20px 138px;display:flex;flex-direction:column;gap:6px">
+        <span style="padding:0 4px 10px;font:500 14px/1.45 Archivo,sans-serif;color:#3C443E">O convite vai pelo WhatsApp, com um link. Quem abrir entra direto — não precisa criar senha nem baixar nada antes.</span>
+
+        <div style="flex:none;display:flex;flex-direction:column;gap:8px;min-height:78px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+          <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">NOME</span>
+          <input value="{{ form.nome }}" onChange="{{ form.setNome }}" placeholder="Como você chama essa pessoa" style="width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;border:none;outline:none;background:none;font:600 17px/1.3 Archivo,sans-serif;color:#141A17"></input>
+        </div>
+
+        <div style="flex:none;display:flex;flex-direction:column;gap:8px;min-height:78px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+          <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">WHATSAPP</span>
+          <input value="{{ form.tel }}" onChange="{{ form.setTel }}" placeholder="(88) 9 0000-0000" style="width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;border:none;outline:none;background:none;font:600 17px/1.3 Archivo,sans-serif;color:#141A17"></input>
+        </div>
+
+        <span style="padding:20px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">MENSAGEM QUE VAI</span>
+        <div style="flex:none;padding:16px 18px;border-radius:18px;background:#E4E9E5">
+          <span style="font:400 14.5px/1.55 Archivo,sans-serif;color:#22402F;white-space:pre-wrap">{{ form.previa }}</span>
+        </div>
+
+        <div style="flex:none;display:flex;flex-direction:column;gap:10px;margin-top:22px">
+          <sc-if value="{{ form.pode }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ form.enviar }}" style="flex:none;display:flex;align-items:center;justify-content:center;gap:10px;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1.6a6.4 6.4 0 0 0-5.5 9.7L1.6 14.4l3.2-.9A6.4 6.4 0 1 0 8 1.6Z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+              Enviar pelo WhatsApp
+            </button>
+          </sc-if>
+          <sc-if value="{{ form.bloqueado }}" hint-placeholder-val="{{ true }}">
+            <button disabled="disabled" style="flex:none;height:60px;border:none;border-radius:999px;background:#E4E0D6;color:#5C6660;font:700 17px/1 Archivo,sans-serif;cursor:not-allowed">Enviar pelo WhatsApp</button>
+          </sc-if>
+          <span style="padding:0 4px;font:500 12.5px/1.4 Archivo,sans-serif;color:#6E7770">O FretiGate não manda nada sozinho — abre a conversa com o texto pronto e quem envia é você.</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehDetalhe }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ voltarLista }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">USUÁRIO</span>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:12px 20px 138px">
+        <div style="font:800 26px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.015em">{{ detalhe.nome }}</div>
+        <div style="margin-top:8px;font:500 14px/1.4 Archivo,sans-serif;color:#6E7770">{{ detalhe.papel }}</div>
+
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:26px">
+          <span style="padding:0 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">ACESSO</span>
+          <sc-for list="{{ detalhe.linhas }}" as="l" hint-placeholder-count="3">
+            <div style="display:flex;align-items:flex-start;gap:12px;min-height:56px;padding:14px 18px;border-radius:14px;background:#F0EDE6">
+              <span style="flex:none;width:96px;padding-top:2px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ l.rotulo }}</span>
+              <span style="flex:1;min-width:0;overflow-wrap:anywhere;font:600 16px/1.35 Archivo,sans-serif;color:#141A17">{{ l.valor }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:26px">
+          <sc-if value="{{ detalhe.podeRemover }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ detalhe.remover }}" style="flex:none;height:44px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#B3401A" style-active="color:#8A3314">Remover acesso</button>
+          </sc-if>
+          <sc-if value="{{ detalhe.ehVoceDono }}" hint-placeholder-val="{{ true }}">
+            <span style="padding:0 4px;font:500 12.5px/1.45 Archivo,sans-serif;color:#6E7770">Você é o dono da conta. Só o dono remove acesso, e o acesso do dono não pode ser removido.</span>
+          </sc-if>
+          <sc-if value="{{ detalhe.semPermissao }}" hint-placeholder-val="{{ false }}">
+            <span style="padding:0 4px;font:500 12.5px/1.45 Archivo,sans-serif;color:#6E7770">Só o dono da conta pode remover o acesso de alguém.</span>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehAceitar }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="flex:1;min-height:0;overflow:auto;padding:66px 20px 24px;display:flex;flex-direction:column">
+        <button onClick="{{ convite.voltarDemo }}" style="flex:none;align-self:flex-start;display:flex;align-items:center;gap:8px;height:38px;margin:-8px 0 18px -6px;padding:0 12px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;font:600 12px/1 Archivo,sans-serif;color:#6E7770" style-active="background:#E4E0D6">
+          <svg width="7" height="12" viewBox="0 0 8 14" fill="none"><path d="M6.6 1.4 1.4 7l5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          É o que ela vê ao abrir o link — voltar
+        </button>
+        <div style="display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:999px;background:#1B6B3A;font:700 17px/1 Archivo,sans-serif;letter-spacing:.02em;color:#fff">{{ iniciaisEmpresa }}</div>
+        <div style="margin-top:22px;font:800 30px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.02em;text-wrap:pretty">{{ convite.titulo }}</div>
+        <div style="margin-top:14px;font:500 15px/1.5 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">{{ convite.texto }}</div>
+
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:26px">
+          <span style="padding:0 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">O QUE VOCÊ VAI PODER FAZER</span>
+          <sc-for list="{{ convite.pode }}" as="p" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:12px;min-height:56px;padding:14px 18px;border-radius:14px;background:#F0EDE6">
+              <svg width="17" height="14" viewBox="0 0 19 15" fill="none" style="flex:none"><path d="M1.6 7.6 6.9 12.9 17.4 2.2" stroke="#1B6B3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              <span style="flex:1;min-width:0;font:600 15.5px/1.3 Archivo,sans-serif;color:#141A17;text-wrap:pretty">{{ p }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:26px">
+          <button onClick="{{ convite.aceitar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Entrar na conta</button>
+          <button onClick="{{ convite.recusar }}" style="flex:none;height:44px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#6E7770" style-active="color:#141A17">Não conheço essa empresa</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+
+  <sc-if value="{{ temBarra }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(26px, calc(env(safe-area-inset-bottom) + 20px));z-index:40;display:flex;align-items:flex-end;height:57px;padding:0 4px;border-radius:999px;background:#141A17">
+      <button onClick="{{ navInicio }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+        <svg width="19" height="19" viewBox="0 0 20 20" fill="none"><path d="M2.6 8.4 10 2.4l7.4 6v8.2a1 1 0 0 1-1 1h-3.6v-5.2H7.2v5.2H3.6a1 1 0 0 1-1-1V8.4Z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+        <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Início</span>
+      </button>
+      <button onClick="{{ navFretes }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+        <svg width="21" height="19" viewBox="0 0 22 20" fill="none"><path d="M1.6 4.2h11.2v9.4H1.6zM12.8 7.4h4l3.6 3.4v2.8h-7.6z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="5.8" cy="15.8" r="2" stroke="rgba(255,255,255,.5)" stroke-width="1.8"></circle><circle cx="16.2" cy="15.8" r="2" stroke="rgba(255,255,255,.5)" stroke-width="1.8"></circle></svg>
+        <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Fretes</span>
+      </button>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px">
+        <button onClick="{{ navNovo }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin-top:-18px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer">
+          <svg width="24" height="24" viewBox="0 0 26 26" fill="none"><path d="M13 4.5v17M4.5 13h17" stroke="#fff" stroke-width="2.8" stroke-linecap="round"></path></svg>
+        </button>
+        <span style="font:700 10.5px/1 Archivo,sans-serif;color:#fff">Novo</span>
+      </div>
+      <button onClick="{{ navCobrancas }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+        <svg width="20" height="19" viewBox="0 0 20 20" fill="none"><path d="M2.4 3.6h15.2v10.2a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V3.6Z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path><path d="M5.6 7h8.8M5.6 10.4h5" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Cobranças</span>
+      </button>
+      <button onClick="{{ navMais }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+        <svg width="20" height="19" viewBox="0 0 20 20" fill="none"><path d="M3.4 6h13.2M3.4 10h13.2M3.4 14h8.4" stroke="#7FCB9B" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        <span style="font:700 10.5px/1 Archivo,sans-serif;color:#7FCB9B">Mais</span>
+      </button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ temAviso }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:16px;right:16px;bottom:112px;z-index:70">
+      <dc-import name="AvisoSistema" texto="{{ aviso }}" hint-size="100%,74px"></dc-import>
+    </div>
+  </sc-if>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;estadoInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lista&quot;,&quot;semPendente&quot;,&quot;convite&quot;,&quot;conviteCheio&quot;,&quot;detalhe&quot;,&quot;detalheDono&quot;,&quot;aceitar&quot;],&quot;default&quot;:&quot;lista&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;souDono&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;empresa&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;AP Transportes&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Identidade&quot;},&quot;onVoltar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onInicio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onFretes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onNovo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onCobrancas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMais&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const USUARIOS = [
+  { id: 'ap', nome: 'Antônio Pinheiro', tel: '(88) 99612-4400', papel: 'Dono da conta', desde: 'desde março de 2026', dono: true },
+  { id: 'fat', nome: 'Dona Fátima', tel: '(88) 99530-7712', papel: 'Cobrança e relatórios', desde: 'entrou em abril de 2026', dono: false },
+  { id: 'jr', nome: 'Antônio Júnior', tel: '(88) 99188-2043', papel: 'Lança frete no pátio', desde: 'entrou em junho de 2026', dono: false },
+];
+const PENDENTES = [
+  { id: 'pen1', nome: 'Sandra do escritório', tel: '(88) 99744-3315', apoio: 'convite enviado há 2 dias' },
+];
+const iniciais = n => n.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+class Component extends DCLogic {
+  state = { tela: null, alvo: null, nome: '', tel: '', aviso: null, removidos: [], cancelados: [] };
+
+  componentDidMount() {
+    const ini = this.props.estadoInicial || 'lista';
+    if (ini === 'convite') this.setState({ tela: 'convite' });
+    else if (ini === 'conviteCheio') this.setState({ tela: 'convite', nome: 'Sandra do escritório', tel: '(88) 99744-3315' });
+    else if (ini === 'detalhe') this.setState({ tela: 'detalhe', alvo: 'fat' });
+    else if (ini === 'detalheDono') this.setState({ tela: 'detalhe', alvo: 'ap' });
+    else if (ini === 'aceitar') this.setState({ tela: 'aceitar' });
+    else if (ini === 'semPendente') this.setState({ tela: 'lista', cancelados: ['pen1'] });
+    else this.setState({ tela: 'lista' });
+  }
+
+  avisar(txt) {
+    this.setState({ aviso: txt });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ aviso: null }), 6000);
+  }
+
+  componentWillUnmount() { clearTimeout(this._t); }
+
+  renderVals() {
+    const s = this.state;
+    const empresa = this.props.empresa || 'AP Transportes';
+    // o dono é quem convida e remove; os demais só veem a lista
+    const souDono = this.props.souDono ?? true;
+    const t = s.tela || 'lista';
+    const d = USUARIOS.find(u => u.id === s.alvo) || USUARIOS[1];
+    const pend = PENDENTES.filter(p => s.cancelados.indexOf(p.id) === -1);
+    const nomeConvite = s.nome.trim() || 'ela';
+    const previa = 'Oi ' + nomeConvite + ', aqui é o Antônio da ' + empresa + '.\n'
+      + 'Te dei acesso ao nosso sistema de fretes. É só abrir esse link no celular:\n'
+      + 'fretigate.com.br/entrar/ap-8t2q';
+
+    return {
+      empresa,
+      iniciaisEmpresa: iniciais(empresa),
+      ehLista: t === 'lista',
+      ehConvite: t === 'convite',
+      ehDetalhe: t === 'detalhe',
+      ehAceitar: t === 'aceitar',
+      ehDonoAtual: souDono,
+
+      voltar: () => { if (this.props.onVoltar) this.props.onVoltar(); },
+      voltarLista: () => this.setState({ tela: 'lista' }),
+      convidar: () => this.setState({ tela: 'convite', nome: '', tel: '' }),
+
+      ativos: USUARIOS.filter(u => s.removidos.indexOf(u.id) === -1).map(u => ({
+        nome: u.nome, iniciais: iniciais(u.nome), ehDono: u.dono,
+        apoio: u.papel + ' · ' + u.desde,
+        abrir: () => this.setState({ tela: 'detalhe', alvo: u.id }),
+      })),
+      temPendentes: pend.length > 0,
+      verConviteDemo: () => this.setState({ tela: 'aceitar' }),
+      pendentes: pend.map(p => ({
+        nome: p.nome, iniciais: iniciais(p.nome), apoio: p.tel + ' · ' + p.apoio,
+        reenviar: () => this.avisar('Abre a conversa com ' + p.tel + ' e o link do convite pronto.'),
+        // no app real ela chega por link do WhatsApp; aqui é a porta de entrada da demonstração
+        verConvite: () => this.setState({ tela: 'aceitar' }),
+        cancelar: () => { this.setState({ cancelados: s.cancelados.concat([p.id]) }); this.avisar('Convite cancelado. O link parou de funcionar.'); },
+      })),
+
+      form: {
+        nome: s.nome, tel: s.tel,
+        setNome: e => this.setState({ nome: e.target.value }),
+        setTel: e => this.setState({ tel: e.target.value }),
+        previa,
+        pode: s.nome.trim().length > 0 && s.tel.trim().length >= 8,
+        bloqueado: !(s.nome.trim().length > 0 && s.tel.trim().length >= 8),
+        enviar: () => { this.setState({ tela: 'lista' }); this.avisar('Abre a conversa com ' + s.tel.trim() + '. O convite aparece como aguardando até ela entrar.'); },
+      },
+
+      detalhe: {
+        nome: d.nome,
+        papel: d.papel + ' · ' + d.desde,
+        linhas: [
+          { rotulo: 'WHATSAPP', valor: d.tel },
+          { rotulo: 'ENTROU', valor: d.desde.replace('entrou em ', '').replace('desde ', '') },
+          { rotulo: 'O QUE VÊ', valor: d.dono ? 'Tudo, e é quem administra os acessos' : 'Os mesmos fretes, cobranças e relatórios que você' },
+        ],
+        podeRemover: souDono && !d.dono,
+        ehVoceDono: d.dono,
+        semPermissao: !souDono && !d.dono,
+        remover: () => { this.setState({ removidos: s.removidos.concat([d.id]), tela: 'lista' }); this.avisar(d.nome + ' perdeu o acesso. Os fretes que ela lançou continuam aí.'); },
+      },
+
+      convite: {
+        titulo: 'A ' + empresa + ' te deu acesso',
+        texto: 'Antônio Pinheiro te convidou para usar o FretiGate da ' + empresa + '. Você entra com o seu número, sem senha.',
+        pode: [
+          'Lançar frete e ver todos os fretes da empresa',
+          'Montar relatório e cobrar cliente pelo WhatsApp',
+          'Marcar cobrança como recebida',
+        ],
+        aceitar: () => { if (this.props.onEntrou) this.props.onEntrou(); else this.avisar('Entra direto na dashboard da ' + empresa + '.'); },
+        recusar: () => this.setState({ tela: 'lista', aviso: 'Convite recusado. Ninguém é avisado, e o link para de funcionar.' }),
+        voltarDemo: () => this.setState({ tela: 'lista' }),
+      },
+
+      // aceitar convite chega por link do WhatsApp, fora do app — é a única sem barra
+      temBarra: t !== 'aceitar',
+      navInicio: this.props.onInicio || (() => this.avisar('Início está na dashboard.')),
+      navFretes: this.props.onFretes || (() => this.avisar('Fretes está em Meus fretes.')),
+      navNovo: this.props.onNovo || (() => this.avisar('Abre Lançar frete.')),
+      navCobrancas: this.props.onCobrancas || (() => this.avisar('Cobranças é a Tela 4.')),
+      navMais: this.props.onMais || (() => this.avisar('Usuários vive em Mais › Conta da empresa.')),
+      temAviso: !!s.aviso,
+      aviso: s.aviso,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap"></helmet>
+
+<div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(26px, calc(env(safe-area-inset-bottom) + 20px));z-index:40;display:flex;align-items:flex-end;height:57px;padding:0 4px;border-radius:999px;background:#141A17">
+  <button onClick="{{ onInicio }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+    <svg width="19" height="19" viewBox="0 0 20 20" fill="none"><path d="M2.6 8.4 10 2.4l7.4 6v8.2a1 1 0 0 1-1 1h-3.6v-5.2H7.2v5.2H3.6a1 1 0 0 1-1-1V8.4Z" stroke="{{ corInicio }}" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+    <span style="font:600 10.5px/1 Archivo,sans-serif;color:{{ corInicio }}">Início</span>
+  </button>
+  <button onClick="{{ onFretes }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+    <svg width="21" height="19" viewBox="0 0 22 20" fill="none"><path d="M1.6 4.2h11.2v9.4H1.6zM12.8 7.4h4l3.6 3.4v2.8h-7.6z" stroke="{{ corFretes }}" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="5.8" cy="15.8" r="2" stroke="{{ corFretes }}" stroke-width="1.8"></circle><circle cx="16.2" cy="15.8" r="2" stroke="{{ corFretes }}" stroke-width="1.8"></circle></svg>
+    <span style="font:600 10.5px/1 Archivo,sans-serif;color:{{ corFretes }}">Fretes</span>
+  </button>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px">
+    <button onClick="{{ onNovo }}" style="display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin-top:-18px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer" style-active="background:#14522C">
+      <svg width="24" height="24" viewBox="0 0 26 26" fill="none"><path d="M13 4.5v17M4.5 13h17" stroke="#fff" stroke-width="2.8" stroke-linecap="round"></path></svg>
+    </button>
+    <span style="font:700 10.5px/1 Archivo,sans-serif;color:#fff">Novo</span>
+  </div>
+  <button onClick="{{ onCobrancas }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+    <svg width="20" height="19" viewBox="0 0 20 20" fill="none"><path d="M2.4 3.6h15.2v10.2a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V3.6Z" stroke="{{ corCobrancas }}" stroke-width="1.8" stroke-linejoin="round"></path><path d="M5.6 7h8.8M5.6 10.4h5" stroke="{{ corCobrancas }}" stroke-width="1.8" stroke-linecap="round"></path></svg>
+    <span style="font:600 10.5px/1 Archivo,sans-serif;color:{{ corCobrancas }}">Cobranças</span>
+  </button>
+  <button onClick="{{ onMais }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+    <svg width="20" height="19" viewBox="0 0 20 20" fill="none"><path d="M3.4 6h13.2M3.4 10h13.2M3.4 14h8.4" stroke="{{ corMais }}" stroke-width="1.8" stroke-linecap="round"></path></svg>
+    <span style="font:600 10.5px/1 Archivo,sans-serif;color:{{ corMais }}">Mais</span>
+  </button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:370,&quot;height&quot;:100},&quot;ativo&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;inicio&quot;,&quot;fretes&quot;,&quot;cobrancas&quot;,&quot;mais&quot;],&quot;default&quot;:&quot;mais&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onInicio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onFretes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onNovo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onCobrancas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMais&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const ATIVO = '#7FCB9B';
+const INATIVO = 'rgba(255,255,255,.5)';
+
+class Component extends DCLogic {
+  renderVals() {
+    const a = this.props.ativo || 'mais';
+    const nada = () => { };
+    const cor = k => a === k ? ATIVO : INATIVO;
+    return {
+      corInicio: cor('inicio'), corFretes: cor('fretes'),
+      corCobrancas: cor('cobrancas'), corMais: cor('mais'),
+      onInicio: this.props.onInicio || nada,
+      onFretes: this.props.onFretes || nada,
+      onNovo: this.props.onNovo || nada,
+      onCobrancas: this.props.onCobrancas || nada,
+      onMais: this.props.onMais || nada,
+    };
+  }
+}
+</script>
+</body>
+</html>

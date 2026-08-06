@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+body{margin:0;background:#E8E4DB;font-family:Archivo,system-ui,sans-serif}
+a{color:#1B6B3A}a:hover{color:#14522C}
+.dv-turn{padding:44px 48px 36px;border-bottom:1px solid rgba(20,26,23,.1);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 24px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#141A17;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 Archivo,sans-serif;color:#141A17}
+.dv-opts{display:flex;flex-wrap:wrap;gap:44px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(20,26,23,.1);color:#141A17;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.4 Archivo,sans-serif;color:rgba(20,26,23,.6);max-width:402px}
+.dv-opt:target .dv-oid{background:#1B6B3A;color:#fff}
+.dv-next{margin:26px 0 0;font:12px/1.6 Archivo,sans-serif;color:rgba(20,26,23,.55)}
+.dv-spec{max-width:440px;font:12.5px/1.7 Archivo,sans-serif;color:#3C443E}
+.dv-spec h4{margin:20px 0 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770}
+.dv-spec h4:first-child{margin-top:0}
+.dv-spec table{border-collapse:collapse;width:100%}
+.dv-spec td{padding:4px 10px 4px 0;vertical-align:top;font-size:12px}
+.dv-spec code{font:11.5px 'Azeret Mono',monospace;background:#F0EDE6;padding:1px 5px;border-radius:4px}
+.dv-spec p{margin:0 0 6px}
+</style></helmet>
+
+<div style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none" aria-hidden="true"><x-import component="IOSDevice" from="./ios-frame.jsx" hint-size="1px,1px"></x-import></div>
+
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Dashboard · Meus fretes · Detalhe do frete — mesmo app, navegação viva</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="4a2">
+<div class="dv-olabel"><a class="dv-oid" href="#4a2">4a2</a>Dashboard — cartão escuro começa abaixo da barra de status, com a marca da empresa no respiro superior. Dois atalhos: Gerar relatório · Importar fretes.</div>
+<dc-import name="TelaFretiGate" tela-inicial="dashboard" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="4a3">
+<div class="dv-olabel"><a class="dv-oid" href="#4a3">4a3</a>Lucro sem despesa lançada — o card não inventa número: explica que o lucro aparece quando houver despesa e oferece o caminho pra lançar.</div>
+<dc-import name="TelaFretiGate" tela-inicial="dashboard" sem-despesas="{{ true }}" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="4b">
+<div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Meus fretes — busca única (cliente, rota, placa, motorista), três chips de filtro e total contextual que muda junto. Sem resumo fixo do mês e sem link “Início” no topo: a barra faz isso.</div>
+<dc-import name="TelaFretiGate" tela-inicial="fretes" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="4c">
+<div class="dv-olabel"><a class="dv-oid" href="#4c">4c</a>Deslizar pra esquerda revela “Marcar recebido”. Arraste qualquer linha; um toque curto volta e abre o detalhe.</div>
+<dc-import name="TelaFretiGate" tela-inicial="swipe" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="4d">
+<div class="dv-olabel"><a class="dv-oid" href="#4d">4d</a>Detalhe do frete — faturar, marcar recebido, editar, arquivar. A ação principal muda conforme a situação.</div>
+<dc-import name="TelaFretiGate" tela-inicial="detalhe" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="4e">
+<div class="dv-olabel"><a class="dv-oid" href="#4e">4e</a>Barra temporária depois de salvar — flutua acima do menu e some sozinha em 6 segundos. Não existe quando a tela é aberta pelo menu.</div>
+<dc-import name="TelaFretiGate" tela-inicial="salvo" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="4f">
+<div class="dv-olabel"><a class="dv-oid" href="#4f">4f</a>Decisões e medidas novas.</div>
+<div class="dv-spec">
+<h4>NAVEGAÇÃO</h4>
+<p>Pílula escura flutuante, <code>left/right 16 · bottom 26</code>, altura <strong>66px</strong>, raio <code>999</code>, fundo <code>#141A17</code>. Cinco posições, todas com ícone <em>e</em> rótulo: Início · Fretes · (+) · Cobranças · Mais.</p>
+<table>
+<tr><td>Item</td><td>ícone 19–21px + rótulo <code>10.5 · 600</code>; ativo <code>#7FCB9B</code> peso 700, inativo <code>rgba(255,255,255,.5)</code></td></tr>
+<tr><td>(+)</td><td>círculo <strong>60px</strong> <code>#1B6B3A</code>, elevado <code>-32px</code> acima da linha da barra, rótulo “Novo” em branco. Substitui o botão flutuante — ele não existe mais.</td></tr>
+<tr><td>Folga</td><td>a pílula sobrepõe o conteúdo durante a rolagem, de propósito. No fim da rolagem cada tela reserva <strong>150px</strong> (142 no rodapé do detalhe) — medido a partir do topo do (+), que sobe 32px acima da barra</td></tr>
+</table>
+
+<h4>IDENTIDADE DA EMPRESA</h4>
+<p>A faixa separada foi descartada. A marca vive no <strong>respiro superior do cartão</strong>: círculo 30px + nome <code>14.5 · 700</code> em <code>rgba(255,255,255,.82)</code> + acesso à conta. O cartão começa em <strong>66px</strong> do topo — abaixo da barra de status e da ilha dinâmica, com os cantos arredondados livres.</p>
+<p>Sem logo cadastrado, o círculo traz as <strong>iniciais</strong> em branco sobre <code>#1B6B3A</code>: sigla própria quando existe (“AP Transportes” → <strong>AP</strong>), senão a inicial das duas primeiras palavras (“Transportes São Jorge” → <strong>TS</strong>). Nunca ícone genérico, nunca foto de pessoa, nunca saudação.</p>
+
+<h4>DASHBOARD</h4>
+<table>
+<tr><td>Atalhos</td><td>duas pílulas de <strong>46px</strong> dentro do cartão, <code>rgba(255,255,255,.1)</code>, texto <code>12.5 · 600</code>: Gerar relatório · Importar fretes. “Vencidos” saiu — já é pastilha e pendência na mesma tela.</td></tr>
+<tr><td>Pendência de relatório</td><td>é sugestão, não coisa pronta: “Agro Vale Verde tem 9 fretes de julho sem cobrança”. O sistema nunca gera sozinho.</td></tr>
+<tr><td>Cartão</td><td>raio <code>28</code>, fundo <code>#141A17</code>, valor <code>56/1 · 800</code> <code>wdth 92%</code></td></tr>
+<tr><td>Comparação</td><td>seta + <code>14/1 · 700</code> em <code>#7FCB9B</code> — único verde claro do sistema, para o verde de ação não ser legível sobre o escuro</td></tr>
+<tr><td>Pastilha</td><td>raio <code>22</code>, padding <code>18</code>, valor <code>25/1 · 800</code>; “A receber” em <code>#F0EDE6</code>, “Vencido” em <code>#F6E6DD</code> com tinta <code>#B3401A</code></td></tr>
+<tr><td>Pendência</td><td>linha mín. <strong>70px</strong>, raio <code>18</code>, título <code>16.5 · 700</code> + apoio <code>13 · 500</code></td></tr>
+<tr><td>Barras</td><td>6 colunas, altura máx. <strong>112px</strong>, raio <code>8 8 3 3</code>, gap <code>10</code>. Mês corrente <code>#1B6B3A</code>, anterior <code>#D6D1C5</code>, resto <code>#E4E0D6</code>. Sem eixo, sem grade, sem legenda — só a abreviação do mês em <code>11 · 600</code></td></tr>
+</table>
+
+<h4>MEUS FRETES</h4>
+<p>Saiu o resumo fixo do mês. Entrou <strong>um total contextual</strong> logo abaixo dos filtros: quantidade + valor do que está na tela naquele instante. Filtre por situação em <a class="dv-oid" href="#4b">4b</a> e ele recalcula.</p>
+<table>
+<tr><td>Busca</td><td>52px, raio <code>18</code>, um campo só — varre cliente, rota, placa, motorista e apelido do caminhão, ignorando acento</td></tr>
+<tr><td>Chips</td><td>44px, raio <code>999</code>; neutro <code>#F0EDE6</code>/<code>#3C443E</code>, ativo <code>#1B6B3A</code>/branco mostrando o valor escolhido</td></tr>
+<tr><td>Total</td><td><code>13.5 · 600</code> <code>#3C443E</code>, 14px abaixo dos chips</td></tr>
+<tr><td>Cabeçalho de data</td><td>texto puro, não é botão. <code>11 · 700</code>, <code>ls .16em</code>, <code>#6E7770</code></td></tr>
+<tr><td>Linha</td><td>raio <code>20</code>, fundo <code>#F0EDE6</code>, cliente <code>17 · 700</code>, rota <code>13.5 · 400</code>, valor <code>20 · 800</code></td></tr>
+<tr><td>Situação</td><td><code>10.5 · 700</code> <code>ls .1em</code> — A faturar <code>#8A6206</code> · Faturado <code>#6E7770</code> · Parcial <code>#B3401A</code> · Quitado <code>#1B6B3A</code></td></tr>
+<tr><td>Novo frete</td><td>não tem mais botão próprio — é o <strong>(+)</strong> central da barra</td></tr>
+<tr><td>Deslizar</td><td>arrasto de <strong>40px</strong> pra esquerda revela painel de <strong>116px</strong> em <code>#1B6B3A</code>; arrasto pra direita ou toque curto fecha</td></tr>
+<tr><td>Barra temporária</td><td>só depois de salvar; cartão flutuante <code>#E4E9E5</code> raio <code>22</code> em <code>bottom 112</code>, some em <strong>6s</strong></td></tr>
+</table>
+<p>Sem seleção múltipla e sem ação em lote — uma linha, uma ação.</p>
+
+<h4>DETALHE DO FRETE</h4>
+<table>
+<tr><td>Topo</td><td>voltar 44px + <code>FRETE · data</code> em <code>11 · 700</code></td></tr>
+<tr><td>Cabeçalho</td><td>cliente <code>26/1.1 · 800</code>, rota <code>15 · 500</code>, valor <code>46/1 · 800</code>, situação <code>11 · 700</code></td></tr>
+<tr><td>Linhas</td><td>56px, raio <code>14</code>, rótulo em coluna fixa de <strong>88px</strong></td></tr>
+<tr><td>Ações</td><td>principal 60px verde (muda de <em>Faturar</em> para <em>Ver relatório</em> conforme a situação) · <em>Marcar recebido</em> e <em>Editar</em> 56px em <code>#F0EDE6</code> · <em>Arquivar</em> como texto 44px</td></tr>
+</table>
+
+<h4>NOMENCLATURA</h4>
+<p><strong>Relatório</strong> substitui “extrato” em toda a interface — atalho do cartão, pendência, linha do detalhe, botão de ação e título do PDF. É a palavra que o dono usa.</p>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Tente: “o detalhe deveria mostrar o histórico de pagamento” · “deixar a pílula sumir ao rolar pra baixo” · “seguir pra Tela 3 — Relatório do cliente”</p>
+</section>
+
+<section class="dv-turn" id="t3b">
+<div class="dv-thd"><a class="dv-tid" href="#t3b">3</a><span class="dv-tname">Turno 3 — arquivo separado</span></div>
+<p class="dv-next">A Tela 1 — Lançar frete, com repouso de altura fixa e folha de busca em tela cheia, está em <strong>Tela 1 - Lançar frete v3.dc.html</strong>.</p>
+</section>
+</x-dc>
+</body>
+</html>

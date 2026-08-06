@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#141A17">
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+<rect width="120" height="120" fill="#141A17"></rect>
+<rect x="42" y="30" width="36" height="60" rx="9" fill="none" stroke="#7FCB9B" stroke-width="3"></rect>
+<circle cx="60" cy="78" r="6" fill="#1B6B3A"></circle>
+<path d="M52 52h16M52 62h10" stroke="#7FCB9B" stroke-width="3" stroke-linecap="round"></path>
+</svg>
+</template>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+body{margin:0;background:#E8E4DB;font-family:Archivo,system-ui,sans-serif}
+a{color:#1B6B3A}a:hover{color:#14522C}
+</style></helmet>
+
+<div style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none" aria-hidden="true">
+  <x-import component="IOSDevice" from="./ios-frame.jsx" hint-size="1px,1px"></x-import>
+</div>
+
+<div style="display:flex;justify-content:center;padding:0">
+
+  <sc-if value="{{ ehInicio }}" hint-placeholder-val="{{ true }}">
+    <dc-import name="TelaFretiGate" tela-inicial="dashboard" on-nav="{{ irPara }}" on-perfil="{{ abrirPerfil }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehFretes }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaFretiGate" tela-inicial="fretes" on-nav="{{ irPara }}" on-perfil="{{ abrirPerfil }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehSalvo }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaFretiGate" tela-inicial="salvo" on-nav="{{ irPara }}" on-perfil="{{ abrirPerfil }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehNovo }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaLancarFrete" estado-inicial="repouso" on-salvo="{{ frefeSalvo }}" on-voltar="{{ voltar }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehCobrancas }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaCobrancas" estado-inicial="lista" on-nav="{{ irPara }}" on-perfil="{{ abrirPerfil }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehCobrancasVencidas }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaCobrancas" estado-inicial="vencidas" on-nav="{{ irPara }}" on-perfil="{{ abrirPerfil }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehModelo }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaCobrancas" estado-inicial="modelo" on-nav="{{ irPara }}" on-perfil="{{ abrirPerfil }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehRelatorio }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaRelatorio" estado-inicial="vazia" on-nav="{{ irPara }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehRelatorioCliente }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaRelatorio" estado-inicial="previa" cliente-inicial="{{ clienteRelatorio }}" on-nav="{{ irPara }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehClientes }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaClientes" estado-inicial="lista" on-nav="{{ irPara }}" on-relatorio="{{ relatorioDe }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehPerfil }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaClientes" estado-inicial="perfil" cliente-inicial="{{ clientePerfil }}" on-nav="{{ irPara }}" on-relatorio="{{ relatorioDe }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehMais }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaMais" plano="frota" on-usuarios="{{ irUsuarios }}" on-despesas="{{ irDespesas }}" on-novidades="{{ irNovidades }}" on-conta="{{ irConta }}" on-clientes="{{ irClientes }}" on-caminhoes="{{ irCaminhoes }}" on-motoristas="{{ irMotoristas }}" on-relatorio="{{ irRelatorio }}" on-importar="{{ irImportar }}" on-configuracoes="{{ irConfiguracoes }}" on-sair="{{ irLogin }}" on-assinar="{{ irConta }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehModeloOrdem }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaCobrancas" estado-inicial="modeloOrdem" on-nav="{{ irPara }}" on-perfil="{{ abrirPerfil }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehCaminhao }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaCaminhoes" estado-inicial="lista" com-km="{{ true }}" on-voltar="{{ irMais }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehNovidades }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaNovidades" estado-inicial="lista" on-voltar="{{ irMais }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehRodagem }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaCaminhoes" estado-inicial="rodagem" com-km="{{ true }}" on-voltar="{{ irInicio }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehMotoristas }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaMotoristas" estado-inicial="lista" on-voltar="{{ irMais }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehDespesas }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaDespesas" estado-inicial="lista" on-voltar="{{ irMais }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehImportar }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaImportar" estado-inicial="entrada" on-voltar="{{ irMais }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehConfiguracoes }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaAjustes" estado-inicial="config" on-modelo-cobranca="{{ irModelo }}" on-modelo-ordem="{{ irModeloOrdem }}" on-voltar="{{ irMais }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehConta }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaAjustes" estado-inicial="conta" on-assinatura="{{ irAssinatura }}" on-usuarios="{{ irUsuarios }}" on-termos="{{ irTermos }}" on-voltar="{{ irMais }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehUsuarios }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaUsuarios" estado-inicial="lista" on-voltar="{{ irConta }}" on-entrou="{{ irInicio }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehTermos }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaTermos" aba-inicial="{{ abaTermos }}" origem="ajustes" on-voltar="{{ voltarTermos }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehLogin }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaAcesso" estado-inicial="entrar" on-entrou="{{ irPrimeiro }}" on-termos="{{ irTermosCadastro }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehTermosCadastro }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaTermos" aba-inicial="{{ abaTermos }}" origem="cadastro" on-aceitar="{{ irLogin }}" on-voltar="{{ irLogin }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehPlanos }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaPlanos" estado-inicial="planos" on-voltar="{{ irMais }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehAssinatura }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaPlanos" estado-inicial="assinatura" on-planos="{{ irPlanos }}" on-voltar="{{ irConta }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehPrimeiro }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaPrimeiroAcesso" on-importar="{{ irImportar }}" on-lancar="{{ irNovo }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ ehSimples }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="TelaPlaceholder" titulo="{{ tituloSimples }}" texto="{{ textoSimples }}" itens="{{ itensSimples }}" on-voltar="{{ irMais }}" on-inicio="{{ irInicio }}" on-fretes="{{ irFretes }}" on-novo="{{ irNovo }}" on-cobrancas="{{ irCobrancas }}" on-mais="{{ irMais }}" hint-size="402px,874px"></dc-import>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+// telas ainda não desenhadas — placeholder só para a navegação não ter beco sem saída
+// todas as telas do MVP existem — nada restou como placeholder
+const SIMPLES = {
+  _vazio: null,
+};
+const SIMPLES_ANTIGO = {
+  motoristas: { titulo: 'Motoristas', texto: 'Tela ainda não desenhada. Mesmo padrão de Clientes: lista ordenada, perfil com telefone, caminhão habitual e histórico, e cadastro curto.' },
+  importar: { titulo: 'Importar fretes', texto: 'Tela ainda não desenhada. Aqui entra o caminho de colar a conversa do WhatsApp ou mandar a foto do caderno, revisar o que o app entendeu e jogar para Meus fretes.' },
+  configuracoes: { titulo: 'Configurações', texto: 'Tela ainda não desenhada. É onde nascem o endereço padrão do pátio, o prazo padrão de vencimento, a numeração do relatório e o modelo de cobrança.' },
+  conta: { titulo: 'Conta da empresa', texto: 'Tela ainda não desenhada. Logo, razão social, CNPJ, endereço, telefone, e-mail, chave Pix e dados bancários — é o que alimenta o cabeçalho e o rodapé do relatório em A4.' },
+  login: { titulo: 'Entrar', texto: 'Tela ainda não desenhada. Entrada por telefone com código no WhatsApp seria o caminho mais curto para esse usuário, mas não foi definido.' },
+};
+// nomes usados nas linhas de frete e cobrança -> id do cliente
+const ID_POR_NOME = {
+  'Agro Vale Verde': 'agro',
+  'Cerâmica Boa Vista': 'cer',
+  'Distribuidora Nordeste': 'dist',
+  'Frigorífico São Luiz': 'frig',
+  'Cimentos Apodi': 'apo',
+  'Nutrisul Rações': 'nut',
+  'Lojas Miranda': 'mir',
+};
+
+class Component extends DCLogic {
+  state = { tela: 'inicio', clientePerfil: 'agro', clienteRelatorio: 'agro' };
+
+  ir(dest) {
+    if (dest === 'relatorio-agro') return this.setState({ tela: 'relatorioCliente', clienteRelatorio: 'agro' });
+    this.setState({ tela: dest });
+  }
+
+  renderVals() {
+    const t = this.state.tela;
+    const simples = (SIMPLES[t] && t !== '_vazio') ? SIMPLES[t] : null;
+    return {
+      ehInicio: t === 'inicio',
+      ehFretes: t === 'fretes',
+      ehSalvo: t === 'salvo',
+      ehNovo: t === 'novo',
+      ehCobrancas: t === 'cobrancas',
+      ehCobrancasVencidas: t === 'cobrancas-vencidas',
+      ehModelo: t === 'modelo',
+      ehRelatorio: t === 'relatorio',
+      ehRelatorioCliente: t === 'relatorioCliente',
+      ehClientes: t === 'clientes',
+      ehPerfil: t === 'perfil',
+      ehMais: t === 'mais',
+      ehCaminhao: t === 'caminhoes',
+      ehRodagem: t === 'caminhoes-rodagem',
+      ehNovidades: t === 'novidades',
+      irNovidades: () => this.ir('novidades'),
+      ehMotoristas: t === 'motoristas',
+      ehDespesas: t === 'despesas',
+      ehImportar: t === 'importar',
+      ehConfiguracoes: t === 'configuracoes',
+      ehConta: t === 'conta',
+      ehUsuarios: t === 'usuarios',
+      ehTermos: t === 'termos',
+      ehTermosCadastro: t === 'termosCadastro',
+      abaTermos: this.state.aba || 'termos',
+      irUsuarios: () => this.ir('usuarios'),
+      irTermos: aba => this.setState({ tela: 'termos', aba: aba || 'termos' }),
+      irTermosCadastro: aba => this.setState({ tela: 'termosCadastro', aba: aba || 'termos' }),
+      voltarTermos: () => this.ir('conta'),
+      ehLogin: t === 'login',
+      ehPlanos: t === 'planos',
+      ehAssinatura: t === 'assinatura',
+      ehPrimeiro: t === 'primeiro',
+      irModelo: () => this.ir('modelo'),
+      irModeloOrdem: () => this.ir('modeloOrdem'),
+      irPlanos: () => this.ir('planos'),
+      irAssinatura: () => this.ir('assinatura'),
+      irPrimeiro: () => this.ir('primeiro'),
+      irDespesas: () => this.ir('despesas'),
+      ehModeloOrdem: t === 'modeloOrdem',
+      ehSimples: !!simples,
+      tituloSimples: simples ? simples.titulo : '',
+      textoSimples: simples ? simples.texto : '',
+
+      clientePerfil: this.state.clientePerfil,
+      clienteRelatorio: this.state.clienteRelatorio,
+
+      irPara: dest => this.ir(dest),
+      irClientes: () => this.ir('clientes'),
+      irCaminhoes: () => this.ir('caminhoes'),
+      irMotoristas: () => this.ir('motoristas'),
+      irRelatorio: () => this.ir('relatorio'),
+      irImportar: () => this.ir('importar'),
+      irConfiguracoes: () => this.ir('configuracoes'),
+      irConta: () => this.ir('conta'),
+      irLogin: () => this.ir('login'),
+      // Mensagem de cobrança agora vive dentro de Configurações
+      itensSimples: false ? [
+        { nome: 'Endereço padrão do pátio', apoio: 'Pátio AP — Sobral/CE', tap: () => { } },
+        { nome: 'Prazo padrão de vencimento', apoio: '15 dias', tap: () => { } },
+        { nome: 'Numeração do relatório', apoio: 'próximo: 0143', tap: () => { } },
+        { nome: 'Mensagem de cobrança', apoio: 'modelo que abre a conversa', tap: () => this.ir('modelo') },
+        { nome: 'Ordem de serviço', apoio: 'modelo que vai pro motorista', tap: () => this.ir('modeloOrdem') },
+      ] : [],
+      irInicio: () => this.ir('inicio'),
+      irFretes: () => this.ir('fretes'),
+      irNovo: () => this.ir('novo'),
+      irCobrancas: () => this.ir('cobrancas'),
+      irMais: () => this.ir('mais'),
+      voltar: () => this.ir('inicio'),
+      // salvou o frete: cai em Meus fretes com o aviso do sistema e o frete piscando
+      frefeSalvo: () => this.setState({ tela: 'salvo' }),
+      abrirPerfil: nome => this.setState({ tela: 'perfil', clientePerfil: ID_POR_NOME[nome] || 'agro' }),
+      relatorioDe: id => this.setState({ tela: 'relatorioCliente', clienteRelatorio: id || 'agro' }),
+
+
+    };
+  }
+}
+</script>
+</body>
+</html>

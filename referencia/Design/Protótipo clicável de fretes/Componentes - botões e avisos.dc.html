@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+body{margin:0;background:#E8E4DB;font-family:Archivo,system-ui,sans-serif}
+a{color:#1B6B3A}a:hover{color:#14522C}
+.pg{width:1180px;margin:0;padding:48px 52px 60px;background:#FAF8F4}
+.h1{margin:0;font:800 34px/1.05 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.02em;color:#141A17}
+.sub{margin:10px 0 0;max-width:660px;font:500 15px/1.55 Archivo,sans-serif;color:#3C443E}
+.rule{margin:34px 0 0;padding:18px 20px;border-radius:18px;background:#F0EDE6;font:500 14px/1.6 Archivo,sans-serif;color:#3C443E}
+.rule b{color:#141A17}
+.h2{margin:44px 0 4px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.18em;color:#6E7770}
+.name{margin:8px 0 2px;font:800 22px/1.2 Archivo,sans-serif;letter-spacing:-.01em;color:#141A17}
+.use{margin:0 0 18px;max-width:620px;font:500 13.5px/1.5 Archivo,sans-serif;color:#6E7770}
+.grid{display:grid;grid-template-columns:250px 250px 250px 1fr;gap:22px;align-items:start}
+.cell{display:flex;flex-direction:column;gap:9px}
+.st{font:700 10px/1 Archivo,sans-serif;letter-spacing:.14em;color:#A8AFA9}
+.spec{font:500 12.5px/1.75 Archivo,sans-serif;color:#3C443E}
+.spec code{font:11.5px 'Azeret Mono',monospace;background:#F0EDE6;padding:1px 5px;border-radius:4px}
+.dark{padding:22px;border-radius:22px;background:#141A17}
+.sep{height:1px;margin:44px 0 0;background:rgba(20,26,23,.09)}
+.tbl{border-collapse:collapse;margin-top:14px}
+.tbl td{padding:5px 16px 5px 0;font:500 12.5px/1.5 Archivo,sans-serif;color:#3C443E;vertical-align:top}
+.tbl td:first-child{font-weight:700;color:#141A17;white-space:nowrap}
+.tbl code{font:11.5px 'Azeret Mono',monospace;background:#F0EDE6;padding:1px 5px;border-radius:4px}
+@keyframes girar{to{transform:rotate(360deg)}}
+.icon-row{display:flex;flex-direction:column;gap:14px}
+.icon-item{display:flex;align-items:center;gap:14px}
+.icon-name{width:190px;flex:none;font:700 13px/1.3 Archivo,sans-serif;color:#141A17}
+.icon-use{font:500 12.5px/1.5 Archivo,sans-serif;color:#6E7770}
+</style></helmet>
+
+<div class="pg">
+  <h1 class="h1">Botões e avisos — inventário fechado</h1>
+  <p class="sub">Seis variantes de botão, mais o estado carregando e a especificação de ícones. Nenhuma tela pode usar nada fora daqui: sem cor nova, sem altura nova, sem nome novo. Chips de seleção não são botões e estão no fim.</p>
+
+  <div class="rule">
+    <b>Verde sólido.</b> <code>#1B6B3A</code> preenchido é exclusivo da <b>ação principal</b> — mais o (+) da barra e o círculo de iniciais da empresa. Nenhum chip, de filtro ou de escolha, usa verde sólido: selecionado é sempre <code>#E4E9E5</code> com texto <code>#1B6B3A</code>.<br>
+    <b>Hierarquia.</b> Uma principal por tela, sempre a ação que avança o dinheiro ou o estado. Nunca duas verdes na mesma tela. Telas de consulta (dashboard, listas) não têm principal — o (+) da barra é chrome global, não ação de tela.<br>
+    <b>Nome.</b> Uma ação, um nome: <b>Gerar relatório</b> quando cria, <b>Ver relatório</b> quando já existe. Nunca “Relatório” sozinho. Igual para Faturar frete · Marcar recebido · Receber o resto · Cobrar no WhatsApp · Editar frete · Arquivar frete.<br>
+    <b>Posição.</b> O bloco de ações fica ancorado no rodapé, acima da barra de navegação, nesta ordem: principal → secundárias lado a lado → destrutiva em texto. Nunca no meio do conteúdo rolável.
+  </div>
+
+  <div class="h2">01</div>
+  <div class="name">Principal</div>
+  <p class="use">Verde sólido, largura total, altura fixa. A ação que avança dinheiro ou estado. Uma por tela.</p>
+  <div class="grid">
+    <div class="cell"><span class="st">NORMAL</span>
+      <button style="width:100%;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;color:#fff;font:700 17px/1 Archivo,sans-serif" style-active="background:#14522C">Faturar frete</button>
+    </div>
+    <div class="cell"><span class="st">PRESSIONADO</span>
+      <button style="width:100%;height:60px;border:none;border-radius:999px;background:#14522C;cursor:pointer;color:#fff;font:700 17px/1 Archivo,sans-serif">Faturar frete</button>
+    </div>
+    <div class="cell"><span class="st">CARREGANDO</span>
+      <button disabled="disabled" style="width:100%;height:60px;border:none;border-radius:999px;background:#1B6B3A;color:transparent;font:700 17px/1 Archivo,sans-serif;cursor:default;position:relative">
+        Faturar frete
+        <span class="spin" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+          <span style="width:20px;height:20px;border-radius:999px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;animation:girar .7s linear infinite"></span>
+        </span>
+      </button>
+    </div>
+    <div class="cell"><span class="st">DESABILITADO</span>
+      <button disabled="disabled" style="width:100%;height:60px;border:none;border-radius:999px;background:#E4E0D6;color:#5C6660;font:700 17px/1 Archivo,sans-serif;cursor:not-allowed">Faturar frete</button>
+    </div>
+    <div class="spec">
+      altura <code>60</code> · raio <code>999</code> · largura <code>100%</code><br>
+      padding lateral <code>24</code> (só se largura automática)<br>
+      texto <code>17px / 700 / line-height 1</code><br>
+      normal <code>#1B6B3A</code> sobre texto <code>#FFFFFF</code><br>
+      pressionado <code>#14522C</code><br>
+      carregando: mesmo fundo <code>#1B6B3A</code>, texto oculto, spinner <code>20px</code> traço <code>2.5px</code> branco sobre <code>rgba(255,255,255,.3)</code>, centralizado — largura e altura travadas, toque ignorado<br>
+      desabilitado <code>#E4E0D6</code> · texto <code>#5C6660</code> (4.52:1 — antes <code>#A8AFA9</code>, 1.9:1, ilegível no sol)<br>
+      <strong>com ícone</strong> (só quando a ação sai do app — “Compartilhar no WhatsApp”): ícone <code>18px</code>, traço <code>1.6px</code>, gap <code>10px</code>, traço na cor do texto (<code>#fff</code>), conteúdo centralizado. Máximo um ícone, sempre antes do rótulo.
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="h2">02</div>
+  <div class="name">Secundária</div>
+  <p class="use">Fundo claro, largura total ou metade, uma altura abaixo da principal. Duas lado a lado no máximo.</p>
+  <div class="grid">
+    <div class="cell"><span class="st">NORMAL</span>
+      <button style="width:100%;height:52px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#141A17;font:700 15px/1 Archivo,sans-serif" style-active="background:#E4E0D6">Marcar recebido</button>
+    </div>
+    <div class="cell"><span class="st">PRESSIONADO</span>
+      <button style="width:100%;height:52px;border:none;border-radius:999px;background:#E4E0D6;cursor:pointer;color:#141A17;font:700 15px/1 Archivo,sans-serif">Marcar recebido</button>
+    </div>
+    <div class="cell"><span class="st">CARREGANDO</span>
+      <button disabled="disabled" style="width:100%;height:52px;border:none;border-radius:999px;background:#F0EDE6;color:transparent;font:700 15px/1 Archivo,sans-serif;cursor:default;position:relative">
+        Marcar recebido
+        <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+          <span style="width:18px;height:18px;border-radius:999px;border:2.5px solid rgba(20,26,23,.15);border-top-color:#141A17;animation:girar .7s linear infinite"></span>
+        </span>
+      </button>
+    </div>
+    <div class="cell"><span class="st">DESABILITADO</span>
+      <button disabled="disabled" style="width:100%;height:52px;border:none;border-radius:999px;background:#F4F1EB;color:#5C6660;font:700 15px/1 Archivo,sans-serif;cursor:not-allowed">Recebido ✓</button>
+    </div>
+    <div class="spec">
+      altura <code>52</code> · raio <code>999</code> · largura <code>100%</code> ou <code>flex:1</code><br>
+      padding lateral <code>22</code> (só se largura automática)<br>
+      texto <code>15px / 700 / 1</code><br>
+      normal <code>#F0EDE6</code> · texto <code>#141A17</code><br>
+      pressionado <code>#E4E0D6</code><br>
+      carregando: mesmo fundo, texto oculto, spinner <code>18px</code> traço <code>2.5px</code> escuro sobre <code>rgba(20,26,23,.15)</code><br>
+      desabilitado <code>#F4F1EB</code> · texto <code>#5C6660</code> (5.29:1 — antes <code>#A8AFA9</code>, 2.5:1)<br>
+      espaço entre duas secundárias <code>10</code>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="h2">03</div>
+  <div class="name">Texto</div>
+  <p class="use">Sem fundo. Só para ação rara ou destrutiva — arquivar, descartar. Fica sempre por último no bloco de ações.</p>
+  <div class="grid">
+    <div class="cell"><span class="st">NORMAL</span>
+      <button style="width:100%;height:44px;border:none;background:none;cursor:pointer;color:#B3401A;font:600 14px/1 Archivo,sans-serif" style-active="color:#8A3314">Arquivar frete</button>
+    </div>
+    <div class="cell"><span class="st">PRESSIONADO</span>
+      <button style="width:100%;height:44px;border:none;background:none;cursor:pointer;color:#8A3314;font:600 14px/1 Archivo,sans-serif">Arquivar frete</button>
+    </div>
+    <div class="cell"><span class="st">DESABILITADO</span>
+      <button disabled="disabled" style="width:100%;height:44px;border:none;background:none;color:#5C6660;font:600 14px/1 Archivo,sans-serif;cursor:not-allowed">Arquivar frete</button>
+    </div>
+    <div class="spec">
+      altura <code>44</code> — alvo mínimo de toque<br>
+      sem fundo, sem raio visível<br>
+      texto <code>14px / 600 / 1</code><br>
+      destrutiva <code>#B3401A</code> · pressionada <code>#8A3314</code><br>
+      neutra (rara, não destrutiva) <code>#6E7770</code> · pressionada <code>#141A17</code><br>
+      desabilitada <code>#5C6660</code> (5.62:1 sobre o papel — antes <code>#C4C9C3</code>, 1.7:1)<br>
+      sem carregando — é sempre rara ou destrutiva, nunca uma chamada de servidor com espera visível<br>
+      é a neutra que fecha folha (<b>Fechar</b>) — nunca verde
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="h2">04</div>
+  <div class="name">Pílula em linha</div>
+  <p class="use">Pequena, dentro de linhas de lista. Uma por linha. Nunca sai da lista para o rodapé.</p>
+  <div class="grid">
+    <div class="cell"><span class="st">NORMAL</span>
+      <div style="padding:14px 16px;border-radius:20px;background:#F0EDE6">
+        <button style="display:flex;align-items:center;gap:7px;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 12.5px/1 Archivo,sans-serif" style-active="background:#D0E1D7">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.6a6.4 6.4 0 0 0-5.5 9.7L1.6 14.4l3.2-.9A6.4 6.4 0 1 0 8 1.6Z" stroke="#1B6B3A" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+          Cobrar no WhatsApp
+        </button>
+      </div>
+    </div>
+    <div class="cell"><span class="st">PRESSIONADO</span>
+      <div style="padding:14px 16px;border-radius:20px;background:#F0EDE6">
+        <button style="display:flex;align-items:center;gap:7px;height:38px;padding:0 14px;border:none;border-radius:999px;background:#D0E1D7;cursor:pointer;color:#1B6B3A;font:700 12.5px/1 Archivo,sans-serif">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.6a6.4 6.4 0 0 0-5.5 9.7L1.6 14.4l3.2-.9A6.4 6.4 0 1 0 8 1.6Z" stroke="#1B6B3A" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+          Cobrar no WhatsApp
+        </button>
+      </div>
+    </div>
+    <div class="cell"><span class="st">CARREGANDO</span>
+      <div style="padding:14px 16px;border-radius:20px;background:#F0EDE6">
+        <button disabled="disabled" style="display:flex;align-items:center;justify-content:center;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;color:transparent;font:700 12.5px/1 Archivo,sans-serif;cursor:default;position:relative;min-width:150px">
+          Cobrar no WhatsApp
+          <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+            <span style="width:15px;height:15px;border-radius:999px;border:2px solid rgba(27,107,58,.25);border-top-color:#1B6B3A;animation:girar .7s linear infinite"></span>
+          </span>
+        </button>
+      </div>
+    </div>
+    <div class="cell"><span class="st">DESABILITADO</span>
+      <div style="padding:14px 16px;border-radius:20px;background:#F0EDE6">
+        <button disabled="disabled" style="display:flex;align-items:center;gap:7px;height:38px;padding:0 14px;border:none;border-radius:999px;background:#EDEAE3;color:#7A8177;font:700 12.5px/1 Archivo,sans-serif;cursor:not-allowed">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.6a6.4 6.4 0 0 0-5.5 9.7L1.6 14.4l3.2-.9A6.4 6.4 0 1 0 8 1.6Z" stroke="#5C6660" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+          Cobrar no WhatsApp
+        </button>
+      </div>
+    </div>
+    <div class="spec">
+      altura <code>38</code> · raio <code>999</code> · padding lateral <code>14</code><br>
+      texto <code>12.5px / 700 / 1</code> · ícone <code>14px</code> · gap <code>7</code><br>
+      normal <code>#E4E9E5</code> · texto e traço <code>#1B6B3A</code><br>
+      pressionada <code>#D0E1D7</code><br>
+      carregando: spinner <code>15px</code> traço <code>2px</code>, ícone e texto ocultos, largura mínima travada pra não encolher<br>
+      desabilitada <code>#EDEAE3</code> · <code>#5C6660</code> (4.96:1 — antes <code>#A8AFA9</code>, 2.2:1)<br>
+      usada também como “ver todos os 9” no fim de uma lista
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="h2">05</div>
+  <div class="name">Pílula sobre escuro</div>
+  <p class="use">Só dentro do cartão preto da dashboard e do aviso do sistema. Nunca sobre fundo claro.</p>
+  <div class="grid">
+    <div class="cell"><span class="st">NORMAL</span>
+      <div class="dark">
+        <button style="width:100%;height:46px;border:none;border-radius:999px;background:rgba(255,255,255,.1);cursor:pointer;color:#fff;font:600 12.5px/1.15 Archivo,sans-serif" style-active="background:rgba(255,255,255,.2)">Gerar relatório</button>
+      </div>
+    </div>
+    <div class="cell"><span class="st">PRESSIONADA</span>
+      <div class="dark">
+        <button style="width:100%;height:46px;border:none;border-radius:999px;background:rgba(255,255,255,.2);cursor:pointer;color:#fff;font:600 12.5px/1.15 Archivo,sans-serif">Gerar relatório</button>
+      </div>
+    </div>
+    <div class="cell"><span class="st">CARREGANDO</span>
+      <div class="dark">
+        <button disabled="disabled" style="width:100%;height:46px;border:none;border-radius:999px;background:rgba(255,255,255,.1);color:transparent;font:600 12.5px/1.15 Archivo,sans-serif;cursor:default;position:relative">
+          Gerar relatório
+          <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+            <span style="width:16px;height:16px;border-radius:999px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;animation:girar .7s linear infinite"></span>
+          </span>
+        </button>
+      </div>
+    </div>
+    <div class="cell"><span class="st">DESABILITADA</span>
+      <div class="dark">
+        <button disabled="disabled" style="width:100%;height:46px;border:none;border-radius:999px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.55);font:600 12.5px/1.15 Archivo,sans-serif;cursor:not-allowed">Gerar relatório</button>
+      </div>
+    </div>
+    <div class="spec">
+      altura <code>46</code> · raio <code>999</code> · padding lateral <code>6–14</code><br>
+      texto <code>12.5px / 600 / 1.15</code>, centralizado<br>
+      normal <code>rgba(255,255,255,.1)</code> · texto <code>#FFFFFF</code><br>
+      pressionada <code>rgba(255,255,255,.2)</code><br>
+      carregando: spinner <code>16px</code> traço <code>2px</code> branco, texto oculto<br>
+      desabilitada <code>rgba(255,255,255,.06)</code> · texto <code>rgba(255,255,255,.55)</code> (antes .35 — quase some sobre o escuro)<br>
+      no aviso do sistema o texto sobe para <code>14px</code>
+    </div>
+  </div>
+
+  <div class="rule" style="margin-top:22px">
+    <b>Carregando, em geral.</b> Só existe nas variantes que chamam o servidor: Principal, Secundária, Pílula em linha, Pílula sobre escuro. Texto, Pílula de cabeçalho e chips de seleção mudam de estado na hora (local) e não precisam dele. Botão fica <code>disabled</code>, largura e altura travadas — nunca redimensiona o layout. Toques repetidos são ignorados até a resposta chegar (sucesso ou erro).
+  </div>
+
+  <div class="sep"></div>
+  <div class="h2">06</div>
+  <div class="name">Pílula de cabeçalho</div>
+  <p class="use">Ação de cabeçalho de tela ou de folha — cadastrar, ver todos. Nunca verde sólida: só a principal do rodapé é verde sólida.</p>
+  <div class="grid">
+    <div class="cell"><span class="st">NORMAL</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="flex:1;font:800 19px/1.1 Archivo,sans-serif;color:#141A17">Escolher cliente</span>
+        <button style="height:44px;padding:0 16px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13.5px/1 Archivo,sans-serif" style-active="background:#D0E1D7">+ Novo</button>
+      </div>
+    </div>
+    <div class="cell"><span class="st">PRESSIONADA</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="flex:1;font:800 19px/1.1 Archivo,sans-serif;color:#141A17">Escolher cliente</span>
+        <button style="height:44px;padding:0 16px;border:none;border-radius:999px;background:#D0E1D7;cursor:pointer;color:#1B6B3A;font:700 13.5px/1 Archivo,sans-serif">+ Cadastrar</button>
+      </div>
+    </div>
+    <div class="cell"><span class="st">DESABILITADA</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="flex:1;font:800 19px/1.1 Archivo,sans-serif;color:#A8AFA9">Escolher cliente</span>
+        <button disabled="disabled" style="height:44px;padding:0 16px;border:none;border-radius:999px;background:#EDEAE3;color:#5C6660;font:700 13.5px/1 Archivo,sans-serif;cursor:not-allowed">+ Novo</button>
+      </div>
+    </div>
+    <div class="spec">
+      altura <code>44</code> · raio <code>999</code> · padding lateral <code>16</code><br>
+      texto <code>13.5px / 700 / 1</code><br>
+      normal <code>#E4E9E5</code> · texto <code>#1B6B3A</code><br>
+      pressionada <code>#D0E1D7</code><br>
+      desabilitada <code>#EDEAE3</code> · <code>#5C6660</code> (4.96:1 — antes <code>#A8AFA9</code>, 2.2:1)<br>
+      o rótulo muda com o estado: <b>+ Novo</b> sem busca, <b>+ Cadastrar</b> quando há texto novo
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="h2">07</div>
+  <div class="name">Aviso do sistema</div>
+  <p class="use">Um componente só, usado pelo “Frete salvo” e pelo “Cobrou o Frigorífico São Luiz?”. <b>Dado do usuário fica em superfície clara; mensagem do sistema fica em superfície escura.</b> As duas coisas nunca compartilham tratamento.</p>
+  <div class="grid">
+    <div class="cell"><span class="st">SEM BOTÕES</span>
+      <dc-import name="AvisoSistema" texto="Recebimento lançado · hoje · Pix" hint-size="250px,74px"></dc-import>
+    </div>
+    <div class="cell"><span class="st">COM BOTÕES</span>
+      <dc-import name="AvisoSistema" texto="Cobrou o Frigorífico São Luiz?" temBotoes="{{ true }}" labelA="Ainda não" labelB="Enviei" hint-size="250px,140px"></dc-import>
+    </div>
+    <div class="cell"><span class="st">DEPOIS DE SALVAR</span>
+      <dc-import name="AvisoSistema" texto="Frete salvo como A faturar." temBotoes="{{ true }}" labelA="Já recebi" labelB="Ver o frete" hint-size="250px,140px"></dc-import>
+    </div>
+    <div class="spec">
+      fundo <code>#141A17</code> — o mesmo do cartão de faturamento<br>
+      texto <code>14.5px / 600 / 1.4</code> em <code>#FFFFFF</code><br>
+      raio <code>22</code> · padding <code>16 / 18</code><br>
+      sombra <code>0 14px 34px rgba(20,26,23,.30)</code> + <code>0 3px 10px rgba(20,26,23,.16)</code><br>
+      ancorado <code>left/right 16 · bottom 134</code> — acima da barra e livre do (+)<br>
+      flutua sobre o conteúdo, <b>nunca ocupa lugar no fluxo</b>, nunca empurra a lista<br>
+      some sozinho em <code>6s</code> (sem botões) ou <code>8s</code> (com botões)<br>
+      botões: variante <b>05</b>, <code>flex:1</code>, gap <code>10</code>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="h2">08</div>
+  <div class="name">Ícones</div>
+  <p class="use">Uma família só: traçado, sem preenchimento, cantos arredondados — desenhados à mão no próprio SVG (sem biblioteca externa, para não misturar espessura de traço).</p>
+  <div class="icon-row">
+    <div class="icon-item">
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M8 1.6a6.4 6.4 0 0 0-5.5 9.7L1.6 14.4l3.2-.9A6.4 6.4 0 1 0 8 1.6Z" stroke="#1B6B3A" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+      <span class="icon-name">WhatsApp</span>
+      <span class="icon-use">14px na pílula em linha · traço <code>1.6px</code> · cor herda o texto do botão</span>
+    </div>
+    <div class="icon-item">
+      <svg width="20" height="20" viewBox="0 0 19 15" fill="none"><path d="M1.6 7.6 6.9 12.9 17.4 2.2" stroke="#1B6B3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span class="icon-name">Confirmar</span>
+      <span class="icon-use">19px no painel de deslizar · traço <code>2.4px</code> — mais grosso porque não tem texto ao lado</span>
+    </div>
+    <div class="icon-item">
+      <svg width="20" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span class="icon-name">Voltar</span>
+      <span class="icon-use">12px em toque de 44px · traço <code>2.2px</code> · sempre sozinho, sem rótulo</span>
+    </div>
+    <div class="icon-item">
+      <svg width="20" height="20" viewBox="0 0 15 15" fill="none"><circle cx="6.4" cy="6.4" r="5" stroke="#6E7770" stroke-width="1.9"></circle><path d="m10.2 10.2 3.4 3.4" stroke="#6E7770" stroke-width="1.9" stroke-linecap="round"></path></svg>
+      <span class="icon-name">Busca</span>
+      <span class="icon-use">17px · traço <code>1.9px</code> · gap <code>12px</code> até o campo de texto</span>
+    </div>
+    <div class="icon-item">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2.6 8.4 10 2.4l7.4 6v8.2a1 1 0 0 1-1 1h-3.6v-5.2H7.2v5.2H3.6a1 1 0 0 1-1-1V8.4Z" stroke="#7FCB9B" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+      <span class="icon-name">Barra · Início</span>
+      <span class="icon-use">19px · traço <code>1.8px</code></span>
+    </div>
+    <div class="icon-item">
+      <svg width="20" height="20" viewBox="0 0 22 20" fill="none"><path d="M1.6 4.2h11.2v9.4H1.6zM12.8 7.4h4l3.6 3.4v2.8h-7.6z" stroke="#7FCB9B" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="5.8" cy="15.8" r="2" stroke="#7FCB9B" stroke-width="1.8"></circle><circle cx="16.2" cy="15.8" r="2" stroke="#7FCB9B" stroke-width="1.8"></circle></svg>
+      <span class="icon-name">Barra · Fretes</span>
+      <span class="icon-use">21px · traço <code>1.8px</code></span>
+    </div>
+    <div class="icon-item">
+      <svg width="20" height="20" viewBox="0 0 26 26" fill="none"><path d="M13 4.5v17M4.5 13h17" stroke="#fff" stroke-width="2.8" stroke-linecap="round"></path></svg>
+      <span class="icon-name">Barra · Novo (+)</span>
+      <span class="icon-use">26px · traço <code>2.8px</code> — o mais grosso, é o item elevado</span>
+    </div>
+    <div class="icon-item">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2.4 3.6h15.2v10.2a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V3.6Z" stroke="#7FCB9B" stroke-width="1.8" stroke-linejoin="round"></path><path d="M5.6 7h8.8M5.6 10.4h5" stroke="#7FCB9B" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span class="icon-name">Barra · Cobranças</span>
+      <span class="icon-use">20px · traço <code>1.8px</code></span>
+    </div>
+    <div class="icon-item">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3.4 6h13.2M3.4 10h13.2M3.4 14h8.4" stroke="rgba(20,26,23,.5)" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span class="icon-name">Barra · Mais</span>
+      <span class="icon-use">20px · traço <code>1.8px</code></span>
+    </div>
+  </div>
+  <p class="use" style="margin-top:14px">
+    <b>Regra geral:</b> 17–21px sozinho (barra, voltar, busca) · 14–15px ao lado de texto (pílula em linha). Traço entre <code>1.6</code> e <code>2.4</code> — mais fino quando acompanha texto pequeno, mais grosso quando é o único elemento do botão. Alinhamento sempre <code>align-items:center</code> com o rótulo; <b>gap 7px</b> entre ícone e texto (10px quando o ícone é maior que 17px). Cor do traço sempre igual à cor do texto do botão — nunca uma cor de ícone independente.
+  </p>
+
+  <div class="sep"></div>
+  <div class="h2">07</div>
+  <div class="name">Família FretiNews</div>
+  <p class="use">A terceira superfície do produto. <b>Superfície clara = dado do usuário · superfície escura = mensagem do sistema · lilás = comunicação da plataforma.</b> Escopo fechado: cartão FretiNews na dashboard, lista de Novidades e detalhe da mensagem. Nunca em dado, ação, cobrança ou frete.</p>
+  <div class="grid">
+    <div class="cell"><span class="st">CARTÃO NA DASHBOARD</span>
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:17px 18px;border-radius:22px;background:#EDEBFA">
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+          <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#5B4FA8">FRETINEWS</span>
+          <span style="font:700 16.5px/1.25 Archivo,sans-serif;color:#2C2555;text-wrap:pretty">Agora dá pra lançar frete sem sinal</span>
+          <span style="font:400 13px/1.4 Archivo,sans-serif;color:#5B4FA8;text-wrap:pretty">Salva no aparelho e sobe sozinho.</span>
+        </span>
+        <span style="flex:none;display:flex;align-items:center;justify-content:center;width:32px;height:32px;margin:-4px -6px 0 0">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.6 1.6l8.8 8.8M10.4 1.6l-8.8 8.8" stroke="#5B4FA8" stroke-width="1.9" stroke-linecap="round"></path></svg>
+        </span>
+      </div>
+    </div>
+    <div class="cell"><span class="st">LINHA NÃO LIDA</span>
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-radius:20px;background:#EDEBFA">
+        <span style="flex:none;width:8px;height:8px;border-radius:99px;background:#5B4FA8"></span>
+        <span style="flex:1;min-width:0;font:700 15.5px/1.25 Archivo,sans-serif;color:#2C2555">Relatório agora sai em PDF</span>
+      </div>
+    </div>
+    <div class="cell"><span class="st">LINHA JÁ LIDA</span>
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-radius:20px;background:#F0EDE6">
+        <span style="flex:none;width:8px;height:8px;border-radius:99px;background:transparent"></span>
+        <span style="flex:1;min-width:0;font:600 15.5px/1.25 Archivo,sans-serif;color:#141A17">Relatório agora sai em PDF</span>
+      </div>
+    </div>
+    <div class="spec">
+      superfície <code>#EDEBFA</code><br>
+      título <code>#2C2555</code> — contraste <b>11.89:1</b><br>
+      apoio, rótulo, ponto e traço do × <code>#5B4FA8</code> — <b>5.71:1</b><br>
+      medidos pela fórmula WCAG, mesmo padrão do texto desabilitado<br>
+      lida perde o lilás e volta para <code>#F0EDE6</code>: o peso e o ponto marcam o estado, não a cor<br>
+      <b>Três tons, só.</b> <code>#8B82C4</code> saiu por dar 2.93:1 no × — abaixo do mínimo de 3:1 para controle
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="h2">NÃO SÃO BOTÕES</div>
+  <div class="name">Chips de seleção</div>
+  <p class="use">Controles de estado, não ações. Não entram na regra de hierarquia e nunca ficam no bloco de ações do rodapé.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:26px;align-items:flex-start">
+    <div class="cell"><span class="st">FILTRO — NEUTRO / SELECIONADO</span>
+      <div style="display:flex;gap:8px">
+        <button style="display:flex;align-items:center;gap:7px;height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#6E7770;font:600 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden">Situação
+          <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#A8AFA9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <button style="display:flex;align-items:center;gap:7px;height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden">Vencidas
+          <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#1B6B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+      </div>
+    </div>
+    <div class="cell"><span class="st">ESCOLHA — NÃO / SELECIONADO</span>
+      <div style="display:flex;gap:8px">
+        <button style="height:48px;padding:0 18px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#141A17;font:600 15px/1 Archivo,sans-serif">Dinheiro</button>
+        <button style="height:48px;padding:0 18px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 15px/1 Archivo,sans-serif">Pix</button>
+      </div>
+    </div>
+    <div class="cell"><span class="st">VARIÁVEL DE TEXTO</span>
+      <div style="display:flex;gap:8px">
+        <button style="height:44px;padding:0 16px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13.5px/1 Archivo,sans-serif">{cliente}</button>
+        <button style="height:44px;padding:0 16px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13.5px/1 Archivo,sans-serif">{valor}</button>
+      </div>
+    </div>
+  </div>
+  <table class="tbl">
+    <tr><td>Filtro</td><td>40px · raio 999 · <code>13px/600</code> · largura máx. <code>148px</code>, uma linha só com reticências — neutro <code>#F0EDE6</code>/<code>#6E7770</code>, selecionado <code>#E4E9E5</code>/<code>#1B6B3A</code> em 700, mostrando o valor escolhido. <strong>Nunca verde sólido</strong> — esse é exclusivo da ação principal.</td></tr>
+    <tr><td>Escolha</td><td>48px · raio 999 · <code>15px/600</code> — não escolhido <code>#F0EDE6</code>/<code>#141A17</code>, escolhido <code>#E4E9E5</code>/<code>#1B6B3A</code> em 700. <strong>Nunca verde sólido</strong> — nenhum chip usa.</td></tr>
+    <tr><td>Variável</td><td>44px · raio 999 · <code>13.5px/700</code> · <code>#E4E9E5</code>/<code>#1B6B3A</code></td></tr>
+  </table>
+
+  <div class="sep"></div>
+  <div class="h2">ONDE CADA TELA USA O QUÊ</div>
+  <table class="tbl">
+    <tr><td>Dashboard</td><td>sem principal · 2× pílula sobre escuro (Gerar relatório · Importar fretes) · pastilhas e pendências são superfícies tocáveis, não botões</td></tr>
+    <tr><td>Meus fretes</td><td>sem principal · aviso do sistema depois de salvar · (+) da barra é chrome</td></tr>
+    <tr><td>Detalhe do frete</td><td>principal <b>Faturar frete</b> ou <b>Ver relatório</b> · secundárias <b>Marcar recebido</b> + <b>Editar frete</b> · texto destrutiva <b>Arquivar frete</b></td></tr>
+    <tr><td>Folhas de escolha</td><td>pílula de cabeçalho <b>+ Novo</b> / <b>+ Cadastrar</b> · texto neutra <b>Fechar</b> · chips de escolha</td></tr>
+    <tr><td>Cobranças</td><td>sem principal · pílula em linha <b>Cobrar no WhatsApp</b> · aviso do sistema no retorno</td></tr>
+    <tr><td>Detalhe da cobrança</td><td>principal <b>Marcar recebido</b> / <b>Receber o resto</b> / desabilitada <b>Recebido ✓</b> · secundárias <b>Cobrar no WhatsApp</b> + <b>Ver relatório</b> · pílula em linha <b>ver todos os 9</b></td></tr>
+    <tr><td>Cobranças vazia</td><td>principal <b>Gerar relatório</b> · texto neutra <b>Ver os 4 fretes</b></td></tr>
+    <tr><td>Modelo de mensagem</td><td>principal <b>Salvar modelo</b> · chips de variável</td></tr>
+    <tr><td>Lançar frete</td><td>principal <b>Salvar frete</b> · chips de escolha · pílula de cabeçalho na folha de busca · aviso do sistema depois de salvar (com <b>Já recebi</b> / <b>Novo frete</b>) — não existe segunda verde na tela</td></tr>
+  </table>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+@keyframes fg-spin{to{transform:rotate(360deg)}}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <sc-if value="{{ ehLista }}" hint-placeholder-val="{{ true }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ voltar }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 20px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.01em;color:#3C443E">Despesas</span>
+        <sc-if value="{{ temNovoTopo }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ nova }}" style="flex:none;display:flex;align-items:center;height:44px;padding:0 16px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13.5px/1 Archivo,sans-serif" style-active="background:#D0E1D7">+ Nova</button>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ temResumo }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:none;padding:14px 16px 0">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:18px;border-radius:22px;background:#F0EDE6">
+            <span style="font:700 11px/1.3 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">GASTO EM AGOSTO</span>
+            <span style="display:flex;align-items:baseline;gap:4px;white-space:nowrap;font:800 25px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.025em;color:#141A17;font-variant-numeric:tabular-nums">
+              <span style="font-size:13px;font-weight:700;letter-spacing:0;color:#6E7770">R$</span>{{ totalPeriodo }}
+            </span>
+            <span style="font:500 12.5px/1.35 Archivo,sans-serif;color:#6E7770">{{ notaTotal }}</span>
+          </div>
+        </div>
+
+        <div style="flex:none;padding:12px 20px 14px">
+          <div style="display:flex;gap:8px">
+            <sc-for list="{{ chips }}" as="c" hint-placeholder-count="2">
+              <span style="display:flex;min-width:0">
+                <sc-if value="{{ c.ativo }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ c.abrir }}" style="display:flex;min-width:0;align-items:center;gap:7px;min-height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden" style-active="background:#D0E1D7">
+                    <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.valor }}</span>
+                    <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#1B6B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  </button>
+                </sc-if>
+                <sc-if value="{{ c.neutro }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ c.abrir }}" style="display:flex;min-width:0;align-items:center;gap:7px;min-height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#6E7770;font:600 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden" style-active="background:#E4E0D6">
+                    <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.nome }}</span>
+                    <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#A8AFA9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  </button>
+                </sc-if>
+              </span>
+            </sc-for>
+          </div>
+          <div style="margin-top:12px;font:500 12px/1 Archivo,sans-serif;color:#6E7770">{{ totalContexto }}</div>
+        </div>
+      </sc-if>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:0 16px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="padding:14px 4px 2px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ g.titulo }}</span>
+            <sc-for list="{{ g.itens }}" as="d" hint-placeholder-count="3">
+              <button onClick="{{ d.abrir }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:74px;padding:14px 18px;border:none;border-radius:20px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+                  <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 16.5px/1.2 Archivo,sans-serif">{{ d.descricao }}</span>
+                  <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 13px/1.2 Archivo,sans-serif;color:#6E7770">{{ d.apoio }}</span>
+                </span>
+                <span style="flex:none;white-space:nowrap;font:800 18px/1 Archivo,sans-serif;color:#141A17;font-variant-numeric:tabular-nums">{{ d.valor }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-for>
+
+        <sc-if value="{{ vazia }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:26px 4px 0;display:flex;flex-direction:column;gap:14px;align-items:flex-start">
+            <span style="font:800 22px/1.25 Archivo,sans-serif;letter-spacing:-.01em">Nenhuma despesa lançada.</span>
+            <span style="font:500 15px/1.5 Archivo,sans-serif;color:#3C443E">Enquanto não houver despesa, o app sabe quanto entrou mas não quanto sobrou — e o card de <strong>Lucro</strong> na tela inicial fica sem número.</span>
+            <span style="font:500 15px/1.5 Archivo,sans-serif;color:#3C443E">Lance o diesel, a manutenção, o pedágio e o que você paga ao motorista. Não precisa ser tudo de uma vez: cada despesa lançada já melhora a conta.</span>
+            <button onClick="{{ nova }}" style="flex:none;width:100%;height:60px;margin-top:8px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Lançar primeira despesa</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehForm }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ form.cancelar }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ form.eyebrow }}</span>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:14px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;flex-direction:column;gap:10px;padding:18px;border-radius:22px;background:#141A17">
+          <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.45)">VALOR DA DESPESA</span>
+          <div style="display:flex;align-items:baseline;gap:10px">
+            <span style="font:700 20px/1 Archivo,sans-serif;color:rgba(255,255,255,.45)">R$</span>
+            <input value="{{ form.valor }}" onChange="{{ form.setValor }}" placeholder="0,00" style="flex:1;min-width:0;box-sizing:border-box;border:none;outline:none;background:none;font:800 46px/1.15 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;color:#fff;font-variant-numeric:tabular-nums"></input>
+          </div>
+        </div>
+
+        <span style="padding:14px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">CATEGORIA</span>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <sc-for list="{{ form.categorias }}" as="c" hint-placeholder-count="6">
+            <span style="display:flex;min-width:0">
+              <sc-if value="{{ c.sel }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ c.pick }}" style="flex:none;height:48px;padding:0 18px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 15px/1 Archivo,sans-serif">{{ c.nome }}</button>
+              </sc-if>
+              <sc-if value="{{ c.off }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ c.pick }}" style="flex:none;height:48px;padding:0 18px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#141A17;font:600 15px/1 Archivo,sans-serif" style-active="background:#E4E0D6">{{ c.nome }}</button>
+              </sc-if>
+            </span>
+          </sc-for>
+        </div>
+
+        <span style="padding:18px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">QUANDO E O QUÊ</span>
+        <div style="flex:none;display:flex;align-items:center;gap:12px;height:60px;min-height:60px;padding:0 18px;border-radius:18px;background:#F0EDE6">
+          <span style="flex:none;width:92px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">DATA</span>
+          <button onClick="{{ form.trocarData }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:100%;padding:0;border:none;background:none;cursor:pointer;text-align:left">
+            <span style="flex:1;min-width:0;font:700 16.5px/1.2 Archivo,sans-serif">{{ form.dataLabel }}</span>
+            <span style="flex:none;font:700 10px/1 Archivo,sans-serif;letter-spacing:.1em;color:#1B6B3A">TROCAR</span>
+          </button>
+        </div>
+        <div style="flex:none;display:flex;flex-direction:column;gap:8px;min-height:78px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+          <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">DESCRIÇÃO</span>
+          <input value="{{ form.descricao }}" onChange="{{ form.setDescricao }}" placeholder="{{ form.dicaDescricao }}" style="width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;border:none;outline:none;background:none;font:600 17px/1.3 Archivo,sans-serif;color:#141A17"></input>
+        </div>
+
+        <span style="padding:18px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">VÍNCULO — OPCIONAL</span>
+        <span style="padding:0 4px 8px;font:500 12.5px/1.4 Archivo,sans-serif;color:#6E7770">Vincular a um caminhão faz a despesa entrar no R$/km dele. Sem vínculo, ela entra só no lucro do mês.</span>
+        <button onClick="{{ form.abrirVinculo }}" style="flex:none;display:flex;align-items:center;gap:12px;width:100%;height:60px;min-height:60px;padding:0 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+          <span style="flex:none;width:92px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">CAMINHÃO</span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 16.5px/1.2 Archivo,sans-serif;color:{{ form.corVinculo }}">{{ form.vinculo }}</span>
+          <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:22px">
+          <sc-if value="{{ form.podeSalvar }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ form.salvar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Salvar despesa</button>
+          </sc-if>
+          <sc-if value="{{ form.salvando }}" hint-placeholder-val="{{ false }}">
+            <button disabled="disabled" style="flex:none;display:flex;align-items:center;justify-content:center;gap:10px;height:60px;border:none;border-radius:999px;background:#1B6B3A;font:700 17px/1 Archivo,sans-serif;color:#fff;cursor:wait">
+              <span style="display:inline-block;width:17px;height:17px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:999px;animation:fg-spin .7s linear infinite"></span>
+              Salvar despesa
+            </button>
+          </sc-if>
+          <sc-if value="{{ form.bloqueado }}" hint-placeholder-val="{{ true }}">
+            <button disabled="disabled" style="flex:none;height:60px;border:none;border-radius:999px;background:#E4E0D6;color:#5C6660;font:700 17px/1 Archivo,sans-serif;cursor:not-allowed">Salvar despesa</button>
+          </sc-if>
+          <sc-if value="{{ form.ehEdicao }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ form.excluir }}" style="flex:none;height:44px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#B3401A" style-active="color:#8A3314">Excluir despesa</button>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ folha.open }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,26,23,.42)">
+      <button onClick="{{ folha.fechar }}" style="flex:1;border:none;background:none;cursor:pointer"></button>
+      <div style="background:#FAF8F4;border-radius:28px 28px 0 0;padding:16px 20px 40px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:38px;height:4px;border-radius:99px;background:#DAD5CA;align-self:center"></div>
+        <span style="font:800 21px/1.1 Archivo,sans-serif">{{ folha.titulo }}</span>
+        <div style="max-height:400px;overflow:auto;display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ folha.itens }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:60px;padding:12px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+              <span style="font:700 16.5px/1.2 Archivo,sans-serif">{{ o.nome }}</span>
+              <sc-if value="{{ o.sel }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:none;font:700 12px/1 Archivo,sans-serif;letter-spacing:.08em;color:#1B6B3A">ATUAL</span>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ seletor.open }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:90;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,26,23,.42)">
+      <button onClick="{{ seletor.fechar }}" style="flex:1;border:none;background:none;cursor:pointer"></button>
+      <div style="background:#FAF8F4;border-radius:28px 28px 0 0;padding:16px 20px 40px;display:flex;flex-direction:column;gap:18px">
+        <div style="width:38px;height:4px;border-radius:99px;background:#DAD5CA;align-self:center"></div>
+        <span style="font:800 21px/1.1 Archivo,sans-serif">Data da despesa</span>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">DIA</span>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ seletor.atalhos }}" as="a" hint-placeholder-count="3">
+              <span style="display:flex;min-width:0">
+                <sc-if value="{{ a.sel }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ a.pick }}" style="flex:none;height:48px;padding:0 18px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 15px/1 Archivo,sans-serif">{{ a.nome }}</button>
+                </sc-if>
+                <sc-if value="{{ a.off }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ a.pick }}" style="flex:none;height:48px;padding:0 18px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#141A17;font:600 15px/1 Archivo,sans-serif" style-active="background:#E4E0D6">{{ a.nome }}</button>
+                </sc-if>
+              </span>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ seletor.ehOutra }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">ESCOLHER NO CALENDÁRIO</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <button onClick="{{ seletor.mesAnterior }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer" style-active="background:#E4E0D6">
+                <svg width="9" height="15" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </button>
+              <span style="flex:1;min-width:0;text-align:center;font:700 16px/1.2 Archivo,sans-serif">{{ seletor.mesLabel }}</span>
+              <button onClick="{{ seletor.mesSeguinte }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer" style-active="background:#E4E0D6">
+                <svg width="9" height="15" viewBox="0 0 12 20" fill="none"><path d="M2 1.5 10 10l-8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+              <sc-for list="{{ seletor.semana }}" as="w" hint-placeholder-count="7">
+                <span style="text-align:center;font:700 10px/1 Archivo,sans-serif;letter-spacing:.06em;color:#A8AFA9;padding:4px 0 6px">{{ w }}</span>
+              </sc-for>
+              <sc-for list="{{ seletor.dias }}" as="d" hint-placeholder-count="35">
+                <span style="display:flex;min-width:0">
+                  <sc-if value="{{ d.vazio }}" hint-placeholder-val="{{ false }}">
+                    <span style="width:100%;height:44px"></span>
+                  </sc-if>
+                  <sc-if value="{{ d.sel }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ d.pick }}" style="flex:none;width:100%;height:44px;border:none;border-radius:12px;background:#1B6B3A;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#fff;font-variant-numeric:tabular-nums">{{ d.n }}</button>
+                  </sc-if>
+                  <sc-if value="{{ d.normal }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ d.pick }}" style="flex:none;width:100%;height:44px;border:none;border-radius:12px;background:#F0EDE6;cursor:pointer;font:600 15px/1 Archivo,sans-serif;color:#141A17;font-variant-numeric:tabular-nums" style-active="background:#E4E0D6">{{ d.n }}</button>
+                  </sc-if>
+                </span>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ seletor.podeConfirmar }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ seletor.confirmar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">{{ seletor.labelConfirmar }}</button>
+        </sc-if>
+        <sc-if value="{{ seletor.bloqueado }}" hint-placeholder-val="{{ false }}">
+          <button disabled="disabled" style="flex:none;height:60px;border:none;border-radius:999px;background:#E4E0D6;color:#5C6660;font:700 17px/1 Archivo,sans-serif;cursor:not-allowed">Escolha um dia</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ temAviso }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(112px, calc(env(safe-area-inset-bottom) + 106px));z-index:70">
+      <dc-import name="AvisoSistema" texto="{{ aviso }}" hint-size="100%,74px"></dc-import>
+    </div>
+  </sc-if>
+
+  <dc-import name="BarraFG" ativo="mais" onInicio="{{ onInicio }}" onFretes="{{ onFretes }}" onNovo="{{ onNovo }}" onCobrancas="{{ onCobrancas }}" onMais="{{ onMais }}" hint-size="100%,100px"></dc-import>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;estadoInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lista&quot;,&quot;nova&quot;,&quot;vazia&quot;],&quot;default&quot;:&quot;lista&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;onVoltar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onInicio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onFretes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onNovo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onCobrancas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMais&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const CATEGORIAS = ['Diesel', 'Manutenção', 'Motorista', 'Pedágio', 'Pneu', 'Documento', 'Outro'];
+const CAMINHOES = ['Sem vínculo', 'Scania branco', 'Volvo azul', 'MB prata', 'Truck vermelho', 'Ford cinza', 'Iveco branco', 'VW 24-280'];
+const PERIODOS = ['Este mês', 'Mês passado', 'Últimos 30 dias', 'Tudo'];
+const DATAS = ['Hoje', 'Ontem', 'Outra data'];
+const MESES_NOME = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+// as despesas somam R$ 24.780, o valor que a dashboard subtrai do faturamento
+const DESPESAS = [
+  { id: 1, dia: 'HOJE · QUA, 5 AGO', cat: 'Diesel', desc: 'Posto Bandeira — 380 litros', cents: 268000, caminhao: 'Scania branco' },
+  { id: 2, dia: 'HOJE · QUA, 5 AGO', cat: 'Pedágio', desc: 'CE-440 e BR-222', cents: 14000, caminhao: 'Scania branco' },
+  { id: 3, dia: 'ONTEM · TER, 4 AGO', cat: 'Motorista', desc: 'Diária do Nego', cents: 25000, caminhao: '' },
+  { id: 4, dia: 'ONTEM · TER, 4 AGO', cat: 'Diesel', desc: 'Posto do Zé — 310 litros', cents: 218000, caminhao: 'Volvo azul' },
+  { id: 5, dia: 'DOM, 2 AGO', cat: 'Manutenção', desc: 'Troca de óleo e filtro', cents: 92000, caminhao: 'MB prata' },
+  { id: 6, dia: 'DOM, 2 AGO', cat: 'Pneu', desc: 'Dois recapados no eixo traseiro', cents: 148000, caminhao: 'Truck vermelho' },
+  { id: 7, dia: 'SÁB, 1 AGO', cat: 'Diesel', desc: 'Posto Bandeira — 290 litros', cents: 204000, caminhao: 'Ford cinza' },
+  { id: 8, dia: 'SÁB, 1 AGO', cat: 'Documento', desc: 'Licenciamento do Iveco', cents: 48000, caminhao: 'Iveco branco' },
+  { id: 9, dia: 'SÁB, 1 AGO', cat: 'Manutenção', desc: 'Solda no baú', cents: 36000, caminhao: 'Volvo azul' },
+  { id: 10, dia: 'SÁB, 1 AGO', cat: 'Motorista', desc: 'Diária do Damião', cents: 25000, caminhao: '' },
+  { id: 11, dia: 'SÁB, 1 AGO', cat: 'Diesel', desc: 'Posto do Zé — 340 litros', cents: 238000, caminhao: 'VW 24-280' },
+  { id: 12, dia: 'SÁB, 1 AGO', cat: 'Outro', desc: 'Lavagem da frota', cents: 12000, caminhao: '' },
+  { id: 13, dia: 'SÁB, 1 AGO', cat: 'Pedágio', desc: 'BR-020 ida e volta', cents: 18000, caminhao: 'MB prata' },
+  { id: 14, dia: 'SÁB, 1 AGO', cat: 'Diesel', desc: 'Posto Bandeira — 400 litros', cents: 280000, caminhao: 'Scania branco' },
+  { id: 15, dia: 'SÁB, 1 AGO', cat: 'Motorista', desc: 'Diária do Cícero e do Zé', cents: 50000, caminhao: '' },
+  { id: 16, dia: 'SÁB, 1 AGO', cat: 'Manutenção', desc: 'Freio do Truck', cents: 92000, caminhao: 'Truck vermelho' },
+  { id: 17, dia: 'SÁB, 1 AGO', cat: 'Diesel', desc: 'Posto do Zé — 420 litros', cents: 294000, caminhao: 'Volvo azul' },
+  { id: 18, dia: 'SÁB, 1 AGO', cat: 'Manutenção', desc: 'Revisão do Scania', cents: 186000, caminhao: 'Scania branco' },
+  { id: 19, dia: 'SÁB, 1 AGO', cat: 'Diesel', desc: 'Posto Bandeira — 210 litros', cents: 154000, caminhao: 'Ford cinza' },
+  { id: 20, dia: 'SÁB, 1 AGO', cat: 'Motorista', desc: 'Diária do Marcos e do Valdo', cents: 50000, caminhao: '' },
+  { id: 21, dia: 'SÁB, 1 AGO', cat: 'Pedágio', desc: 'BR-222 na semana', cents: 26000, caminhao: '' },
+];
+const money = c => (c / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const inteiro = c => money(c).split(',')[0];
+
+class Component extends DCLogic {
+  state = { tela: null, alvo: null, form: null, salvando: false, aviso: null, periodo: 'Este mês', categoria: 'Todas', folha: null, seletor: false, atalho: 'Hoje', mesOff: 0, diaEscolhido: null };
+
+  componentDidMount() {
+    const ini = this.props.estadoInicial;
+    if (ini === 'nova') this.setState({ tela: 'form', alvo: null, form: { valor: '', cat: '', desc: '', dataIdx: 0, caminhao: 'Sem vínculo' } });
+    else this.setState({ tela: 'lista' });
+  }
+
+  avisar(txt) {
+    this.setState({ aviso: txt });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ aviso: null }), 6000);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const vazia = this.props.estadoInicial === 'vazia';
+    const base = vazia ? [] : DESPESAS;
+    const lista = s.categoria === 'Todas' ? base : base.filter(d => d.cat === s.categoria);
+    const soma = lista.reduce((a, d) => a + d.cents, 0);
+    const dias = [];
+    lista.forEach(d => { if (dias.indexOf(d.dia) < 0) dias.push(d.dia); });
+    const f = s.form || { valor: '', cat: '', desc: '', dataIdx: 0, caminhao: 'Sem vínculo', dataLivre: '' };
+    const setF = (k, v) => this.setState({ form: Object.assign({}, f, { [k]: v }) });
+    const fk = s.folha;
+    const opcoes = { periodo: PERIODOS, categoria: ['Todas'].concat(CATEGORIAS), vinculo: CAMINHOES };
+    const titulos = { periodo: 'Período', categoria: 'Categoria', vinculo: 'Vincular a um caminhão' };
+    const atual = { periodo: s.periodo, categoria: s.categoria, vinculo: f.caminhao };
+    const nada = () => { };
+    return {
+      ehLista: s.tela === 'lista',
+      ehForm: s.tela === 'form',
+      vazia,
+      temResumo: !vazia,
+      temNovoTopo: !vazia,
+      totalPeriodo: inteiro(base.reduce((a, d) => a + d.cents, 0)),
+      notaTotal: base.length + ' lançamentos · entra no lucro da tela inicial',
+      totalContexto: lista.length + (lista.length === 1 ? ' despesa · R$ ' : ' despesas · R$ ') + money(soma),
+      chips: [
+        { chave: 'periodo', nome: 'Período', valor: s.periodo, ativo: s.periodo !== 'Este mês', neutro: s.periodo === 'Este mês' },
+        { chave: 'categoria', nome: 'Categoria', valor: s.categoria, ativo: s.categoria !== 'Todas', neutro: s.categoria === 'Todas' },
+      ].map(c => Object.assign(c, { abrir: () => this.setState({ folha: c.chave }) })),
+      grupos: dias.map(dia => ({
+        titulo: dia,
+        itens: lista.filter(d => d.dia === dia).map(d => ({
+          descricao: d.desc,
+          apoio: d.cat + (d.caminhao ? ' · ' + d.caminhao : ' · sem vínculo'),
+          valor: 'R$ ' + inteiro(d.cents),
+          abrir: () => this.setState({ tela: 'form', alvo: d.id, form: { valor: money(d.cents), cat: d.cat, desc: d.desc, dataIdx: 0, caminhao: d.caminhao || 'Sem vínculo' } }),
+        })),
+      })),
+      nova: () => this.setState({ tela: 'form', alvo: null, form: { valor: '', cat: '', desc: '', dataIdx: 0, caminhao: 'Sem vínculo' } }),
+      form: {
+        eyebrow: s.alvo ? 'EDITAR DESPESA' : 'NOVA DESPESA',
+        ehEdicao: !!s.alvo,
+        valor: f.valor,
+        setValor: e => setF('valor', e.target.value.replace(/[^\d,]/g, '')),
+        categorias: CATEGORIAS.map(c => ({ nome: c, sel: f.cat === c, off: f.cat !== c, pick: () => setF('cat', c) })),
+        dataLabel: f.dataLivre ? f.dataLivre : DATAS[f.dataIdx],
+        // um toque abre a folha de chips, igual ao Lançar frete
+        trocarData: () => this.setState({ seletor: true, atalho: f.dataLivre ? 'Outra data' : DATAS[f.dataIdx] }),
+        descricao: f.desc,
+        setDescricao: e => setF('desc', e.target.value),
+        dicaDescricao: f.cat === 'Diesel' ? 'Posto e litros' : f.cat === 'Manutenção' ? 'O que foi feito' : 'O que foi',
+        vinculo: f.caminhao,
+        corVinculo: f.caminhao === 'Sem vínculo' ? '#5C6660' : '#141A17',
+        abrirVinculo: () => this.setState({ folha: 'vinculo' }),
+        // só valor e data são obrigatórios
+        podeSalvar: !!f.valor.trim() && !s.salvando,
+        salvando: s.salvando,
+        bloqueado: !f.valor.trim() && !s.salvando,
+        salvar: () => {
+          if (s.salvando) return;
+          this.setState({ salvando: true });
+          setTimeout(() => {
+            this.setState({ salvando: false, tela: 'lista' });
+            this.avisar('Despesa de R$ ' + f.valor + ' lançada. O lucro do mês já mudou.');
+          }, 1200);
+        },
+        excluir: () => this.avisar('Despesa excluída. O lucro do mês foi recalculado.'),
+        cancelar: () => this.setState({ tela: 'lista' }),
+      },
+      folha: {
+        open: !!fk,
+        titulo: fk ? titulos[fk] : '',
+        fechar: () => this.setState({ folha: null }),
+        itens: (fk ? opcoes[fk] : []).map(o => ({
+          nome: o, sel: fk ? atual[fk] === o : false,
+          pick: () => {
+            if (fk === 'periodo') this.setState({ periodo: o, folha: null });
+            else if (fk === 'categoria') this.setState({ categoria: o, folha: null });
+            else this.setState({ form: Object.assign({}, f, { caminhao: o }), folha: null });
+          },
+        })),
+      },
+      seletor: (() => {
+        // calendário do mês, sem digitação: mesmo padrão de chips da folha de recebimento
+        const hoje = new Date(2026, 7, 5);
+        const base = new Date(2026, 7 + s.mesOff, 1);
+        const primeiroDia = base.getDay();
+        const totalDias = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+        const dias = [];
+        for (let i = 0; i < primeiroDia; i++) dias.push({ vazio: true, sel: false, normal: false, n: '', pick: () => { } });
+        for (let d = 1; d <= totalDias; d++) {
+          const sel = s.diaEscolhido === d;
+          dias.push({
+            vazio: false, sel, normal: !sel, n: String(d),
+            pick: () => this.setState({ diaEscolhido: d }),
+          });
+        }
+        const nomeMes = MESES_NOME[base.getMonth()] + ' de ' + base.getFullYear();
+        const ehOutra = s.atalho === 'Outra data';
+        const dataFinal = ehOutra && s.diaEscolhido
+          ? String(s.diaEscolhido).padStart(2, '0') + '/' + String(base.getMonth() + 1).padStart(2, '0') + '/' + String(base.getFullYear()).slice(2)
+          : '';
+        return {
+          open: s.seletor,
+          atalhos: DATAS.map(o => ({ nome: o, sel: s.atalho === o, off: s.atalho !== o, pick: () => this.setState({ atalho: o, diaEscolhido: o === 'Outra data' ? s.diaEscolhido : null }) })),
+          ehOutra,
+          mesLabel: nomeMes,
+          mesAnterior: () => this.setState({ mesOff: s.mesOff - 1, diaEscolhido: null }),
+          mesSeguinte: () => this.setState({ mesOff: s.mesOff + 1, diaEscolhido: null }),
+          semana: ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'],
+          dias,
+          podeConfirmar: !ehOutra || !!s.diaEscolhido,
+          bloqueado: ehOutra && !s.diaEscolhido,
+          labelConfirmar: ehOutra ? 'Usar ' + dataFinal : 'Usar ' + s.atalho.toLowerCase(),
+          confirmar: () => this.setState({
+            form: Object.assign({}, f, ehOutra ? { dataLivre: dataFinal } : { dataIdx: DATAS.indexOf(s.atalho), dataLivre: '' }),
+            seletor: false,
+          }),
+          fechar: () => this.setState({ seletor: false }),
+        };
+      })(),
+      temAviso: !!s.aviso,
+      aviso: s.aviso,
+      voltar: this.props.onVoltar || nada,
+      onInicio: this.props.onInicio || nada,
+      onFretes: this.props.onFretes || nada,
+      onNovo: this.props.onNovo || nada,
+      onCobrancas: this.props.onCobrancas || nada,
+      onMais: this.props.onMais || nada,
+    };
+  }
+}
+</script>
+</body>
+</html>

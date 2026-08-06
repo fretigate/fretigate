@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+body{margin:0;background:#E8E4DB;font-family:Archivo,system-ui,sans-serif}
+a{color:#1B6B3A}a:hover{color:#14522C}
+.dv-turn{padding:44px 48px 36px;border-bottom:1px solid rgba(20,26,23,.1);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 24px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#141A17;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 Archivo,sans-serif;color:#141A17}
+.dv-opts{display:flex;flex-wrap:wrap;gap:44px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(20,26,23,.1);color:#141A17;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.4 Archivo,sans-serif;color:rgba(20,26,23,.6);max-width:402px}
+.dv-opt:target .dv-oid{background:#1B6B3A;color:#fff}
+.dv-next{margin:26px 0 0;font:12px/1.6 Archivo,sans-serif;color:rgba(20,26,23,.55)}
+.dv-spec{max-width:460px;font:12.5px/1.7 Archivo,sans-serif;color:#3C443E}
+.dv-spec h4{margin:20px 0 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770}
+.dv-spec h4:first-child{margin-top:0}
+.dv-spec table{border-collapse:collapse;width:100%}
+.dv-spec td{padding:4px 10px 4px 0;vertical-align:top;font-size:12px}
+.dv-spec code{font:11.5px 'Azeret Mono',monospace;background:#F0EDE6;padding:1px 5px;border-radius:4px}
+.dv-spec p{margin:0 0 6px}
+.paper{box-shadow:0 8px 28px rgba(20,26,23,.14)}
+.conflito{margin:14px 0 0;padding:16px 18px;border-radius:16px;background:#FBF1DF;font:500 12.5px/1.6 Archivo,sans-serif;color:#7A5A0B}
+.conflito b{color:#8A6206}
+</style></helmet>
+
+<div style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none" aria-hidden="true"><x-import component="IOSDevice" from="./ios-frame.jsx" hint-size="1px,1px"></x-import></div>
+
+<section class="dv-turn" id="t6">
+<div class="dv-thd"><a class="dv-tid" href="#t6">6</a><span class="dv-tname">Tela 3 — Relatório do cliente · montagem no celular, documento em A4</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="6a">
+<div class="dv-olabel"><a class="dv-oid" href="#6a">6a</a>Montagem vazia — nenhum cliente escolhido. O período já vem em “Mês passado”, que é o caso real: ele fatura o mês que fechou. Gerar relatório fica desabilitado.</div>
+<dc-import name="TelaRelatorio" estado-inicial="vazia" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="6b">
+<div class="dv-olabel"><a class="dv-oid" href="#6b">6b</a>Prévia carregada — bloco de resumo com o total em 46px e a contagem como texto de apoio; abaixo, o cabeçalho de seção abrindo a lista. Toque numa linha para tirá-la: ela fica claramente vazia e o total recalcula.</div>
+<dc-import name="TelaRelatorio" estado-inicial="previa" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="6c">
+<div class="dv-olabel"><a class="dv-oid" href="#6c">6c</a>Cobrança ativada — vencimento calculado (emissão + prazo cadastrado do cliente) e editável em um toque. O sistema lembra a última escolha dele.</div>
+<dc-import name="TelaRelatorio" estado-inicial="cobranca" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="6d">
+<div class="dv-olabel"><a class="dv-oid" href="#6d">6d</a>Nenhum frete no período — diz quando foi o último e ancora as duas saídas no rodapé: <strong>Ver mês passado</strong> como principal, <strong>Lançar frete</strong> como secundária.</div>
+<dc-import name="TelaRelatorio" estado-inicial="semFretes" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="6e">
+<div class="dv-olabel"><a class="dv-oid" href="#6e">6e</a>Documento gerado, sem cobrança — A4 inteiro visível dentro do celular. Rodapé: <strong>Compartilhar no WhatsApp</strong> principal, <strong>Baixar PDF</strong> e <strong>Imprimir</strong> secundárias lado a lado.</div>
+<dc-import name="TelaRelatorio" estado-inicial="documento" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="6f">
+<div class="dv-olabel"><a class="dv-oid" href="#6f">6f</a>Aviso do sistema depois de gerar — componente escuro já definido, flutuando acima da barra, some sozinho. Variação com cobrança.</div>
+<dc-import name="TelaRelatorio" estado-inicial="gerado" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="6g">
+<div class="dv-olabel"><a class="dv-oid" href="#6g">6g</a>O documento em tamanho real — A4 retrato, sem cobrança. Termina no total. Legível em preto e branco: fios finos e peso de tipografia, nenhum bloco colorido.</div>
+<div class="paper"><dc-import name="DocumentoA4" com-cobranca="{{ false }}" hint-size="794px,1123px"></dc-import></div>
+</div>
+
+<div class="dv-opt" id="6h">
+<div class="dv-olabel"><a class="dv-oid" href="#6h">6h</a>A4 com cobrança — acrescenta vencimento e a chave Pix em destaque no rodapé, dentro de um fio, não de um bloco de cor. Marca do FretiGate discreta no pé.</div>
+<div class="paper"><dc-import name="DocumentoA4" com-cobranca="{{ true }}" hint-size="794px,1123px"></dc-import></div>
+</div>
+
+<div class="dv-opt" id="6i">
+<div class="dv-olabel"><a class="dv-oid" href="#6i">6i</a>Medidas do impresso — registradas como seção própria na folha de estilo.</div>
+<div class="dv-spec">
+<h4>PÁGINA</h4>
+<table>
+<tr><td>Formato</td><td>A4 retrato · <code>794 × 1123px</code> a 96 dpi (210 × 297 mm)</td></tr>
+<tr><td>Margens</td><td><code>64px</code> topo/rodapé · <code>56px</code> laterais (≈17 / 15 mm)</td></tr>
+<tr><td>Área útil</td><td><code>682px</code> de largura</td></tr>
+<tr><td>Fundo</td><td><code>#FFFFFF</code> puro — não o papel <code>#FAF8F4</code> do app: impressora comum não imprime fundo</td></tr>
+<tr><td>Exibição no celular</td><td>A4 em <code>scale(0.466)</code> → <code>370 × 523px</code>, página inteira visível</td></tr>
+</table>
+
+<h4>COLUNAS DA TABELA</h4>
+<table>
+<tr><td>Data</td><td><code>86px</code> · Azeret Mono <code>14px/500</code></td></tr>
+<tr><td>Rota</td><td>flexível (≈306px) · <code>15px/500</code></td></tr>
+<tr><td>Carga</td><td><code>170px</code> · <code>14px/400</code> em <code>#3C443E</code></td></tr>
+<tr><td>Valor</td><td><code>120px</code>, alinhado à direita · <code>15px/600</code> tabular</td></tr>
+<tr><td>Altura de linha</td><td><code>13px</code> de padding vertical (≈45px por linha)</td></tr>
+</table>
+
+<h4>TIPOGRAFIA DO IMPRESSO</h4>
+<table>
+<tr><td>Razão social</td><td><code>21px/700</code> <code>wdth 96%</code> (≈16pt)</td></tr>
+<tr><td>Dados da empresa</td><td><code>12px/400</code> (≈9pt)</td></tr>
+<tr><td>Título do documento</td><td><code>13px/700</code> <code>ls .16em</code> maiúsculas</td></tr>
+<tr><td>Nome do cliente</td><td><code>22px/700</code> <code>wdth 96%</code></td></tr>
+<tr><td>Rótulo de coluna/bloco</td><td><code>11px/700</code> <code>ls .14–.16em</code> maiúsculas</td></tr>
+<tr><td>Corpo da tabela</td><td><code>14–15px/500</code> (≈11pt)</td></tr>
+<tr><td>Total</td><td><code>34px/800</code> <code>wdth 94%</code> tabular</td></tr>
+<tr><td>Vencimento</td><td><code>22px/700</code></td></tr>
+<tr><td>Chave Pix</td><td>Azeret Mono <code>15px/600</code> dentro de fio de <code>1.5px</code></td></tr>
+<tr><td>Nota de pé / marca</td><td><code>11px/400</code> · marca <code>10px/500</code> <code>ls .14em</code> em <code>#A8AFA9</code></td></tr>
+</table>
+
+<h4>FIOS (SEPARAÇÃO SEM COR)</h4>
+<table>
+<tr><td>Fio forte</td><td><code>1.5px solid #141A17</code> — abaixo do cabeçalho, topo e base da tabela, acima do bloco de cobrança</td></tr>
+<tr><td>Fio de linha</td><td><code>1px solid rgba(20,26,23,.16)</code> — entre fretes</td></tr>
+<tr><td>Moldura do Pix</td><td><code>1.5px solid #141A17</code>, sem preenchimento</td></tr>
+</table>
+
+<div class="conflito">
+<b>Resolvido — o impresso tem escala própria.</b><br><br>
+Registrado em <code>docs/estilo.md</code> como seção <b>“Impresso — só o documento A4”</b>: fundo <code>#FFFFFF</code> puro, espaçamento em referência de milímetro, tipografia de impresso, fios de separação e larguras de coluna. Nada disso conflita com o app — são contextos diferentes, e está escrito que essas medidas valem <b>só para o documento</b>.<br><br>
+O app continua com zero borda e separação por fundo; o A4 continua com fio fino e fundo branco, porque fundo colorido não sobrevive à impressora em preto e branco.
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Tente: “mostrar o CNPJ do cliente no cabeçalho da tabela” · “assinatura e campo de recebimento no pé do A4” · “versão do A4 em paisagem para muitos fretes”</p>
+</section>
+
+<section class="dv-turn" id="t5b">
+<div class="dv-thd"><a class="dv-tid" href="#t5b">5</a><span class="dv-tname">Turnos anteriores — arquivos separados</span></div>
+<p class="dv-next">Tela 1 em <strong>Tela 1 - Lançar frete v3.dc.html</strong> · Dashboard, Meus fretes e detalhe em <strong>Tela 2 e 3 - Dashboard e Meus fretes.dc.html</strong> · Cobranças em <strong>Tela 4 - Cobranças.dc.html</strong> · inventário em <strong>Componentes - botões e avisos.dc.html</strong> · medidas em <strong>docs/estilo.md</strong>.</p>
+</section>
+</x-dc>
+</body>
+</html>

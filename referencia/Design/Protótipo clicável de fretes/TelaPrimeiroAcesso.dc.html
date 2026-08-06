@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <div style="flex:none;padding:66px 20px 0">
+    <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ empresa }}</span>
+  </div>
+
+  <div style="flex:1;min-height:0;overflow:auto;padding:18px 16px 40px;display:flex;flex-direction:column;gap:10px">
+    <span style="padding:0 4px;font:800 28px/1.15 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.025em;text-wrap:pretty">Por onde você quer começar?</span>
+    <span style="padding:8px 4px 14px;font:500 15px/1.5 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">Dois caminhos, os dois levam ao mesmo lugar. Escolha o que for mais rápido pra você agora.</span>
+
+    <button onClick="{{ irImportar }}" style="flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:9px;width:100%;padding:20px;border:none;border-radius:24px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <span style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:13px;background:#E4E9E5">
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><path d="M10 2.6v9.8M6.1 8.5 10 12.4l3.9-3.9M3 15.4v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1" stroke="#1B6B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </span>
+      <span style="font:700 19px/1.25 Archivo,sans-serif;text-wrap:pretty">Trazer os fretes que já fiz</span>
+      <span style="font:400 13.5px/1.45 Archivo,sans-serif;color:#6E7770;text-wrap:pretty">Cole as mensagens do WhatsApp ou mande foto do caderno. O app lê, você confere e o mês já entra pronto.</span>
+    </button>
+
+    <button onClick="{{ irLancar }}" style="flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:9px;width:100%;padding:20px;border:none;border-radius:24px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+      <span style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:13px;background:#E4E9E5">
+        <svg width="22" height="22" viewBox="0 0 26 26" fill="none"><path d="M13 4.5v17M4.5 13h17" stroke="#1B6B3A" stroke-width="2.6" stroke-linecap="round"></path></svg>
+      </span>
+      <span style="font:700 19px/1.25 Archivo,sans-serif;text-wrap:pretty">Começar do zero</span>
+      <span style="font:400 13.5px/1.45 Archivo,sans-serif;color:#6E7770;text-wrap:pretty">Lance o próximo frete direto, em menos de um minuto. O que passou você traz depois, quando der.</span>
+    </button>
+
+    <span style="padding:16px 4px 0;font:500 12.5px/1.45 Archivo,sans-serif;color:#6E7770;text-wrap:pretty">Dá pra fazer os dois. Importar depois continua disponível em Mais › Importar fretes.</span>
+  </div>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;empresa&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;AP TRANSPORTES&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onImportar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onLancar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const nada = () => { };
+    return {
+      empresa: this.props.empresa || 'AP TRANSPORTES',
+      irImportar: this.props.onImportar || nada,
+      irLancar: this.props.onLancar || nada,
+    };
+  }
+}
+</script>
+</body>
+</html>

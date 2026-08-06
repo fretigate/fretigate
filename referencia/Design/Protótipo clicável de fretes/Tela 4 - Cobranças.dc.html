@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+body{margin:0;background:#E8E4DB;font-family:Archivo,system-ui,sans-serif}
+a{color:#1B6B3A}a:hover{color:#14522C}
+.dv-turn{padding:44px 48px 36px;border-bottom:1px solid rgba(20,26,23,.1);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 24px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#141A17;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 Archivo,sans-serif;color:#141A17}
+.dv-opts{display:flex;flex-wrap:wrap;gap:44px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(20,26,23,.1);color:#141A17;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.4 Archivo,sans-serif;color:rgba(20,26,23,.6);max-width:402px}
+.dv-opt:target .dv-oid{background:#1B6B3A;color:#fff}
+.dv-next{margin:26px 0 0;font:12px/1.6 Archivo,sans-serif;color:rgba(20,26,23,.55)}
+.dv-spec{max-width:440px;font:12.5px/1.7 Archivo,sans-serif;color:#3C443E}
+.dv-spec h4{margin:20px 0 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770}
+.dv-spec h4:first-child{margin-top:0}
+.dv-spec table{border-collapse:collapse;width:100%}
+.dv-spec td{padding:4px 10px 4px 0;vertical-align:top;font-size:12px}
+.dv-spec code{font:11.5px 'Azeret Mono',monospace;background:#F0EDE6;padding:1px 5px;border-radius:4px}
+.dv-spec p{margin:0 0 6px}
+</style></helmet>
+
+<div style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none" aria-hidden="true"><x-import component="IOSDevice" from="./ios-frame.jsx" hint-size="1px,1px"></x-import></div>
+
+<section class="dv-turn" id="t5">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">Tela 4 — Cobranças · quem me deve, e o que fazer a respeito</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="5a">
+<div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a>Lista — vencidas, vence hoje e a vencer, da mais antiga pra mais nova. A primeira linha já traz a marca “cobrado há 2 dias”. Filtre por Situação e o total recalcula.</div>
+<dc-import name="TelaCobrancas" estado-inicial="lista" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="5b">
+<div class="dv-olabel"><a class="dv-oid" href="#5b">5b</a>Deslizar revela “Marcar recebido” — mesmo painel verde e mesmo arrasto de 40px de Meus fretes. O botão de WhatsApp fica na linha, sem precisar deslizar.</div>
+<dc-import name="TelaCobrancas" estado-inicial="swipe" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="5c">
+<div class="dv-olabel"><a class="dv-oid" href="#5c">5c</a>Cartão de retorno do WhatsApp — mesmo tratamento da barra “Frete salvo”, flutua acima do menu e some sozinho. Confirmando, a linha ganha a marca de cobrado.</div>
+<dc-import name="TelaCobrancas" estado-inicial="retorno" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="5d">
+<div class="dv-olabel"><a class="dv-oid" href="#5d">5d</a>Folha de recebimento — valor já preenchido com o total, data e forma. Baixe o valor e o botão vira “Lançar recebimento parcial”, avisando quanto fica em aberto.</div>
+<dc-import name="TelaCobrancas" estado-inicial="recebimento" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="5j">
+<div class="dv-olabel"><a class="dv-oid" href="#5j">5j</a>Detalhe de uma cobrança parcial — Distribuidora Nordeste recebeu R$ 400 de R$ 740. A linha SITUAÇÃO diz quanto entrou e quanto falta, e a ação principal vira “Receber o resto”. Na lista, ela aparece com a tarja PARCIAL em <a class="dv-oid" href="#5a">5a</a>.</div>
+<dc-import name="TelaCobrancas" estado-inicial="parcial" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="5e">
+<div class="dv-olabel"><a class="dv-oid" href="#5e">5e</a>Detalhe da cobrança — os fretes que entraram no relatório aparecem como lista, não como cobranças separadas.</div>
+<dc-import name="TelaCobrancas" estado-inicial="detalhe" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="5f">
+<div class="dv-olabel"><a class="dv-oid" href="#5f">5f</a>Estado vazio — não é desenho triste: é a conta do que ainda não foi faturado e o botão pra resolver.</div>
+<dc-import name="TelaCobrancas" estado-inicial="vazio" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="5g">
+<div class="dv-olabel"><a class="dv-oid" href="#5g">5g</a>Modelo de cobrança, dentro de “Mais” — texto editável, chips que inserem as variáveis e prévia com uma cobrança real. O app nunca envia nada sozinho.</div>
+<dc-import name="TelaCobrancas" estado-inicial="modelo" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="5i">
+<div class="dv-olabel"><a class="dv-oid" href="#5i">5i</a>Prova de carga — mesma tela com valores 25× maiores (R$ 312.000 a receber). Os três números continuam numa linha só: o “R$” fica pequeno e fixo, e só o número encolhe.</div>
+<dc-import name="TelaCobrancas" estado-inicial="lista" valores-altos="{{ true }}" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="5h">
+<div class="dv-olabel"><a class="dv-oid" href="#5h">5h</a>Decisões e medidas.</div>
+<div class="dv-spec">
+<h4>NADA NOVO NO SISTEMA VISUAL</h4>
+<p>Reaproveita tudo: papel <code>#FAF8F4</code>, separação <code>#F0EDE6</code>, tinta <code>#141A17</code>, ação <code>#1B6B3A</code>, vencido <code>#F6E6DD</code>/<code>#B3401A</code>, Archivo, raios e alturas já definidos. A pílula de navegação é a mesma, com <strong>Cobranças</strong> ativo em <code>#7FCB9B</code>.</p>
+
+<h4>TOPO</h4>
+<table>
+<tr><td>Três números</td><td>grade de 3, raio <code>20</code>, padding <code>13/11</code>, rótulo <code>9 · 700</code> <code>ls .09em</code> em bloco de 23px (cabe em duas linhas), valor <code>17 · 800</code>. “Vencido” usa o mesmo <code>#F6E6DD</code>/<code>#B3401A</code> da dashboard; “Recebido em agosto” em <code>#1B6B3A</code>.</td></tr>
+<tr><td>Escopo</td><td>os três são <strong>sempre situação atual e mês corrente</strong> — não respondem aos chips. Só o total logo abaixo recalcula com o filtro.</td></tr>
+<tr><td>Parciais</td><td>“A receber” e “Vencido” contam o <strong>saldo</strong>, não o valor cheio; o que já entrou de um parcial soma em “Recebido em agosto”. O total contextual segue a mesma regra, então os números do topo sempre fecham com as linhas.</td></tr>
+<tr><td>Chips</td><td>44px, mesmos dois estados de Meus fretes — Situação (Em aberto · Vencidas · Recebidas) · Cliente · Período</td></tr>
+<tr><td>Total</td><td><code>13.5 · 600</code>, recalcula com o filtro</td></tr>
+<tr><td>Valor alto</td><td>nunca quebra e nunca abrevia: <code>white-space:nowrap</code>, “R$” fixo em <code>10 · 700</code> e o número em <code>17px</code> até 7 dígitos, <code>15px</code> até 9, <code>13.5px</code> acima disso. Centavos ficam fora — no resumo o que importa é a ordem de grandeza. Veja em <a class="dv-oid" href="#5i">5i</a>.</td></tr>
+<tr><td>Pastilhas da dashboard</td><td>mesma regra em meia tela: <code>25px</code> → <code>21px</code> → <code>19px</code></td></tr>
+</table>
+
+<h4>LINHA DE COBRANÇA</h4>
+<table>
+<tr><td>Estrutura</td><td>cliente <code>17 · 700</code> · o que está sendo cobrado <code>13.5 · 400</code> · prazo <code>12.5 · 700</code> colorido pelo tom · valor <code>20 · 800</code> (mesmo peso de Meus fretes)</td></tr>
+<tr><td>Prazo</td><td>vencida <code>#B3401A</code> · vence hoje <code>#8A6206</code> · a vencer <code>#6E7770</code> · recebida <code>#1B6B3A</code></td></tr>
+<tr><td>Cobrar</td><td>pílula de <strong>38px</strong> na própria linha, <code>#E4E9E5</code>/<code>#1B6B3A</code> <code>12.5 · 700</code> — discreta, sem exigir deslizar</td></tr>
+<tr><td>Marca de cobrado</td><td>texto <code>11.5 · 500</code> <code>#6E7770</code> no lugar da pílula</td></tr>
+<tr><td>Relatório</td><td>uma cobrança de relatório é <strong>uma linha só</strong>. No detalhe, “Fretes incluídos” mostra <strong>3 linhas</strong> e um link “ver todos os 9”; as ações ficam fixas no rodapé, sempre visíveis sem rolar.</td></tr>
+</table>
+
+<h4>RECEBIMENTO E RETORNO</h4>
+<table>
+<tr><td>Folha</td><td>campo de valor editável de <strong>64px</strong> (número <code>26 · 800</code> alinhado à direita, “R$” fixo à esquerda) pré-preenchido com o saldo, atalho “Valor todo”, chips de <strong>48px</strong> para data e forma, confirmar 60px.</td></tr>
+<tr><td>Parcial</td><td>valor menor que o saldo → o botão vira <em>Lançar recebimento parcial</em>, a cobrança fica em aberto pelo resto e a linha ganha tarja <code>#FBF1DF</code> com <strong>PARCIAL</strong> em <code>#8A6206</code> mais “Recebeu X · falta Y”. No detalhe, a linha SITUAÇÃO diz o mesmo e a ação principal vira <em>Receber o resto</em>. Veja <a class="dv-oid" href="#5j">5j</a>.</td></tr>
+<tr><td>Cartão de retorno</td><td><code>#E4E9E5</code>, raio <code>22</code>, <code>bottom 134</code> — mesmo tratamento de “Frete salvo”. No app some em <strong>8s</strong>; no quadro <a class="dv-oid" href="#5c">5c</a> fica parado para você poder olhar. Não é tela.</td></tr>
+</table>
+
+<h4>MENSAGEM</h4>
+<p>O modelo mora em “Mais”. Chips inserem <code>{cliente}</code>, <code>{valor}</code>, <code>{vencimento}</code>, <code>{rota}</code>, <code>{empresa}</code>; a prévia troca pelas informações de uma cobrança de verdade. <strong>O app só abre a conversa com o texto pronto</strong> — quem envia é o dono.</p>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Tente: “a linha deveria mostrar há quantos dias foi faturada” · “juntar cobranças do mesmo cliente” · “seguir pra Tela 3 — Relatório do cliente”</p>
+</section>
+
+<section class="dv-turn" id="t4b">
+<div class="dv-thd"><a class="dv-tid" href="#t4b">4</a><span class="dv-tname">Turno 4 — arquivo separado</span></div>
+<p class="dv-next">Dashboard, Meus fretes e Detalhe do frete estão em <strong>Tela 2 e 3 - Dashboard e Meus fretes.dc.html</strong>. A Tela 1 está em <strong>Tela 1 - Lançar frete v3.dc.html</strong>.</p>
+</section>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+body{margin:0;background:#E8E4DB;font-family:Archivo,system-ui,sans-serif}
+a{color:#1B6B3A}a:hover{color:#14522C}
+.dv-turn{padding:44px 48px 36px;border-bottom:1px solid rgba(20,26,23,.1);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 24px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#141A17;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 Archivo,sans-serif;color:#141A17}
+.dv-opts{display:flex;flex-wrap:wrap;gap:44px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(20,26,23,.1);color:#141A17;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.4 Archivo,sans-serif;color:rgba(20,26,23,.6);max-width:402px}
+.dv-opt:target .dv-oid{background:#1B6B3A;color:#fff}
+.dv-next{margin:26px 0 0;font:12px/1.6 Archivo,sans-serif;color:rgba(20,26,23,.55)}
+.mapa{width:1120px;padding:34px 36px;border-radius:24px;background:#FAF8F4;font:12.5px/1.6 Archivo,sans-serif;color:#3C443E}
+.mapa h3{margin:26px 0 10px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770}
+.mapa h3:first-child{margin-top:0}
+.mapa table{width:100%;border-collapse:collapse}
+.mapa th{text-align:left;font:700 10px/1 Archivo,sans-serif;letter-spacing:.1em;color:#6E7770;text-transform:uppercase;padding:8px 14px 8px 0;border-bottom:1px solid rgba(20,26,23,.14)}
+.mapa td{padding:9px 14px 9px 0;border-bottom:1px solid rgba(20,26,23,.06);vertical-align:top;font-size:12px}
+.mapa td:first-child{white-space:nowrap;color:#141A17;font-weight:700}
+.mapa code{font:11.5px 'Azeret Mono',monospace;background:#F0EDE6;padding:1px 5px;border-radius:4px}
+.barra{display:flex;gap:10px;margin:0 0 6px;padding:14px 16px;border-radius:22px;background:#141A17}
+.barra span{flex:1;text-align:center;font:700 11px/1.4 Archivo,sans-serif;color:rgba(255,255,255,.55)}
+.barra span.mais{color:#7FCB9B}
+.barra span.novo{color:#fff}
+.falta{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;background:#FBF1DF;font:700 9.5px/1.5 Archivo,sans-serif;letter-spacing:.08em;color:#8A6206}
+.feito{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;background:#E4E9E5;font:700 9.5px/1.5 Archivo,sans-serif;letter-spacing:.08em;color:#1B6B3A}
+</style></helmet>
+
+<div style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none" aria-hidden="true"><x-import component="IOSDevice" from="./ios-frame.jsx" hint-size="1px,1px"></x-import></div>
+
+<section class="dv-turn" id="t7">
+<div class="dv-thd"><a class="dv-tid" href="#t7">7</a><span class="dv-tname">Mapa de navegação do MVP · área de Clientes</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="7a">
+<div class="dv-olabel"><a class="dv-oid" href="#7a">7a</a>Mapa completo — de onde se chega e para onde leva, tela por tela. <span class="feito">FEITA</span> já desenhada · <span class="falta">FALTA</span> ainda não desenhada.</div>
+<div class="mapa">
+
+<h3>ESTRUTURA DA BARRA</h3>
+<div class="barra">
+  <span>Início</span><span>Fretes</span><span class="novo">(+)</span><span>Cobranças</span><span class="mais">Mais</span>
+</div>
+<p style="margin:0 0 4px">A barra é global: aparece em toda tela de nível 1 e continua visível nas telas de detalhe. O <strong>(+)</strong> abre Lançar frete de qualquer lugar. Nenhuma tela de nível 1 tem ação principal própria — só as de detalhe e de formulário têm.</p>
+
+<h3>NÍVEL 1 — DESTINOS DA BARRA</h3>
+<table>
+<tr><th>Tela</th><th>Chega de</th><th>Leva para</th></tr>
+<tr><td>Início (dashboard) <span class="feito">FEITA</span></td><td>Abrir o app · barra · voltar de qualquer detalhe</td><td>Pastilha A receber → Cobranças · Pastilha Vencido → Cobranças filtrado · Pendência de faturar → Fretes filtrado · Pendência de cobrança → Cobranças · Pendência de relatório → Relatório preenchido · Atalho Gerar relatório → Relatório · Atalho Importar fretes → Importar · Marca da empresa → Conta</td></tr>
+<tr><td>Fretes <span class="feito">FEITA</span></td><td>Barra · pendência da dashboard · "ver todos" do perfil do cliente</td><td>Linha → Detalhe do frete · Nome do cliente na linha → Perfil do cliente · Deslizar → marca recebido na hora · Chips → folhas de filtro</td></tr>
+<tr><td>(+) Lançar frete <span class="feito">FEITA</span></td><td>Barra, de qualquer tela</td><td>Salvar → Fretes com o aviso do sistema · Linha recolhida → folha de busca (cliente, caminhão, motorista, origem, destino, carga)</td></tr>
+<tr><td>Cobranças <span class="feito">FEITA</span></td><td>Barra · pastilhas e pendências da dashboard · perfil do cliente</td><td>Linha → Detalhe da cobrança · Nome do cliente → Perfil do cliente · Cobrar no WhatsApp → conversa + cartão de retorno · Deslizar → folha de recebimento · Estado vazio → Relatório</td></tr>
+<tr><td>Mais <span class="feito">FEITA</span></td><td>Barra</td><td>Cartão de identidade → Conta · CADASTROS: Clientes · Caminhões · Motoristas · FERRAMENTAS: Relatório · Importar fretes · AJUSTES: Novidades · Configurações · Conta · Sair da conta</td></tr>
+</table>
+
+<h3>NÍVEL 2 — DETALHES E FLUXOS</h3>
+<table>
+<tr><th>Tela</th><th>Chega de</th><th>Leva para</th></tr>
+<tr><td>Detalhe do frete <span class="feito">FEITA</span></td><td>Linha em Fretes · histórico do perfil do cliente</td><td>Faturar frete · Marcar recebido · Editar frete → Lançar frete preenchido · Arquivar · Ver relatório → Documento</td></tr>
+<tr><td>Detalhe da cobrança <span class="feito">FEITA</span></td><td>Linha em Cobranças</td><td>Marcar recebido / Receber o resto → folha de recebimento · Cobrar no WhatsApp → conversa · Ver relatório → Documento</td></tr>
+<tr><td>Relatório — montagem <span class="feito">FEITA</span></td><td>Atalho e pendência da dashboard · estado vazio de Cobranças · perfil do cliente</td><td>Gerar relatório → Documento A4</td></tr>
+<tr><td>Documento A4 <span class="feito">FEITA</span></td><td>Gerar relatório · Ver relatório (frete ou cobrança)</td><td>Compartilhar no WhatsApp · Baixar PDF · Imprimir</td></tr>
+<tr><td>Modelo de cobrança <span class="feito">FEITA</span></td><td>Mais</td><td>Salvar modelo → volta para Mais</td></tr>
+</table>
+
+<h3>MAIS — CADASTROS</h3>
+<table>
+<tr><th>Tela</th><th>Chega de</th><th>Leva para</th></tr>
+<tr><td>Clientes — lista <span class="feito">FEITA</span></td><td>Mais · folha de busca de cliente ("ver todos")</td><td>Linha → Perfil do cliente · + Novo → Cadastro</td></tr>
+<tr><td>Perfil do cliente <span class="feito">FEITA</span></td><td>Lista de clientes · <strong>nome do cliente em qualquer linha de frete ou de cobrança</strong></td><td>Gerar relatório → Relatório preenchido · Editar cliente → Edição · Cobrar no WhatsApp → conversa · Frete do histórico → Detalhe do frete · Ver todos → Fretes filtrado</td></tr>
+<tr><td>Cadastro / edição de cliente <span class="feito">FEITA</span></td><td>+ Novo na lista · Editar no perfil · "+ Cadastrar" na folha de busca do lançamento</td><td>Salvar → volta para a lista (ou para o perfil, na edição) · Arquivar cliente</td></tr>
+<tr><td>Caminhões — lista e perfil <span class="feito">FEITA</span></td><td>Mais · folha de busca de caminhão</td><td>Mesmo padrão de Clientes: perfil com placa, apelido, tipo, histórico de fretes</td></tr>
+<tr><td>Motoristas — lista, perfil, cadastro <span class="feito">FEITA</span></td><td>Mais · folha de busca de motorista</td><td>Linha → Perfil · Editar no cabeçalho → Formulário · Telefone tocável → conversa · Lançar frete com ele → Lançar frete · Estado vazio com convite</td></tr>
+<tr><td>Importar fretes <span class="feito">FEITA</span></td><td>Mais · atalho da dashboard · estado vazio de Fretes · primeiro acesso</td><td>Colar texto ou mandar foto → processando → revisão (linha desmarcável, valor editável na hora) → resultado → Fretes. Nada reconhecido → orientação do que tentar</td></tr>
+<tr><td>Configurações <span class="feito">FEITA</span></td><td>Mais</td><td>OPERAÇÃO: pátio, prazo padrão, numeração do relatório · MENSAGENS: Modelo de cobrança · Modelo de ordem de serviço</td></tr>
+<tr><td>Conta da empresa <span class="feito">FEITA</span></td><td>Mais · marca da empresa no cartão da dashboard</td><td>Logo (ou iniciais), razão social, CNPJ, endereço, telefone, e-mail, Pix e banco · prévia do cabeçalho do relatório · Minha assinatura · Sair da conta</td></tr>
+<tr><td>Despesas — lista e cadastro <span class="feito">FEITA</span></td><td>Mais · card de Lucro da dashboard no estado de convite</td><td>Linha → edição · + Nova → cadastro (valor e data obrigatórios, vínculo opcional a caminhão) · Estado vazio explica que o Lucro depende dela</td></tr>
+<tr><td>Modelo de ordem de serviço <span class="feito">FEITA</span></td><td>Configurações › Mensagens</td><td>Chips {motorista} {cliente} {carga} {origem} {destino} {data} — sem {valor}</td></tr>
+<tr><td>Novidades — lista e detalhe <span class="feito">FEITA</span></td><td>Mais › Ajustes · cartão FRETINEWS dispensado na dashboard</td><td>Linha → Detalhe da mensagem · no máximo uma ação por mensagem</td></tr>
+<tr><td>Entrar <span class="feito">FEITA</span></td><td>Abrir o app sem sessão · Sair da conta</td><td>Código no WhatsApp → Primeiro acesso · Criar conta · Recuperar acesso</td></tr>
+<tr><td>Criar conta <span class="feito">FEITA</span></td><td>Entrar</td><td>Nome da transportadora + telefone + a única pergunta de pesquisa do produto → Primeiro acesso</td></tr>
+<tr><td>Recuperar acesso <span class="feito">FEITA</span></td><td>Entrar</td><td>CNPJ → mostra em qual telefone a conta está</td></tr>
+<tr><td>Usuários — lista, convite, detalhe <span class="feito">FEITA</span></td><td>Conta da empresa › Usuários</td><td>COM ACESSO + CONVITE ENVIADO (aguardando, reenviar, cancelar) · Linha → Detalhe · + Convidar → nome, WhatsApp, prévia da mensagem → abre a conversa · Detalhe → Remover acesso, <strong>só para o dono</strong>; o acesso do dono não é removível. <strong>É a única tela de convidar</strong> — o estado duplicado que existia em Entrar foi removido</td></tr>
+<tr><td>Aceitar convite <span class="feito">FEITA</span></td><td>Link do WhatsApp, fora do app. Na demonstração, por "Ver o que ela recebe" no convite pendente</td><td>Marca da empresa + o que a pessoa vai poder fazer → Entrar na conta · Não conheço essa empresa. Sem barra de navegação: quem abre ainda não está dentro do app</td></tr>
+<tr><td>Termos de uso e privacidade <span class="feito">FEITA</span></td><td>Criar conta · Conta da empresa</td><td>Duas abas no mesmo documento. Vindo do cadastro, termina em "Li e aceito"; vindo de Ajustes, é só leitura</td></tr>
+<tr><td>Planos <span class="feito">FEITA</span></td><td>Mais (plano gratuito) · limite do gratuito · assinatura</td><td>Anual R$ 990 em destaque, 12x de R$ 82,50, economia de R$ 798 · Mensal R$ 149</td></tr>
+<tr><td>Minha assinatura <span class="feito">FEITA</span></td><td>Conta da empresa</td><td>Plano, próxima cobrança, cartão, acessos · Trocar de plano → Planos</td></tr>
+<tr><td>Limite do gratuito <span class="feito">FEITA</span></td><td>Tentar cadastrar o segundo caminhão</td><td>Ver os planos → Planos · Continuar com um caminhão → volta sem bloquear nada do que já existe</td></tr>
+<tr><td>Assinatura vencida <span class="feito">FEITA</span></td><td>Cobrança recusada</td><td>Leitura e exportação seguem · Atualizar o cartão · Baixar meus relatórios</td></tr>
+<tr><td>Primeiro acesso <span class="feito">FEITA</span></td><td>Criar conta · Entrar pela primeira vez</td><td>Duas opções em pé de igualdade: Trazer os fretes que já fiz → Importar · Começar do zero → Lançar frete</td></tr>
+<tr><td>Guia de progresso <span class="feito">FEITA</span></td><td>Topo da dashboard, depois do primeiro acesso</td><td>No máximo 3 itens · cada um sai ao ser cumprido · o bloco desaparece ao completar</td></tr>
+</table>
+
+<h3>DADOS QUE HOJE NÃO TÊM ONDE SER PREENCHIDOS</h3>
+<table>
+<tr><td>Prazo de pagamento do cliente</td><td>Usado no vencimento calculado do Relatório e da cobrança. <strong>Resolvido</strong> — entra no cadastro de cliente (<a class="dv-oid" href="#7d">7d</a>) e aparece no perfil.</td></tr>
+<tr><td>Telefone do cliente</td><td>Usado por "Cobrar no WhatsApp" em Cobranças e no perfil. <strong>Resolvido</strong> — entra no cadastro, segundo campo, antes até do documento.</td></tr>
+<tr><td>Dados da transportadora e Pix</td><td>Usados no cabeçalho e no rodapé do A4. <strong>Resolvido</strong> — Conta da empresa.</td></tr>
+<tr><td>Endereço padrão do pátio</td><td>Pré-preenche a origem no lançamento. <strong>Resolvido</strong> — Configurações › Operação.</td></tr>
+<tr><td>Numeração do relatório</td><td>O A4 mostra "Nº 0142". <strong>Resolvido</strong> — Configurações › Operação.</td></tr>
+<tr><td>Distância entre municípios</td><td>Pré-preenche o KM quando origem e destino são reconhecidos. Hoje é uma tabela fixa de 20 municípios do Ceará e vizinhos. <strong>Em aberto</strong> — de onde vem essa tabela em produção (base própria, API de rotas) não foi decidido.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="dv-opt" id="7b">
+<div class="dv-olabel"><a class="dv-oid" href="#7b">7b</a>Clientes — lista ordenada por uso mais recente, com valor em aberto como dado de contexto. Cadastrar pela pílula de cabeçalho. Busca varre nome e cidade.</div>
+<dc-import name="TelaClientes" estado-inicial="lista" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="7c">
+<div class="dv-olabel"><a class="dv-oid" href="#7c">7c</a>Perfil do cliente — resumo financeiro, cadastro (o que falta aparece como “não preenchido”, não vazio) e histórico com link para ver todos. Principal: Gerar relatório.</div>
+<dc-import name="TelaClientes" estado-inicial="perfil" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="7c2">
+<div class="dv-olabel"><a class="dv-oid" href="#7c2">7c2</a>Perfil com valor vencido — a pastilha Vencido acende em terracota e “Cobrar no WhatsApp” fica ao lado de Editar. Sem valor em aberto, essa secundária não existe.</div>
+<dc-import name="TelaClientes" estado-inicial="perfilVencido" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="7d">
+<div class="dv-olabel"><a class="dv-oid" href="#7d">7d</a>Novo cliente — só o nome é obrigatório, e a ordem dos campos segue o uso: telefone e prazo antes de documento, porque são os que o app precisa para cobrar.</div>
+<dc-import name="TelaClientes" estado-inicial="novo" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="7e">
+<div class="dv-olabel"><a class="dv-oid" href="#7e">7e</a>Edição — mesmo formulário, título e rótulo do botão mudam, e ganha “Arquivar cliente” como texto destrutiva.</div>
+<dc-import name="TelaClientes" estado-inicial="editar" hint-size="402px,874px"></dc-import>
+</div>
+
+<div class="dv-opt" id="7f">
+<div class="dv-olabel"><a class="dv-oid" href="#7f">7f</a>Estado vazio — conta nova. Não é ilustração: é a razão de cadastrar, e a ação principal ancorada no rodapé.</div>
+<dc-import name="TelaClientes" estado-inicial="vazia" hint-size="402px,874px"></dc-import>
+</div>
+
+</div>
+<p class="dv-next">Nenhum valor novo foi criado nesta área — tudo saiu da folha de estilo e do inventário fechado. Tente: “desenhar Caminhões e Motoristas no mesmo padrão” · “desenhar Conta da empresa, que alimenta o A4” · “desenhar Importar fretes”</p>
+</section>
+</x-dc>
+</body>
+</html>

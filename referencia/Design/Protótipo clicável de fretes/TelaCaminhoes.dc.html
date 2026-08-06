@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <sc-if value="{{ ehLista }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ voltar }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 20px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.01em;color:#3C443E">Caminhões</span>
+        <button onClick="{{ novoCaminhao }}" style="flex:none;display:flex;align-items:center;height:44px;padding:0 16px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13.5px/1 Archivo,sans-serif" style-active="background:#D0E1D7">+ Novo</button>
+      </div>
+
+      <div style="flex:none;padding:0 20px 14px">
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <sc-if value="{{ ordemAtiva }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ abrirOrdem }}" style="display:flex;min-width:0;align-items:center;gap:7px;min-height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden" style-active="background:#D0E1D7">
+              <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ordem }}</span>
+              <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#1B6B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </button>
+          </sc-if>
+          <sc-if value="{{ ordemNeutra }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ abrirOrdem }}" style="display:flex;min-width:0;align-items:center;gap:7px;min-height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#6E7770;font:600 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden" style-active="background:#E4E0D6">
+              <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ordem }}</span>
+              <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#A8AFA9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </button>
+          </sc-if>
+        </div>
+        <div style="margin-top:12px;font:500 12px/1 Archivo,sans-serif;color:#6E7770">{{ totalContexto }}</div>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:0 16px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ lista }}" as="c" hint-placeholder-count="7">
+          <button onClick="{{ c.abrir }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:78px;padding:14px 18px;border:none;border-radius:20px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 17px/1.15 Archivo,sans-serif">{{ c.apelido }}</span>
+              <span style="display:flex;align-items:center;gap:8px">
+                <span style="flex:none;display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;background:#141A17;font:500 11px/1 'Azeret Mono',monospace;letter-spacing:.06em;color:#fff">{{ c.placa }}</span>
+                <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 13.5px/1.2 Archivo,sans-serif;color:#6E7770">{{ c.apoio }}</span>
+              </span>
+            </span>
+            <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+              <span style="white-space:nowrap;font:700 15px/1 Archivo,sans-serif;color:{{ c.corValor }};font-variant-numeric:tabular-nums">{{ c.valor }}</span>
+              <span style="white-space:nowrap;font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.1em;color:#6E7770">{{ c.rotulo }}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehPerfil }}" hint-placeholder-val="{{ true }}">
+  <div style="height:100%;display:flex;flex-direction:column">
+  <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+    <button onClick="{{ voltar }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+      <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+    <span style="flex:1;min-width:0;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">CAMINHÃO</span>
+  </div>
+
+  <div style="flex:1;min-height:0;overflow:auto;padding:12px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px))">
+    <div style="font:800 26px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.015em">{{ apelido }}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+      <span style="display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:8px;background:#141A17;font:500 11px/1 'Azeret Mono',monospace;letter-spacing:.06em;color:#fff">{{ placa }}</span>
+      <span style="font:500 15px/1.3 Archivo,sans-serif;color:#6E7770">{{ tipo }}</span>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <sc-if value="{{ periodoAtivo }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ abrirPeriodo }}" style="display:flex;min-width:0;align-items:center;gap:7px;min-height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden" style-active="background:#D0E1D7">
+          {{ periodo }}
+          <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#1B6B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+      </sc-if>
+      <sc-if value="{{ periodoNeutro }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ abrirPeriodo }}" style="display:flex;min-width:0;align-items:center;gap:7px;min-height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#6E7770;font:600 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden" style-active="background:#E4E0D6" style-active="background:#E4E0D6">
+          {{ periodo }}
+          <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#A8AFA9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+      </sc-if>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:14px">
+      <button onClick="{{ verFretes }}" style="min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:13px 14px;border:none;border-radius:20px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+        <span style="min-height:23px;font:700 9px/1.25 Archivo,sans-serif;letter-spacing:.09em;color:#6E7770">RODADO NO PERÍODO</span>
+        <span style="display:flex;align-items:baseline;gap:3px;white-space:nowrap;font:800 17px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;color:#141A17;font-variant-numeric:tabular-nums">
+          <span style="font-size:10px;font-weight:700;letter-spacing:0;color:#6E7770">R$</span>{{ rodado }}
+        </span>
+        <span style="font:500 9.5px/1.3 Archivo,sans-serif;color:#6E7770">{{ qtdFretes }} fretes</span>
+      </button>
+      <div style="min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:13px 14px;border-radius:20px;background:#F0EDE6">
+        <span style="min-height:23px;font:700 9px/1.25 Archivo,sans-serif;letter-spacing:.09em;color:#6E7770">MOTORISTA HABITUAL</span>
+        <span style="font:800 17px/1.15 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.02em;color:#141A17">{{ motorista }}</span>
+        <span style="font:500 9.5px/1.3 Archivo,sans-serif;color:#6E7770">{{ notaMotorista }}</span>
+      </div>
+    </div>
+
+    <sc-if value="{{ temKm }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px">
+        <div style="min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:13px 14px;border-radius:20px;background:#F0EDE6">
+          <span style="min-height:23px;font:700 9px/1.25 Archivo,sans-serif;letter-spacing:.09em;color:#6E7770">KM NO PERÍODO</span>
+          <span style="display:flex;align-items:baseline;gap:3px;white-space:nowrap;font:800 17px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;color:#141A17;font-variant-numeric:tabular-nums">
+            {{ km }}<span style="font-size:10px;font-weight:700;letter-spacing:0;color:#6E7770">km</span>
+          </span>
+          <span style="font:500 9.5px/1.3 Archivo,sans-serif;color:#6E7770">{{ notaKm }}</span>
+        </div>
+        <div style="min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:13px 14px;border-radius:20px;background:#F0EDE6">
+          <span style="min-height:23px;font:700 9px/1.25 Archivo,sans-serif;letter-spacing:.09em;color:#6E7770">POR QUILÔMETRO</span>
+          <span style="display:flex;align-items:baseline;gap:3px;white-space:nowrap;font:800 17px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;color:#141A17;font-variant-numeric:tabular-nums">
+            <span style="font-size:10px;font-weight:700;letter-spacing:0;color:#6E7770">R$</span>{{ porKm }}
+          </span>
+          <span style="font:500 9.5px/1.3 Archivo,sans-serif;color:#6E7770">média do período</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ semKm }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:7px;padding:16px 18px;border-radius:20px;background:#F0EDE6">
+        <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">KM E R$/KM</span>
+        <span style="font:500 13.5px/1.45 Archivo,sans-serif;color:#3C443E">Preencha o km no lançamento e aqui aparece quanto esse caminhão rodou e quanto rende por quilômetro. O campo é opcional — o frete salva sem ele.</span>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:column;gap:4px;margin-top:26px">
+      <span style="padding:0 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">CADASTRO</span>
+      <sc-for list="{{ dados }}" as="d" hint-placeholder-count="3">
+        <div style="display:flex;align-items:flex-start;gap:12px;min-height:56px;padding:14px 18px;border-radius:14px;background:#F0EDE6">
+          <span style="flex:none;width:96px;padding-top:2px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ d.rotulo }}</span>
+          <span style="flex:1;min-width:0;overflow-wrap:anywhere;font:600 16px/1.35 Archivo,sans-serif;color:{{ d.cor }}">{{ d.valor }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:26px">
+      <button onClick="{{ editar }}" style="flex:none;height:52px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#141A17" style-active="background:#E4E0D6">Editar caminhão</button>
+      <button onClick="{{ arquivar }}" style="flex:none;height:44px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#B3401A" style-active="color:#8A3314">Arquivar caminhão</button>
+    </div>
+  </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ folhaOrdem }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,26,23,.42)">
+      <button onClick="{{ fecharOrdem }}" style="flex:1;border:none;background:none;cursor:pointer"></button>
+      <div style="background:#FAF8F4;border-radius:28px 28px 0 0;padding:16px 20px 40px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:38px;height:4px;border-radius:99px;background:#DAD5CA;align-self:center"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font:800 21px/1.1 Archivo,sans-serif;color:#141A17">Ordenar por</span>
+          <button onClick="{{ fecharOrdem }}" style="flex:none;height:44px;padding:0 4px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#6E7770" style-active="color:#141A17">Fechar</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ itensOrdem }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:60px;padding:12px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+              <span style="font:700 16.5px/1.2 Archivo,sans-serif;color:#141A17">{{ o.nome }}</span>
+              <sc-if value="{{ o.sel }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:none;font:700 12px/1 Archivo,sans-serif;letter-spacing:.08em;color:#1B6B3A">ATUAL</span>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ folhaPeriodo }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,26,23,.42)">
+      <button onClick="{{ fecharPeriodo }}" style="flex:1;border:none;background:none;cursor:pointer"></button>
+      <div style="background:#FAF8F4;border-radius:28px 28px 0 0;padding:16px 20px 40px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:38px;height:4px;border-radius:99px;background:#DAD5CA;align-self:center"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font:800 21px/1.1 Archivo,sans-serif;color:#141A17">Período</span>
+          <button onClick="{{ fecharPeriodo }}" style="flex:none;height:44px;padding:0 4px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#6E7770" style-active="color:#141A17">Fechar</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ itensPeriodo }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:60px;padding:12px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+              <span style="font:700 16.5px/1.2 Archivo,sans-serif;color:#141A17">{{ o.nome }}</span>
+              <sc-if value="{{ o.sel }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:none;font:700 12px/1 Archivo,sans-serif;letter-spacing:.08em;color:#1B6B3A">ATUAL</span>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ temAviso }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(112px, calc(env(safe-area-inset-bottom) + 106px));z-index:70">
+      <dc-import name="AvisoSistema" texto="{{ aviso }}" hint-size="100%,74px"></dc-import>
+    </div>
+  </sc-if>
+
+  <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(26px, calc(env(safe-area-inset-bottom) + 20px));z-index:40;display:flex;align-items:flex-end;height:57px;padding:0 4px;border-radius:999px;background:#141A17">
+    <button onClick="{{ onInicio }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="19" height="19" viewBox="0 0 20 20" fill="none"><path d="M2.6 8.4 10 2.4l7.4 6v8.2a1 1 0 0 1-1 1h-3.6v-5.2H7.2v5.2H3.6a1 1 0 0 1-1-1V8.4Z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+      <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Início</span>
+    </button>
+    <button onClick="{{ onFretes }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="21" height="19" viewBox="0 0 22 20" fill="none"><path d="M1.6 4.2h11.2v9.4H1.6zM12.8 7.4h4l3.6 3.4v2.8h-7.6z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="5.8" cy="15.8" r="2" stroke="rgba(255,255,255,.5)" stroke-width="1.8"></circle><circle cx="16.2" cy="15.8" r="2" stroke="rgba(255,255,255,.5)" stroke-width="1.8"></circle></svg>
+      <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Fretes</span>
+    </button>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px">
+      <button onClick="{{ onNovo }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin-top:-18px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer">
+        <svg width="24" height="24" viewBox="0 0 26 26" fill="none"><path d="M13 4.5v17M4.5 13h17" stroke="#fff" stroke-width="2.8" stroke-linecap="round"></path></svg>
+      </button>
+      <span style="font:700 10.5px/1 Archivo,sans-serif;color:#fff">Novo</span>
+    </div>
+    <button onClick="{{ onCobrancas }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="20" height="19" viewBox="0 0 20 20" fill="none"><path d="M2.4 3.6h15.2v10.2a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V3.6Z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path><path d="M5.6 7h8.8M5.6 10.4h5" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Cobranças</span>
+    </button>
+    <button onClick="{{ onMais }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="20" height="19" viewBox="0 0 20 20" fill="none"><path d="M3.4 6h13.2M3.4 10h13.2M3.4 14h8.4" stroke="#7FCB9B" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span style="font:700 10.5px/1 Archivo,sans-serif;color:#7FCB9B">Mais</span>
+    </button>
+  </div>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;estadoInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lista&quot;,&quot;rodagem&quot;,&quot;perfil&quot;],&quot;default&quot;:&quot;lista&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;comKm&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;onVoltar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onInicio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onFretes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onNovo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onCobrancas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMais&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+// mesmo caminhão usado nas outras telas; km só existe onde o usuário preencheu
+// o período escala os números do caminhão escolhido, mantendo o R$/km coerente
+const POR_PERIODO = {
+  'Este mês': { mult: 1 },
+  'Mês passado': { mult: 1.24 },
+  'Últimos 30 dias': { mult: 1 },
+  'Tudo': { mult: 7.6 },
+};
+const PERIODOS = ['Este mês', 'Mês passado', 'Últimos 30 dias', 'Tudo'];
+const money = c => (c / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const inteiro = c => money(c).split(',')[0];
+
+// frota da AP Transportes — soma exatamente os 14 fretes e os R$ 38.420 do mês,
+// e os 15.680 km dão o R$ 2,45/km que a dashboard mostra
+const FROTA = [
+  { id: 'vol', apelido: 'Volvo azul', placa: 'QRT-7H88', tipo: 'Carreta · 3 eixos', dias: 1, fretes: 3, rodado: 924000, km: 3360, motorista: 'Raimundo Sales' },
+  { id: 'sca', apelido: 'Scania branco', placa: 'ABC-1D23', tipo: 'Carreta · 3 eixos', dias: 1, fretes: 3, rodado: 868000, km: 3360, motorista: 'Nego' },
+  { id: 'mb', apelido: 'MB prata', placa: 'JKL-5F09', tipo: 'Truck', dias: 2, fretes: 2, rodado: 560000, km: 2240, motorista: 'Damião' },
+  { id: 'trk', apelido: 'Truck vermelho', placa: 'PHK-2A55', tipo: 'Truck', dias: 3, fretes: 2, rodado: 532000, km: 2240, motorista: 'Cícero' },
+  { id: 'frd', apelido: 'Ford cinza', placa: 'RTU-3C41', tipo: 'Toco', dias: 6, fretes: 2, rodado: 490000, km: 2240, motorista: 'Marcos Vieira' },
+  { id: 'iv', apelido: 'Iveco branco', placa: 'MNO-8B12', tipo: 'Toco', dias: 12, fretes: 1, rodado: 252000, km: 1120, motorista: 'Zé do Pátio' },
+  { id: 'vw', apelido: 'VW 24-280', placa: 'GHT-6K74', tipo: 'Truck', dias: 21, fretes: 1, rodado: 216000, km: 1120, motorista: 'Nego' },
+];
+const ORDENS = ['Mais recente', 'Mais fretes', 'Maior valor rodado', 'Maior R$/km'];
+const porKm = c => (c.km ? c.rodado / c.km : 0);
+
+class Component extends DCLogic {
+  state = { tela: null, periodo: 'Este mês', folhaPeriodo: false, aviso: null, alvo: 'sca', ordem: 'Mais recente', folhaOrdem: false };
+
+  componentDidMount() {
+    const ini = this.props.estadoInicial;
+    if (ini === 'lista') this.setState({ tela: 'lista' });
+    else if (ini === 'rodagem') this.setState({ tela: 'lista', ordem: 'Maior R$/km' });
+    else this.setState({ tela: 'perfil' });
+  }
+
+  avisar(txt) {
+    this.setState({ aviso: txt });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ aviso: null }), 6000);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const p = POR_PERIODO[s.periodo];
+    // sem km lançado, o cartão vira convite em vez de mostrar zero
+    const comKm = this.props.comKm !== false;
+    const nada = () => { };
+    const alvo = FROTA.find(x => x.id === s.alvo) || FROTA[0];
+    const ordenar = {
+      'Mais recente': (a, b) => a.dias - b.dias,
+      'Mais fretes': (a, b) => b.fretes - a.fretes,
+      'Maior valor rodado': (a, b) => b.rodado - a.rodado,
+      'Maior R$/km': (a, b) => porKm(b) - porKm(a),
+    }[s.ordem];
+    const frota = FROTA.slice().sort(ordenar);
+    // o dado de contexto acompanha a ordenação escolhida
+    const porRodagem = s.ordem === 'Maior R$/km' || s.ordem === 'Maior valor rodado';
+    return {
+      ehLista: s.tela === 'lista',
+      ehPerfil: s.tela === 'perfil',
+      ordem: s.ordem,
+      ordemAtiva: s.ordem !== 'Mais recente',
+      ordemNeutra: s.ordem === 'Mais recente',
+      abrirOrdem: () => this.setState({ folhaOrdem: true }),
+      fecharOrdem: () => this.setState({ folhaOrdem: false }),
+      folhaOrdem: s.folhaOrdem,
+      itensOrdem: ORDENS.map(o => ({
+        nome: o, sel: s.ordem === o,
+        pick: () => this.setState({ ordem: o, folhaOrdem: false }),
+      })),
+      totalContexto: FROTA.length + ' caminhões · ' + FROTA.reduce((a, x) => a + x.km, 0).toLocaleString('pt-BR') + ' km no mês',
+      novoCaminhao: () => this.avisar('Cadastro de caminhão — formulário ainda não desenhado.'),
+      lista: frota.map(x => ({
+        apelido: x.apelido, placa: x.placa,
+        apoio: porRodagem
+          ? (x.km ? x.km.toLocaleString('pt-BR') + ' km · ' + x.fretes + ' fretes' : 'sem km preenchido · ' + x.fretes + ' fretes')
+          : x.tipo + ' · ' + x.motorista,
+        valor: s.ordem === 'Maior R$/km'
+          ? (x.km ? 'R$ ' + (x.rodado / 100 / x.km).toFixed(2).replace('.', ',') : '—')
+          : s.ordem === 'Maior valor rodado' ? 'R$ ' + inteiro(x.rodado)
+            : s.ordem === 'Mais fretes' ? String(x.fretes)
+              : 'há ' + x.dias + (x.dias === 1 ? ' dia' : ' dias'),
+        rotulo: s.ordem === 'Maior R$/km' ? (x.km ? 'POR KM' : 'SEM KM')
+          : s.ordem === 'Maior valor rodado' ? 'RODADO'
+            : s.ordem === 'Mais fretes' ? 'FRETES' : 'ÚLTIMO FRETE',
+        corValor: x.km || s.ordem !== 'Maior R$/km' ? '#141A17' : '#6E7770',
+        abrir: () => this.setState({ tela: 'perfil', alvo: x.id }),
+      })),
+      apelido: alvo.apelido,
+      placa: alvo.placa,
+      tipo: alvo.tipo,
+      periodo: s.periodo,
+      periodoAtivo: s.periodo !== 'Este mês',
+      periodoNeutro: s.periodo === 'Este mês',
+      abrirPeriodo: () => this.setState({ folhaPeriodo: true }),
+      fecharPeriodo: () => this.setState({ folhaPeriodo: false }),
+      folhaPeriodo: s.folhaPeriodo,
+      itensPeriodo: PERIODOS.map(o => ({
+        nome: o, sel: s.periodo === o,
+        pick: () => this.setState({ periodo: o, folhaPeriodo: false }),
+      })),
+      rodado: inteiro(Math.round(alvo.rodado * p.mult)),
+      qtdFretes: Math.max(1, Math.round(alvo.fretes * p.mult)),
+      motorista: alvo.motorista,
+      notaMotorista: 'em todos os fretes do período',
+      temKm: comKm && alvo.km > 0,
+      semKm: !comKm || alvo.km === 0,
+      km: Math.round(alvo.km * p.mult).toLocaleString('pt-BR'),
+      notaKm: 'em ' + Math.max(1, Math.round(alvo.fretes * p.mult)) + ' fretes',
+      porKm: alvo.km ? (alvo.rodado / 100 / alvo.km).toFixed(2).replace('.', ',') : '—',
+      dados: [
+        { rotulo: 'PLACA', valor: alvo.placa, cor: '#141A17' },
+        { rotulo: 'TIPO', valor: alvo.tipo, cor: '#141A17' },
+        { rotulo: 'MOTORISTA', valor: alvo.motorista, cor: '#141A17' },
+      ],
+      editar: () => this.avisar('Editar caminhão — formulário ainda não desenhado.'),
+      arquivar: () => this.avisar('Arquivar tira o caminhão das listas, sem apagar o histórico.'),
+      temAviso: !!s.aviso,
+      aviso: s.aviso,
+      voltar: s.tela === 'perfil' && this.props.estadoInicial ? () => this.setState({ tela: 'lista' }) : (this.props.onVoltar || nada),
+      verFretes: () => this.avisar('Abre Meus fretes filtrado por ' + alvo.apelido + '.'),
+      onInicio: this.props.onInicio || nada,
+      onFretes: this.props.onFretes || nada,
+      onNovo: this.props.onNovo || nada,
+      onCobrancas: this.props.onCobrancas || nada,
+      onMais: this.props.onMais || nada,
+    };
+  }
+}
+</script>
+</body>
+</html>

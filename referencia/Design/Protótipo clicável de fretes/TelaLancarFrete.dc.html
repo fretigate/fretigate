@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+@keyframes fg-flash{0%{background:#E4E9E5}100%{background:#F0EDE6}}
+@keyframes fg-up{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fg-open{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <div style="flex:none;padding:66px 16px 0;background:#FAF8F4">
+    <div style="border-radius:28px;background:#141A17;padding:18px 22px 20px">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <sc-if value="{{ temVoltar }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ sair }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-8px 0 0 -12px;border:none;background:none;cursor:pointer;flex:none">
+            <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+        </sc-if>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+        <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.45)">LANÇAR FRETE</span>
+        <button onClick="{{ trocarData }}" style="display:flex;align-items:center;gap:8px;height:26px;padding:0;border:none;background:none;cursor:pointer">
+          <span style="font:600 15px/1 Archivo,sans-serif;color:#fff">{{ dataLabel }}</span>
+          <span style="font:700 10px/1 Archivo,sans-serif;letter-spacing:.1em;color:#F4B723">TROCAR</span>
+        </button>
+        </div>
+      </div>
+
+      <button onClick="{{ abrirPad }}" style="display:flex;align-items:baseline;gap:10px;width:100%;margin-top:18px;padding:0;border:none;background:none;cursor:pointer;text-align:left">
+        <span style="font:700 24px/1 Archivo,sans-serif;color:rgba(255,255,255,.45)">R$</span>
+        <span style="flex:1;min-width:0;font:800 60px/1 Archivo,sans-serif;font-stretch:92%;letter-spacing:-.035em;color:#fff;font-variant-numeric:tabular-nums">{{ valorTexto }}</span>
+      </button>
+
+      <sc-if value="{{ temSugestao }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ usarSugestao }}" style="flex:none;display:flex;align-items:center;gap:10px;height:40px;margin-top:14px;padding:0 14px;border:none;border-radius:999px;background:rgba(244,183,35,.16);cursor:pointer">
+          <span style="font:500 12.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.72)">Última vez neste trecho</span>
+          <span style="font:700 13.5px/1 Archivo,sans-serif;color:#F4B723">{{ sugestaoValor }}</span>
+          <span style="font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.1em;color:#F4B723">USAR</span>
+        </button>
+      </sc-if>
+
+      <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;font:500 12.5px/1.3 Archivo,sans-serif;color:#F4B723">
+          <span style="width:7px;height:7px;border-radius:99px;background:#F4B723;flex:none"></span>
+          Sem sinal — salva no aparelho e envia sozinho
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="flex:1;min-height:0;overflow:auto;padding:20px 16px 22px;display:flex;flex-direction:column;gap:6px">
+    <sc-for list="{{ secoes }}" as="s" hint-placeholder-count="6">
+      <button onClick="{{ s.abrir }}" style="flex:none;display:flex;align-items:center;gap:12px;width:100%;height:60px;min-height:60px;padding:0 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+        <span style="flex:none;width:82px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ s.label }}</span>
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 16.5px/1.2 Archivo,sans-serif;color:#141A17">{{ s.valor }}</span>
+        <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+    </sc-for>
+
+    <div style="flex:none;display:flex;flex-direction:column;justify-content:center;gap:4px;width:100%;min-height:60px;padding:10px 18px;border-radius:18px;background:#F0EDE6">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="flex:none;width:82px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">KM</span>
+        <input value="{{ km }}" onChange="{{ setKm }}" onFocus="{{ fecharPad }}" placeholder="opcional" style="flex:1;min-width:0;box-sizing:border-box;border:none;outline:none;background:none;font:700 16.5px/1.2 Archivo,sans-serif;color:#141A17"></input>
+      </div>
+      <sc-if value="{{ temKmNota }}" hint-placeholder-val="{{ false }}">
+        <span style="padding-left:94px;font:500 12px/1.3 Archivo,sans-serif;color:#6E7770">{{ kmNota }}</span>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="flex:none;padding:16px 20px 40px;background:#FAF8F4">
+    <button onClick="{{ salvar }}" style="flex:none;display:flex;align-items:center;justify-content:center;gap:14px;width:100%;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;color:#fff" style-active="background:#14522C">
+      <span style="font:700 17px/1 Archivo,sans-serif">Salvar frete</span>
+      <span style="font:800 19px/1 Archivo,sans-serif;color:rgba(255,255,255,.75);font-variant-numeric:tabular-nums">{{ valorBotao }}</span>
+    </button>
+  </div>
+
+  <sc-if value="{{ padAberto }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;right:0;bottom:116px;z-index:60;background:#F0EDE6;padding:10px 8px 12px;box-shadow:0 -14px 34px rgba(20,26,23,.16)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 10px 10px">
+        <span style="font:600 13px/1.3 Archivo,sans-serif;color:#3C443E">Valor do frete</span>
+        <button onClick="{{ fecharPad }}" style="flex:none;height:44px;padding:0 6px;border:none;background:none;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#1B6B3A" style-active="color:#14522C">Pronto</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <sc-for list="{{ teclas }}" as="k" hint-placeholder-count="12">
+          <button onClick="{{ k.tap }}" style="flex:none;height:52px;min-height:52px;border:none;border-radius:14px;background:#FAF8F4;cursor:pointer;font:500 26px/1 Archivo,sans-serif;color:#141A17" style-active="background:#E4E0D6">{{ k.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ cal.open }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:85;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,26,23,.42)">
+      <button onClick="{{ cal.fechar }}" style="flex:1;border:none;background:none;cursor:pointer"></button>
+      <div style="flex:none;background:#FAF8F4;border-radius:28px 28px 0 0;padding:16px 20px 40px;display:flex;flex-direction:column;gap:14px">
+        <div style="width:38px;height:4px;border-radius:99px;background:#DAD5CA;align-self:center"></div>
+
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="flex:1;min-width:0;font:800 21px/1.1 Archivo,sans-serif;color:#141A17">Data do frete</span>
+          <button onClick="{{ cal.mesAnterior }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer" style-active="background:#E4E0D6">
+            <svg width="9" height="15" viewBox="0 0 8 14" fill="none"><path d="M6.6 1.4 1.4 7l5.2 5.6" stroke="#141A17" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+          <button onClick="{{ cal.mesSeguinte }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer" style-active="background:#E4E0D6">
+            <svg width="9" height="15" viewBox="0 0 8 14" fill="none"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#141A17" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+        </div>
+
+        <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ cal.mesTitulo }}</span>
+
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+          <span style="height:24px;display:flex;align-items:center;justify-content:center;font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.08em;color:#A8AFA9">D</span>
+          <span style="height:24px;display:flex;align-items:center;justify-content:center;font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.08em;color:#A8AFA9">S</span>
+          <span style="height:24px;display:flex;align-items:center;justify-content:center;font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.08em;color:#A8AFA9">T</span>
+          <span style="height:24px;display:flex;align-items:center;justify-content:center;font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.08em;color:#A8AFA9">Q</span>
+          <span style="height:24px;display:flex;align-items:center;justify-content:center;font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.08em;color:#A8AFA9">Q</span>
+          <span style="height:24px;display:flex;align-items:center;justify-content:center;font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.08em;color:#A8AFA9">S</span>
+          <span style="height:24px;display:flex;align-items:center;justify-content:center;font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.08em;color:#A8AFA9">S</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+          <sc-for list="{{ cal.celulas }}" as="d" hint-placeholder-count="35">
+            <sc-if value="{{ d.vazia }}" hint-placeholder-val="{{ false }}">
+              <span style="height:48px"></span>
+            </sc-if>
+            <sc-if value="{{ d.escolhida }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ d.tap }}" style="flex:none;height:48px;min-height:48px;border:none;border-radius:14px;background:#1B6B3A;cursor:pointer;font:700 16px/1 Archivo,sans-serif;color:#fff;font-variant-numeric:tabular-nums">{{ d.dia }}</button>
+            </sc-if>
+            <sc-if value="{{ d.hoje }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ d.tap }}" style="flex:none;height:48px;min-height:48px;border:none;border-radius:14px;background:#E4E9E5;cursor:pointer;font:700 16px/1 Archivo,sans-serif;color:#1B6B3A;font-variant-numeric:tabular-nums" style-active="background:#D0E1D7">{{ d.dia }}</button>
+            </sc-if>
+            <sc-if value="{{ d.comum }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ d.tap }}" style="flex:none;height:48px;min-height:48px;border:none;border-radius:14px;background:#F0EDE6;cursor:pointer;font:600 16px/1 Archivo,sans-serif;color:#141A17;font-variant-numeric:tabular-nums" style-active="background:#E4E0D6">{{ d.dia }}</button>
+            </sc-if>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <button onClick="{{ cal.hoje }}" style="flex:none;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 12.5px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">Hoje</button>
+          <button onClick="{{ cal.ontem }}" style="flex:none;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 12.5px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">Ontem</button>
+          <button onClick="{{ cal.amanha }}" style="flex:none;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 12.5px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">Amanhã</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ folha.open }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;background:#FAF8F4">
+      <div style="padding:66px 20px 0;display:flex;align-items:center;gap:12px">
+        <button onClick="{{ folha.close }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:800 21px/1.1 Archivo,sans-serif;color:#141A17">{{ folha.titulo }}</span>
+        <button onClick="{{ folha.criar }}" style="flex:none;display:flex;align-items:center;height:44px;padding:0 16px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13.5px/1 Archivo,sans-serif" style-active="background:#D0E1D7">{{ folha.labelNovo }}</button>
+      </div>
+
+      <div style="padding:16px 20px 0">
+        <div style="display:flex;align-items:center;gap:12px;height:56px;padding:0 18px;border-radius:18px;background:#F0EDE6">
+          <svg width="17" height="17" viewBox="0 0 15 15" fill="none" style="flex:none"><circle cx="6.4" cy="6.4" r="5" stroke="#6E7770" stroke-width="1.9"></circle><path d="m10.2 10.2 3.4 3.4" stroke="#6E7770" stroke-width="1.9" stroke-linecap="round"></path></svg>
+          <input value="{{ folha.busca }}" onChange="{{ folha.setBusca }}" onFocus="{{ folha.focar }}" onClick="{{ folha.focar }}" placeholder="{{ folha.placeholder }}" style="flex:1;min-width:0;border:none;outline:none;background:none;font:600 17px/1 Archivo,sans-serif;color:#141A17"></input>
+          <sc-if value="{{ folha.teclado }}" hint-placeholder-val="{{ false }}">
+            <span style="flex:none;width:2px;height:22px;background:#1B6B3A"></span>
+          </sc-if>
+        </div>
+        <sc-if value="{{ folha.dica }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:10px 18px 0;font:600 13.5px/1.4 Archivo,sans-serif;color:#8A6206">Digite o nome primeiro — depois toque em Cadastrar.</div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ folha.temMunicipios }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:12px 20px 0;display:flex;flex-direction:column;gap:6px">
+          <span style="padding:0 2px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">MUNICÍPIO RECONHECIDO</span>
+          <sc-for list="{{ folha.municipios }}" as="m" hint-placeholder-count="1">
+            <button onClick="{{ m.pick }}" style="display:flex;align-items:center;gap:10px;min-height:56px;padding:12px 18px;border:none;border-radius:18px;background:#E4E9E5;cursor:pointer;text-align:left" style-active="background:#D0E1D7">
+              <svg width="16" height="18" viewBox="0 0 16 18" fill="none" style="flex:none"><path d="M8 1.4c-2.9 0-5.2 2.3-5.2 5.2 0 3.9 5.2 9.6 5.2 9.6s5.2-5.7 5.2-9.6c0-2.9-2.3-5.2-5.2-5.2Z" stroke="#1B6B3A" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="8" cy="6.5" r="1.9" stroke="#1B6B3A" stroke-width="1.7"></circle></svg>
+              <span style="flex:1;min-width:0;font:700 16.5px/1.2 Archivo,sans-serif;color:#1B6B3A">{{ m.nome }}</span>
+            </button>
+          </sc-for>
+          <span style="padding:2px 2px 0;font:500 12.5px/1.4 Archivo,sans-serif;color:#6E7770">Se não for nenhum desses, toque em Cadastrar e siga — o frete salva do mesmo jeito.</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ folha.temChips }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px 20px 0;display:flex;flex-direction:column;gap:8px">
+          <span style="padding:0 2px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">O QUE VOCÊ MAIS CARREGA</span>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ folha.chips }}" as="c" hint-placeholder-count="4">
+              <button onClick="{{ c.pick }}" style="flex:none;height:48px;padding:0 18px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">{{ c.nome }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="flex:1;overflow:auto;padding:14px 20px 10px;display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ folha.itens }}" as="it" hint-placeholder-count="9">
+          <button onClick="{{ it.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:12px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left">
+            <span style="display:flex;flex-direction:column;gap:4px;min-width:0">
+              <span style="font:700 16.5px/1.15 Archivo,sans-serif;color:#141A17">{{ it.nome }}</span>
+              <span style="font:400 12.5px/1 Archivo,sans-serif;color:#6E7770">{{ it.sub }}</span>
+            </span>
+            <sc-if value="{{ it.sel }}" hint-placeholder-val="{{ false }}">
+              <span style="flex:none;font:700 12px/1 Archivo,sans-serif;letter-spacing:.08em;color:#1B6B3A">ATUAL</span>
+            </sc-if>
+          </button>
+        </sc-for>
+        <sc-if value="{{ folha.vazio }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:24px 4px;font:500 15px/1.5 Archivo,sans-serif;color:#6E7770">Nenhum resultado. Toque em <strong style="color:#1B6B3A">{{ folha.labelNovo }}</strong> para cadastrar agora.</div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ folha.teclado }}" hint-placeholder-val="{{ false }}">
+        <x-import component-from-global-scope="IOSKeyboard" hint-size="100%,270px"></x-import>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ salvo }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:90;display:flex;flex-direction:column;background:#FAF8F4">
+      <div style="padding:56px 20px 16px">
+        <div style="font:800 27px/1.05 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.015em;color:#141A17">Meus fretes</div>
+        <div style="margin-top:6px;font:500 14px/1 Archivo,sans-serif;color:#6E7770">Agosto · 13 fretes</div>
+      </div>
+      <div style="flex:1;overflow:auto;padding:6px 20px 150px;display:flex;flex-direction:column;gap:6px">
+        <div style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770;padding:8px 4px">HOJE</div>
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:20px;background:#F0EDE6;animation:fg-flash 1.6s ease-out 2">
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+            <span style="font:700 17px/1.15 Archivo,sans-serif;color:#141A17">{{ novoCliente }}</span>
+            <span style="font:400 13.5px/1.15 Archivo,sans-serif;color:#6E7770">{{ novaRota }}</span>
+            <span style="display:flex;margin-top:3px">
+              <sc-if value="{{ naoRecebido }}" hint-placeholder-val="{{ true }}">
+                <span style="font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.1em;color:#8A6206">A FATURAR</span>
+              </sc-if>
+              <sc-if value="{{ recebido }}" hint-placeholder-val="{{ false }}">
+                <span style="font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.1em;color:#1B6B3A">QUITADO</span>
+              </sc-if>
+            </span>
+          </span>
+          <span style="font:800 20px/1 Archivo,sans-serif;color:#141A17;font-variant-numeric:tabular-nums">{{ valorBotao }}</span>
+        </div>
+        <sc-for list="{{ anteriores }}" as="f" hint-placeholder-count="4">
+          <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:20px;background:#F0EDE6">
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+              <span style="font:700 17px/1.15 Archivo,sans-serif;color:#141A17">{{ f.cliente }}</span>
+              <span style="font:400 13.5px/1.15 Archivo,sans-serif;color:#6E7770">{{ f.rota }}</span>
+              <span style="margin-top:3px;font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.1em;color:#6E7770">{{ f.situacao }}</span>
+            </span>
+            <span style="font:800 20px/1 Archivo,sans-serif;color:#141A17;font-variant-numeric:tabular-nums">{{ f.valor }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="position:absolute;left:16px;right:16px;bottom:44px;z-index:60">
+        <dc-import name="AvisoSistema" texto="{{ msgSalvo }}" temBotoes="{{ true }}" labelA="{{ labelRecebi }}" labelB="Novo frete" onA="{{ jaRecebi }}" onB="{{ novoFrete }}" hint-size="100%,140px"></dc-import>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;estadoInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;repouso&quot;,&quot;digitado&quot;,&quot;busca&quot;],&quot;default&quot;:&quot;repouso&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;onSalvo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onVoltar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+// dias = dias desde o último uso · usos = quantas vezes já foi usado
+const CLIENTES = [
+  { id: 'agro', nome: 'Agro Vale Verde', cidade: 'Sobral/CE', dias: 8, usos: 34 },
+  { id: 'cer', nome: 'Cerâmica Boa Vista', cidade: 'Sobral/CE', dias: 10, usos: 41 },
+  { id: 'dist', nome: 'Distribuidora Nordeste', cidade: 'Fortaleza/CE', dias: 14, usos: 22 },
+  { id: 'frig', nome: 'Frigorífico São Luiz', cidade: 'Sobral/CE', dias: 21, usos: 18 },
+  { id: 'apo', nome: 'Cimentos Apodi', cidade: 'Quixeré/CE', dias: 27, usos: 12 },
+  { id: 'nut', nome: 'Nutrisul Rações', cidade: 'Fortaleza/CE', dias: 34, usos: 9 },
+  { id: 'mir', nome: 'Lojas Miranda', cidade: 'Crateús/CE', dias: 42, usos: 6 },
+  { id: 'agp', nome: 'Agropec Sobral', cidade: 'Sobral/CE', dias: 51, usos: 5 },
+  { id: 'ipu', nome: 'Metalúrgica Ipu', cidade: 'Ipu/CE', dias: 66, usos: 3 },
+  { id: 'aca', nome: 'Comercial Acaraú', cidade: 'Acaraú/CE', dias: 80, usos: 2 },
+  { id: 'gsf', nome: 'Granja Santa Fé', cidade: 'Massapê/CE', dias: 95, usos: 1 },
+];
+const CAMINHOES = [
+  { id: 'sca', nome: 'Scania branco', extra: 'ABC-1D23', tipo: 'Carreta · 30t', dias: 2, usos: 120 },
+  { id: 'vol', nome: 'Volvo azul', extra: 'QRT-7H88', tipo: 'Carreta · 28t', dias: 3, usos: 98 },
+  { id: 'red', nome: 'Truck vermelho', extra: 'PHK-2A55', tipo: 'Truck · 14t', dias: 5, usos: 76 },
+  { id: 'mb', nome: 'MB prata', extra: 'JKL-5F09', tipo: 'Toco · 8t', dias: 9, usos: 44 },
+  { id: 'frd', nome: 'Ford cinza', extra: 'RTU-3C41', tipo: 'Truck · 12t', dias: 16, usos: 31 },
+  { id: 'ive', nome: 'Iveco velho', extra: 'MNO-8B20', tipo: 'Toco · 8t', dias: 40, usos: 12 },
+  { id: 'alu', nome: 'Carreta alugada', extra: 'XYZ-4K77', tipo: 'Carreta · 30t', dias: 70, usos: 4 },
+];
+const MOTORISTAS = [
+  { id: 'nego', nome: 'Nego', tipo: 'Costuma ir no Scania', dias: 1, usos: 88 },
+  { id: 'rai', nome: 'Raimundo Sales', tipo: 'Costuma ir no Volvo', dias: 2, usos: 74 },
+  { id: 'cic', nome: 'Cícero', tipo: 'Costuma ir no vermelho', dias: 4, usos: 60 },
+  { id: 'dam', nome: 'Damião', tipo: 'Costuma ir no MB', dias: 8, usos: 41 },
+  { id: 'zep', nome: 'Zé do Pátio', tipo: 'Cobre folga', dias: 13, usos: 29 },
+  { id: 'mvi', nome: 'Marcos Vieira', tipo: 'Costuma ir no Ford', dias: 22, usos: 17 },
+  { id: 'toi', nome: 'Toinho', tipo: 'Cobre folga', dias: 38, usos: 9 },
+  { id: 'eri', nome: 'Erivan', tipo: 'Agregado', dias: 55, usos: 5 },
+];
+const ORIGENS = [
+  { id: 'patio', nome: 'Pátio AP — Sobral/CE', tipo: 'Garagem padrão', dias: 0, usos: 210 },
+  { id: 'ind', nome: 'Distrito Industrial — Sobral/CE', tipo: 'Coleta', dias: 6, usos: 38 },
+  { id: 'ftz', nome: 'Fortaleza/CE', tipo: 'Coleta', dias: 11, usos: 26 },
+  { id: 'msp', nome: 'Massapê/CE', tipo: 'Coleta', dias: 18, usos: 14 },
+  { id: 'grj', nome: 'Groaíras/CE', tipo: 'Coleta', dias: 29, usos: 8 },
+  { id: 'cau', nome: 'Cariré/CE', tipo: 'Coleta', dias: 44, usos: 5 },
+  { id: 'ipu', nome: 'Ipu/CE', tipo: 'Coleta', dias: 61, usos: 3 },
+];
+// destinos por cliente — só o que já rodou com aquele cliente
+const DESTINOS = {
+  agro: [
+    { id: 'ftz', nome: 'Fortaleza/CE', dias: 8, usos: 14 },
+    { id: 'ter', nome: 'Teresina/PI', dias: 19, usos: 9 },
+    { id: 'jdn', nome: 'Juazeiro do Norte/CE', dias: 26, usos: 6 },
+    { id: 'pic', nome: 'Picos/PI', dias: 40, usos: 3 },
+  ],
+  cer: [
+    { id: 'ftz', nome: 'Fortaleza/CE', dias: 10, usos: 21 },
+    { id: 'mos', nome: 'Mossoró/RN', dias: 17, usos: 11 },
+    { id: 'par', nome: 'Parnaíba/PI', dias: 31, usos: 7 },
+  ],
+  dist: [
+    { id: 'cra', nome: 'Crateús/CE', dias: 14, usos: 12 },
+    { id: 'cam', nome: 'Camocim/CE', dias: 23, usos: 8 },
+    { id: 'ftz', nome: 'Fortaleza/CE', dias: 36, usos: 5 },
+  ],
+  frig: [
+    { id: 'ftz', nome: 'Fortaleza/CE', dias: 21, usos: 16 },
+    { id: 'pic', nome: 'Picos/PI', dias: 38, usos: 4 },
+  ],
+};
+const TODOS_DESTINOS = [
+  { id: 'ftz', nome: 'Fortaleza/CE', tipo: 'Já rodou 58 vezes', dias: 8, usos: 58 },
+  { id: 'ter', nome: 'Teresina/PI', tipo: 'Já rodou 19 vezes', dias: 19, usos: 19 },
+  { id: 'mos', nome: 'Mossoró/RN', tipo: 'Já rodou 14 vezes', dias: 17, usos: 14 },
+  { id: 'cra', nome: 'Crateús/CE', tipo: 'Já rodou 12 vezes', dias: 14, usos: 12 },
+  { id: 'jdn', nome: 'Juazeiro do Norte/CE', tipo: 'Já rodou 9 vezes', dias: 26, usos: 9 },
+  { id: 'cam', nome: 'Camocim/CE', tipo: 'Já rodou 8 vezes', dias: 23, usos: 8 },
+  { id: 'par', nome: 'Parnaíba/PI', tipo: 'Já rodou 7 vezes', dias: 31, usos: 7 },
+  { id: 'pic', nome: 'Picos/PI', tipo: 'Já rodou 5 vezes', dias: 38, usos: 5 },
+  { id: 'nat', nome: 'Natal/RN', tipo: 'Já rodou 2 vezes', dias: 74, usos: 2 },
+];
+// municípios reconhecidos: alimentam a sugestão embaixo do campo e o cálculo de km
+const MUNICIPIOS = ['Sobral/CE', 'Fortaleza/CE', 'Juazeiro do Norte/CE', 'Crateús/CE', 'Camocim/CE', 'Quixeré/CE', 'Tianguá/CE', 'Itapipoca/CE', 'Iguatu/CE', 'Caucaia/CE', 'Maracanaú/CE', 'Teresina/PI', 'Parnaíba/PI', 'Picos/PI', 'Mossoró/RN', 'Natal/RN', 'Juazeiro/BA', 'Petrolina/PE', 'Recife/PE', 'São Luís/MA'];
+// distância rodoviária aproximada, em km, entre municípios reconhecidos
+const DISTANCIAS = {
+  'Sobral/CE|Fortaleza/CE': 235, 'Sobral/CE|Teresina/PI': 350, 'Sobral/CE|Juazeiro do Norte/CE': 480,
+  'Sobral/CE|Crateús/CE': 190, 'Sobral/CE|Camocim/CE': 130, 'Sobral/CE|Parnaíba/PI': 260,
+  'Sobral/CE|Picos/PI': 460, 'Sobral/CE|Mossoró/RN': 480, 'Sobral/CE|Tianguá/CE': 105,
+  'Sobral/CE|Itapipoca/CE': 120, 'Sobral/CE|Natal/RN': 660, 'Sobral/CE|São Luís/MA': 680,
+  'Fortaleza/CE|Sobral/CE': 235, 'Fortaleza/CE|Quixeré/CE': 200, 'Fortaleza/CE|Mossoró/RN': 260,
+  'Fortaleza/CE|Juazeiro do Norte/CE': 490, 'Fortaleza/CE|Teresina/PI': 590, 'Fortaleza/CE|Natal/RN': 520,
+  'Quixeré/CE|Fortaleza/CE': 200, 'Crateús/CE|Sobral/CE': 190, 'Camocim/CE|Sobral/CE': 130,
+};
+const CARGAS = [
+  { id: 'rac', nome: 'Ração', tipo: 'Ensacada', dias: 3, usos: 62 },
+  { id: 'cim', nome: 'Cimento', tipo: 'Ensacado', dias: 5, usos: 48 },
+  { id: 'cer', nome: 'Cerâmica', tipo: 'Paletizada', dias: 9, usos: 37 },
+  { id: 'mil', nome: 'Milho a granel', tipo: 'Granel', dias: 12, usos: 29 },
+  { id: 'tra', nome: 'Trator', tipo: 'Máquina', dias: 20, usos: 11 },
+  { id: 'bov', nome: 'Bovinos', tipo: 'Vivo', dias: 27, usos: 9 },
+  { id: 'mad', nome: 'Madeira', tipo: 'Amarrada', dias: 45, usos: 6 },
+];
+const ULTIMO_VALOR = {
+  'agro|Fortaleza/CE': 140000, 'agro|Teresina/PI': 235000, 'agro|Juazeiro do Norte/CE': 198000,
+  'cer|Fortaleza/CE': 118000, 'cer|Mossoró/RN': 172000,
+  'dist|Crateús/CE': 96000, 'frig|Fortaleza/CE': 155000,
+};
+const DATAS = ['Hoje · qua, 5 de agosto'];
+const DIA_SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+const MES_NOME = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const TECLAS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', '⌫'];
+const ANTERIORES = [
+  { cliente: 'Cerâmica Boa Vista', rota: 'Sobral → Mossoró/RN', valor: 'R$ 1.720,00', situacao: 'FATURADO' },
+  { cliente: 'Distribuidora Nordeste', rota: 'Sobral → Crateús/CE', valor: 'R$ 960,00', situacao: 'QUITADO' },
+  { cliente: 'Agro Vale Verde', rota: 'Sobral → Teresina/PI', valor: 'R$ 2.350,00', situacao: 'PARCIAL' },
+  { cliente: 'Frigorífico São Luiz', rota: 'Sobral → Fortaleza/CE', valor: 'R$ 1.550,00', situacao: 'QUITADO' },
+];
+
+const money = c => (c / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// mais recente primeiro; empate resolve por mais frequente
+const ranked = lista => lista.slice().sort((a, b) => (a.dias - b.dias) || (b.usos - a.usos));
+// busca sem acento: o sujeito digita "ceramica", "mossoro", "racoes"
+const fold = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+class Component extends DCLogic {
+  // teclado aberto é o estado inicial da tela: dois layouts distintos, não um que se ajusta
+  // a tela abre com as seis linhas visíveis; o teclado só aparece ao tocar no valor
+  state = { folha: undefined, dados: null, novos: {}, dica: false, teclado: false, busca: '', cents: 0, pad: false, salvo: false, recebido: false, km: '', kmTocado: false, cal: false, calMes: null, escolhida: null };
+
+  // "hoje" do protótipo: 5 de agosto de 2026
+  get hoje() { return [2026, 7, 5]; }
+
+  rotuloData() {
+    const e = this.state.escolhida;
+    const h = this.hoje;
+    if (!e) return this.props.dataHoje || DATAS[0];
+    const d = new Date(e[0], e[1], e[2]);
+    const dia = DIA_SEMANA[d.getDay()];
+    const corpo = dia + ', ' + e[2] + ' de ' + MES_NOME[e[1]];
+    const mesmo = (a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+    const desloca = n => { const x = new Date(h[0], h[1], h[2] + n); return [x.getFullYear(), x.getMonth(), x.getDate()]; };
+    if (mesmo(e, h)) return 'Hoje · ' + corpo;
+    if (mesmo(e, desloca(-1))) return 'Ontem · ' + corpo;
+    if (mesmo(e, desloca(1))) return 'Amanhã · ' + corpo;
+    return corpo.charAt(0).toUpperCase() + corpo.slice(1) + (e[0] === h[0] ? '' : ' de ' + e[0]);
+  }
+
+  calendario() {
+    const s = this.state;
+    const h = this.hoje;
+    const esc = s.escolhida || h;
+    const [ano, mes] = (s.calMes || '').split('-').length === 2
+      ? s.calMes.split('-').map(Number)
+      : [esc[0], esc[1]];
+    const primeiro = new Date(ano, mes, 1).getDay();
+    const total = new Date(ano, mes + 1, 0).getDate();
+    const celulas = [];
+    for (let i = 0; i < primeiro; i++) celulas.push({ vazia: true, dia: '', escolhida: false, hoje: false, comum: false, tap: () => { } });
+    for (let d = 1; d <= total; d++) {
+      const ehEsc = s.escolhida ? (esc[0] === ano && esc[1] === mes && esc[2] === d) : false;
+      const ehHoje = !ehEsc && h[0] === ano && h[1] === mes && h[2] === d;
+      celulas.push({
+        vazia: false, dia: d,
+        escolhida: ehEsc, hoje: ehHoje, comum: !ehEsc && !ehHoje,
+        tap: () => this.setState({ escolhida: [ano, mes, d], cal: false }),
+      });
+    }
+    const pular = n => { const x = new Date(ano, mes + n, 1); this.setState({ calMes: x.getFullYear() + '-' + x.getMonth() }); };
+    const rel = n => { const x = new Date(h[0], h[1], h[2] + n); this.setState({ escolhida: [x.getFullYear(), x.getMonth(), x.getDate()], cal: false, calMes: null }); };
+    return {
+      open: !!s.cal,
+      fechar: () => this.setState({ cal: false }),
+      mesTitulo: (MES_NOME[mes] + ' de ' + ano).toUpperCase(),
+      mesAnterior: () => pular(-1),
+      mesSeguinte: () => pular(1),
+      celulas,
+      hoje: () => rel(0), ontem: () => rel(-1), amanha: () => rel(1),
+    };
+  }
+
+  criarComNome(campo, nomeItem) {
+    const id = 'n' + Date.now();
+    const novos = Object.assign({}, this.state.novos);
+    novos[campo] = (novos[campo] || []).concat([{ id, nome: nomeItem, novo: true, tipo: 'Município reconhecido', usos: 0, dias: 0 }]);
+    const dados = Object.assign({}, this.dados);
+    dados[campo] = id;
+    this.setState({ novos, dados, folha: null, busca: '', teclado: false, dica: false });
+  }
+
+  get dados() {
+    return this.state.dados || {
+      cliente: 'agro', caminhao: 'sca', motorista: 'nego',
+      origem: 'patio', destino: 'ftz', carga: 'rac',
+    };
+  }
+  componentDidMount() {
+    // estado de vitrine com o valor já digitado
+    if (this.props.estadoInicial === 'digitado') this.setState({ cents: 214000, pad: true });
+  }
+
+  get folhaKey() { return this.state.folha === undefined ? (this.props.estadoInicial === 'busca' ? 'cliente' : null) : this.state.folha; }
+
+  escolher(campo, id) {
+    this.setState({ dados: Object.assign({}, this.dados, { [campo]: id }), folha: null, busca: '', dica: false, teclado: false });
+  }
+
+  criar() {
+    const campo = this.folhaKey;
+    const nome = this.state.busca.trim();
+    if (!campo) return;
+    if (!nome) return this.setState({ dica: true });
+    const id = 'novo-' + campo + '-' + (this.state.novos[campo] || []).length;
+    const item = { id, nome, novo: true, extra: '', dias: 0, usos: 1 };
+    this.setState(s => ({
+      novos: Object.assign({}, s.novos, { [campo]: (s.novos[campo] || []).concat([item]) }),
+      dados: Object.assign({}, this.dados, { [campo]: id }),
+      folha: null, busca: '', dica: false, teclado: false,
+    }));
+  }
+  tecla(label) {
+    if (label === ',') return;
+    if (label === '⌫') return this.setState(s => ({ cents: Math.floor(s.cents / 10) }));
+    this.setState(s => ({ cents: s.cents * 10 + Number(label) <= 99999999 ? s.cents * 10 + Number(label) : s.cents }));
+  }
+
+  fontes() {
+    const d = this.dados;
+    const n = this.state.novos;
+    const mais = k => n[k] || [];
+    const F = {
+      cliente: { label: 'CLIENTE', lista: CLIENTES, titulo: 'Escolher cliente', novo: '+ Novo', placeholder: 'Buscar cliente', sub: x => x.novo ? 'Cadastrado agora' : x.cidade + ' · ' + x.usos + ' fretes' },
+      caminhao: { label: 'CAMINHÃO', lista: CAMINHOES, titulo: 'Escolher caminhão', novo: '+ Novo', placeholder: 'Buscar caminhão', sub: x => x.novo ? 'Cadastrado agora' : x.extra + ' · ' + x.tipo },
+      motorista: { label: 'MOTORISTA', lista: MOTORISTAS, titulo: 'Escolher motorista', novo: '+ Novo', placeholder: 'Buscar motorista', sub: x => x.novo ? 'Cadastrado agora' : x.tipo },
+      origem: { label: 'ORIGEM', lista: ORIGENS, titulo: 'Escolher origem', novo: '+ Nova', placeholder: 'Buscar origem', sub: x => x.novo ? 'Cadastrada agora' : x.tipo },
+      destino: { label: 'DESTINO', lista: DESTINOS[d.cliente] || TODOS_DESTINOS, todos: TODOS_DESTINOS, titulo: 'Escolher destino', novo: '+ Novo', placeholder: 'Buscar destino', sub: x => x.novo ? 'Cadastrado agora' : (x.tipo || 'Já rodou com este cliente') },
+      carga: { label: 'CARGA', lista: CARGAS, titulo: 'Escolher carga', novo: '+ Nova', placeholder: 'Buscar carga', sub: x => x.novo ? 'Cadastrada agora' : x.tipo },
+    };
+    Object.keys(F).forEach(k => {
+      F[k].lista = mais(k).concat(F[k].lista);
+      if (F[k].todos) F[k].todos = mais(k).concat(F[k].todos);
+    });
+    return F;
+  }
+
+  renderVals() {
+    const s = this.state;
+    const d = this.dados;
+    const F = this.fontes();
+    const nome = (campo) => {
+      const fonte = F[campo];
+      const todos = fonte.todos ? fonte.lista.concat(fonte.todos) : fonte.lista;
+      const achado = todos.find(x => x.id === d[campo]);
+      return achado ? achado.nome : 'Escolher';
+    };
+    const destinoNome = nome('destino');
+    const sug = ULTIMO_VALOR[d.cliente + '|' + destinoNome] || 0;
+
+    const caminhaoAtual = F.caminhao.lista.find(x => x.id === d.caminhao) || {};
+    const secoes = ['cliente', 'caminhao', 'motorista', 'origem', 'destino', 'carga'].map(campo => ({
+      label: F[campo].label,
+      valor: campo === 'caminhao' && caminhaoAtual.extra ? nome(campo) + ' · ' + caminhaoAtual.extra : nome(campo),
+      // escolher outro campo fecha o teclado do valor
+      abrir: () => this.setState({ folha: campo, busca: '', teclado: false, dica: false, pad: false }),
+    }));
+
+    const fk = this.folhaKey;
+    const fonte = fk ? F[fk] : null;
+    const q = s.busca.trim().toLowerCase();
+    const universo = fonte ? (fonte.todos || fonte.lista) : [];
+    const qf = fold(q);
+    const achados = qf ? universo.filter(x => fold(x.nome).includes(qf) || fold(x.extra).includes(qf)) : ranked(universo);
+    const exato = universo.some(x => fold(x.nome) === qf);
+
+    // município reconhecido enquanto digita — sugestão, nunca trava o salvar
+    const buscaMunicipio = (fk === 'origem' || fk === 'destino') && qf.length >= 3 && !exato
+      ? MUNICIPIOS.filter(m => fold(m).startsWith(qf) && !universo.some(x => fold(x.nome) === fold(m))).slice(0, 3)
+      : [];
+
+    // carga: chips do próprio histórico, ordenados pelo que ele mais lança
+    const chipsCarga = fk === 'carga'
+      ? CARGAS.slice().sort((a, b) => b.usos - a.usos).slice(0, 4).map(c => ({
+        nome: c.nome, sel: d.carga === c.id, pick: () => this.escolher('carga', c.id),
+      }))
+      : [];
+
+    const nomeCru = campo => {
+      const f2 = F[campo];
+      const todos = f2.todos ? f2.lista.concat(f2.todos) : f2.lista;
+      const a = todos.find(x => x.id === d[campo]);
+      return a ? a.nome : '';
+    };
+    const oNome = nomeCru('origem').replace('Pátio AP — ', '');
+    const dNome = nomeCru('destino');
+    const kmSugerido = DISTANCIAS[oNome + '|' + dNome] || 0;
+
+    return {
+      offline: this.props.offline ?? false,
+      dataLabel: this.rotuloData(),
+      trocarData: () => this.setState({ cal: true, pad: false, calMes: s.escolhida ? s.escolhida.slice(0, 2).join('-') : null }),
+      cal: this.calendario(),
+      ditar: () => { },
+
+      valorTexto: money(s.cents),
+      valorBotao: 'R$ ' + money(s.cents),
+      temSugestao: sug > 0 && s.cents === 0,
+      sugestaoValor: 'R$ ' + money(sug),
+      usarSugestao: () => this.setState({ cents: sug }),
+      // km é opcional: nunca bloqueia o salvar. Pré-preenchido quando os dois municípios são reconhecidos
+      km: s.kmTocado ? (s.km || '') : (kmSugerido ? String(kmSugerido) : ''),
+      setKm: e => this.setState({ km: e.target.value.replace(/[^\d]/g, ''), kmTocado: true }),
+      kmNota: !s.kmTocado && kmSugerido ? 'distância estimada do trecho — pode corrigir' : '',
+      temKmNota: !s.kmTocado && !!kmSugerido,
+      abrirPad: () => this.setState({ pad: true }),
+      fecharPad: () => this.setState({ pad: false }),
+      padAberto: s.pad,
+      padFechado: !s.pad,
+      teclas: TECLAS.map(l => ({ label: l, tap: () => this.tecla(l) })),
+
+      secoes,
+
+      folha: {
+        open: !!fk,
+        titulo: fonte ? fonte.titulo : '',
+        labelNovo: fonte ? (qf && !exato ? '+ Cadastrar' : fonte.novo) : '',
+        placeholder: fonte ? fonte.placeholder : '',
+        busca: s.busca,
+        setBusca: e => this.setState({ busca: e.target.value, dica: false, teclado: true }),
+        focar: () => { if (!s.teclado) this.setState({ teclado: true }); },
+        close: () => this.setState({ folha: null, busca: '', dica: false, teclado: false }),
+        criar: () => this.criar(),
+        teclado: s.teclado,
+        dica: s.dica,
+        vazio: !!fk && achados.length === 0 && buscaMunicipio.length === 0,
+        temMunicipios: buscaMunicipio.length > 0,
+        municipios: buscaMunicipio.map(m => ({
+          nome: m,
+          pick: () => this.criarComNome(fk, m),
+        })),
+        temChips: chipsCarga.length > 0 && !qf,
+        chips: chipsCarga,
+        itens: achados.map(x => ({
+          nome: x.nome, sub: fonte.sub(x), sel: d[fk] === x.id,
+          pick: () => this.escolher(fk, x.id),
+        })),
+      },
+
+      salvar: () => { if (this.props.onSalvo) this.props.onSalvo(); else this.setState({ salvo: true }); },
+      temVoltar: !!this.props.onVoltar,
+      sair: () => { if (this.props.onVoltar) this.props.onVoltar(); },
+      salvo: s.salvo,
+      recebido: s.recebido,
+      naoRecebido: !s.recebido,
+      msgSalvo: s.recebido ? 'Frete salvo e quitado.' : 'Frete salvo como A faturar.',
+      labelRecebi: s.recebido ? 'Recebido ✓' : 'Já recebi',
+      jaRecebi: () => this.setState({ recebido: true }),
+      novoFrete: () => this.setState({ salvo: false, recebido: false, cents: 0, pad: false }),
+      novoCliente: nome('cliente'),
+      novaRota: nome('origem').replace('Pátio AP — ', '') + ' → ' + destinoNome,
+      anteriores: ANTERIORES,
+    };
+  }
+}
+</script>
+</body>
+</html>

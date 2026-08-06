@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <sc-if value="{{ ehLista }}" hint-placeholder-val="{{ true }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ voltar }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 20px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.01em;color:#3C443E">Motoristas</span>
+        <sc-if value="{{ temNovoTopo }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ novo }}" style="flex:none;display:flex;align-items:center;height:44px;padding:0 16px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13.5px/1 Archivo,sans-serif" style-active="background:#D0E1D7">+ Novo</button>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ temBusca }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:none;padding:0 20px 14px">
+          <div style="display:flex;align-items:center;gap:10px;height:48px;min-height:48px;margin-top:12px;padding:0 15px;border-radius:18px;background:#F0EDE6">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="flex:none"><circle cx="6.4" cy="6.4" r="5" stroke="#6E7770" stroke-width="1.9"></circle><path d="m10.2 10.2 3.4 3.4" stroke="#6E7770" stroke-width="1.9" stroke-linecap="round"></path></svg>
+            <input value="{{ busca }}" onChange="{{ setBusca }}" placeholder="Buscar motorista" style="flex:1;min-width:0;border:none;outline:none;background:none;font:500 14px/1 Archivo,sans-serif;color:#141A17"></input>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <sc-if value="{{ ordemAtiva }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ abrirOrdem }}" style="display:flex;min-width:0;align-items:center;gap:7px;min-height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden" style-active="background:#D0E1D7">
+                <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ordem }}</span>
+                <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#1B6B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </button>
+            </sc-if>
+            <sc-if value="{{ ordemNeutra }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ abrirOrdem }}" style="display:flex;min-width:0;align-items:center;gap:7px;min-height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#6E7770;font:600 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden" style-active="background:#E4E0D6">
+                <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ordem }}</span>
+                <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#A8AFA9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </button>
+            </sc-if>
+          </div>
+          <div style="margin-top:12px;font:500 12px/1 Archivo,sans-serif;color:#6E7770">{{ totalContexto }}</div>
+        </div>
+      </sc-if>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:0 16px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ lista }}" as="m" hint-placeholder-count="6">
+          <button onClick="{{ m.abrir }}" style="flex:none;display:flex;align-items:center;gap:14px;width:100%;min-height:78px;padding:14px 18px;border:none;border-radius:20px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+            <span style="flex:none;display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;background:#E4E9E5;font:700 13px/1 Archivo,sans-serif;color:#1B6B3A">{{ m.iniciais }}</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 17px/1.15 Archivo,sans-serif">{{ m.nome }}</span>
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 13.5px/1.2 Archivo,sans-serif;color:#6E7770">{{ m.apoio }}</span>
+            </span>
+            <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+              <span style="white-space:nowrap;font:700 15px/1 Archivo,sans-serif;color:#141A17;font-variant-numeric:tabular-nums">{{ m.valor }}</span>
+              <span style="white-space:nowrap;font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.1em;color:#6E7770">{{ m.rotulo }}</span>
+            </span>
+          </button>
+        </sc-for>
+
+        <sc-if value="{{ vazia }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:26px 4px 0;display:flex;flex-direction:column;gap:14px;align-items:flex-start">
+            <span style="font:800 22px/1.25 Archivo,sans-serif;letter-spacing:-.01em">Nenhum motorista cadastrado.</span>
+            <span style="font:500 15px/1.5 Archivo,sans-serif;color:#3C443E">Cadastre quem roda pra você e o nome aparece na lista do lançamento — nunca mais digitado. Só o nome é obrigatório; o telefone serve pra mandar a ordem de serviço.</span>
+            <button onClick="{{ novo }}" style="flex:none;width:100%;height:60px;margin-top:8px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Cadastrar motorista</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehPerfil }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ voltarLista }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">MOTORISTA</span>
+        <button onClick="{{ perfil.editar }}" style="flex:none;display:flex;align-items:center;height:44px;padding:0 16px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13.5px/1 Archivo,sans-serif" style-active="background:#D0E1D7">Editar</button>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:12px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px))">
+        <div style="font:800 26px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.015em">{{ perfil.nome }}</div>
+        <div style="margin-top:8px;font:500 15px/1.3 Archivo,sans-serif;color:#6E7770">{{ perfil.apelido }}</div>
+
+        <div style="display:flex;gap:8px;margin-top:20px">
+          <sc-if value="{{ perfil.periodoAtivo }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ perfil.abrirPeriodo }}" style="flex:none;display:flex;align-items:center;gap:7px;height:40px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13px/1 Archivo,sans-serif;white-space:nowrap">
+              {{ perfil.periodo }}
+              <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#1B6B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </button>
+          </sc-if>
+          <sc-if value="{{ perfil.periodoNeutro }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ perfil.abrirPeriodo }}" style="flex:none;display:flex;align-items:center;gap:7px;height:40px;padding:0 14px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#6E7770;font:600 13px/1 Archivo,sans-serif;white-space:nowrap" style-active="background:#E4E0D6">
+              {{ perfil.periodo }}
+              <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#A8AFA9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </button>
+          </sc-if>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:14px">
+          <button onClick="{{ perfil.verFretes }}" style="min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:13px 14px;border:none;border-radius:20px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+            <span style="min-height:23px;font:700 9px/1.25 Archivo,sans-serif;letter-spacing:.09em;color:#6E7770">RODADO NO PERÍODO</span>
+            <span style="display:flex;align-items:baseline;gap:3px;white-space:nowrap;font:800 17px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;font-variant-numeric:tabular-nums">
+              <span style="font-size:10px;font-weight:700;letter-spacing:0;color:#6E7770">R$</span>{{ perfil.rodado }}
+            </span>
+            <span style="font:500 9.5px/1.3 Archivo,sans-serif;color:#6E7770">{{ perfil.qtdFretes }} fretes</span>
+          </button>
+          <button onClick="{{ perfil.verCaminhao }}" style="min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:13px 14px;border:none;border-radius:20px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+            <span style="min-height:23px;font:700 9px/1.25 Archivo,sans-serif;letter-spacing:.09em;color:#6E7770">CAMINHÃO HABITUAL</span>
+            <span style="font:800 17px/1.15 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.02em">{{ perfil.caminhao }}</span>
+            <span style="font:500 9.5px/1.3 Archivo,sans-serif;color:#6E7770">{{ perfil.notaCaminhao }}</span>
+          </button>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:26px">
+          <span style="padding:0 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">CADASTRO</span>
+          <sc-for list="{{ perfil.dados }}" as="d" hint-placeholder-count="3">
+            <div style="display:flex;align-items:flex-start;gap:12px;min-height:56px;padding:14px 18px;border-radius:14px;background:#F0EDE6">
+              <span style="flex:none;width:88px;padding-top:2px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ d.rotulo }}</span>
+              <sc-if value="{{ d.tocavel }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ d.tap }}" style="flex:1;min-width:0;padding:0;border:none;background:none;cursor:pointer;text-align:left;overflow-wrap:anywhere;font:600 16px/1.35 Archivo,sans-serif;color:#1B6B3A" style-active="color:#14522C">{{ d.valor }}</button>
+              </sc-if>
+              <sc-if value="{{ d.simples }}" hint-placeholder-val="{{ true }}">
+                <span style="flex:1;min-width:0;overflow-wrap:anywhere;font:600 16px/1.35 Archivo,sans-serif;color:{{ d.cor }}">{{ d.valor }}</span>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:26px">
+          <button onClick="{{ perfil.lancar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Lançar frete com {{ perfil.primeiro }}</button>
+          <sc-if value="{{ perfil.temTel }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ perfil.conversar }}" style="flex:none;height:52px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#141A17" style-active="background:#E4E0D6">Abrir conversa no WhatsApp</button>
+          </sc-if>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:26px">
+          <span style="padding:0 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">ÚLTIMOS FRETES</span>
+          <sc-for list="{{ perfil.historico }}" as="h" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 18px;border-radius:14px;background:#F0EDE6">
+              <span style="flex:none;width:52px;font:500 12px/1 'Azeret Mono',monospace;color:#6E7770">{{ h.data }}</span>
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 14.5px/1.2 Archivo,sans-serif">{{ h.rota }}</span>
+              <span style="font:700 14.5px/1 Archivo,sans-serif;font-variant-numeric:tabular-nums">{{ h.valor }}</span>
+            </div>
+          </sc-for>
+          <button onClick="{{ perfil.verFretes }}" style="flex:none;align-self:flex-start;margin-top:4px;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 12.5px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">Ver todos os {{ perfil.qtdTotal }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehForm }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ form.cancelar }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ form.eyebrow }}</span>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:16px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+        <span style="padding:0 4px 8px;font:500 14px/1.45 Archivo,sans-serif;color:#3C443E">Só o nome é obrigatório. O telefone é o que abre a conversa para mandar a ordem de serviço.</span>
+        <sc-for list="{{ form.campos }}" as="c" hint-placeholder-count="4">
+          <div style="flex:none;display:flex;flex-direction:column;gap:8px;min-height:78px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+            <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ c.rotulo }}</span>
+            <input value="{{ c.valor }}" onChange="{{ c.set }}" placeholder="{{ c.dica }}" style="width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;border:none;outline:none;background:none;font:600 17px/1.3 Archivo,sans-serif;color:#141A17"></input>
+          </div>
+        </sc-for>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
+          <sc-if value="{{ form.podeSalvar }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ form.salvar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">{{ form.labelSalvar }}</button>
+          </sc-if>
+          <sc-if value="{{ form.salvando }}" hint-placeholder-val="{{ false }}">
+            <button disabled="disabled" style="flex:none;display:flex;align-items:center;justify-content:center;gap:10px;height:60px;border:none;border-radius:999px;background:#1B6B3A;font:700 17px/1 Archivo,sans-serif;color:#fff;cursor:wait">
+              <span style="display:inline-block;width:17px;height:17px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:999px;animation:fg-spin .7s linear infinite"></span>
+              {{ form.labelSalvar }}
+            </button>
+          </sc-if>
+          <sc-if value="{{ form.bloqueado }}" hint-placeholder-val="{{ true }}">
+            <button disabled="disabled" style="flex:none;height:60px;border:none;border-radius:999px;background:#E4E0D6;color:#5C6660;font:700 17px/1 Archivo,sans-serif;cursor:not-allowed">{{ form.labelSalvar }}</button>
+          </sc-if>
+          <sc-if value="{{ form.ehEdicao }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ form.arquivar }}" style="flex:none;height:44px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#B3401A" style-active="color:#8A3314">Arquivar motorista</button>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ folhaPeriodo }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,26,23,.42)">
+      <button onClick="{{ fecharPeriodo }}" style="flex:1;border:none;background:none;cursor:pointer"></button>
+      <div style="background:#FAF8F4;border-radius:28px 28px 0 0;padding:16px 20px 40px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:38px;height:4px;border-radius:99px;background:#DAD5CA;align-self:center"></div>
+        <span style="font:800 21px/1.1 Archivo,sans-serif">Período</span>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ itensPeriodo }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:60px;padding:12px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+              <span style="font:700 16.5px/1.2 Archivo,sans-serif">{{ o.nome }}</span>
+              <sc-if value="{{ o.sel }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:none;font:700 12px/1 Archivo,sans-serif;letter-spacing:.08em;color:#1B6B3A">ATUAL</span>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ folhaOrdem }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,26,23,.42)">
+      <button onClick="{{ fecharOrdem }}" style="flex:1;border:none;background:none;cursor:pointer"></button>
+      <div style="background:#FAF8F4;border-radius:28px 28px 0 0;padding:16px 20px 40px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:38px;height:4px;border-radius:99px;background:#DAD5CA;align-self:center"></div>
+        <span style="font:800 21px/1.1 Archivo,sans-serif">Ordenar por</span>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ itensOrdem }}" as="o" hint-placeholder-count="3">
+            <button onClick="{{ o.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:60px;padding:12px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+              <span style="font:700 16.5px/1.2 Archivo,sans-serif">{{ o.nome }}</span>
+              <sc-if value="{{ o.sel }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:none;font:700 12px/1 Archivo,sans-serif;letter-spacing:.08em;color:#1B6B3A">ATUAL</span>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ temAviso }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(112px, calc(env(safe-area-inset-bottom) + 106px));z-index:70">
+      <dc-import name="AvisoSistema" texto="{{ aviso }}" hint-size="100%,74px"></dc-import>
+    </div>
+  </sc-if>
+
+  <dc-import name="BarraFG" ativo="mais" onInicio="{{ onInicio }}" onFretes="{{ onFretes }}" onNovo="{{ onNovo }}" onCobrancas="{{ onCobrancas }}" onMais="{{ onMais }}" hint-size="100%,100px"></dc-import>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;estadoInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lista&quot;,&quot;perfil&quot;,&quot;novo&quot;,&quot;editar&quot;,&quot;vazia&quot;],&quot;default&quot;:&quot;lista&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;onVoltar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onInicio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onFretes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onNovo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onCobrancas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMais&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const MOTORISTAS = [
+  { id: 'nego', nome: 'Nego', apelido: 'José Nogueira da Silva', dias: 1, fretes: 3, rodado: 868000, caminhao: 'Scania branco', tel: '(88) 99812-3355', cnh: 'E · vence 03/2027', total: 96 },
+  { id: 'rai', nome: 'Raimundo Sales', apelido: 'Raimundo Nonato Sales', dias: 1, fretes: 3, rodado: 924000, caminhao: 'Volvo azul', tel: '(88) 99744-1180', cnh: 'E · vence 11/2026', total: 88 },
+  { id: 'dam', nome: 'Damião', apelido: 'Damião Ferreira Lima', dias: 2, fretes: 2, rodado: 560000, caminhao: 'MB prata', tel: '(88) 99510-8846', cnh: 'D · vence 07/2028', total: 54 },
+  { id: 'cic', nome: 'Cícero', apelido: 'Cícero Alves Pinto', dias: 3, fretes: 2, rodado: 532000, caminhao: 'Truck vermelho', tel: '(88) 99655-2093', cnh: 'D · vence 02/2027', total: 47 },
+  { id: 'mar', nome: 'Marcos Vieira', apelido: '', dias: 6, fretes: 2, rodado: 490000, caminhao: 'Ford cinza', tel: '(88) 99388-7412', cnh: '', total: 31 },
+  { id: 'ze', nome: 'Zé do Pátio', apelido: 'José Ribamar Costa', dias: 12, fretes: 1, rodado: 252000, caminhao: 'Iveco branco', tel: '(88) 99277-6650', cnh: 'D · vence 09/2026', total: 22 },
+  { id: 'val', nome: 'Valdo', apelido: '', dias: 21, fretes: 1, rodado: 216000, caminhao: 'VW 24-280', tel: '', cnh: '', total: 8 },
+];
+const ORDENS = ['Mais recente', 'Mais fretes', 'Maior valor rodado'];
+const PERIODOS = ['Este mês', 'Mês passado', 'Últimos 30 dias', 'Tudo'];
+const MULT = { 'Este mês': 1, 'Mês passado': 1.24, 'Últimos 30 dias': 1, 'Tudo': 7.6 };
+const HIST = [
+  { data: '05/08', rota: 'Sobral → Fortaleza/CE', valor: 'R$ 1.400' },
+  { data: '03/08', rota: 'Sobral → Teresina/PI', valor: 'R$ 2.150' },
+  { data: '01/08', rota: 'Sobral → Juazeiro/CE', valor: 'R$ 1.980' },
+];
+const money = c => (c / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const inteiro = c => money(c).split(',')[0];
+const fold = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const iniciais = n => n.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+class Component extends DCLogic {
+  state = { tela: null, busca: '', alvo: 'nego', form: null, salvando: false, aviso: null, ordem: 'Mais recente', folhaOrdem: false, periodo: 'Este mês', folhaPeriodo: false };
+
+  componentDidMount() {
+    const ini = this.props.estadoInicial;
+    if (ini === 'perfil') this.setState({ tela: 'perfil' });
+    else if (ini === 'novo') this.setState({ tela: 'form', alvo: null, form: { nome: '', apelido: '', tel: '', cnh: '' } });
+    else if (ini === 'editar') { const m = MOTORISTAS[0]; this.setState({ tela: 'form', alvo: m.id, form: { nome: m.nome, apelido: m.apelido, tel: m.tel, cnh: m.cnh } }); }
+    else this.setState({ tela: 'lista' });
+  }
+
+  avisar(txt) {
+    this.setState({ aviso: txt });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ aviso: null }), 6000);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const vazia = this.props.estadoInicial === 'vazia';
+    const q = fold(s.busca.trim());
+    const ordenar = {
+      'Mais recente': (a, b) => a.dias - b.dias,
+      'Mais fretes': (a, b) => b.fretes - a.fretes,
+      'Maior valor rodado': (a, b) => b.rodado - a.rodado,
+    }[s.ordem];
+    const base = vazia ? [] : MOTORISTAS.slice().sort(ordenar);
+    const lista = q ? base.filter(m => fold(m.nome + ' ' + m.apelido).includes(q)) : base;
+    const c = MOTORISTAS.find(x => x.id === s.alvo) || MOTORISTAS[0];
+    const f = s.form || { nome: '', apelido: '', tel: '', cnh: '' };
+    const setCampo = k => e => this.setState({ form: Object.assign({}, f, { [k]: e.target.value }) });
+    const mult = MULT[s.periodo];
+    const nada = () => { };
+    return {
+      ehLista: s.tela === 'lista',
+      ehPerfil: s.tela === 'perfil',
+      ehForm: s.tela === 'form',
+      vazia,
+      temBusca: !vazia,
+      temNovoTopo: !vazia,
+      busca: s.busca,
+      setBusca: e => this.setState({ busca: e.target.value }),
+      ordem: s.ordem,
+      ordemAtiva: s.ordem !== 'Mais recente',
+      ordemNeutra: s.ordem === 'Mais recente',
+      abrirOrdem: () => this.setState({ folhaOrdem: true }),
+      fecharOrdem: () => this.setState({ folhaOrdem: false }),
+      folhaOrdem: s.folhaOrdem,
+      itensOrdem: ORDENS.map(o => ({ nome: o, sel: s.ordem === o, pick: () => this.setState({ ordem: o, folhaOrdem: false }) })),
+      totalContexto: MOTORISTAS.length + ' motoristas · ' + MOTORISTAS.filter(x => x.tel).length + ' com telefone',
+      novo: () => this.setState({ tela: 'form', alvo: null, form: { nome: '', apelido: '', tel: '', cnh: '' } }),
+      lista: lista.map(m => ({
+        nome: m.nome, iniciais: iniciais(m.nome),
+        apoio: s.ordem === 'Mais recente' ? m.caminhao + ' · último há ' + m.dias + (m.dias === 1 ? ' dia' : ' dias') : m.caminhao + ' · ' + m.fretes + ' fretes',
+        valor: s.ordem === 'Mais fretes' ? String(m.fretes) : 'R$ ' + inteiro(m.rodado),
+        rotulo: s.ordem === 'Mais fretes' ? 'FRETES' : 'RODADO',
+        abrir: () => this.setState({ tela: 'perfil', alvo: m.id }),
+      })),
+      voltarLista: () => this.setState({ tela: 'lista' }),
+      perfil: {
+        nome: c.nome,
+        primeiro: c.nome.split(' ')[0],
+        apelido: c.apelido || 'sem nome completo no cadastro',
+        periodo: s.periodo,
+        periodoAtivo: s.periodo !== 'Este mês',
+        periodoNeutro: s.periodo === 'Este mês',
+        abrirPeriodo: () => this.setState({ folhaPeriodo: true }),
+        rodado: inteiro(Math.round(c.rodado * mult)),
+        qtdFretes: Math.max(1, Math.round(c.fretes * mult)),
+        caminhao: c.caminhao.split(' ')[0],
+        notaCaminhao: 'em todos os fretes',
+        qtdTotal: c.total,
+        temTel: !!c.tel,
+        dados: [
+          { rotulo: 'TELEFONE', valor: c.tel || 'não preenchido', cor: c.tel ? '#141A17' : '#5C6660', tocavel: !!c.tel, simples: !c.tel, tap: () => this.avisar('Abre a conversa com ' + c.tel + '.') },
+          { rotulo: 'NOME COMPLETO', valor: c.apelido || 'não preenchido', cor: c.apelido ? '#141A17' : '#5C6660', tocavel: false, simples: true },
+          { rotulo: 'CNH', valor: c.cnh || 'não preenchida', cor: c.cnh ? '#141A17' : '#5C6660', tocavel: false, simples: true },
+        ],
+        historico: HIST,
+        editar: () => this.setState({ tela: 'form', alvo: c.id, form: { nome: c.nome, apelido: c.apelido, tel: c.tel, cnh: c.cnh } }),
+        lancar: () => this.avisar('Abre Lançar frete com ' + c.nome + ' preenchido.'),
+        conversar: () => this.avisar('Abre a conversa com ' + c.tel + '.'),
+        verFretes: () => this.avisar('Abre Meus fretes filtrado por ' + c.nome + '.'),
+        verCaminhao: () => this.avisar('Abre o perfil do ' + c.caminhao + '.'),
+      },
+      periodoAtual: s.periodo,
+      folhaPeriodo: s.folhaPeriodo,
+      fecharPeriodo: () => this.setState({ folhaPeriodo: false }),
+      itensPeriodo: PERIODOS.map(o => ({ nome: o, sel: s.periodo === o, pick: () => this.setState({ periodo: o, folhaPeriodo: false }) })),
+      form: {
+        eyebrow: s.alvo ? 'EDITAR MOTORISTA' : 'NOVO MOTORISTA',
+        ehEdicao: !!s.alvo,
+        labelSalvar: s.alvo ? 'Salvar alterações' : 'Salvar motorista',
+        campos: [
+          { rotulo: 'NOME *', valor: f.nome, dica: 'Como você chama ele', set: setCampo('nome') },
+          { rotulo: 'TELEFONE', valor: f.tel, dica: 'Pra mandar a ordem no WhatsApp', set: setCampo('tel') },
+          { rotulo: 'NOME COMPLETO', valor: f.apelido, dica: 'Se precisar em documento', set: setCampo('apelido') },
+          { rotulo: 'CNH', valor: f.cnh, dica: 'Categoria e vencimento', set: setCampo('cnh') },
+        ],
+        podeSalvar: !!f.nome.trim() && !s.salvando,
+        salvando: s.salvando,
+        bloqueado: !f.nome.trim() && !s.salvando,
+        salvar: () => {
+          if (s.salvando) return;
+          this.setState({ salvando: true });
+          setTimeout(() => {
+            this.setState({ salvando: false, tela: 'lista' });
+            this.avisar(s.alvo ? 'Motorista atualizado.' : f.nome.trim() + ' entrou na lista.');
+          }, 1200);
+        },
+        arquivar: () => this.avisar('Arquivar tira da lista, sem apagar o histórico.'),
+        cancelar: () => this.setState({ tela: s.alvo ? 'perfil' : 'lista' }),
+      },
+      temAviso: !!s.aviso,
+      aviso: s.aviso,
+      voltar: this.props.onVoltar || nada,
+      onInicio: this.props.onInicio || nada,
+      onFretes: this.props.onFretes || nada,
+      onNovo: this.props.onNovo || nada,
+      onCobrancas: this.props.onCobrancas || nada,
+      onMais: this.props.onMais || nada,
+    };
+  }
+}
+</script>
+</body>
+</html>

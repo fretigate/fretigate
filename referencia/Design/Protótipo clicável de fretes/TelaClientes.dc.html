@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+@keyframes girar{to{transform:rotate(360deg)}}
+@keyframes fg-in{from{opacity:0}to{opacity:1}}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <sc-if value="{{ ehLista }}" hint-placeholder-val="{{ true }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="padding:66px 20px 14px;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ voltar }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 20px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.01em;color:#3C443E">Clientes</span>
+        <sc-if value="{{ temNovoHeader }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ novoCliente }}" style="flex:none;display:flex;align-items:center;height:44px;padding:0 16px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13.5px/1 Archivo,sans-serif" style-active="background:#D0E1D7">+ Novo</button>
+        </sc-if>
+      </div>
+
+      <div style="padding:0 20px 14px">
+        <sc-if value="{{ temBusca }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:10px;height:48px;min-height:48px;padding:0 15px;border-radius:18px;background:#F0EDE6">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="flex:none"><circle cx="6.4" cy="6.4" r="5" stroke="#6E7770" stroke-width="1.9"></circle><path d="m10.2 10.2 3.4 3.4" stroke="#6E7770" stroke-width="1.9" stroke-linecap="round"></path></svg>
+            <input value="{{ busca }}" onChange="{{ setBusca }}" placeholder="Buscar cliente" style="flex:1;min-width:0;border:none;outline:none;background:none;font:500 14px/1 Archivo,sans-serif;color:#141A17"></input>
+          </div>
+        </sc-if>
+        <sc-if value="{{ temBusca }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <sc-if value="{{ ordemAtiva }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ abrirOrdem }}" style="display:flex;min-width:0;align-items:center;gap:7px;min-height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden" style-active="background:#D0E1D7">
+                {{ ordemLabel }}
+                <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#1B6B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </button>
+            </sc-if>
+            <sc-if value="{{ ordemNeutra }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ abrirOrdem }}" style="display:flex;min-width:0;align-items:center;gap:7px;min-height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#6E7770;font:600 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden" style-active="background:#E4E0D6" style-active="background:#E4E0D6">
+                {{ ordemLabel }}
+                <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#A8AFA9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </button>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ temTotal }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-top:12px;font:500 12px/1 Archivo,sans-serif;color:#6E7770">{{ totalContexto }}</div>
+        </sc-if>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:0 16px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ lista }}" as="c" hint-placeholder-count="7">
+          <button onClick="{{ c.abrir }}" style="flex:none;display:flex;align-items:center;gap:14px;min-height:78px;padding:14px 18px;border:none;border-radius:20px;background:#F0EDE6;cursor:pointer;text-align:left;width:100%" style-active="background:#E4E0D6">
+            <span style="flex:none;display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;background:#E4E9E5;font:700 13px/1 Archivo,sans-serif;color:#1B6B3A">{{ c.iniciais }}</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 17px/1.15 Archivo,sans-serif">{{ c.nome }}</span>
+              <span style="font:400 13.5px/1.2 Archivo,sans-serif;color:#6E7770">{{ c.apoio }}</span>
+            </span>
+            <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+              <span style="white-space:nowrap;font:700 15px/1 Archivo,sans-serif;color:{{ c.corValor }};font-variant-numeric:tabular-nums">{{ c.valor }}</span>
+              <span style="white-space:nowrap;font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.1em;color:{{ c.corValor }}">{{ c.rotulo }}</span>
+            </span>
+          </button>
+        </sc-for>
+
+        <sc-if value="{{ vazio }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:30px 4px 0;display:flex;flex-direction:column;gap:12px">
+            <span style="font:800 22px/1.25 Archivo,sans-serif;letter-spacing:-.01em">Nenhum cliente cadastrado ainda.</span>
+            <span style="font:500 15px/1.5 Archivo,sans-serif;color:#3C443E">Cadastre quem você já roda pra não digitar de novo em cada frete. Só o nome é obrigatório — o resto entra quando precisar.</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ semResultado }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:30px 4px 0;display:flex;flex-direction:column;gap:14px;align-items:flex-start">
+            <span style="font:500 15px/1.5 Archivo,sans-serif;color:#3C443E">Nenhum cliente com esse nome.</span>
+            <button onClick="{{ cadastrarBusca }}" style="flex:none;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 12.5px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">Cadastrar “{{ buscaTrim }}”</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ vazio }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ novoCliente }}" style="flex:none;width:100%;height:60px;margin-top:20px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Cadastrar cliente</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehPerfil }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%;display:flex;flex-direction:column;animation:fg-in .18s ease-out">
+      <div style="padding:66px 20px 14px;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ voltarLista }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">CLIENTE</span>
+        <button onClick="{{ perfil.editar }}" style="flex:none;display:flex;align-items:center;height:44px;padding:0 16px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13.5px/1 Archivo,sans-serif" style-active="background:#D0E1D7">Editar</button>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:12px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px))">
+        <div style="font:800 26px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.015em">{{ perfil.nome }}</div>
+        <div style="margin-top:8px;font:500 15px/1.3 Archivo,sans-serif;color:#6E7770">{{ perfil.cidade }}</div>
+
+        <div style="display:flex;gap:8px;margin-top:20px">
+          <sc-if value="{{ perfil.periodoAtivo }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ perfil.abrirPeriodo }}" style="display:flex;min-width:0;align-items:center;gap:7px;min-height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden" style-active="background:#D0E1D7">
+              {{ perfil.periodo }}
+              <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#1B6B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </button>
+          </sc-if>
+          <sc-if value="{{ perfil.periodoNeutro }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ perfil.abrirPeriodo }}" style="display:flex;min-width:0;align-items:center;gap:7px;min-height:40px;max-width:148px;padding:0 14px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#6E7770;font:600 13px/1 Archivo,sans-serif;white-space:nowrap;overflow:hidden" style-active="background:#E4E0D6" style-active="background:#E4E0D6">
+              {{ perfil.periodo }}
+              <svg width="11" height="7" viewBox="0 0 11 7" fill="none"><path d="M1.2 1.2 5.5 5.4 9.8 1.2" stroke="#A8AFA9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </button>
+          </sc-if>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:14px">
+          <button onClick="{{ perfil.verFretes }}" style="min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:13px 14px;border:none;border-radius:20px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+            <span style="min-height:23px;font:700 9px/1.25 Archivo,sans-serif;letter-spacing:.09em;color:#6E7770">RODADO NO PERÍODO</span>
+            <span style="display:flex;align-items:baseline;gap:3px;white-space:nowrap;font:800 17px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;color:#141A17;font-variant-numeric:tabular-nums">
+              <span style="font-size:10px;font-weight:700;letter-spacing:0;color:#6E7770">R$</span>{{ perfil.rodado }}
+            </span>
+            <span style="font:500 9.5px/1.3 Archivo,sans-serif;color:#6E7770">{{ perfil.qtdFretes }} fretes</span>
+          </button>
+          <div style="min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:13px 14px;border-radius:20px;background:#F0EDE6">
+            <span style="min-height:23px;font:700 9px/1.25 Archivo,sans-serif;letter-spacing:.09em;color:#6E7770">RECEBIDO NO PERÍODO</span>
+            <span style="display:flex;align-items:baseline;gap:3px;white-space:nowrap;font:800 17px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;color:{{ perfil.corRecebido }};font-variant-numeric:tabular-nums">
+              <span style="font-size:10px;font-weight:700;letter-spacing:0;color:#6E7770">R$</span>{{ perfil.recebido }}
+            </span>
+            <span style="font:500 9.5px/1.3 Archivo,sans-serif;color:#6E7770">{{ perfil.notaRecebido }}</span>
+          </div>
+          <button onClick="{{ perfil.verCobrancas }}" style="min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:13px 14px;border:none;border-radius:20px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+            <span style="min-height:23px;font:700 9px/1.25 Archivo,sans-serif;letter-spacing:.09em;color:#6E7770">A RECEBER</span>
+            <span style="display:flex;align-items:baseline;gap:3px;white-space:nowrap;font:800 17px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;color:{{ perfil.corReceber }};font-variant-numeric:tabular-nums">
+              <span style="font-size:10px;font-weight:700;letter-spacing:0;color:#6E7770">R$</span>{{ perfil.aReceber }}
+            </span>
+            <span style="font:500 9.5px/1.3 Archivo,sans-serif;color:#6E7770">{{ perfil.notaReceber }}</span>
+          </button>
+          <button onClick="{{ perfil.verVencidas }}" style="min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:13px 14px;border:none;border-radius:20px;background:{{ perfil.fundoVencido }};cursor:pointer;text-align:left">
+            <span style="min-height:23px;font:700 9px/1.25 Archivo,sans-serif;letter-spacing:.09em;color:{{ perfil.corVencido }}">DESSE, VENCIDO</span>
+            <span style="display:flex;align-items:baseline;gap:3px;white-space:nowrap;font:800 17px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;color:{{ perfil.corVencido }};font-variant-numeric:tabular-nums">
+              <span style="font-size:10px;font-weight:700;letter-spacing:0;opacity:.75">R$</span>{{ perfil.vencido }}
+            </span>
+            <span style="font:500 9.5px/1.3 Archivo,sans-serif;color:{{ perfil.corVencido }}">{{ perfil.notaVencido }}</span>
+          </button>
+        </div>
+
+        <span style="display:block;margin-top:10px;padding:0 2px;font:500 12px/1.45 Archivo,sans-serif;color:#6E7770">{{ perfil.resumoFrase }}</span>
+
+        <sc-if value="{{ perfil.temParcial }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;padding:12px 14px;border-radius:14px;background:#FBF1DF">
+            <span style="font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.1em;color:#8A6206">PARCIAL</span>
+            <span style="font:600 12.5px/1.35 Archivo,sans-serif;color:#7A5A0B">{{ perfil.parcialTexto }}</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ perfil.temAberto }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ perfil.cobrar }}" style="flex:none;display:flex;align-items:center;gap:7px;margin-top:12px;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;color:#1B6B3A;font:700 12.5px/1 Archivo,sans-serif" style-active="background:#D0E1D7">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.6a6.4 6.4 0 0 0-5.5 9.7L1.6 14.4l3.2-.9A6.4 6.4 0 1 0 8 1.6Z" stroke="#1B6B3A" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+            Cobrar no WhatsApp
+          </button>
+        </sc-if>
+
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:26px">
+          <span style="padding:0 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">IDENTIFICAÇÃO</span>
+          <sc-for list="{{ perfil.dados }}" as="d" hint-placeholder-count="4">
+            <div style="display:flex;align-items:flex-start;gap:12px;min-height:56px;padding:14px 18px;border-radius:14px;background:#F0EDE6">
+              <span style="flex:none;width:96px;padding-top:2px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ d.rotulo }}</span>
+              <sc-if value="{{ d.tocavel }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ d.tap }}" style="flex:1;min-width:0;padding:0;border:none;background:none;cursor:pointer;text-align:left;overflow-wrap:anywhere;font:600 16px/1.35 Archivo,sans-serif;color:#1B6B3A" style-active="color:#14522C">{{ d.valor }}</button>
+              </sc-if>
+              <sc-if value="{{ d.simples }}" hint-placeholder-val="{{ true }}">
+                <span style="flex:1;min-width:0;overflow-wrap:anywhere;font:600 16px/1.35 Archivo,sans-serif;color:{{ d.cor }}">{{ d.valor }}</span>
+              </sc-if>
+            </div>
+          </sc-for>
+
+          <span style="padding:14px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">CONDIÇÃO COMERCIAL</span>
+          <div style="display:flex;flex-direction:column;gap:6px;padding:14px 18px;border-radius:14px;background:#F0EDE6">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <span style="flex:none;width:96px;padding-top:2px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">PRAZO DE PAGAMENTO</span>
+              <span style="flex:1;min-width:0;overflow-wrap:anywhere;font:600 16px/1.35 Archivo,sans-serif;color:#141A17">{{ perfil.prazoTexto }}</span>
+            </div>
+            <span style="padding-left:108px;font:500 12.5px/1.4 Archivo,sans-serif;color:#6E7770">{{ perfil.prazoOrigem }}</span>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:26px">
+          <span style="padding:0 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">ÚLTIMOS FRETES</span>
+          <sc-for list="{{ perfil.fretes }}" as="f" hint-placeholder-count="4">
+            <button onClick="{{ f.abrir }}" style="flex:none;display:flex;align-items:center;gap:14px;min-height:70px;padding:14px 18px;border:none;border-radius:20px;background:#F0EDE6;cursor:pointer;text-align:left;width:100%" style-active="background:#E4E0D6">
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+                <span style="font:700 16.5px/1.15 Archivo,sans-serif">{{ f.rota }}</span>
+                <span style="font:400 13.5px/1.2 Archivo,sans-serif;color:#6E7770">{{ f.data }} · {{ f.carga }}</span>
+              </span>
+              <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+                <span style="font:800 19px/1 Archivo,sans-serif;font-variant-numeric:tabular-nums">{{ f.valor }}</span>
+                <span style="font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.1em;color:{{ f.cor }}">{{ f.situacao }}</span>
+              </span>
+            </button>
+          </sc-for>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+            <button onClick="{{ perfil.verTodos }}" style="flex:none;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 12.5px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">Ver todos os {{ perfil.qtdFretes }}</button>
+            <button onClick="{{ perfil.lancarFrete }}" style="flex:none;height:38px;padding:0 14px;border:none;border-radius:999px;background:#E4E9E5;cursor:pointer;font:700 12.5px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#D0E1D7">Lançar frete para este cliente</button>
+          </div>
+        </div>
+
+        <button onClick="{{ perfil.gerar }}" style="flex:none;width:100%;height:60px;margin-top:26px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Gerar relatório</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehForm }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%;display:flex;flex-direction:column;animation:fg-in .18s ease-out">
+      <div style="padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ voltarDeForm }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:800 24px/1.15 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.015em">{{ form.titulo }}</span>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:16px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+        <span style="padding:0 4px 8px;font:500 14px/1.45 Archivo,sans-serif;color:#3C443E">Só o nome é obrigatório. O resto você preenche quando precisar.</span>
+
+        <span style="padding:0 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">IDENTIFICAÇÃO</span>
+        <sc-for list="{{ form.campos }}" as="c" hint-placeholder-count="5">
+          <div style="flex:none;display:flex;flex-direction:column;gap:8px;min-height:78px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+            <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">{{ c.rotulo }}</span>
+            <input value="{{ c.valor }}" onChange="{{ c.set }}" placeholder="{{ c.dica }}" style="width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;border:none;outline:none;background:none;font:600 17px/1.3 Archivo,sans-serif;color:#141A17"></input>
+          </div>
+        </sc-for>
+
+        <span style="padding:14px 4px 6px;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">CONDIÇÃO COMERCIAL</span>
+        <div style="flex:none;display:flex;flex-direction:column;gap:8px;min-height:78px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+          <span style="font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">PRAZO DE PAGAMENTO</span>
+          <input value="{{ form.prazoValor }}" onChange="{{ form.setPrazo }}" placeholder="{{ form.prazoPlaceholder }}" style="width:100%;box-sizing:border-box;min-width:0;text-overflow:ellipsis;border:none;outline:none;background:none;font:600 17px/1.3 Archivo,sans-serif;color:#141A17"></input>
+          <span style="font:500 12.5px/1.4 Archivo,sans-serif;color:#6E7770">Usado para calcular o vencimento quando você fatura este cliente.</span>
+        </div>
+
+        <sc-if value="{{ form.podeSalvar }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ form.salvar }}" style="flex:none;width:100%;height:60px;margin-top:16px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">{{ form.labelSalvar }}</button>
+        </sc-if>
+        <sc-if value="{{ form.salvando }}" hint-placeholder-val="{{ false }}">
+          <button disabled="disabled" style="flex:none;position:relative;width:100%;height:60px;margin-top:16px;border:none;border-radius:999px;background:#1B6B3A;color:transparent;font:700 17px/1 Archivo,sans-serif;cursor:default">
+            {{ form.labelSalvar }}
+            <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+              <span style="width:20px;height:20px;border-radius:999px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;animation:girar .7s linear infinite"></span>
+            </span>
+          </button>
+        </sc-if>
+        <sc-if value="{{ form.bloqueado }}" hint-placeholder-val="{{ true }}">
+          <button disabled="disabled" style="flex:none;width:100%;height:60px;margin-top:16px;border:none;border-radius:999px;background:#E4E0D6;color:#5C6660;font:700 17px/1 Archivo,sans-serif;cursor:not-allowed">{{ form.labelSalvar }}</button>
+        </sc-if>
+        <sc-if value="{{ form.ehEdicao }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ form.arquivar }}" style="flex:none;align-self:stretch;height:44px;margin-top:10px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#B3401A" style-active="color:#8A3314">Arquivar cliente</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(26px, calc(env(safe-area-inset-bottom) + 20px));z-index:40;display:flex;align-items:flex-end;height:57px;padding:0 4px;border-radius:999px;background:#141A17">
+    <button onClick="{{ navInicio }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="19" height="19" viewBox="0 0 20 20" fill="none"><path d="M2.6 8.4 10 2.4l7.4 6v8.2a1 1 0 0 1-1 1h-3.6v-5.2H7.2v5.2H3.6a1 1 0 0 1-1-1V8.4Z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+      <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Início</span>
+    </button>
+    <button onClick="{{ navFretes }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="21" height="19" viewBox="0 0 22 20" fill="none"><path d="M1.6 4.2h11.2v9.4H1.6zM12.8 7.4h4l3.6 3.4v2.8h-7.6z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="5.8" cy="15.8" r="2" stroke="rgba(255,255,255,.5)" stroke-width="1.8"></circle><circle cx="16.2" cy="15.8" r="2" stroke="rgba(255,255,255,.5)" stroke-width="1.8"></circle></svg>
+      <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Fretes</span>
+    </button>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px">
+      <button onClick="{{ navNovo }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin-top:-18px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer">
+        <svg width="24" height="24" viewBox="0 0 26 26" fill="none"><path d="M13 4.5v17M4.5 13h17" stroke="#fff" stroke-width="2.8" stroke-linecap="round"></path></svg>
+      </button>
+      <span style="font:700 10.5px/1 Archivo,sans-serif;color:#fff">Novo</span>
+    </div>
+    <button onClick="{{ navCobrancas }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="20" height="19" viewBox="0 0 20 20" fill="none"><path d="M2.4 3.6h15.2v10.2a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V3.6Z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path><path d="M5.6 7h8.8M5.6 10.4h5" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Cobranças</span>
+    </button>
+    <button onClick="{{ nav }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="20" height="19" viewBox="0 0 20 20" fill="none"><path d="M3.4 6h13.2M3.4 10h13.2M3.4 14h8.4" stroke="#7FCB9B" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span style="font:700 10.5px/1 Archivo,sans-serif;color:#7FCB9B">Mais</span>
+    </button>
+  </div>
+
+  <sc-if value="{{ folhaPeriodo.open }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,26,23,.42)">
+      <button onClick="{{ folhaPeriodo.fechar }}" style="flex:1;border:none;background:none;cursor:pointer"></button>
+      <div style="background:#FAF8F4;border-radius:28px 28px 0 0;padding:16px 20px 40px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:38px;height:4px;border-radius:99px;background:#DAD5CA;align-self:center"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font:800 21px/1.1 Archivo,sans-serif;color:#141A17">Período</span>
+          <button onClick="{{ folhaPeriodo.fechar }}" style="flex:none;height:44px;padding:0 4px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#6E7770" style-active="color:#141A17">Fechar</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ folhaPeriodo.itens }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:60px;padding:12px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+              <span style="font:700 16.5px/1.2 Archivo,sans-serif;color:#141A17">{{ o.nome }}</span>
+              <sc-if value="{{ o.sel }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:none;font:700 12px/1 Archivo,sans-serif;letter-spacing:.08em;color:#1B6B3A">ATUAL</span>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ folhaOrdem.open }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,26,23,.42)">
+      <button onClick="{{ folhaOrdem.fechar }}" style="flex:1;border:none;background:none;cursor:pointer"></button>
+      <div style="background:#FAF8F4;border-radius:28px 28px 0 0;padding:16px 20px 40px;display:flex;flex-direction:column;gap:12px">
+        <div style="width:38px;height:4px;border-radius:99px;background:#DAD5CA;align-self:center"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font:800 21px/1.1 Archivo,sans-serif;color:#141A17">Ordenar por</span>
+          <button onClick="{{ folhaOrdem.fechar }}" style="flex:none;height:44px;padding:0 4px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#6E7770" style-active="color:#141A17">Fechar</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ folhaOrdem.itens }}" as="o" hint-placeholder-count="3">
+            <button onClick="{{ o.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:60px;padding:12px 18px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+              <span style="font:700 16.5px/1.2 Archivo,sans-serif;color:#141A17">{{ o.nome }}</span>
+              <sc-if value="{{ o.sel }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:none;font:700 12px/1 Archivo,sans-serif;letter-spacing:.08em;color:#1B6B3A">ATUAL</span>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ temAviso }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:{{ avisoBottom }};z-index:70">
+      <dc-import name="AvisoSistema" texto="{{ aviso }}" hint-size="100%,74px"></dc-import>
+    </div>
+  </sc-if>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;estadoInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lista&quot;,&quot;perfil&quot;,&quot;perfilVencido&quot;,&quot;novo&quot;,&quot;editar&quot;,&quot;vazia&quot;],&quot;default&quot;:&quot;lista&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;}}">
+// recebido e rodado por período, por cliente — mesmos valores das outras telas
+const POR_PERIODO = {
+  'Este mês': { agro: [479000, 398000], cer: [0, 231000], dist: [96000, 74000], frig: [412000, 365000], apo: [0, 96000], nut: [0, 0], mir: [0, 84000] },
+  'Mês passado': { agro: [612000, 453000], cer: [180000, 231000], dist: [140000, 96000], frig: [388000, 412000], apo: [96000, 96000], nut: [88000, 0], mir: [0, 84000] },
+  'Últimos 30 dias': { agro: [479000, 398000], cer: [0, 231000], dist: [96000, 74000], frig: [412000, 365000], apo: [0, 96000], nut: [0, 0], mir: [0, 84000] },
+  'Tudo': { agro: [4414000, 4812000], cer: [5009000, 5240000], dist: [2106000, 2180000], frig: [2760000, 3125000], apo: [1864000, 1960000], nut: [880000, 880000], mir: [556000, 640000] },
+};
+const PERIODOS_PERFIL = ['Este mês', 'Mês passado', 'Últimos 30 dias', 'Tudo'];
+const PRAZO_PADRAO = '15 dias'; // configurável em Configurações — ainda não desenhada
+const CLIENTES = [
+  { id: 'agro', nome: 'Agro Vale Verde', cidade: 'Sobral/CE', dias: 8, fretes: 34, rodado: 4812000, aberto: 398000, vencido: 0, doc: 'CNPJ 08.771.203/0001-44', tel: '(88) 99721-4408', email: 'compras@agrovaleverde.com.br', endereco: 'Rod. CE-440, km 12 — Sobral/CE', prazoProprio: '' },
+  { id: 'cer', nome: 'Cerâmica Boa Vista', cidade: 'Sobral/CE', dias: 10, fretes: 41, rodado: 5240000, aberto: 231000, vencido: 231000, doc: 'CNPJ 11.402.887/0001-09', tel: '(88) 99610-2277', email: 'financeiro@ceramicaboavista.com.br', endereco: 'Distrito Industrial, s/n — Sobral/CE', prazoProprio: '20 dias' },
+  // aberto = saldo real: R$ 740 da cobrança nº 5 menos R$ 400 já recebidos (parcial), igual à dashboard e a Cobranças
+  { id: 'dist', nome: 'Distribuidora Nordeste', cidade: 'Fortaleza/CE', dias: 14, fretes: 22, rodado: 2180000, aberto: 34000, parcial: 40000, vencido: 0, doc: 'CNPJ 05.339.114/0001-72', tel: '(85) 98814-3300', email: 'logistica@distnordeste.com.br', endereco: 'Av. Francisco Sá, 4120 — Fortaleza/CE', prazoProprio: '30 dias' },
+  { id: 'frig', nome: 'Frigorífico São Luiz', cidade: 'Sobral/CE', dias: 21, fretes: 18, rodado: 3125000, aberto: 365000, vencido: 0, doc: 'CNPJ 14.008.552/0001-31', tel: '(88) 99444-1120', email: 'contas@frigsaoluiz.com.br', endereco: 'Av. Dom José, 880 — Sobral/CE', prazoProprio: '' },
+  { id: 'apo', nome: 'Cimentos Apodi', cidade: 'Quixeré/CE', dias: 27, fretes: 12, rodado: 1960000, aberto: 96000, vencido: 0, doc: 'CNPJ 07.230.888/0001-55', tel: '(88) 99200-7744', email: 'frete@cimentosapodi.com.br', endereco: 'Rod. CE-138, km 4 — Quixeré/CE', prazoProprio: '30 dias' },
+  { id: 'nut', nome: 'Nutrisul Rações', cidade: 'Fortaleza/CE', dias: 34, fretes: 9, rodado: 880000, aberto: 0, vencido: 0, doc: 'CNPJ 19.664.201/0001-18', tel: '(85) 99120-8866', email: '', endereco: 'Av. Contorno Norte, 210 — Fortaleza/CE', prazoProprio: '20 dias' },
+  { id: 'mir', nome: 'Lojas Miranda', cidade: 'Crateús/CE', dias: 42, fretes: 6, rodado: 640000, aberto: 84000, vencido: 84000, doc: '', tel: '(88) 99377-2109', email: '', endereco: '', prazoProprio: '' },
+];
+const HISTORICO = {
+  agro: [
+    { data: '30/07', rota: 'Sobral → Teresina/PI', carga: 'Milho a granel', valor: 'R$ 610,00', situacao: 'A FATURAR', cor: '#8A6206' },
+    { data: '26/07', rota: 'Sobral → Fortaleza/CE', carga: 'Ração ensacada', valor: 'R$ 420,00', situacao: 'FATURADO', cor: '#6E7770' },
+    { data: '23/07', rota: 'Sobral → Picos/PI', carga: 'Ração ensacada', valor: 'R$ 480,00', situacao: 'FATURADO', cor: '#6E7770' },
+    { data: '19/07', rota: 'Sobral → Fortaleza/CE', carga: 'Ração ensacada', valor: 'R$ 420,00', situacao: 'QUITADO', cor: '#1B6B3A' },
+  ],
+  cer: [
+    { data: '22/07', rota: 'Sobral → Parnaíba/PI', carga: 'Cerâmica', valor: 'R$ 240,00', situacao: 'VENCIDO', cor: '#B3401A' },
+    { data: '11/07', rota: 'Sobral → Mossoró/RN', carga: 'Cerâmica', valor: 'R$ 312,00', situacao: 'VENCIDO', cor: '#B3401A' },
+    { data: '03/07', rota: 'Sobral → Fortaleza/CE', carga: 'Cerâmica', valor: 'R$ 268,00', situacao: 'QUITADO', cor: '#1B6B3A' },
+  ],
+};
+const money = c => (c / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const inteiro = c => money(c).split(',')[0];
+const fold = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const prazoEfetivo = c => c.prazoProprio || PRAZO_PADRAO;
+const prazoTextoOrigem = c => c.prazoProprio ? c.prazoProprio : PRAZO_PADRAO + ' (padrão da empresa)';
+const iniciais = nome => {
+  const p = nome.trim().split(/\s+/);
+  return ((p[0] === p[0].toUpperCase() && p[0].length <= 3) ? p[0] : p.slice(0, 2).map(w => w[0]).join('')).toUpperCase();
+};
+
+class Component extends DCLogic {
+  state = { tela: null, busca: '', alvo: null, form: null, salvando: false, aviso: null, ordem: 'Mais recente', folhaOrdem: false, periodo: 'Tudo', folhaPeriodo: false };
+
+  componentDidMount() {
+    const ini = this.props.estadoInicial || 'lista';
+    if (ini === 'perfil') this.setState({ tela: 'perfil', alvo: this.props.clienteInicial || 'agro' });
+    else if (ini === 'perfilVencido') this.setState({ tela: 'perfil', alvo: 'cer' });
+    else if (ini === 'novo') this.setState({ tela: 'form', form: { nome: '', doc: '', tel: '', email: '', endereco: '', prazoProprio: '' } });
+    else if (ini === 'editar') { const c = CLIENTES[0]; this.setState({ tela: 'form', alvo: c.id, form: { nome: c.nome, doc: c.doc, tel: c.tel, email: c.email, endereco: c.endereco, prazoProprio: c.prazoProprio } }); }
+    else if (ini === 'vazia') this.setState({ tela: 'lista', busca: '' });
+    else this.setState({ tela: 'lista' });
+  }
+  componentWillUnmount() { clearTimeout(this._a); clearTimeout(this._s); }
+
+  go(dest, msg) { if (this.props.onNav) this.props.onNav(dest); else this.avisar(msg); }
+
+  avisar(txt) {
+    clearTimeout(this._a);
+    this.setState({ aviso: txt });
+    this._a = setTimeout(() => this.setState({ aviso: null }), 4000);
+  }
+
+  salvar() {
+    this.setState({ salvando: true });
+    clearTimeout(this._s);
+    this._s = setTimeout(() => {
+      const nome = (this.state.form && this.state.form.nome.trim()) || 'Cliente';
+      this.setState({ salvando: false, tela: 'lista', form: null, alvo: null });
+      this.avisar(nome + ' salvo. Já aparece na lista do lançamento de frete.');
+    }, 1200);
+  }
+
+  get tela() { return this.state.tela || 'lista'; }
+  get contaVazia() { return this.props.estadoInicial === 'vazia'; }
+
+  renderVals() {
+    const s = this.state;
+    const q = fold(s.busca.trim());
+    const ordenar = {
+      'Mais recente': (a, b) => a.dias - b.dias,
+      'Maior valor em aberto': (a, b) => b.aberto - a.aberto,
+      'Maior valor total': (a, b) => b.rodado - a.rodado,
+    }[s.ordem] || ((a, b) => a.dias - b.dias);
+    const base = this.contaVazia ? [] : CLIENTES.slice().sort(ordenar);
+    const lista = q ? base.filter(c => fold(c.nome).includes(q) || fold(c.cidade).includes(q)) : base;
+    const c = CLIENTES.find(x => x.id === s.alvo) || CLIENTES[0];
+    const hist = HISTORICO[c.id] || HISTORICO.agro;
+    const f = s.form || { nome: '', doc: '', tel: '', email: '', endereco: '', prazoProprio: '' };
+    const ehEdicao = !!s.alvo && this.tela === 'form';
+    const setCampo = k => e => this.setState(st => ({ form: Object.assign({}, st.form, { [k]: e.target.value }) }));
+
+    return {
+      ehLista: this.tela === 'lista',
+      ehPerfil: this.tela === 'perfil',
+      ehForm: this.tela === 'form',
+      voltar: () => this.go('mais', 'Volta pra "Mais".'),
+      voltarLista: () => this.setState({ tela: 'lista', alvo: null }),
+      voltarDeForm: () => this.setState({ tela: s.alvo ? 'perfil' : 'lista', form: null }),
+
+      busca: s.busca,
+      buscaTrim: s.busca.trim(),
+      setBusca: e => this.setState({ busca: e.target.value }),
+      temTotal: !this.contaVazia,
+      temBusca: !this.contaVazia,
+      temNovoHeader: !this.contaVazia,
+      totalContexto: lista.length + (lista.length === 1 ? ' cliente' : ' clientes') + ' · R$ ' + inteiro(lista.reduce((a, x) => a + x.aberto, 0)) + ' em aberto',
+      ordemLabel: s.ordem,
+      ordemAtiva: s.ordem !== 'Mais recente',
+      ordemNeutra: s.ordem === 'Mais recente',
+      abrirOrdem: () => this.setState({ folhaOrdem: true }),
+      folhaPeriodo: {
+        open: s.folhaPeriodo,
+        fechar: () => this.setState({ folhaPeriodo: false }),
+        itens: PERIODOS_PERFIL.map(o => ({
+          nome: o, sel: s.periodo === o,
+          pick: () => this.setState({ periodo: o, folhaPeriodo: false }),
+        })),
+      },
+      folhaOrdem: {
+        open: s.folhaOrdem,
+        fechar: () => this.setState({ folhaOrdem: false }),
+        itens: ['Mais recente', 'Maior valor em aberto', 'Maior valor total'].map(o => ({
+          nome: o, sel: s.ordem === o,
+          pick: () => this.setState({ ordem: o, folhaOrdem: false }),
+        })),
+      },
+      lista: lista.map(x => ({
+        nome: x.nome, iniciais: iniciais(x.nome),
+        // o valor da ordenação fica só na coluna da direita; o apoio traz dado complementar
+        apoio: s.ordem === 'Mais recente'
+          ? x.cidade + ' · último há ' + x.dias + ' dias'
+          : x.cidade + ' · ' + x.fretes + ' fretes',
+        valor: s.ordem === 'Maior valor total'
+          ? 'R$ ' + inteiro(x.rodado)
+          : x.aberto ? 'R$ ' + inteiro(x.aberto) : '—',
+        rotulo: s.ordem === 'Maior valor total'
+          ? 'JÁ RODADO'
+          : x.vencido ? 'TODO VENCIDO' : x.aberto ? 'A RECEBER' : 'EM DIA',
+        corValor: s.ordem === 'Maior valor total'
+          ? '#141A17'
+          : x.vencido ? '#B3401A' : x.aberto ? '#141A17' : '#6E7770',
+        abrir: () => this.setState({ tela: 'perfil', alvo: x.id }),
+      })),
+      vazio: this.contaVazia,
+      semResultado: !this.contaVazia && lista.length === 0 && !!q,
+      cadastrarBusca: () => this.setState({ tela: 'form', alvo: null, form: { nome: s.busca.trim(), doc: '', tel: '', email: '', endereco: '', prazoProprio: '' } }),
+      novoCliente: () => this.setState({ tela: 'form', alvo: null, form: { nome: '', doc: '', tel: '', email: '', endereco: '', prazoProprio: '' } }),
+
+      perfil: {
+        nome: c.nome, cidade: c.cidade,
+        periodo: s.periodo,
+        periodoAtivo: s.periodo !== 'Tudo',
+        periodoNeutro: s.periodo === 'Tudo',
+        abrirPeriodo: () => this.setState({ folhaPeriodo: true }),
+        // rodado e recebido variam com o período; a receber e vencido são situação atual
+        rodado: inteiro((POR_PERIODO[s.periodo][c.id] || [0, c.rodado])[1]),
+        recebido: inteiro((POR_PERIODO[s.periodo][c.id] || [0, 0])[0]),
+        corRecebido: (POR_PERIODO[s.periodo][c.id] || [0, 0])[0] ? '#1B6B3A' : '#6E7770',
+        notaRecebido: (POR_PERIODO[s.periodo][c.id] || [0, 0])[0] ? 'já entrou' : 'nada entrou',
+        rodadoTotal: inteiro(c.rodado),
+        aReceber: c.aberto ? inteiro(c.aberto) : '0',
+        vencido: c.vencido ? inteiro(c.vencido) : '0',
+        corReceber: c.aberto ? '#141A17' : '#6E7770',
+        // Vencido é um recorte de A receber, nunca uma parcela somada
+        notaReceber: c.aberto ? (c.vencido ? 'sendo R$ ' + inteiro(c.vencido) + ' vencido' : 'tudo no prazo') : 'nada em aberto',
+        notaVencido: c.vencido ? 'parte do a receber' : 'nada vencido',
+        resumoFrase: c.aberto
+          ? (c.vencido
+            ? 'Ele te deve R$ ' + money(c.aberto) + ' — desse total, R$ ' + money(c.vencido) + ' já venceu.'
+            : 'Ele te deve R$ ' + money(c.aberto) + ', tudo dentro do prazo de ' + prazoEfetivo(c) + '.')
+          : 'Nada em aberto com esse cliente.',
+        fundoVencido: c.vencido ? '#F6E6DD' : '#F0EDE6',
+        corVencido: c.vencido ? '#B3401A' : '#6E7770',
+        dados: [
+          { rotulo: 'TELEFONE', valor: c.tel || 'não preenchido', cor: c.tel ? '#141A17' : '#5C6660', tocavel: !!c.tel, simples: !c.tel, tap: () => this.avisar('Abre a conversa com ' + c.tel + '.') },
+          { rotulo: 'DOCUMENTO', valor: c.doc || 'não preenchido', cor: c.doc ? '#141A17' : '#5C6660', tocavel: false, simples: true },
+          { rotulo: 'ENDEREÇO', valor: c.endereco || 'não preenchido', cor: c.endereco ? '#141A17' : '#5C6660', tocavel: false, simples: true },
+          { rotulo: 'E-MAIL', valor: c.email || 'não preenchido', cor: c.email ? '#141A17' : '#5C6660', tocavel: false, simples: true },
+        ],
+        prazoTexto: prazoTextoOrigem(c),
+        prazoOrigem: c.prazoProprio ? 'Acordo próprio deste cliente.' : 'Herdado da configuração padrão da empresa.',
+        temParcial: !!c.parcial,
+        parcialTexto: c.parcial ? 'Recebeu R$ ' + money(c.parcial) + ' · falta R$ ' + money(c.aberto) : '',
+        fretes: hist.map(h => Object.assign({}, h, { abrir: () => this.avisar('Abre o detalhe do frete.') })),
+        qtdFretes: c.fretes,
+        verTodos: () => this.avisar('Abre Meus fretes filtrado por ' + c.nome + '.'),
+        verFretes: () => this.go('fretes', 'Abre Meus fretes filtrado por ' + c.nome + '.'),
+        verCobrancas: () => this.go('cobrancas', 'Abre Cobranças em aberto de ' + c.nome + '.'),
+        verVencidas: () => this.avisar(c.vencido ? 'Abre Cobranças vencidas de ' + c.nome + '.' : 'Nada vencido com ' + c.nome + '.'),
+        lancarFrete: () => this.go('novo', 'Abre Lançar frete com ' + c.nome + ' preenchido.'),
+        gerar: () => { if (this.props.onRelatorio) this.props.onRelatorio(c.id); else this.avisar('Abre o Relatório com ' + c.nome + ' preenchido.'); },
+        editar: () => this.setState({ tela: 'form', alvo: c.id, form: { nome: c.nome, doc: c.doc, tel: c.tel, email: c.email, endereco: c.endereco, prazoProprio: c.prazoProprio } }),
+        cobrar: () => this.avisar('Abre a conversa com ' + c.tel + ' e a mensagem pronta.'),
+        temAberto: c.aberto > 0,
+      },
+
+      form: {
+        titulo: ehEdicao ? 'Editar cliente' : 'Novo cliente',
+        labelSalvar: ehEdicao ? 'Salvar alterações' : 'Salvar cliente',
+        ehEdicao,
+        campos: [
+          { rotulo: 'NOME *', valor: f.nome, dica: 'Como você chama esse cliente', set: setCampo('nome') },
+          { rotulo: 'DOCUMENTO', valor: f.doc, dica: 'CNPJ ou CPF', set: setCampo('doc') },
+          { rotulo: 'TELEFONE', valor: f.tel, dica: 'Pra abrir o WhatsApp da cobrança', set: setCampo('tel') },
+          { rotulo: 'E-MAIL', valor: f.email, dica: 'Se ele pedir nota por e-mail', set: setCampo('email') },
+          { rotulo: 'ENDEREÇO', valor: f.endereco, dica: 'Cidade, ou o ponto onde você costuma ir', set: setCampo('endereco') },
+        ],
+        prazoValor: f.prazoProprio,
+        prazoPlaceholder: PRAZO_PADRAO + ' (padrão da empresa)',
+        setPrazo: setCampo('prazoProprio'),
+        podeSalvar: f.nome.trim().length > 0 && !s.salvando,
+        salvando: s.salvando,
+        bloqueado: f.nome.trim().length === 0 && !s.salvando,
+        salvar: () => this.salvar(),
+        arquivar: () => this.avisar('Cliente arquivado. Sai das listas, o histórico fica.'),
+      },
+
+      nav: () => this.avisar('Clientes vive dentro de "Mais".'),
+      navInicio: () => this.go('inicio', 'Início está no arquivo das telas 1 e 2.'),
+      navFretes: () => this.go('fretes', 'Fretes está no arquivo das telas 1 e 2.'),
+      navNovo: () => this.go('novo', 'Novo frete está no arquivo da Tela 1.'),
+      navCobrancas: () => this.go('cobrancas', 'Cobranças é a Tela 4.'),
+      temAviso: !!s.aviso,
+      aviso: s.aviso,
+      // o bloco de ações agora rola com o conteúdo; o aviso só precisa limpar a barra
+      avisoBottom: 'max(112px, calc(env(safe-area-inset-bottom) + 106px))',
+    };
+  }
+}
+</script>
+</body>
+</html>

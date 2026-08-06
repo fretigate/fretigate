@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+@keyframes fg-spin{to{transform:rotate(360deg)}}
+@keyframes fg-pulso{0%,100%{opacity:.35}50%{opacity:1}}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+    <button onClick="{{ voltarTopo }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+      <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+    <span style="flex:1;min-width:0;font:700 20px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.01em;color:#3C443E">{{ titulo }}</span>
+  </div>
+
+  <sc-if value="{{ ehEntrada }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;min-height:0;overflow:auto;padding:14px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+      <span style="padding:0 2px 14px;font:500 15px/1.5 Archivo,sans-serif;color:#3C443E">Você já tem os fretes em algum lugar. Traga do jeito que estão — o app tenta entender e você confere antes de entrar qualquer coisa.</span>
+
+      <button onClick="{{ irColar }}" style="flex:none;display:flex;align-items:flex-start;gap:14px;width:100%;padding:18px;border:none;border-radius:22px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+        <span style="flex:none;display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:12px;background:#E4E9E5">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6.6 3.4h6.8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H6.6a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z" stroke="#1B6B3A" stroke-width="1.8" stroke-linejoin="round"></path><path d="M8 3.4V2.2h4v1.2M8.2 8h3.6M8.2 11.4h3.6" stroke="#1B6B3A" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        </span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+          <span style="font:700 16.5px/1.25 Archivo,sans-serif">Colar as mensagens do WhatsApp</span>
+          <span style="font:400 13px/1.4 Archivo,sans-serif;color:#6E7770;text-wrap:pretty">Abra a conversa, selecione as mensagens dos fretes, copie e cole aqui. Pode ser a conversa inteira do mês.</span>
+        </span>
+      </button>
+
+      <button onClick="{{ irFoto }}" style="flex:none;display:flex;align-items:flex-start;gap:14px;width:100%;padding:18px;border:none;border-radius:22px;background:#F0EDE6;cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+        <span style="flex:none;display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:12px;background:#E4E9E5">
+          <svg width="20" height="18" viewBox="0 0 20 18" fill="none"><path d="M2.4 5.2h3.2l1.4-2.4h5.8l1.4 2.4h3.4v10.4a.8.8 0 0 1-.8.8H3.2a.8.8 0 0 1-.8-.8V5.2Z" stroke="#1B6B3A" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="10" cy="10.4" r="3.2" stroke="#1B6B3A" stroke-width="1.8"></circle></svg>
+        </span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+          <span style="font:700 16.5px/1.25 Archivo,sans-serif">Mandar foto do caderno</span>
+          <span style="font:400 13px/1.4 Archivo,sans-serif;color:#6E7770;text-wrap:pretty">Uma folha por foto, com a luz batendo de frente. Serve caderno, romaneio ou planilha impressa.</span>
+        </span>
+      </button>
+
+      <span style="padding:18px 2px 0;font:500 12.5px/1.45 Archivo,sans-serif;color:#6E7770">Nada entra sem você confirmar. O app mostra o que entendeu, linha por linha, e você corrige o que estiver errado antes de salvar.</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehColar }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;min-height:0;overflow:auto;padding:14px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:10px">
+      <span style="padding:0 2px;font:500 14px/1.45 Archivo,sans-serif;color:#3C443E">Cole aqui. Não precisa arrumar nada — pode vir com horário, recado no meio e áudio pelo caminho.</span>
+      <textarea value="{{ texto }}" onChange="{{ setTexto }}" rows="9" placeholder="Cole as mensagens aqui" style="width:100%;box-sizing:border-box;padding:15px 17px;border:none;border-radius:18px;background:#F0EDE6;outline:none;resize:none;font:500 14.5px/1.55 Archivo,sans-serif;color:#141A17"></textarea>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+        <sc-if value="{{ podeProcessar }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ processar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Ver o que o app entendeu</button>
+        </sc-if>
+        <sc-if value="{{ semTexto }}" hint-placeholder-val="{{ false }}">
+          <button disabled="disabled" style="flex:none;height:60px;border:none;border-radius:999px;background:#E4E0D6;color:#5C6660;font:700 17px/1 Archivo,sans-serif;cursor:not-allowed">Ver o que o app entendeu</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehFoto }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;min-height:0;overflow:auto;padding:14px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:10px">
+      <span style="padding:0 2px;font:500 14px/1.45 Archivo,sans-serif;color:#3C443E">Uma folha por foto. Se o caderno tem três páginas de agosto, manda as três.</span>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ fotos }}" as="p" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:14px;min-height:74px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+            <span style="flex:none;display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:12px;background:#E4E9E5">
+              <svg width="20" height="18" viewBox="0 0 20 18" fill="none"><path d="M2.4 5.2h3.2l1.4-2.4h5.8l1.4 2.4h3.4v10.4a.8.8 0 0 1-.8.8H3.2a.8.8 0 0 1-.8-.8V5.2Z" stroke="#1B6B3A" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="10" cy="10.4" r="3.2" stroke="#1B6B3A" stroke-width="1.8"></circle></svg>
+            </span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+              <span style="font:700 15px/1.2 Archivo,sans-serif">{{ p.nome }}</span>
+              <span style="font:400 12.5px/1.3 Archivo,sans-serif;color:#6E7770">{{ p.apoio }}</span>
+            </span>
+            <button onClick="{{ p.remover }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:none;border-radius:999px;background:none;cursor:pointer" style-active="background:#E4E0D6">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.6 1.6l8.8 8.8M10.4 1.6l-8.8 8.8" stroke="#6E7770" stroke-width="1.9" stroke-linecap="round"></path></svg>
+            </button>
+          </div>
+        </sc-for>
+      </div>
+      <button onClick="{{ addFoto }}" style="flex:none;display:flex;align-items:center;justify-content:center;gap:10px;height:60px;border:none;border-radius:18px;background:#F0EDE6;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#1B6B3A" style-active="background:#E4E0D6">+ Adicionar foto</button>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+        <sc-if value="{{ temFoto }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ processar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Ver o que o app entendeu</button>
+        </sc-if>
+        <sc-if value="{{ semFoto }}" hint-placeholder-val="{{ false }}">
+          <button disabled="disabled" style="flex:none;height:60px;border:none;border-radius:999px;background:#E4E0D6;color:#5C6660;font:700 17px/1 Archivo,sans-serif;cursor:not-allowed">Ver o que o app entendeu</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehProcessando }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0 32px max(138px, calc(env(safe-area-inset-bottom) + 132px))">
+      <span style="display:inline-block;width:34px;height:34px;border:3px solid #E4E0D6;border-top-color:#1B6B3A;border-radius:999px;animation:fg-spin .8s linear infinite"></span>
+      <span style="font:700 18px/1.35 Archivo,sans-serif;text-align:center;text-wrap:pretty">Lendo o que você mandou</span>
+      <span style="font:500 14px/1.5 Archivo,sans-serif;color:#6E7770;text-align:center;text-wrap:pretty">Separando cliente, rota e valor de cada frete. Leva alguns segundos.</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehRevisao }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;padding:12px 20px 14px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px">
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
+          <span style="white-space:nowrap;font:700 11px/1.3 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">VÃO ENTRAR</span>
+          <span style="white-space:nowrap;font:600 13.5px/1 Archivo,sans-serif;color:#3C443E">{{ revisao.contagem }}</span>
+        </span>
+        <span style="flex:none;display:flex;align-items:baseline;gap:6px;white-space:nowrap">
+          <span style="font:700 14px/1 Archivo,sans-serif;color:#A8AFA9">R$</span>
+          <span style="font:800 32px/1 Archivo,sans-serif;font-stretch:94%;letter-spacing:-.03em;font-variant-numeric:tabular-nums">{{ revisao.total }}</span>
+        </span>
+      </div>
+      <sc-if value="{{ revisao.temIncompleto }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-top:14px;padding:13px 15px;border-radius:16px;background:#FBF1DF;display:flex;flex-direction:column;gap:5px">
+          <span style="font:700 10.5px/1 Archivo,sans-serif;letter-spacing:.1em;color:#8A6206">FALTA O VALOR</span>
+          <span style="font:600 12.5px/1.4 Archivo,sans-serif;color:#7A5A0B;text-wrap:pretty">{{ revisao.avisoIncompleto }}</span>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="flex:1;min-height:0;overflow:auto;padding:0 16px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+      <sc-for list="{{ revisao.linhas }}" as="l" hint-placeholder-count="6">
+        <div style="flex:none;display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:20px;background:{{ l.fundo }}">
+          <button onClick="{{ l.alternar }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:24px;height:24px;margin-top:2px;border:none;border-radius:8px;background:{{ l.caixaFundo }};cursor:pointer">
+            <sc-if value="{{ l.marcado }}" hint-placeholder-val="{{ true }}">
+              <svg width="13" height="10" viewBox="0 0 19 15" fill="none"><path d="M1.6 7.6 6.9 12.9 17.4 2.2" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </sc-if>
+          </button>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <span style="flex:none;font:500 12px/1 'Azeret Mono',monospace;color:#6E7770">{{ l.data }}</span>
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 16px/1.2 Archivo,sans-serif">{{ l.cliente }}</span>
+              <sc-if value="{{ l.novoCliente }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:none;font:700 9.5px/1 Archivo,sans-serif;letter-spacing:.1em;color:#1B6B3A">NOVO</span>
+              </sc-if>
+            </div>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 13px/1.2 Archivo,sans-serif;color:#6E7770">{{ l.rota }}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 12.5px/1.2 Archivo,sans-serif;color:#6E7770">{{ l.recursos }}</span>
+            <div style="display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;border-radius:14px;background:{{ l.campoFundo }}">
+              <span style="flex:none;font:700 13px/1 Archivo,sans-serif;color:#6E7770">R$</span>
+              <input value="{{ l.valor }}" onChange="{{ l.setValor }}" placeholder="digitar valor" style="flex:1;min-width:0;box-sizing:border-box;border:none;outline:none;background:none;text-align:right;font:800 20px/1 Archivo,sans-serif;color:#141A17;font-variant-numeric:tabular-nums"></input>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
+        <button onClick="{{ revisao.importar }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">{{ revisao.labelImportar }}</button>
+        <button onClick="{{ revisao.cancelar }}" style="flex:none;height:44px;border:none;background:none;cursor:pointer;font:600 14px/1 Archivo,sans-serif;color:#6E7770" style-active="color:#141A17">Descartar e voltar</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehResultado }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;min-height:0;overflow:auto;padding:14px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:14px">
+      <span style="font:800 26px/1.2 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.015em;text-wrap:pretty">{{ resultado.titulo }}</span>
+      <span style="font:500 15px/1.5 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">{{ resultado.apoio }}</span>
+
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
+        <sc-for list="{{ resultado.linhas }}" as="r" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:14px;min-height:64px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+            <span style="flex:1;min-width:0;font:600 15px/1.3 Archivo,sans-serif;color:#3C443E">{{ r.nome }}</span>
+            <span style="flex:none;font:800 18px/1 Archivo,sans-serif;font-variant-numeric:tabular-nums">{{ r.valor }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+        <button onClick="{{ resultado.verFretes }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Ver meus fretes</button>
+        <button onClick="{{ resultado.maisUm }}" style="flex:none;height:52px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#141A17" style-active="background:#E4E0D6">Importar mais</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehNada }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;min-height:0;overflow:auto;padding:14px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:14px">
+      <span style="font:800 22px/1.25 Archivo,sans-serif;letter-spacing:-.01em;text-wrap:pretty">Não achei nenhum frete aí.</span>
+      <span style="font:500 15px/1.5 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">Pode ser o formato do texto ou a foto. Tenta assim:</span>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ dicas }}" as="d" hint-placeholder-count="3">
+          <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-radius:18px;background:#F0EDE6">
+            <span style="flex:none;width:6px;height:6px;margin-top:8px;border-radius:999px;background:#1B6B3A"></span>
+            <span style="flex:1;min-width:0;font:500 14px/1.45 Archivo,sans-serif;color:#3C443E;text-wrap:pretty">{{ d }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+        <button onClick="{{ tentarDeNovo }}" style="flex:none;height:60px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">Tentar de novo</button>
+        <button onClick="{{ lancarNaMao }}" style="flex:none;height:52px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;font:700 15px/1 Archivo,sans-serif;color:#141A17" style-active="background:#E4E0D6">Lançar na mão</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ temAviso }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(112px, calc(env(safe-area-inset-bottom) + 106px));z-index:70">
+      <dc-import name="AvisoSistema" texto="{{ aviso }}" hint-size="100%,74px"></dc-import>
+    </div>
+  </sc-if>
+
+  <dc-import name="BarraFG" ativo="mais" onInicio="{{ onInicio }}" onFretes="{{ onFretes }}" onNovo="{{ onNovo }}" onCobrancas="{{ onCobrancas }}" onMais="{{ onMais }}" hint-size="100%,100px"></dc-import>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;estadoInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;entrada&quot;,&quot;colar&quot;,&quot;foto&quot;,&quot;processando&quot;,&quot;revisao&quot;,&quot;revisaoCompleta&quot;,&quot;resultado&quot;,&quot;nada&quot;],&quot;default&quot;:&quot;entrada&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;onVoltar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onInicio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onFretes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onNovo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onCobrancas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMais&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const EXEMPLO = 'Dona Fátima: bom dia, o Nego já saiu pra Fortaleza com a ração da Agro Vale\n05/08 Agro Vale Verde Sobral x Fortaleza 1.400\nCerâmica Boa Vista pra Mossoró, Volvo, Raimundo — 2.300\n04/08 Distribuidora Nordeste Sobral x Crateús Cícero\nFrigorífico São Luiz Picos, carne resfriada, Raimundo 820\naudio omitido\n02/08 Cimentos Apodi Quixeré x Juazeiro Damião\nNutrisul Fortaleza x Sobral ração Cícero 960';
+// o valor costuma faltar no material de origem — essas linhas nascem sem valor
+const ENCONTRADOS = [
+  { id: 1, data: '05/08', cliente: 'Agro Vale Verde', novoCliente: false, rota: 'Sobral → Fortaleza/CE', recursos: 'Scania branco · Nego', cents: 140000 },
+  { id: 2, data: '05/08', cliente: 'Cerâmica Boa Vista', novoCliente: false, rota: 'Sobral → Mossoró/RN', recursos: 'Volvo azul · Raimundo Sales', cents: 230000 },
+  { id: 3, data: '04/08', cliente: 'Distribuidora Nordeste', novoCliente: false, rota: 'Sobral → Crateús/CE', recursos: 'Truck vermelho · Cícero', cents: 0 },
+  { id: 4, data: '04/08', cliente: 'Frigorífico São Luiz', novoCliente: false, rota: 'Sobral → Picos/PI', recursos: 'Volvo azul · Raimundo Sales', cents: 82000 },
+  { id: 5, data: '02/08', cliente: 'Cimentos Apodi', novoCliente: false, rota: 'Quixeré → Juazeiro do Norte/CE', recursos: 'MB prata · Damião', cents: 0 },
+  { id: 6, data: '02/08', cliente: 'Nutrisul Rações', novoCliente: true, rota: 'Fortaleza → Sobral/CE', recursos: 'Truck vermelho · Cícero', cents: 96000 },
+];
+const DICAS = [
+  'No texto, deixe cada frete numa linha com o nome do cliente e as duas cidades. Data e valor ajudam, mas o app tenta sem eles.',
+  'Na foto, uma folha por vez, sem sombra da mão e com a folha ocupando quase toda a imagem.',
+  'Se o caderno for manuscrito muito apertado, escreva os fretes numa mensagem de WhatsApp e cole o texto — dá mais certo.',
+];
+const money = c => (c / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const inteiro = c => money(c).split(',')[0];
+
+class Component extends DCLogic {
+  state = { tela: null, texto: '', fotos: [{ nome: 'Caderno — agosto p.1', apoio: 'foto de hoje · 2,4 MB' }], fora: [], valores: {}, aviso: null };
+
+  componentDidMount() {
+    const ini = this.props.estadoInicial;
+    if (ini === 'colar') this.setState({ tela: 'colar', texto: EXEMPLO });
+    else if (ini === 'foto') this.setState({ tela: 'foto' });
+    else if (ini === 'processando') this.setState({ tela: 'processando' });
+    else if (ini === 'revisao') this.setState({ tela: 'revisao' });
+    else if (ini === 'revisaoCompleta') this.setState({ tela: 'revisao', valores: { 3: '780,00', 5: '2.140,00' } });
+    else if (ini === 'resultado') this.setState({ tela: 'resultado' });
+    else if (ini === 'nada') this.setState({ tela: 'nada' });
+    else this.setState({ tela: 'entrada' });
+  }
+
+  avisar(txt) {
+    this.setState({ aviso: txt });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ aviso: null }), 6000);
+  }
+
+  centsDe(l) {
+    const v = this.state.valores[l.id];
+    if (v === undefined) return l.cents;
+    const n = Number(String(v).replace(/\./g, '').replace(',', '.'));
+    return isNaN(n) ? 0 : Math.round(n * 100);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const dentro = ENCONTRADOS.filter(l => s.fora.indexOf(l.id) < 0);
+    const semValor = dentro.filter(l => this.centsDe(l) === 0);
+    const soma = dentro.reduce((a, l) => a + this.centsDe(l), 0);
+    const novos = dentro.filter(l => l.novoCliente).length;
+    const nada = () => { };
+    const titulos = { entrada: 'Importar fretes', colar: 'Colar do WhatsApp', foto: 'Foto do caderno', processando: 'Importar fretes', revisao: 'Confira antes de entrar', resultado: 'Importar fretes', nada: 'Importar fretes' };
+    return {
+      titulo: titulos[s.tela] || 'Importar fretes',
+      ehEntrada: s.tela === 'entrada',
+      ehColar: s.tela === 'colar',
+      ehFoto: s.tela === 'foto',
+      ehProcessando: s.tela === 'processando',
+      ehRevisao: s.tela === 'revisao',
+      ehResultado: s.tela === 'resultado',
+      ehNada: s.tela === 'nada',
+      voltarTopo: () => {
+        if (s.tela === 'entrada') (this.props.onVoltar || nada)();
+        else this.setState({ tela: 'entrada' });
+      },
+      irColar: () => this.setState({ tela: 'colar' }),
+      irFoto: () => this.setState({ tela: 'foto' }),
+      texto: s.texto,
+      setTexto: e => this.setState({ texto: e.target.value }),
+      podeProcessar: !!s.texto.trim(),
+      semTexto: !s.texto.trim(),
+      fotos: s.fotos.map((p, i) => ({ nome: p.nome, apoio: p.apoio, remover: () => this.setState({ fotos: s.fotos.filter((_, j) => j !== i) }) })),
+      temFoto: s.fotos.length > 0,
+      semFoto: s.fotos.length === 0,
+      addFoto: () => this.setState({ fotos: s.fotos.concat([{ nome: 'Caderno — agosto p.' + (s.fotos.length + 1), apoio: 'foto de hoje · 2,1 MB' }]) }),
+      processar: () => {
+        this.setState({ tela: 'processando' });
+        setTimeout(() => this.setState({ tela: 'revisao' }), 2200);
+      },
+      revisao: {
+        contagem: dentro.length + (dentro.length === 1 ? ' frete de 6 encontrados' : ' de 6 fretes encontrados') + (novos ? ' · ' + novos + ' cliente novo' : ''),
+        total: inteiro(soma),
+        temIncompleto: semValor.length > 0,
+        avisoIncompleto: semValor.length === 1
+          ? 'Um frete veio sem valor. Digite direto na linha — ou desmarque para deixar de fora.'
+          : semValor.length + ' fretes vieram sem valor. Digite direto na linha — ou desmarque para deixar de fora.',
+        linhas: ENCONTRADOS.map(l => {
+          const marcado = s.fora.indexOf(l.id) < 0;
+          const vazio = this.centsDe(l) === 0;
+          const v = s.valores[l.id] !== undefined ? s.valores[l.id] : (l.cents ? money(l.cents) : '');
+          return {
+            data: l.data, cliente: l.cliente, rota: l.rota, recursos: l.recursos,
+            novoCliente: l.novoCliente,
+            marcado,
+            // linha sem valor se destaca pelo fundo, não por alarme
+            fundo: !marcado ? '#F4F1EB' : vazio ? '#FBF1DF' : '#F0EDE6',
+            campoFundo: vazio && marcado ? '#FBF1DF' : '#FAF8F4',
+            caixaFundo: marcado ? '#1B6B3A' : '#E4E0D6',
+            valor: v,
+            setValor: e => this.setState({ valores: Object.assign({}, s.valores, { [l.id]: e.target.value.replace(/[^\d.,]/g, '') }) }),
+            alternar: () => this.setState({ fora: marcado ? s.fora.concat([l.id]) : s.fora.filter(x => x !== l.id) }),
+          };
+        }),
+        labelImportar: dentro.length === 0
+          ? 'Nada selecionado'
+          : semValor.length
+            ? 'Importar ' + dentro.length + ' · ' + semValor.length + ' sem valor'
+            : 'Importar ' + dentro.length + (dentro.length === 1 ? ' frete' : ' fretes'),
+        importar: () => this.setState({ tela: 'resultado' }),
+        cancelar: () => this.setState({ tela: 'entrada' }),
+      },
+      resultado: {
+        titulo: dentro.length + (dentro.length === 1 ? ' frete entrou.' : ' fretes entraram.'),
+        apoio: 'Já estão em Meus fretes, todos como A faturar. Se algum ficou errado, é só abrir e editar.',
+        linhas: [
+          { nome: 'Fretes importados', valor: String(dentro.length) },
+          { nome: 'Valor total', valor: 'R$ ' + inteiro(soma) },
+          { nome: 'Clientes novos cadastrados', valor: String(novos) },
+        ],
+        verFretes: () => (this.props.onFretes || nada)(),
+        maisUm: () => this.setState({ tela: 'entrada', valores: {}, fora: [] }),
+      },
+      dicas: DICAS,
+      tentarDeNovo: () => this.setState({ tela: 'entrada' }),
+      lancarNaMao: () => (this.props.onNovo || nada)(),
+      temAviso: !!s.aviso,
+      aviso: s.aviso,
+      onInicio: this.props.onInicio || nada,
+      onFretes: this.props.onFretes || nada,
+      onNovo: this.props.onNovo || nada,
+      onCobrancas: this.props.onCobrancas || nada,
+      onMais: this.props.onMais || nada,
+    };
+  }
+}
+</script>
+</body>
+</html>

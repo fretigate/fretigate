@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Azeret+Mono:wght@400..600&display=swap"><style>
+[data-om-starter] *{scrollbar-width:none}
+[data-om-starter] *::-webkit-scrollbar{display:none}
+</style></helmet>
+
+<x-import component-from-global-scope="IOSDevice" hint-size="402px,874px">
+<div style="height:100%;display:flex;flex-direction:column;background:#FAF8F4;color:#141A17;font-family:Archivo,sans-serif">
+
+  <sc-if value="{{ ehLista }}" hint-placeholder-val="{{ true }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ voltar }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 20px/1.1 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.01em;color:#3C443E">Novidades</span>
+        <sc-if value="{{ temNaoLidas }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ marcarTodas }}" style="flex:none;display:flex;align-items:center;height:40px;padding:0 14px;border:none;border-radius:999px;background:#F0EDE6;cursor:pointer;color:#6E7770;font:600 13px/1 Archivo,sans-serif" style-active="background:#E4E0D6">Marcar lidas</button>
+        </sc-if>
+      </div>
+
+      <div style="flex:none;padding:12px 20px 14px">
+        <span style="font:500 12px/1 Archivo,sans-serif;color:#6E7770">{{ totalContexto }}</span>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:0 16px max(138px, calc(env(safe-area-inset-bottom) + 132px));display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ lista }}" as="m" hint-placeholder-count="5">
+          <button onClick="{{ m.abrir }}" style="flex:none;display:flex;align-items:flex-start;gap:12px;width:100%;padding:16px 18px;border:none;border-radius:20px;background:{{ m.fundo }};cursor:pointer;text-align:left" style-active="background:#E4E0D6">
+            <span style="flex:none;width:8px;height:8px;margin-top:7px;border-radius:999px;background:{{ m.ponto }}"></span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+              <span style="font:{{ m.peso }} 16.5px/1.25 Archivo,sans-serif;color:#141A17;text-wrap:pretty">{{ m.titulo }}</span>
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 13px/1.3 Archivo,sans-serif;color:#6E7770">{{ m.apoio }}</span>
+              <span style="font:500 11.5px/1 Archivo,sans-serif;color:#A8AFA9">{{ m.quando }}</span>
+            </span>
+            <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="flex:none;margin-top:4px"><path d="M1.4 1.4 6.6 7l-5.2 5.6" stroke="#A8AFA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+        </sc-for>
+
+        <sc-if value="{{ vazia }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:26px 4px 0;display:flex;flex-direction:column;gap:12px">
+            <span style="font:800 22px/1.25 Archivo,sans-serif;letter-spacing:-.01em;color:#141A17">Nada novo por aqui.</span>
+            <span style="font:500 15px/1.5 Archivo,sans-serif;color:#3C443E">Quando o FretiGate tiver novidade, oferta ou aviso sobre a sua conta, aparece nesta lista. Nada de propaganda no meio dos seus fretes.</span>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehDetalhe }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%;display:flex;flex-direction:column">
+      <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;gap:10px">
+        <button onClick="{{ voltarLista }}" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-10px;border:none;background:none;cursor:pointer;flex:none">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 1.5 2 10l8 8.5" stroke="#141A17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
+        <span style="flex:1;min-width:0;font:700 11px/1 Archivo,sans-serif;letter-spacing:.16em;color:#6E7770">DO FRETIGATE · {{ detalhe.quando }}</span>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;padding:14px 20px max(138px, calc(env(safe-area-inset-bottom) + 132px))">
+        <div style="font:800 26px/1.15 Archivo,sans-serif;font-stretch:96%;letter-spacing:-.015em;text-wrap:pretty">{{ detalhe.titulo }}</div>
+        <div style="margin-top:16px;font:500 15.5px/1.6 Archivo,sans-serif;color:#3C443E;white-space:pre-wrap;text-wrap:pretty">{{ detalhe.texto }}</div>
+
+        <sc-if value="{{ detalhe.temAcao }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ detalhe.acao }}" style="flex:none;width:100%;height:60px;margin-top:26px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer;font:700 17px/1 Archivo,sans-serif;color:#fff" style-active="background:#14522C">{{ detalhe.labelAcao }}</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ temAviso }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(112px, calc(env(safe-area-inset-bottom) + 106px));z-index:70">
+      <dc-import name="AvisoSistema" texto="{{ aviso }}" hint-size="100%,74px"></dc-import>
+    </div>
+  </sc-if>
+
+  <div style="position:absolute;left:max(16px, calc(env(safe-area-inset-left) + 16px));right:max(16px, calc(env(safe-area-inset-right) + 16px));bottom:max(26px, calc(env(safe-area-inset-bottom) + 20px));z-index:40;display:flex;align-items:flex-end;height:57px;padding:0 4px;border-radius:999px;background:#141A17">
+    <button onClick="{{ onInicio }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="19" height="19" viewBox="0 0 20 20" fill="none"><path d="M2.6 8.4 10 2.4l7.4 6v8.2a1 1 0 0 1-1 1h-3.6v-5.2H7.2v5.2H3.6a1 1 0 0 1-1-1V8.4Z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+      <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Início</span>
+    </button>
+    <button onClick="{{ onFretes }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="21" height="19" viewBox="0 0 22 20" fill="none"><path d="M1.6 4.2h11.2v9.4H1.6zM12.8 7.4h4l3.6 3.4v2.8h-7.6z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="5.8" cy="15.8" r="2" stroke="rgba(255,255,255,.5)" stroke-width="1.8"></circle><circle cx="16.2" cy="15.8" r="2" stroke="rgba(255,255,255,.5)" stroke-width="1.8"></circle></svg>
+      <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Fretes</span>
+    </button>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px">
+      <button onClick="{{ onNovo }}" style="flex:none;display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin-top:-18px;border:none;border-radius:999px;background:#1B6B3A;cursor:pointer">
+        <svg width="24" height="24" viewBox="0 0 26 26" fill="none"><path d="M13 4.5v17M4.5 13h17" stroke="#fff" stroke-width="2.8" stroke-linecap="round"></path></svg>
+      </button>
+      <span style="font:700 10.5px/1 Archivo,sans-serif;color:#fff">Novo</span>
+    </div>
+    <button onClick="{{ onCobrancas }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="20" height="19" viewBox="0 0 20 20" fill="none"><path d="M2.4 3.6h15.2v10.2a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V3.6Z" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linejoin="round"></path><path d="M5.6 7h8.8M5.6 10.4h5" stroke="rgba(255,255,255,.5)" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span style="font:600 10.5px/1 Archivo,sans-serif;color:rgba(255,255,255,.5)">Cobranças</span>
+    </button>
+    <button onClick="{{ onMais }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:57px;padding-bottom:11px;border:none;background:none;cursor:pointer">
+      <svg width="20" height="19" viewBox="0 0 20 20" fill="none"><path d="M3.4 6h13.2M3.4 10h13.2M3.4 14h8.4" stroke="#7FCB9B" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span style="font:700 10.5px/1 Archivo,sans-serif;color:#7FCB9B">Mais</span>
+    </button>
+  </div>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;estadoInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lista&quot;,&quot;detalhe&quot;,&quot;todasLidas&quot;,&quot;vazia&quot;],&quot;default&quot;:&quot;lista&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Estado&quot;},&quot;onVoltar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onInicio&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onFretes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onNovo&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onCobrancas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMais&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+// mensagens do FretiGate para o assinante — nunca pendência operacional
+const MENSAGENS = [
+  {
+    id: 1, quando: 'hoje', titulo: 'Plano anual com 2 meses grátis',
+    apoio: 'Você paga 10 e usa 12. Vale até o fim de agosto.',
+    texto: 'No plano anual você paga 10 meses e usa 12.\n\nSe hoje você paga mês a mês, a troca economiza dois meses de assinatura por ano — e o valor fica travado, sem reajuste até a próxima renovação.\n\nA troca não muda nada no que você já lançou: fretes, clientes e relatórios continuam como estão.\n\nOferta válida até 31 de agosto.',
+    labelAcao: 'Ver a oferta',
+  },
+  {
+    id: 2, quando: 'há 3 dias', titulo: 'Agora dá pra lançar o frete antes de rodar',
+    apoio: 'Crie a ordem de serviço e mande no WhatsApp do motorista.',
+    texto: 'Antes você só lançava o frete depois de rodado. Agora pode criar com data futura, no momento em que passa o serviço pro motorista.\n\nO frete nasce Em andamento, e você manda a ordem pelo WhatsApp com cliente, carga, origem e destino — sem o valor, que o motorista não precisa ver.\n\nQuando ele terminar, você marca como finalizado e o frete fica pronto pra faturar.',
+    labelAcao: 'Lançar um frete',
+  },
+  {
+    id: 3, quando: 'há 9 dias', titulo: 'Indique e ganhe um mês',
+    apoio: 'Cada transportadora que assinar pela sua indicação vale um mês.',
+    texto: 'Você tem um link pra indicar o FretiGate para outro dono de transportadora.\n\nQuando ele assinar, você ganha um mês grátis e ele também. Não tem limite: dez indicações são dez meses.\n\nO link fica em Mais › Conta da empresa.',
+    labelAcao: 'Pegar meu link',
+  },
+  {
+    id: 4, quando: 'há 16 dias', titulo: 'Relatório agora sai com a sua logo',
+    apoio: 'Suba a logo em Conta da empresa e ela entra no documento.',
+    texto: 'O relatório que você manda pro cliente agora sai com a logo da sua transportadora no cabeçalho, junto com CNPJ, endereço e telefone.\n\nSem logo cadastrada, o documento usa as iniciais da empresa — nunca a marca do FretiGate.\n\nSuba a sua em Mais › Conta da empresa.',
+    labelAcao: 'Subir minha logo',
+  },
+  {
+    id: 5, quando: 'há 24 dias', titulo: 'Chave Pix no rodapé do relatório',
+    apoio: 'O cliente já recebe o documento com a chave para pagar.',
+    texto: 'Quando você gera o relatório com cobrança, a chave Pix e os dados bancários da sua transportadora saem impressos no rodapé.\n\nO cliente não precisa mais pedir a chave em outra mensagem.',
+    labelAcao: '',
+  },
+];
+
+class Component extends DCLogic {
+  state = { tela: null, alvo: null, lidas: [3, 4, 5], aviso: null };
+
+  componentDidMount() {
+    const ini = this.props.estadoInicial;
+    if (ini === 'detalhe') this.setState({ tela: 'detalhe', alvo: 1 });
+    else if (ini === 'vazia') this.setState({ tela: 'lista' });
+    else if (ini === 'todasLidas') this.setState({ tela: 'lista', lidas: MENSAGENS.map(m => m.id) });
+    else this.setState({ tela: 'lista' });
+  }
+
+  avisar(txt) {
+    this.setState({ aviso: txt });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ aviso: null }), 6000);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const vazia = this.props.estadoInicial === 'vazia';
+    const itens = vazia ? [] : MENSAGENS;
+    const naoLidas = itens.filter(m => s.lidas.indexOf(m.id) < 0);
+    const d = MENSAGENS.find(m => m.id === s.alvo) || MENSAGENS[0];
+    const nada = () => { };
+    return {
+      ehLista: s.tela === 'lista',
+      ehDetalhe: s.tela === 'detalhe',
+      vazia,
+      temNaoLidas: naoLidas.length > 0,
+      marcarTodas: () => this.setState({ lidas: MENSAGENS.map(m => m.id) }),
+      totalContexto: vazia
+        ? 'Nenhuma mensagem ainda'
+        : itens.length + ' mensagens' + (naoLidas.length ? ' · ' + naoLidas.length + ' não lida' + (naoLidas.length > 1 ? 's' : '') : ' · todas lidas'),
+      lista: itens.map(m => {
+        const lida = s.lidas.indexOf(m.id) >= 0;
+        return {
+          titulo: m.titulo, apoio: m.apoio, quando: m.quando,
+          // não lida se destaca pelo peso e por um ponto, não por cor de alerta
+          peso: lida ? '600' : '700',
+          fundo: lida ? '#F0EDE6' : '#EDEBFA',
+          ponto: lida ? 'transparent' : '#5B4FA8',
+          abrir: () => this.setState({ tela: 'detalhe', alvo: m.id, lidas: lida ? s.lidas : s.lidas.concat([m.id]) }),
+        };
+      }),
+      detalhe: {
+        titulo: d.titulo, texto: d.texto, quando: d.quando,
+        temAcao: !!d.labelAcao, labelAcao: d.labelAcao,
+        acao: () => this.avisar('Abre ' + d.labelAcao.toLowerCase() + ' — tela ainda não desenhada.'),
+      },
+      voltarLista: () => this.setState({ tela: 'lista' }),
+      temAviso: !!s.aviso,
+      aviso: s.aviso,
+      voltar: this.props.onVoltar || nada,
+      onInicio: this.props.onInicio || nada,
+      onFretes: this.props.onFretes || nada,
+      onNovo: this.props.onNovo || nada,
+      onCobrancas: this.props.onCobrancas || nada,
+      onMais: this.props.onMais || nada,
+    };
+  }
+}
+</script>
+</body>
+</html>
