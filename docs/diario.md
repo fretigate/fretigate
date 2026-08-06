@@ -6,6 +6,59 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 06/08/2026 — acesso de leitura ao Supabase pelo MCP
+
+O MCP do Supabase está ligado nesta máquina para que o assistente consiga
+**olhar** o banco. É ferramenta de conferência, não caminho de alteração.
+
+### Como está configurado
+
+| | |
+|---|---|
+| Modo | `read_only=true` |
+| Escopo | um projeto só, `project_ref=ysldmzvszjxdgcbtaurh` |
+| Alcance | configuração local, presa a esta pasta e a esta máquina |
+| Onde | `C:\Users\Jarvis\.claude.json`. **Não é arquivo do repositório** |
+
+Ligar de novo em outra máquina:
+
+```
+claude mcp add --transport http supabase "https://mcp.supabase.com/mcp?read_only=true&project_ref=ysldmzvszjxdgcbtaurh"
+```
+
+Depois, autorizar com `/mcp` — é OAuth no navegador, e só o fundador faz.
+
+### Para que serve
+
+Conferir, e nada além disso:
+
+- se o schema no banco é o que a migration diz que é;
+- se o RLS está **ativo e forçado** em cada tabela — forçado importa, porque
+  sem isso o dono da tabela ignora a política e o isolamento do `CLAUDE.md` §3
+  cai sem ninguém perceber;
+- se as políticas existem e são as esperadas;
+- na tarefa 2, o comportamento do `set_config` no pool de transação: se o valor
+  de `app.empresa_id` realmente **não sobrevive entre pedidos**.
+
+### Para que NÃO serve
+
+**Nenhuma alteração de banco passa pelo MCP.** Migration é sempre pelo Prisma e
+sempre commitada.
+
+A razão não é desconfiança da ferramenta, é rastreabilidade. Alteração feita
+por MCP não deixa arquivo, não entra em revisão e não é reproduzível: o banco
+de produção passa a ter um estado que nenhum arquivo do repositório explica, e
+a próxima migration é escrita em cima de uma suposição errada. `read_only=true`
+transforma essa regra em impossibilidade, em vez de deixá-la como boa intenção.
+
+O escopo por projeto tem o mesmo espírito: mesmo em leitura, não há motivo para
+o assistente enxergar outros projetos da conta.
+
+**Estado agora:** configurado, `Needs authentication`. Só passa a funcionar
+depois do `/mcp`.
+
+---
+
 ## 06/08/2026 — reorganização das pastas
 
 Fora da ordem de construção. Feito agora justamente porque quase não existe
