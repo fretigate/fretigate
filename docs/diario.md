@@ -6,6 +6,90 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 06/08/2026 — tarefa 3: schema de Empresa, Usuario e Better Auth
+
+Migration `20260806212753_base_empresa_usuario_auth` aplicada. Seis tabelas no
+banco: `empresa`, `usuario`, `session`, `account`, `verification` e o controle
+do próprio Prisma.
+
+### ⚠ As tabelas ainda NÃO têm RLS
+
+`rls=off` em todas, conferido no catálogo do Postgres. **A proteção é a tarefa
+4**, e o teste que a prova é a tarefa 6. Enquanto isso, o isolamento do
+`CLAUDE.md` §3 não está garantido pelo banco.
+
+É aceitável agora porque não existe dado nem código de aplicação lendo — as duas
+tabelas estão com zero linhas, conferido. **Não deve ficar assim por dias, e
+nenhum dado real entra antes da tarefa 4.** Se for parar, parar depois da 4, não
+entre a 3 e a 4.
+
+### Decisões tomadas nesta fatia
+
+**`Usuario` é a tabela `user` do Better Auth**, com os campos em português. A
+configuração da biblioteca (tarefa 7) faz o mapeamento por `user.fields`:
+`name`→`nome`, `emailVerified`→`email_verificado`, `image`→`avatar_url`,
+`createdAt`→`criado_em`, `updatedAt`→`atualizado_em`. O §7 pede domínio em
+português, e usuário é domínio.
+
+**`session`, `account` e `verification` ficam em inglês, campo por campo.** Não
+são domínio, e renomear infraestrutura de biblioteca só cria atrito em toda
+atualização. Os campos saíram de `@better-auth/core/dist/db/get-tables.mjs`,
+lidos do pacote instalado — nenhum escrito de memória.
+
+**Nome de tabela e coluna em minúsculo com underscore.** As políticas da tarefa
+4 são SQL escrito à mão, e identificador em maiúsculo obrigaria aspas em toda
+linha — que é onde o erro de digitação se esconde.
+
+**`empresa_id` é `uuid`, não texto.** É a coluna que a política vai comparar com
+`nullif(current_setting('app.empresa_id', true), '')::uuid` (§9). Conferido no
+banco: `usuario.empresa_id -> uuid`.
+
+**`usuario.id` é texto, não uuid.** Quem gera esse identificador é o Better
+Auth, com o formato dele. Forçar uuid criaria dependência da configuração da
+tarefa 7 para a migration da tarefa 3 funcionar.
+
+**`termos_aceitos_em` e `termos_versao` são obrigatórios.** O aceite acontece no
+cadastro, então não existe `Empresa` sem aceite. A regra fica no banco, não só
+na tela.
+
+### Duas coisas que ficaram em aberto de propósito
+
+**`plano` e `status_assinatura` são texto, não enumeração.** O conjunto de
+valores não está decidido em lugar nenhum dos documentos, e enumerar seria
+inventar decisão de produto. Viram enumeração quando os valores existirem.
+
+**`cnpj` não é único.** "Uma empresa por CNPJ" é regra de negócio, e não está
+escrita em lugar nenhum. Fica sem restrição até ser decidido.
+
+### Fora desta fatia, de propósito
+
+`Convite` (item 10), `Municipio` (item 2, por isso `municipio_id` fica sem
+chave estrangeira), e os campos de `Empresa` que pertencem a itens posteriores
+— `patio_*`, `prazo_padrao_dias`, `chave_pix`, `dados_bancarios`,
+`modelo_mensagem_*`, `afiliado_id`. Coluna sem tela que a preencha é peso morto.
+
+**A tabela `rateLimit` do Better Auth não entrou.** Ela só existe quando o rate
+limit usa armazenamento em banco, que é a decisão da tarefa 7 (§4 exige rate
+limit, e contador em memória não funciona em serverless). Entra lá, com RLS no
+mesmo commit, conforme o §3.
+
+### Conferência
+
+Feita **direto no catálogo do Postgres**, não no que o Prisma reportou: tabelas,
+colunas, tipos, o enum `papel_usuario` e a contagem de linhas.
+
+**O MCP do Supabase não pôde ser usado** — continua em `Needs authentication`. A
+autorização por `/mcp` ainda não foi concluída. A conferência foi feita por
+consulta de leitura pela mesma conexão da aplicação.
+
+### Próximo passo — tarefa 4
+
+RLS: papel da aplicação sem `BYPASSRLS`, `ENABLE` e `FORCE ROW LEVEL SECURITY`,
+e as políticas com `USING` e `WITH CHECK`, em SQL na migration. O requisito de
+falha fechada está no `CLAUDE.md` §9.
+
+---
+
 ## 06/08/2026 — tarefa 2: risco técnico do isolamento derrubado
 
 **A pergunta que travava o plano foi respondida: sim, funciona.** O

@@ -1,11 +1,11 @@
 // Schema do FretiGate.
 //
-// Neste momento existe SÓ a conexão. Nenhuma tabela ainda: a tarefa 2 é
-// conectar e derrubar o risco técnico do isolamento antes de qualquer modelo
-// existir. As tabelas entram na tarefa 3.
-//
 // As URLs de conexão NÃO ficam aqui. A partir do Prisma 7 elas moram em
 // `prisma.config.ts`, na raiz — é lá que está a explicação das duas.
+//
+// ATENÇÃO — ESTAS TABELAS AINDA NÃO TÊM RLS. A proteção do banco é a tarefa 4,
+// e o teste que a prova é a tarefa 6. Até lá, o isolamento do `CLAUDE.md` §3
+// não está garantido pelo banco. Não colocar dado real aqui antes disso.
 
 generator client {
   provider = "prisma-client"
@@ -14,4 +14,171 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Domínio — em português (CLAUDE.md §7), sem acento, nomes de tabela e coluna
+// em minúsculo com underscore. Minúsculo importa: as políticas de RLS da
+// tarefa 4 são SQL escrito à mão, e identificador em maiúsculo obrigaria aspas
+// em toda linha, que é onde o erro de digitação se esconde.
+// ---------------------------------------------------------------------------
+
+/// A transportadora. É a raiz do isolamento: todo dado de domínio aponta para
+/// uma Empresa, e nenhuma consulta roda sem filtrar por ela (§3).
+model Empresa {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  nome_fantasia String
+  razao_social  String?
+  cnpj          String?
+  telefone      String?
+  email         String?
+  endereco      String?
+
+  /// Referência ao município. Fica sem chave estrangeira por enquanto: a
+  /// tabela `Municipio` (base do IBGE, ~5.570 registros) chega no item 2.
+  municipio_id Int?
+
+  logo_url String?
+
+  /// O conjunto de valores destes dois campos ainda NÃO está decidido, então
+  /// são texto e não enumeração — enumeração aqui seria inventar decisão de
+  /// produto. Viram enumeração quando os valores forem definidos.
+  plano             String?
+  status_assinatura String?
+
+  /// §11 — a única pergunta declarada do produto, mais a origem por primeiro
+  /// toque. Nenhum outro campo de pesquisa existe em lugar nenhum.
+  origem_cadastro  String?
+  origem_declarada String?
+
+  /// Obrigatórios de propósito: o aceite acontece no cadastro, então não
+  /// existe Empresa sem aceite. A regra fica no banco, não só na tela.
+  termos_aceitos_em DateTime @db.Timestamptz(6)
+  termos_versao     String
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @updatedAt @db.Timestamptz(6)
+  /// §7 — nada é apagado. Preenchido = arquivado.
+  arquivado_em  DateTime? @db.Timestamptz(6)
+
+  usuarios Usuario[]
+
+  @@map("empresa")
+}
+
+enum PapelUsuario {
+  dono
+  operador
+
+  @@map("papel_usuario")
+}
+
+/// Quem entra no sistema. É também a tabela `user` do Better Auth — os campos
+/// da biblioteca ganham nome em português aqui, e a configuração do Better
+/// Auth (tarefa 7) faz o mapeamento com `user.fields`. O motorista NÃO tem
+/// acesso ao sistema (§12); esta tabela é só do dono e dos operadores.
+///
+/// NÃO tem `senha_hash`: o Better Auth guarda o hash na tabela `account`, com
+/// o provedor `credential`. O §4 continua atendido — hash forte, nunca
+/// reversível, nunca em log.
+model Usuario {
+  /// Texto, não uuid: o Better Auth gera este identificador com o formato
+  /// dele. Quem manda no formato é a biblioteca que escreve a linha.
+  id String @id
+
+  nome  String
+  email String @unique
+
+  /// `emailVerified` do Better Auth.
+  email_verificado Boolean @default(false)
+
+  /// `image` do Better Auth.
+  avatar_url String?
+
+  papel            PapelUsuario
+  ultimo_acesso_em DateTime?    @db.Timestamptz(6)
+
+  /// uuid, e não texto, porque é esta coluna que a política de RLS compara com
+  /// `nullif(current_setting('app.empresa_id', true), '')::uuid` (§9).
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @updatedAt @db.Timestamptz(6)
+  arquivado_em  DateTime? @db.Timestamptz(6)
+
+  sessions Session[]
+  accounts Account[]
+
+  @@index([empresa_id])
+  @@map("usuario")
+}
+
+// ---------------------------------------------------------------------------
+// Infraestrutura do Better Auth — nomes em inglês, iguais aos da biblioteca.
+// Não são domínio: o §7 pede português para o que eu preciso conseguir ler, e
+// renomear infraestrutura de biblioteca só cria atrito em toda atualização.
+//
+// Os campos abaixo saem de `@better-auth/core/dist/db/get-tables.mjs`, lidos do
+// pacote instalado. Nenhum foi escrito de memória.
+// ---------------------------------------------------------------------------
+
+model Session {
+  id String @id
+
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// §4 diz que log não contém dado pessoal. Estes dois campos são do Better
+  /// Auth e existem para o usuário poder encerrar sessão de outro aparelho.
+  ipAddress String?
+  userAgent String?
+
+  userId String
+  user   Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id String @id
+
+  accountId  String
+  providerId String
+
+  userId String
+  user   Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+
+  /// O hash da senha vive aqui, não em `usuario`.
+  password String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id String @id
+
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }
