@@ -7,7 +7,7 @@ Seis variantes de botão, mais o estado carregando, o aviso do sistema, a famíl
 - **Vocabulário.** Dentro do produto é **"empresa"**, nunca "transportadora" — o `tipo_operacao` já prevê guincho e reboque, e o rótulo não pode prender o produto a um ramo. "Transportadora" segue valendo na página de vendas e nos anúncios, onde serve para qualificar quem compra.
 
 - **Verde sólido.** `#1B6B3A` preenchido é exclusivo da **ação principal** — mais o (+) da barra e o círculo de iniciais da empresa. Nenhum chip, de filtro ou de escolha, usa verde sólido: selecionado é sempre `#E4E9E5` com texto `#1B6B3A`.
-- **Hierarquia.** Uma principal por tela, sempre a ação que avança o dinheiro ou o estado. Nunca duas verdes na mesma tela. Telas de consulta (dashboard, listas) não têm principal — o (+) da barra é chrome global, não ação de tela.
+- **Hierarquia.** Uma principal por tela, sempre a ação que avança o dinheiro ou o estado. Nunca duas verdes na mesma tela. Telas de consulta (dashboard, listas) não têm principal — o (+) da barra é chrome global, não ação de tela. **No desktop, o "Novo frete" da barra lateral usa a variante 01 e continua sendo chrome, não a principal da tela** — é o mesmo (+) do celular com rótulo, e uma tela de detalhe continua podendo ter a sua própria principal. Duas verdes na mesma tela só nesse par: uma na barra (chrome permanente) e uma no conteúdo (a ação da tela).
 - **Nome.** Uma ação, um nome: **Gerar relatório** quando cria, **Ver relatório** quando já existe. Nunca “Relatório” sozinho. Igual para Faturar frete · Marcar recebido · Receber o resto · Cobrar no WhatsApp · Editar frete · Arquivar frete.
 - **Posição.** **Nenhuma tela tem barra de ação fixa.** Só a barra de navegação flutua sobre o conteúdo — ela pode, porque é escura, fina e sempre a mesma; um bloco de botões claros sobre fundo claro corta o texto de trás e lê como defeito. A ordem interna do bloco continua: principal → secundárias lado a lado → destrutiva em texto.
   - **Detalhe** (frete, cobrança, cliente, caminhão, motorista): bloco de ações **dentro do conteúdo rolável**, depois do resumo e dos campos, **antes** de qualquer lista ou histórico. Rola junto com a página.
@@ -195,6 +195,16 @@ Uma família só: traçado, sem preenchimento, cantos arredondados — desenhado
 
 Quatro ícones nasceram nas linhas de **Mais** e ainda não foram exportados para `icons/`: clientes (dois bustos), motoristas (um busto), importar (seta para baixo com base) e conta (casa). Todos em `20×20px`, `1.8px`, no mesmo desenho da família. **Não existe ícone de microfone** — o botão "Ditar" foi removido do Lançar frete sem substituto.
 
+**Colisões abertas pela barra lateral — pendentes de aprovação.** No celular três ícones eram reaproveitados em dois lugares porque os dois nunca apareciam juntos. Na barra lateral do desktop eles aparecem lado a lado, e ícone repetido não distingue destino:
+
+| Colisão | No celular | Proposta para o desktop |
+|---|---|---|
+| Início × Conta da empresa | os dois seriam "casa" | Início fica com a casa · Conta da empresa ganha `conta.svg` — **prédio** (supera o "conta (casa)" acima) |
+| Cobranças × Relatório do cliente | os dois usavam `barra-cobrancas.svg` | Cobranças fica com o recibo · Relatório ganha `relatorio.svg` — **folha com dobra e linhas** |
+| Fretes × Caminhões | os dois usavam `barra-fretes.svg` | Fretes fica com o caminhão · Caminhões ganha `caminhoes.svg` — **placa** (o elemento que identifica o caminhão no produto) |
+
+Mais um sem equivalente no inventário: `despesas.svg` — **cédula com moeda**. `barra-mais.svg` foi redesenhado como **três linhas com botões de ajuste** e agora serve Configurações (o item "Mais" não existe no desktop). Os quatro seguem a convenção: `20×20px`, `1.8px`, traçado sem preenchimento, `currentColor`. **Nenhum está aprovado ainda** — estão desenhados na tela para decisão.
+
 ## 10 — Barra de navegação
 
 Global e permanente: aparece em toda tela de nível 1 e continua nas telas de detalhe. **É a única coisa que flutua sobre o conteúdo** — e pode, porque é escura, fina e sempre a mesma. Um bloco de botões claros sobre fundo claro não flutua nunca.
@@ -214,6 +224,113 @@ Do topo do (+) até a base da tela são **`100,5px`** — medido no DOM, não ca
 
 Esse valor era `132`, `142` e `150` em telas diferentes — os três foram unificados no valor acima, em todas as telas. O **aviso do sistema** ancora em `max(112px, …)`, acima do topo do (+) e com espaço para o deslocamento de 18px da animação de entrada.
 
+
+## 11 — Barra lateral (desktop)
+
+Substitui a pílula de navegação no desktop — **é a única diferença estrutural entre celular e desktop**. Escura pela mesma razão da pílula: é a barra de navegação, e barra de navegação é superfície escura. Tem **dois estados**: aberta (`240px`) e recolhida (`80px`), e o estado é lembrado entre sessões (`localStorage`).
+
+**O desktop é a plataforma completa, não uma versão reduzida.** Toda função do celular existe no desktop; nenhuma tela é cortada, nenhum dado é resumido. **"Mais" não existe no desktop** — ele existia no celular porque cinco é o limite da pílula; aqui o conteúdo dele fica visível na própria barra.
+
+**Não flutua.** A barra ocupa lugar no fluxo, então a folga de rolagem de `138px` do celular **não se aplica no desktop** — o conteúdo termina com o respiro normal de `40px`. A regra "a barra é a única coisa que flutua" continua valendo no celular.
+
+### Estrutura, de cima para baixo
+
+| Bloco | Conteúdo |
+|---|---|
+| Marca | logomarca **FretiGate** branca (ícone só, na recolhida) + o controle de recolher |
+| Ação | **Novo frete** — variante **01 (principal)**. É ação, não destino |
+| Destinos | Início · Fretes · Cobranças |
+| CADASTROS | Clientes · Caminhões · Motoristas |
+| FERRAMENTAS | Relatório do cliente · Importar fretes · Despesas |
+| AJUSTES | Configurações · Conta da empresa |
+| Rodapé | identidade da empresa e do usuário (→ Conta) + **Sair da conta** |
+
+Os cabeçalhos de grupo usam o **rótulo de seção** da folha de estilo — `11px / 700 / ls .16em`, maiúsculas — na tinta de rótulo sobre escuro `rgba(255,255,255,.45)`, alinhados à borda esquerda dos itens, `10px` até o primeiro item.
+
+### Medidas — aberta
+
+- largura **`240px`** · fundo `#141A17` · altura da tela inteira, fixa (não rola com o conteúdo)
+- padding `24` em cima e embaixo · `16` nas laterais
+- marca: altura `24px`, alinhada ao padding lateral · `16px` até o **Novo frete**
+- **Novo frete**: variante **01** sem mudança — altura `60`, raio `999`, largura `100%`, `#1B6B3A`, texto `17px/700` branco, pressionado `#14522C`. Sem ícone (o ícone da variante 01 é só para ação que sai do app) · `16px` até o primeiro grupo
+- item: altura `48` · raio `999` · **largura `208px`** (240 menos os dois paddings de 16) · slot de ícone `48×48` com o ícone de `20px` centrado (traço `1.8px`) · gap `8` entre slot e rótulo · rótulo `15px / 1`
+- espaço entre itens `6` · **espaço entre grupos `16`** · cabeçalho de grupo a `8` do primeiro item · rodapé a `16` do último grupo
+- **ativo**: fundo `rgba(255,255,255,.1)` · ícone e rótulo `#7FCB9B` peso `700`
+- **inativo**: sem fundo · ícone e rótulo `rgba(255,255,255,.5)` peso `600`
+- **hover** (só existe no desktop): fundo `rgba(255,255,255,.06)`, sem mudar a cor do texto
+- rodapé: círculo de iniciais `40px` (a medida de linha de lista) + nome da empresa `15/700` em `rgba(255,255,255,.82)` + nome do usuário `12/500` em `rgba(255,255,255,.5)` + seta de afordância · a linha inteira leva a **Conta da empresa**
+- **Sair da conta**: variante **03 (texto)**, altura `44`, `14px/600`, alinhada à borda esquerda dos itens. **Sem a tinta destrutiva** — `#B3401A` sobre `#141A17` dá 2.3:1 e não se lê. Usa a tinta de item inativo, `rgba(255,255,255,.5)`, e vira branco no hover
+- o miolo (grupos) rola sozinho quando não cabe; marca, Novo frete e rodapé ficam presos. **A rolagem não tem barra visível** — uma barra de rolagem clara sobre `#141A17` seria a única coisa no produto que não obedece à paleta, e o calha dela roubaria `15px` da largura do item, desalinhando a pílula ativa do Novo frete e do rodapé. Com os espaçamentos acima o conteúdo fecha em `~959px` de altura, então a rolagem só entra em tela muito baixa — e quando entra, o item continua com `208px`
+
+### Medidas — recolhida
+
+- largura **`80px`** (`16` + slot `48` + `16`) · mesmo fundo, mesmo padding
+- marca: só o **ícone** FretiGate, `26×26px`
+- **Novo frete** vira o **(+) do inventário** sem mudança: círculo `48×48` `#1B6B3A` com o ícone de `26px`, traço `2.8px`. Não é elevado — a elevação de `17,5px` existia para destacá-lo numa pílula horizontal
+- item: só o slot `48×48`, raio `999`; ativo e inativo idênticos à versão aberta (o fundo ativo vira um círculo de `48`)
+- **cabeçalhos de grupo somem** — não há largura para eles. O agrupamento continua legível pelo espaço de `16` entre grupos
+- **rótulo ao passar o mouse**: pílula `38px` de altura, raio `999`, fundo `#141A17`, texto `13px/600` branco, padding lateral `14`, a `88px` da borda esquerda, centrada na vertical do item. Mesma superfície da barra — nenhuma cor nova
+- **Sair da conta não aparece recolhida** (não tem ícone próprio no inventário): chega-se por Conta da empresa. O rodapé fica só com o círculo de iniciais `40px`
+- **controle de recolher**: alvo de `44px` com a seta `voltar`/`seta-linha` de `8×14px` — aponta para a esquerda quando aberta, para a direita quando recolhida. Fica ao lado da marca
+
+### Contadores
+
+Só onde exigem ação, nunca decorativos. **Dois:** **Fretes** = fretes finalizados sem faturar · **Cobranças** = cobranças vencidas. Nenhum contador de total, de "tudo em aberto" ou de cadastro.
+
+- aberta: o número à direita do rótulo, `12px/700` tabular, tinta `#F4B723` (o amarelo que só existe sobre escuro), `16px` da borda direita do item. Sem fundo, sem pílula
+- recolhida: o número não cabe — vira um **ponto** de `6px` em `#F4B723` no canto superior direito do slot, e o número aparece no rótulo do hover ("Cobranças · 2 vencidas"). Mesmo padrão do ponto de não lida do FretiNews, na cor de alerta sobre escuro
+
+## 12 — Campo de texto
+
+O componente mais usado do produto: todo formulário é feito dele. Estava implementado em todas as telas e nunca escrito. **Tudo abaixo é valor que já existe na folha de estilo** — o que não existe está no fim, em *Conflitos*, sem decisão tomada.
+
+**Medidas**
+
+- altura `56–60` (ver conflito 1) · raio `18` · largura `100%`
+- padding lateral `16`
+- fundo `#F0EDE6` — o mesmo tom de Separação de toda superfície de campo
+- texto digitado `16–17px / 600 / 1`, tinta `#141A17`
+- placeholder `16–17px / 600 / 1`, tinta `#6E7770` — mesma medida do texto digitado, só muda a tinta
+- **sem contorno.** O app não tem borda em lugar nenhum: campo se separa do papel pelo fundo, como todo o resto
+
+**Estados**
+
+| Estado | Fundo | Texto | Observação |
+|---|---|---|---|
+| Normal (vazio) | `#F0EDE6` | placeholder `#6E7770` | |
+| **Com foco** | *ver conflito 2* | `#141A17` | não existe tratamento de foco em nenhuma tela |
+| Preenchido | `#F0EDE6` | `#141A17` | o preenchido não muda de fundo — o que muda é a tinta do texto, de `#6E7770` para `#141A17` |
+| **Com erro** | *ver conflito 3* | `#141A17` | a mensagem abaixo é que carrega o estado |
+| Desabilitado | `#F4F1EB` | `#5C6660` | os dois tons já vigentes de desabilitado (fundo do secundário desabilitado, tinta única de texto desabilitado, 5.29:1) |
+| Somente leitura | **sem campo** | `#3C443E`, `16px/600` | não é um campo apagado: é a **linha de cadastro** do detalhe — rótulo em cima, valor em texto puro sobre o papel. Um campo cinza que não aceita toque parece defeito; a linha de cadastro já é a forma do produto para "dado que só se lê" |
+
+**Rótulo, apoio e erro**
+
+| Peça | Valor | Posição |
+|---|---|---|
+| Rótulo | **rótulo de seção**: `11px / 1 / 700`, `ls .16em`, maiúsculas, tinta `#6E7770` | **acima** do campo, sempre — nunca dentro, nunca flutuante. "E-MAIL", "NOME DA EMPRESA", "SENHA" |
+| Texto de apoio | corpo de apoio `13px / 1.4 / 400–500`, tinta `#6E7770` | **abaixo** do campo. Explica a regra antes do erro acontecer ("Aparece no rodapé do relatório") |
+| Mensagem de erro | `13px / 1.4 / 500`, tinta `#B3401A` | **abaixo** do campo, no lugar do texto de apoio — os dois nunca aparecem juntos, senão o erro vira mais uma linha de instrução |
+
+O rótulo não muda de tinta com o estado: quem carrega erro é a mensagem, não o rótulo. `#B3401A` é a mesma tinta de "Vencido" e de ação destrutiva — o usuário já a conhece como "isto está errado".
+
+**Variações**
+
+| Variação | O que muda |
+|---|---|
+| **Texto simples** | nada — é a definição acima. Origem, destino, carga, nome, cidade, e-mail |
+| **Senha com revelar** | mesmo campo, com o controle de revelar encostado na borda direita, dentro do padding de `16`. O controle é a **variante 03 (texto)** neutra: `44px` de alvo, `14px/600`, tinta `#6E7770`, alternando **Mostrar** / **Ocultar** (uma ação, um nome). *Ver conflito 4* |
+| **Numérico** | mesmo campo com `font-variant-numeric: tabular-nums`, para o número não dançar enquanto se digita. **Valor em dinheiro não usa este campo** — usa o número-herói de `60px` no cartão escuro, com o teclado numérico próprio (Lançar frete, Despesas, vencimento do relatório) |
+| **Área de texto longa** | mesmo fundo, mesmo raio `18`, mesmo padding lateral `16`, com `16` também em cima e embaixo; texto `16px/600` com entrelinha `1.4` em vez de `1`. Modelo de cobrança e modelo de ordem de serviço. *Ver conflito 5* |
+
+**Conflitos** (nenhum decidido — todos precisam de um valor que a folha de estilo ainda não tem)
+
+1. **Altura: `56` ou `60`.** As duas estão em uso e a folha de estilo já registra as duas. Continua sem decisão. O `60` casa com o botão principal; o `56` é o que está na maioria dos formulários.
+2. **Foco.** Não existe nenhum tratamento de foco em nenhuma tela — nem de toque, nem de teclado. Duas saídas, e **nenhuma é grátis**: (a) escurecer o fundo para `#E4E0D6`, que é o pressionado da mesma família de neutros e não inventa cor, mas é uma diferença fraca e não ajuda quem navega por teclado; (b) um contorno, que **quebra a regra de que o app não tem borda nenhuma**. Se o desktop vai ter navegação por teclado — e vai, é a plataforma completa — isto precisa de decisão antes dos formulários.
+3. **Erro.** Nenhuma tela tem estado de erro desenhado. Proponho o fundo `#F6E6DD` (o mesmo da pastilha "Vencido", tom de alerta em superfície clara) com a mensagem em `#B3401A`: nenhuma cor nova, e usa a família que o produto já associa a problema. Falta aprovar.
+4. **Revelar senha.** Não existe ícone de olho na família, e desenhar um seria o 13º arquivo. Por isso a proposta usa botão de texto **Mostrar/Ocultar**, que não inventa nada. Se preferir o olho, é um ícone novo.
+5. **Altura da área de texto longa.** Não existe valor na folha. Precisa de um mínimo em linhas (3? 4?) e de dizer se cresce com o conteúdo ou rola por dentro.
+6. **Espaçamento.** Não existem valores para rótulo → campo, campo → apoio/erro, nem entre campos de um formulário. Os que faltam devem sair da escala existente (`4 · 6 · 7 · 8 · 9 · 10 · 12 · 14 · 16 · 18 · 20 · 22 · 24 · 26 · 40`), mas qual é qual não está decidido.
 
 ## Chips de seleção
 
@@ -247,6 +364,7 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 
 | Tela | Botões |
 |---|---|
+| Dashboard — desktop | mesmo inventário da dashboard de celular, sem nenhuma adição · barra lateral (11) no lugar da pílula · **a identidade da empresa saiu do cartão escuro** e vive no rodapé da barra: no desktop a barra é permanente, e identidade em chrome permanente não precisa se repetir no conteúdo · nenhum dado novo |
 | Dashboard | sem principal · 2× pílula sobre escuro (**Gerar relatório** · **Importar fretes**) · pastilhas, pendências, barras do gráfico e cartão FretiNews são superfícies tocáveis, não botões · × discreto para dispensar o FretiNews · aviso do sistema com **Desfazer** |
 | Meus fretes | sem principal · chip de filtro (Período · Cliente · Situação) · deslizar revela **Marcar recebido** · aviso do sistema depois de salvar |
 | Detalhe do frete | principal **muda com a situação**: em andamento → **Enviar ordem no WhatsApp** (com secundária **Marcar como finalizado**); finalizado e sem cobrança → **Faturar frete**; já faturado → **Ver relatório** · secundárias **Marcar recebido** + **Editar frete** · texto destrutiva **Arquivar frete** · pílula em linha para anexar comprovante |
