@@ -4,7 +4,7 @@ Lido automaticamente em toda sessão. É a fonte de verdade das decisões do
 projeto. Se algo aqui conflitar com o que eu pedir no chat, me avise antes de
 executar.
 
-Versão de 06/08/2026. Substitui a anterior por inteiro.
+Versão de 07/08/2026. Substitui a anterior por inteiro.
 
 ---
 
@@ -52,6 +52,44 @@ você escreve.** O padrão é o meu.
 5. **Não invente decisão de produto.** Procure em `docs/`. Se não estiver lá,
    **pergunte**. Não escolha o mais provável.
 6. **Nunca reescreva um arquivo inteiro** quando a mudança é pontual.
+7. **Ao fim de cada tarefa, rode `/revisar`** — antes de pedir o commit, nunca
+   durante a construção. Ele despacha o subagente `revisor`, que enxerga só o
+   diff e os documentos, **nunca a conversa**: quem escreveu passou a sessão se
+   convencendo de que está certo, e um revisor que lesse esse raciocínio
+   concordaria com ele, porque teria pensado igual. Ele julga o resultado, não
+   o argumento.
+
+   Ele responde em duas listas — **divergência** (contradiz regra escrita, com
+   a regra citada) e **lacuna** (o documento não define o caso) — e **não
+   corrige nada**: não tem ferramenta de escrita, então isso é impossível para
+   ele, não pedido educado. Me traga os achados item a item, dizendo o que você
+   aceita e o que discorda e por quê. O que fazer com cada um é decisão minha.
+
+   **Quantas vezes rodar, para isso não virar laço.** Rodar de novo a cada
+   achado nunca termina: toda correção é diff novo, e diff novo tem achado
+   novo. Então o último passe **não** cobre a correção que veio depois dele —
+   isso é aceito de propósito, e o critério para aceitar é a **classe** dos
+   achados, nunca a quantidade:
+
+   - **Mesma classe dos já resolvidos** — corrija e commite, **sem novo passe**.
+     O revisor já provou que enxerga aquela classe; repetir só confirma o que
+     está confirmado.
+   - **Classe nova** — rode de novo. Ele achou um tipo de defeito que ninguém
+     tinha olhado ainda, e o que veio junto dessa correção não foi visto por
+     ninguém.
+
+   Um passe extra é barato; um laço de passes é a tarefa que não fecha.
+8. **Nunca commite sem eu aprovar.** Mostre o que vai entrar e espere o meu ok.
+9. **Ao fechar uma tarefa, feche a sessão junto.** Depois do commit aprovado,
+   termine a resposta com uma linha só, avisando que é hora de eu dar `/clear`
+   e dizendo **qual comando mandar ao reabrir**. Exemplo:
+
+   > Tarefa 6 commitada. Dê `/clear` agora e mande `/onde-paramos` ao reabrir.
+
+   O motivo é meu, não seu: conversa longa fica cara e imprecisa, e a próxima
+   tarefa começa melhor lendo o diário do que arrastando o histórico da
+   anterior. Sem esse aviso eu continuo digitando na mesma sessão e não
+   percebo.
 
 ### Como me explicar as coisas
 
@@ -73,6 +111,12 @@ registro da empresa B, o produto acaba — o setor é competitivo e a notícia c
   formulário, header ou body.
 - Toda rota de API valida sessão antes de qualquer leitura ou escrita.
 - Tabela ou endpoint novo já nasce com isolamento, no mesmo commit.
+- **SQL cru só em `src/lib/db` e em `/tests`. Em nenhum outro lugar.** É onde a
+  camada de acesso a dados é construída e onde os testes falam com o banco de
+  verdade. SQL escrito em qualquer outro arquivo passa por fora do filtro de
+  empresa sem que ninguém precise desligar nada — é o vazamento mais barato de
+  criar e o mais difícil de enxergar em revisão. As migrations de `/prisma` não
+  entram nessa conta: são o SQL do próprio banco, não código do produto.
 
 Na dúvida sobre como garantir isso num caso específico: **pare e pergunte**.
 
@@ -105,6 +149,12 @@ substituída pelas outras.
    > linha e foi engolida por um `finally` com `process.exit`, que suprime o
    > erro. Todas as verificações foram puladas, o contador de falhas ficou em
    > zero, e a última linha dizia que estava tudo certo.
+
+   **O que se exige é o mecanismo, não o formato.** O teste precisa ter uma
+   verificação que reprova quando rodaram menos do que o esperado. Como ela se
+   chama, onde fica no arquivo e com qual função é escrita não importa, e não
+   existe nome obrigatório. Cobrar um formato específico transformaria uma
+   garantia real em ritual de nomenclatura.
 
 Isso vale para sempre, não para a primeira vez. Teste que prova o isolamento
 hoje e não roda amanhã não protege contra a regressão de amanhã.
@@ -478,6 +528,18 @@ experiência de transportadora de carga**.
 | `docs/estilo.md` | Cores, tipografia, espaçamento, formas, alturas, seção Impresso |
 | `docs/componentes.md` | Inventário fechado de botões e avisos, e onde cada tela usa o quê |
 | `docs/icones/` | SVGs, um por ícone |
+
+**Quando dois documentos descrevem a mesma tela, quem vence é o dono do
+escopo.** `docs/componentes.md` manda no que a tela **contém** — campos,
+botões, avisos, rótulos. `docs/navegacao.md` manda em **como se chega até ela e
+para onde ela leva**. Dentro do escopo do outro, cada um é descrição de apoio, e
+descrição de apoio não decide nada: envelhece calada e induz a erro, que foi
+exatamente o que aconteceu com as três telas de entrada.
+
+A precedência resolve desacordo **entre documentos**. Ela nunca põe em vigor o
+que este arquivo proíbe: linha de `docs/navegacao.md` marcada com ⚠️ é
+descrição vencida por definição, e "código no WhatsApp" continua proibido pelo
+§12 esteja escrito onde estiver.
 
 A paleta azul da primeira versão da Tela 1 foi descartada. Se aparecer qualquer
 arquivo com `#2B62E8` como cor de ação, é resíduo — ignore.

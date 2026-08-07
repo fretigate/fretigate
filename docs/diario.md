@@ -6,6 +6,59 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 07/08/2026 — o revisor, e três regras ditadas pelo fundador
+
+O `/revisar` entrou em uso: subagente que enxerga o diff e os documentos e
+**nunca a conversa**, porque quem escreveu passou a sessão se convencendo de
+que está certo. Ver `CLAUDE.md` §2, itens 7 a 9.
+
+### Três regras novas no CLAUDE.md — **ditadas pelo fundador**
+
+Registrado porque o revisor não tem como saber, olhando o diff, se uma regra
+nova no `CLAUDE.md` foi decidida por quem manda ou redigida por quem escreve —
+e o §2 diz que decisão de produto não se inventa. Foram ditadas:
+
+1. **SQL cru só em `src/lib/db` e em `/tests`** (§3).
+2. **Precedência entre documentos** — `componentes.md` manda no que a tela
+   contém, `navegacao.md` em como se chega e para onde leva (§13).
+3. **Contagem de verificações exige o mecanismo, não o formato** (§3, item 4).
+4. **Quantas vezes rodar o revisor** — ele roda sobre o trabalho pronto, antes
+   do commit; achado da mesma classe de um já resolvido se corrige e se commita
+   sem novo passe, achado de classe nova pede outro passe (§2, item 7). Existe
+   para o revisar não virar laço: toda correção é diff novo, e diff novo tem
+   achado novo.
+
+A ressalva das migrations de `/prisma` também é do fundador, e o argumento
+dele está registrado porque muda como a regra se lê: **não é exceção, é
+precisão**. A regra mira consulta crua na aplicação; arquivo de migration é
+SQL por definição.
+
+### O despacho do `Agent` foi verificado por execução
+
+O revisor apontou duas vezes que não conseguia confirmar, lendo a árvore, se
+`Agent` em `allowed-tools` é nome válido. Ele estava certo em apontar: **a
+prova existia e não estava escrita.** O despacho rodou de verdade **duas vezes
+em 07/08/2026**, com o revisor devolvendo achados nas duas.
+
+A diferença para `effort` e `disallowedTools`, removidos no mesmo commit, é
+exatamente essa: lá não havia evidência nenhuma; aqui havia medição, só não
+estava registrada.
+
+**Padrão a seguir daqui em diante:** quando o revisor apontar algo que está
+verificado mas não documentado, **documente** — não descarte o achado. A
+verificação que só existe na cabeça de quem rodou vira configuração não
+verificada assim que a sessão fecha.
+
+### A mutação plantada de propósito
+
+Um token de cor fora da lista fechada do `estilo.md` foi plantado no
+`globals.css` e o revisor **reprovou por três caminhos independentes**: cor
+fora do sistema (§8), token sem consumidor (§6) e conceito inexistente nos
+documentos (§2, item 5). Mutação removida em seguida. Mesmo raciocínio da
+suíte de testes: revisor que nunca reprovou não provou nada.
+
+---
+
 ## 07/08/2026 — tarefa 6: os testes de isolamento permanentes
 
 `npm test` — **25 verificações, 2 arquivos**, rodando contra o banco de verdade
@@ -72,13 +125,36 @@ ao ar.
 **Identificador próprio por execução**, derivado do relógio, para duas rodadas
 simultâneas não colidirem.
 
+### A trava de banco — commit `470fb4f`
+
+A suíte não só semeia: ela **apaga**. O `afterAll` roda `DELETE` sem perguntar
+nada. Hoje o estrago possível é zero, porque só existe o banco de
+desenvolvimento. No dia em que existir produção, um `.env` apontado para o lugar
+errado — ou uma variável herdada de outro terminal — faz `npm test` apagar dado
+de cliente.
+
+A trava roda antes de qualquer arquivo de teste ser carregado, que é o único
+ponto que pega todos sem depender de alguém lembrar de chamar. **Falha
+fechada:** não reconhecer o endereço também recusa. O erro fácil seria "achei um
+identificador e ele não está na lista, então recuso" — isso aprovaria por
+omissão tudo que não tem o formato esperado. A regra é recusar por não
+reconhecer, nunca aprovar por não encontrar.
+
+A lista de projetos permitidos fica **no repositório, não no `.env`**: se a
+expectativa morasse no `.env`, o mesmo engano que troca o endereço trocaria a
+expectativa junto, e a trava aprovaria o desastre.
+
+**Conferido em cinco casos — à mão, uma vez só.** Isso não é prova permanente:
+nada garante que a trava continue fechando amanhã, e ela é justamente o que
+impede `npm test` apagar dado de cliente. Virou tarefa própria, a 9b.
+
 ### Ponto a revisitar
 
 **Não existe banco de teste separado.** A suíte semeia e apaga no banco de
 desenvolvimento. Funciona porque cada execução usa identificadores próprios e
-limpa no fim, mas é frágil por natureza: teste que grava no mesmo lugar onde se
-desenvolve um dia atrapalha. Quando o custo justificar, um projeto Supabase só
-para teste resolve.
+limpa no fim, e agora a trava acima impede que isso aconteça no lugar errado —
+mas continua frágil por natureza. Quando o custo justificar, um projeto Supabase
+só para teste resolve.
 
 ### Próximo passo — tarefa 7
 
@@ -173,11 +249,12 @@ a interface passa a dizer a mesma coisa.
 
 **O schema não muda.** `nome_fantasia` já é neutro.
 
-**Pendente, e vai junto com a correção da tarefa 10:** `docs/navegacao.md` linha
-50 ainda diz "Nome da transportadora". Não editei porque as linhas 49-51 desse
-arquivo **já estão** na fila da tarefa 10 — descrevem login por código no
-WhatsApp e recuperação por CNPJ, os dois derrubados. Corrigir só o rótulo agora
-seria mexer duas vezes na mesma linha.
+~~**Pendente, e vai junto com a correção da tarefa 10:** `docs/navegacao.md`
+linha 50 ainda diz "Nome da transportadora". Não editei porque as linhas 49-51
+desse arquivo **já estão** na fila da tarefa 10.~~ — **RESOLVIDO em
+07/08/2026.** O rótulo foi corrigido separado do mecanismo: vocabulário errado
+não é descrição vencida, e esperar a tarefa 10 deixaria o §8 sendo contrariado
+por escolha. Ver a entrada de 07/08 no topo.
 
 **Provedor de e-mail: RESOLVIDO no mesmo dia.** Resend, domínio
 `fretigate.com` comprado, subdomínio `envio.fretigate.com` verificado,
@@ -864,6 +941,14 @@ achado sobre string vazia que muda a política de RLS da tarefa 4.
 7. Better Auth e `lib/auth` com rate limit
 8. Telas de Entrar, Criar conta, Esqueci a senha e Termos — **ver bloqueio**
 9. Travas de ESLint e SQL cru na integração contínua
+9b. **Teste permanente da trava de banco.** Hoje a trava foi conferida à mão,
+    uma vez, em cinco casos — e verificação manual não roda de novo amanhã. Pelo
+    mesmo argumento do `CLAUDE.md` §3 ("teste que prova hoje e não roda amanhã
+    não protege contra a regressão de amanhã"), ela precisa de teste que rode
+    junto com a suíte. O que se prova: endereço permitido passa, endereço
+    desconhecido recusa, e **formato irreconhecível também recusa** — este
+    último é o caso que separa falha fechada de falha aberta. Vai junto da
+    tarefa 9 porque as duas são trava de infraestrutura, não de produto
 10. Correções nos documentos e a pendência do Storage
 
 ### Bloqueios conhecidos
@@ -872,11 +957,21 @@ achado sobre string vazia que muda a política de RLS da tarefa 4.
 Design completou a tabela "Onde cada tela usa o quê" e a especificação de
 ícones. Ver a entrada de 06/08/2026 no topo deste arquivo.
 
-**A tarefa 8 continua bloqueada, mas por outro motivo:** a tabela nova descreve
+~~**A tarefa 8 continua bloqueada, mas por outro motivo:** a tabela nova descreve
 a tela `Entrar` com **"Receber código no WhatsApp"**, que exige envio automático
 por API de WhatsApp — proibido pelo `CLAUDE.md` §12, e contrário à decisão de
-login por e-mail e senha em cima da qual a tarefa 3 já foi construída. Precisa
-de decisão do fundador.
+login por e-mail e senha em cima da qual a tarefa 3 já foi construída.~~ —
+**RESOLVIDO em 06/08/2026.** O Design corrigiu na fonte: `docs/componentes.md`
+descreve a tela `Entrar` com campos **E-MAIL** e **SENHA**, e registra por
+escrito que o app nunca envia mensagem sozinho, então não existe código por
+WhatsApp ali. Conferido linha a linha. **A tarefa 8 não tem mais bloqueio.**
+
+Sobra só um resíduo de documento, já previsto: em `docs/navegacao.md`, a linha
+da tela `Entrar` ainda cita "Código no WhatsApp". Está marcada com ⚠️ ali, e o
+que ⚠️ significa é que a descrição não está em vigor. Não bloqueia nada — é
+correção de texto, na tarefa 10. (Aqui havia um número de linha; saiu porque
+número de linha envelhece calado — duas linhas acrescentadas no topo do arquivo
+já o tinham deixado errado no mesmo commit.)
 
 ### Decisões tomadas nesta sessão
 

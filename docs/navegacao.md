@@ -1,6 +1,8 @@
 # FretiGate — mapa de navegação
 
-Todas as telas do MVP: de onde se chega e para onde leva. ✅ desenhada · ⬜ não desenhada.
+Todas as telas do MVP: de onde se chega e para onde leva. ✅ desenhada · ⬜ não desenhada · ⚠️ o que está escrito aqui foi superado por outra decisão, e a linha ainda não foi reescrita.
+
+O ⚠️ nunca substitui os outros dois: uma tela desenhada continua ✅ mesmo com a descrição vencida, porque quem lê precisa saber as duas coisas.
 
 Gerado da prancheta `Mapa de navegação e Clientes.dc.html` (opção 7a). O protótipo navegável é `Protótipo FretiGate.dc.html`.
 
@@ -46,9 +48,9 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 | Despesas — lista e cadastro ✅ | Mais · card de Lucro da dashboard no estado de convite | Linha → edição · + Nova → cadastro (valor e data obrigatórios, vínculo opcional a caminhão) · Estado vazio explica que o Lucro depende dela |
 | Modelo de ordem de serviço ✅ | Configurações › Mensagens | Chips {motorista} {cliente} {carga} {origem} {destino} {data} — sem {valor} |
 | Novidades — lista e detalhe ✅ | Mais › Ajustes · cartão FRETINEWS dispensado na dashboard | Linha → Detalhe da mensagem · no máximo uma ação por mensagem |
-| Entrar ✅ | Abrir o app sem sessão · Sair da conta | Código no WhatsApp → Primeiro acesso · Criar conta · Recuperar acesso |
-| Criar conta ✅ | Entrar | Nome da transportadora + telefone + a única pergunta de pesquisa do produto → Primeiro acesso |
-| Recuperar acesso ✅ | Entrar | CNPJ → mostra em qual telefone a conta está |
+| Entrar ✅ ⚠️ **SUPERADO — ver nota** | Abrir o app sem sessão · Sair da conta | Código no WhatsApp → Primeiro acesso · Criar conta · Esqueci a senha |
+| Criar conta ✅ ⚠️ **SUPERADO — ver nota** | Entrar | Nome da empresa + telefone + a única pergunta de pesquisa do produto → Primeiro acesso |
+| Esqueci a senha ✅ ⚠️ **SUPERADO — ver nota** | Entrar | CNPJ → mostra em qual telefone a conta está |
 | Usuários — lista, convite, detalhe ✅ | Conta da empresa › Usuários | COM ACESSO + CONVITE ENVIADO (aguardando, reenviar, cancelar) · Linha → Detalhe · + Convidar → nome, WhatsApp, prévia da mensagem → abre a conversa · Detalhe → Remover acesso, **só para o dono**; o acesso do dono não é removível. **É a única tela de convidar** — o estado duplicado que existia em Entrar foi removido |
 | Aceitar convite ✅ | Link do WhatsApp, fora do app. Na demonstração, por "Ver o que ela recebe" no convite pendente | Marca da empresa + o que a pessoa vai poder fazer → Entrar na conta · Não conheço essa empresa. Sem barra de navegação: quem abre ainda não está dentro do app |
 | Termos de uso e privacidade ✅ | Criar conta · Conta da empresa | Duas abas no mesmo documento. Vindo do cadastro, termina em "Li e aceito"; vindo de Ajustes, é só leitura |
@@ -59,6 +61,26 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 | Primeiro acesso ✅ | Criar conta · Entrar pela primeira vez | Duas opções em pé de igualdade: Trazer os fretes que já fiz → Importar · Começar do zero → Lançar frete |
 | Guia de progresso ✅ | Topo da dashboard, depois do primeiro acesso | No máximo 3 itens · cada um sai ao ser cumprido · o bloco desaparece ao completar |
 
+> ⚠️ **Nota — as três telas de entrada estão superadas.** O texto acima descreve
+> entrada por telefone e código no WhatsApp, e recuperação por CNPJ. **Não é mais
+> assim.** A decisão em vigor é **e-mail e senha**, com recuperação por link no
+> e-mail: envio automático por WhatsApp é proibido pelo `CLAUDE.md` §12, e o
+> schema da tarefa 3 já foi construído sobre e-mail e senha. Quem manda no que
+> essas três telas **contêm** é `docs/componentes.md` (telas `Entrar`, `Criar
+> conta` e `Esqueci a senha`), que já está correto — ver a precedência no
+> `CLAUDE.md` §13.
+>
+> O trecho fica como está de propósito — **a reescrita é da tarefa 10**. A nota
+> existe porque esta linha já induziu a erro uma vez, fazendo um resumo de
+> retomada anunciar um bloqueio que não existia mais.
+>
+> Duas coisas **não** esperaram a tarefa 10, porque nenhuma delas é descrição
+> vencida: o nome da tela virou `Esqueci a senha`, que é como ela se chama no
+> `docs/componentes.md` (§8 — uma ação, um nome, em todo lugar), e "nome da
+> transportadora" virou "nome da empresa" (§8 — dentro do produto é sempre
+> empresa). O que sobra para a tarefa 10 é o **mecanismo**: telefone, código no
+> WhatsApp e CNPJ.
+
 
 ## Dados que hoje não têm onde ser preenchidos
 
@@ -66,7 +88,7 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 |---|---|
 | Prazo de pagamento do cliente | Usado no vencimento calculado do Relatório e da cobrança. **Resolvido** — entra no cadastro de cliente (7d) e aparece no perfil. |
 | Telefone do cliente | Usado por "Cobrar no WhatsApp" em Cobranças e no perfil. **Resolvido** — entra no cadastro, segundo campo, antes até do documento. |
-| Dados da transportadora e Pix | Usados no cabeçalho e no rodapé do A4. **Resolvido** — Conta da empresa. |
+| Dados da empresa e Pix | Usados no cabeçalho e no rodapé do A4. **Resolvido** — Conta da empresa. |
 | Endereço padrão do pátio | Pré-preenche a origem no lançamento. **Resolvido** — Configurações › Operação. |
 | Numeração do relatório | O A4 mostra "Nº 0142". **Resolvido** — Configurações › Operação. |
 | Distância entre municípios | Pré-preenche o KM quando origem e destino são reconhecidos. Hoje é uma tabela fixa de 20 municípios do Ceará e vizinhos. **Em aberto** — de onde vem essa tabela em produção (base própria, API de rotas) não foi decidido. |
