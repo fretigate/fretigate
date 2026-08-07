@@ -141,13 +141,20 @@ passa a ver o conteúdo das respostas que chegam, e quem responde pedindo ajuda
 costuma colar dado do próprio negócio na mensagem. Pela regra do próprio §11,
 subprocessador novo entra na tabela **e** na política, no mesmo commit.
 
-**Duas coisas a saber sobre o catch-all**, nenhuma bloqueante:
+**O Google entrou junto na tabela.** A caixa que recebe o redirecionamento é
+Gmail, e ela **armazena** o conteúdo, não só o vê passar. Se a Cloudflare entra
+por ver de passagem, quem guarda entra com mais razão. **Essa dependência sai
+quando existir caixa própria no domínio** — e é uma das razões para migrar.
 
-- qualquer endereço `@fretigate.com` passa a chegar, inclusive os que ninguém
-  divulgou. Endereço curinga é ímã de spam, e a caixa é pessoal;
-- o `MX` de recebimento fica no domínio raiz e o `SPF`/`DKIM` de envio no
-  `envio.`. **As duas coisas não se atrapalham** — foi por isso que o envio
-  nasceu em subdomínio separado.
+**Catch-all fica como está, e a troca é ponto a revisitar.** O domínio é novo e
+não está em lista de spam nenhuma; o problema de endereço curinga aparece
+quando ele virar conhecido, e aí trocar por regras nominais (`contato@`,
+`suporte@`) leva dois minutos. Por ora o ganho é maior: quem escrever para um
+endereço que supôs existir não fica sem resposta.
+
+**E o `MX` de recebimento fica no domínio raiz enquanto o `SPF`/`DKIM` de envio
+fica no `envio.` — as duas coisas não se atrapalham.** Foi por isso que o envio
+nasceu em subdomínio separado.
 
 ### Próximo passo — tarefa 6
 

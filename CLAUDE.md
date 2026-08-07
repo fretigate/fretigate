@@ -424,7 +424,8 @@ declarar depois não conserta, porque não se pede autorização retroativa.
 | **Supabase** | todo o banco e os arquivos | banco de dados e armazenamento |
 | **Vercel** | o tráfego da aplicação | hospedagem |
 | **Resend** | nome e e-mail de quem recebe a mensagem | e-mail transacional: recuperação de senha, verificação de e-mail e convite de usuário |
-| **Cloudflare** | o conteúdo das respostas que chegam em `contato@` | redirecionamento do e-mail de contato. Quem responde pedindo ajuda costuma colar dado do próprio negócio na mensagem |
+| **Cloudflare** | o conteúdo das respostas que chegam em `contato@`, **de passagem** | redirecionamento do e-mail de contato. Quem responde pedindo ajuda costuma colar dado do próprio negócio na mensagem |
+| **Google** | o conteúdo dessas mesmas respostas, **armazenado** | a caixa que recebe o redirecionamento é Gmail. Quem guarda entra com mais razão que quem só vê passar — **sai desta tabela quando existir caixa própria no domínio**, e essa é uma das razões para migrar |
 | **fornecedor de IA** *(a decidir — §14)* | o conteúdo da conversa colada na importação | extração dos fretes |
 
 O do e-mail e o da IA são os que mais pesam: os dois enxergam **dado de
