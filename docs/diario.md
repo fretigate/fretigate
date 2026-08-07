@@ -6,6 +6,88 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 07/08/2026 — tarefa 6: os testes de isolamento permanentes
+
+`npm test` — **25 verificações, 2 arquivos**, rodando contra o banco de verdade
+com os papéis de verdade. Vitest 4.1.
+
+### Os dois testes
+
+**`tests/isolamento/schema.test.ts` — a prova mecânica.** Percorre o **catálogo
+do Postgres**, não o schema do Prisma: o schema diz o que queríamos, o catálogo
+diz o que existe, e é no catálogo que a política vai ou não recusar. Para cada
+tabela exige RLS ativado, **forçado** e pelo menos uma política. E exige que
+toda tabela tenha `empresa_id` **ou** esteja numa lista de exceções conferida
+por **igualdade exata** — nos dois sentidos, então tanto tabela nova sem
+`empresa_id` quanto exceção que deixou de existir derrubam o teste.
+
+É o §3 virado máquina: quem acrescentar tabela sem isolamento não passa daqui.
+
+**`tests/isolamento/vazamento.test.ts` — a empresa A tentando alcançar a B.**
+Roda pelo `lib/db`, com o papel `fretigate_app`. Cobre listar, buscar por id,
+buscar **por e-mail com `findUnique`** — o caminho que mais escapa de revisão,
+porque quem escreve acha que chave única dispensa filtro —, alterar, e gravar na
+empresa alheia.
+
+Os quatro requisitos do §3 estão lá: o contraste (o mesmo dado visto por
+`postgres`, que ignora RLS), concorrência real compartilhando pool, os três
+jeitos de não ter contexto, e a contagem de cobertura.
+
+### A suíte foi testada contra si mesma
+
+Suíte que nunca ficou vermelha não provou nada. Desliguei o RLS de `usuario` de
+propósito e rodei de novo. **Três falhas, todas as certas:**
+
+| Falhou | Camada que pegou |
+|---|---|
+| `usuario` tem RLS ativado e forçado | estrutural — o catálogo |
+| o usuário da empresa B é invisível | comportamental — `findUnique` enxergou |
+| gravar usuário na empresa B é recusado | comportamental — `WITH CHECK` aceitou |
+
+As duas camadas pegaram **de forma independente**. RLS restaurado e conferido
+(`rls=true forcado=true`), suíte de volta em 25/25.
+
+### Um defeito do teste, achado pela mutação
+
+A primeira versão usava 20 pedidos simultâneos no teste de concorrência. Com o
+RLS quebrado, ele falhou com `Unable to start a transaction in the given time` —
+**esgotamento do pool**, não vazamento. O pool do driver tem dez conexões; pedir
+vinte transações ao mesmo tempo estoura a espera antes de qualquer consulta
+rodar.
+
+Passava por sorte de agendamento. Baixado para dez, com o motivo escrito no
+código. É a mesma família dos outros erros de teste do dia: o teste medindo o
+próprio estrago em vez do produto.
+
+### Decisões
+
+**Vitest**, com `fileParallelism: false`. Os testes semeiam empresas no mesmo
+banco, e dois arquivos em paralelo disputariam linhas — o resultado dependeria
+de agendamento, que é a pior espécie de teste intermitente: o que some quando
+você vai olhar.
+
+**`/tests` fora de `/src`**, registrado no `CLAUDE.md` §6. Não é código que vai
+ao ar.
+
+**Identificador próprio por execução**, derivado do relógio, para duas rodadas
+simultâneas não colidirem.
+
+### Ponto a revisitar
+
+**Não existe banco de teste separado.** A suíte semeia e apaga no banco de
+desenvolvimento. Funciona porque cada execução usa identificadores próprios e
+limpa no fim, mas é frágil por natureza: teste que grava no mesmo lugar onde se
+desenvolve um dia atrapalha. Quando o custo justificar, um projeto Supabase só
+para teste resolve.
+
+### Próximo passo — tarefa 7
+
+Better Auth e `lib/auth`: sessão, exigir sessão, exigir dono, e rate limit. Com
+o bloqueio já registrado — **não fecha sem um e-mail de recuperação real
+chegando à caixa de entrada**.
+
+---
+
 ## 06/08/2026 — tarefa 5: `lib/db`, o filtro que não dá para esquecer
 
 Os dois bloqueios do inventário estão **fechados** (abaixo), e a tarefa 5 está

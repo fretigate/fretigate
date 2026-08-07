@@ -188,10 +188,16 @@ documentação e material de consulta.
     /ui                 componentes base — fonte única de verdade
     /<dominio>          componentes específicos
 /prisma
+/tests
+  /isolamento           a prova do §3 — fala com o banco de verdade
 /docs                   especificação, navegação, estilo, componentes, ícones
 /referencia             marca e protótipo — material de consulta, nada roda
 /public                 arquivos estáticos — fica na raiz, nunca dentro de /src
 ```
+
+**`/tests` fica fora de `/src` de propósito:** não é código que vai ao ar. E os
+testes de isolamento falam com o **banco de verdade**, com os papéis de verdade
+— contra um dobrê, provariam que o dobrê funciona.
 
 - Regra de negócio mora em `/src/lib/servicos`, nunca dentro de componente de
   tela.
