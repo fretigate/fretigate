@@ -22,7 +22,14 @@ Duas correções que estavam na fila da **tarefa 10** já vieram resolvidas: as
 duas seções numeradas 07 (agora 07 aviso do sistema, 08 FretiNews) e a tabela
 final sem título próprio.
 
-### 🔴 Aberto: a tela Entrar reintroduz uma decisão já derrubada
+> **Decidido em 06/08/2026, e os dois viraram bloqueio formal.** O `estilo.md` e
+> o `componentes.md` são **mantidos pelo Design e exportados**. Editar qualquer
+> um dos dois à mão aqui é trabalho perdido: a próxima exportação reverte — foi
+> exatamente o que aconteceu hoje, quando o `componentes.md` voltou sozinho a
+> uma versão antiga. **As duas correções abaixo são pedidas na fonte do Design,
+> não aplicadas neste repositório.**
+
+### 🔴 BLOQUEIO 1 — a tela Entrar reintroduz uma decisão já derrubada
 
 A tabela nova diz, para a tela `Entrar`:
 
@@ -36,12 +43,14 @@ e-mail e senha**, e o schema da tarefa 3 foi construído em cima dela — `usuar
 tem `email` único, e o Better Auth guarda o hash em `account` com o provedor
 `credential`.
 
-**Não mexi no documento.** A decisão é do fundador: ou a tabela volta para
-e-mail e senha, ou o §12 muda — e nesse caso a tarefa 3 e a tarefa 7 mudam
-junto. Enquanto não decidir, **a tarefa 8 fica bloqueada por outro motivo**, não
-mais por lacuna.
+**Decidido: o login continua e-mail e senha.** A API oficial de WhatsApp é
+proibida pelo §12, e o schema da tarefa 3 já está no banco em cima dessa
+decisão. **A tabela vai ser corrigida na fonte do Design.**
 
-### 🟡 Aberto: três valores divergindo do `docs/estilo.md`
+**Bloqueia a tarefa 8** até a correção chegar por exportação. As tarefas 5, 6, 7
+e 9 não desenham tela e seguem sem depender disto.
+
+### 🟡 BLOQUEIO 2 — três valores divergindo do `docs/estilo.md`
 
 O `CLAUDE.md` §8 diz que valor sai de `docs/estilo.md`. O `componentes.md` novo
 diz que as medidas dele foram tiradas do DOM, não estimadas. Nos três pontos
@@ -65,10 +74,14 @@ dentro do `componentes.md`; o `estilo.md` já tinha só o unificado.
 Há também uma incoerência interna a resolver: o `componentes.md` chama o respiro
 de "igualados de propósito" e em seguida dá dois números diferentes.
 
-**Recomendação:** o `componentes.md` foi medido agora, então provavelmente é ele
-que está certo, e o `estilo.md` é que envelheceu. Mas quem manda em valor, pelo
-§8, é o `estilo.md` — então a correção certa é atualizar o `estilo.md` para os
-valores medidos, e isso é decisão do fundador, não minha.
+**Decidido: não editar o `estilo.md` aqui.** A correção é pedida na fonte do
+Design, pelo mesmo motivo do bloqueio 1. O `componentes.md` foi medido no DOM,
+então o provável é que o `estilo.md` tenha envelhecido — mas quem confirma isso
+é o Design.
+
+**Bloqueia qualquer tela que use a barra de navegação**, ou seja, praticamente
+todas: enquanto os dois documentos discordarem, não há valor único de onde
+tirar, e o §8 proíbe inventar. Não bloqueia as tarefas 5, 6, 7 e 9.
 
 ### O que mudou no que já estava escrito
 
