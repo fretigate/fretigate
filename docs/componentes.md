@@ -4,6 +4,8 @@ Seis variantes de botão, mais o estado carregando, o aviso do sistema, a famíl
 
 ## Regras
 
+- **Vocabulário.** Dentro do produto é **"empresa"**, nunca "transportadora" — o `tipo_operacao` já prevê guincho e reboque, e o rótulo não pode prender o produto a um ramo. "Transportadora" segue valendo na página de vendas e nos anúncios, onde serve para qualificar quem compra.
+
 - **Verde sólido.** `#1B6B3A` preenchido é exclusivo da **ação principal** — mais o (+) da barra e o círculo de iniciais da empresa. Nenhum chip, de filtro ou de escolha, usa verde sólido: selecionado é sempre `#E4E9E5` com texto `#1B6B3A`.
 - **Hierarquia.** Uma principal por tela, sempre a ação que avança o dinheiro ou o estado. Nunca duas verdes na mesma tela. Telas de consulta (dashboard, listas) não têm principal — o (+) da barra é chrome global, não ação de tela.
 - **Nome.** Uma ação, um nome: **Gerar relatório** quando cria, **Ver relatório** quando já existe. Nunca “Relatório” sozinho. Igual para Faturar frete · Marcar recebido · Receber o resto · Cobrar no WhatsApp · Editar frete · Arquivar frete.
@@ -280,7 +282,7 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Novidades — lista | sem principal · linha não lida em lilás com ponto; lida volta ao claro |
 | Novidades — detalhe | no máximo **uma** ação por mensagem, como principal |
 | Entrar | campos **E-MAIL** e **SENHA** · principal **Entrar**, com estado carregando · secundária **Criar conta** · texto neutra **Esqueci a senha**. Login é e-mail e senha; o app **nunca** envia mensagem sozinho, então não existe código por WhatsApp aqui |
-| Criar conta | campos **NOME DA TRANSPORTADORA** · **E-MAIL** · **SENHA** · **SEU NOME** (obrigatório — é o que distingue os dois usuários no "cobrado por" e na tela de Usuários; o nome da empresa ali deixaria os dois idênticos justamente na tela que existe para diferenciá-los) · **SEU TELEFONE** (contato para o cliente, não login) · principal **Criar conta** · secundária **Já tenho conta** · chips da única pergunta de pesquisa do produto + campo livre · links para Termos |
+| Criar conta | campos **NOME DA EMPRESA** · **E-MAIL** · **SENHA** · **SEU NOME** (obrigatório — é o que distingue os dois usuários no "cobrado por" e na tela de Usuários; o nome da empresa ali deixaria os dois idênticos justamente na tela que existe para diferenciá-los) · **SEU TELEFONE** (contato para o cliente, não login) · principal **Criar conta** · secundária **Já tenho conta** · chips da única pergunta de pesquisa do produto + campo livre · links para Termos |
 | Esqueci a senha | campo **E-MAIL DA CONTA** · principal **Mandar link de recuperação** · secundária **Voltar pra entrada**. Recuperação por e-mail, nunca por WhatsApp |
 | Termos e privacidade | duas abas · vindo do cadastro termina em principal **Li e aceito**; vindo de Ajustes é só leitura · **sem barra** no modo cadastro |
 | Planos | principal **Assinar o anual** · secundária **Assinar o mensal** · o anual mostra parcelamento e economia |

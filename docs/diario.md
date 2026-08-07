@@ -75,9 +75,27 @@ TELEFONE. Primeiro nome basta. Nem preencher com o nome da transportadora, nem
 tornar a coluna nula: é esse campo que distingue os dois usuários no registro de
 "cobrado por" e na tela de Usuários. Registrado em `docs/especificacao.md` §6.
 
-**Precisa de correção na fonte do Design:** a tabela "Onde cada tela usa o quê"
-lista, para Criar conta, os campos NOME DA TRANSPORTADORA · E-MAIL · SENHA ·
-SEU TELEFONE. Falta SEU NOME, entre SENHA e SEU TELEFONE.
+**Chegou corrigido por exportação**, com `SEU NOME` entre SENHA e SEU TELEFONE.
+
+### Vocabulário: "empresa" dentro do produto, "transportadora" fora
+
+Rótulo do cadastro passa a ser **NOME DA EMPRESA**. O princípio está no topo de
+`docs/especificacao.md` e resumido no `CLAUDE.md` §8.
+
+O motivo não é estética: o `tipo_operacao` já prevê guincho e reboque desde o
+modelo de dados. **Rótulo é a amarra mais barata de criar e a mais cara de
+tirar** — quando o primeiro guincheiro entrar, "Nome da transportadora" na tela
+de cadastro diz a ele que o produto não é para ele, e nenhuma tabela precisava
+mudar para isso acontecer. A entidade se chama `Empresa` no banco desde sempre;
+a interface passa a dizer a mesma coisa.
+
+**O schema não muda.** `nome_fantasia` já é neutro.
+
+**Pendente, e vai junto com a correção da tarefa 10:** `docs/navegacao.md` linha
+50 ainda diz "Nome da transportadora". Não editei porque as linhas 49-51 desse
+arquivo **já estão** na fila da tarefa 10 — descrevem login por código no
+WhatsApp e recuperação por CNPJ, os dois derrubados. Corrigir só o rótulo agora
+seria mexer duas vezes na mesma linha.
 
 **Provedor de e-mail: RESOLVIDO no mesmo dia.** Resend, domínio
 `fretigate.com` comprado, subdomínio `envio.fretigate.com` verificado,

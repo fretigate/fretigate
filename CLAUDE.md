@@ -268,6 +268,10 @@ Vieram de defeitos reais encontrados nos protótipos. São obrigatórias.
 - Interface clara, não escura — o app é usado no pátio, sob sol forte.
 - Vocabulário do usuário: frete, cliente, caminhão, motorista, **relatório**.
   Nunca "registro", "entidade", "item", "transação", "extrato".
+- **Dentro do produto é "empresa", nunca "transportadora".** "Transportadora" é
+  palavra de marketing, e só lá. O `tipo_operacao` já prevê guincho e reboque
+  (§9): rótulo preso a um ramo é a amarra mais barata de criar e a mais cara de
+  tirar. Ver o Vocabulário no topo de `docs/especificacao.md`.
 
 ---
 

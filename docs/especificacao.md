@@ -8,6 +8,30 @@ ou comportamento não estiver aqui, **pergunte antes de implementar**.
 
 ---
 
+## Vocabulário — "empresa" dentro, "transportadora" fora
+
+**Dentro do produto, a palavra é `empresa`.** Rótulo de campo, título de tela,
+texto de botão, mensagem de erro: tudo. `NOME DA EMPRESA`, `Conta da empresa`,
+`Dados da empresa`.
+
+**Na comunicação de marketing, a palavra é `transportadora`.** Site de vendas,
+anúncio, e-mail de captação. É lá que falar com o ramo específico ajuda a pessoa
+a se reconhecer.
+
+**Por quê.** O `tipo_operacao` já prevê guincho e reboque desde o modelo de
+dados (`CLAUDE.md` §9). Rótulo é a amarra mais barata de criar e a mais cara de
+tirar: quando o primeiro guincheiro entrar, "Nome da transportadora" na tela de
+cadastro diz a ele que o produto não é para ele — e nenhuma tabela precisava
+mudar para isso acontecer. A entidade se chama `Empresa` no banco desde sempre;
+a interface só passa a dizer a mesma coisa.
+
+Isto **não** afrouxa a regra do §8 do `CLAUDE.md`: o vocabulário do usuário
+continua sendo frete, cliente, caminhão, motorista e relatório. "Empresa" entra
+nessa lista, "transportadora" sai dela — e nenhuma das duas vira "organização",
+"conta" ou "entidade".
+
+---
+
 ## 1. Quem usa
 
 Dono de transportadora de carga pequena, 4 a 10 caminhões, no Brasil. Opera com
@@ -309,10 +333,13 @@ parabéns.**
 cadastrar além do permitido, **não bloqueia o que já existe**, explica o que
 muda e leva aos planos.
 
-**Cadastro:** campos **NOME DA TRANSPORTADORA** · **E-MAIL** · **SENHA** ·
-**SEU NOME** · **SEU TELEFONE**, nessa ordem. O telefone é para o cliente falar
-com a transportadora, **não é login** — login é e-mail e senha. `SEU NOME` é
-obrigatório, e o porquê está em §6, em `Usuario`.
+**Cadastro:** campos **NOME DA EMPRESA** · **E-MAIL** · **SENHA** · **SEU NOME**
+· **SEU TELEFONE**, nessa ordem. O telefone é o contato para o cliente falar com
+a empresa, **não é login** — login é e-mail e senha. `SEU NOME` é obrigatório, e
+o porquê está em §6, em `Usuario`.
+
+O rótulo é **NOME DA EMPRESA**, não "Nome da transportadora" — ver o
+Vocabulário, no topo deste documento.
 
 ### E-mail transacional
 
@@ -409,9 +436,9 @@ no cadastro, então não existe Empresa sem aceite.
 fica **antes de SEU TELEFONE** na tela Criar conta. Primeiro nome basta.
 
 Não é firula: é o que distingue os dois usuários no registro de "cobrado por" e
-na tela de Usuários. Preencher com o nome da transportadora deixaria os dois
-iguais na tela que existe justamente para diferenciá-los, e deixar a coluna
-aceitar nulo empurraria o problema para toda tela que exibe quem fez o quê.
+na tela de Usuários. Preencher com o nome da empresa deixaria os dois iguais na
+tela que existe justamente para diferenciá-los, e deixar a coluna aceitar nulo
+empurraria o problema para toda tela que exibe quem fez o quê.
 
 **`senha_hash` não existe.** O Better Auth guarda o hash na tabela `account`,
 com o provedor `credential`. O `CLAUDE.md` §4 continua atendido — hash forte,
