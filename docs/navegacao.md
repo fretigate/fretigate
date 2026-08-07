@@ -1,8 +1,6 @@
 # FretiGate — mapa de navegação
 
-Todas as telas do MVP: de onde se chega e para onde leva. ✅ desenhada · ⬜ não desenhada · ⚠️ o que está escrito aqui foi superado por outra decisão, e a linha ainda não foi reescrita.
-
-O ⚠️ nunca substitui os outros dois: uma tela desenhada continua ✅ mesmo com a descrição vencida, porque quem lê precisa saber as duas coisas.
+Todas as telas do MVP: de onde se chega e para onde leva. ✅ desenhada · ⬜ não desenhada.
 
 Gerado da prancheta `Mapa de navegação e Clientes.dc.html` (opção 7a). O protótipo navegável é `Protótipo FretiGate.dc.html`.
 
@@ -46,14 +44,21 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 | Configurações ✅ | Mais | OPERAÇÃO: pátio, prazo padrão, numeração do relatório · MENSAGENS: Modelo de cobrança · Modelo de ordem de serviço |
 | Conta da empresa ✅ | Mais · marca da empresa no cartão da dashboard | Logo (ou iniciais), razão social, CNPJ, endereço, telefone, e-mail, Pix e banco · prévia do cabeçalho do relatório · Minha assinatura · Sair da conta |
 | Despesas — lista e cadastro ✅ | Mais · card de Lucro da dashboard no estado de convite | Linha → edição · + Nova → cadastro (valor e data obrigatórios, vínculo opcional a caminhão) · Estado vazio explica que o Lucro depende dela |
+| Cadastro rápido — cliente ⬜ | Lançar frete › folha de busca › + Novo | Nome (obrigatório) + telefone + prazo → volta ao lançamento com o cliente já escolhido |
+| Cadastro rápido — caminhão ⬜ | Lançar frete › folha de busca › + Novo | Apelido (obrigatório) + placa + tipo → volta ao lançamento |
+| Cadastro rápido — motorista ⬜ | Lançar frete › folha de busca › + Novo | Nome (obrigatório) + telefone + CNH → volta ao lançamento |
+| Folha do campo que falta ⬜ | Qualquer ação que precise de campo não preenchido | Um campo só → salva e **continua a ação** · Agora não cancela |
+| Formulário de caminhão ⬜ | Caminhões › + Novo · perfil › Editar | Apelido + placa + tipo + ano → volta ao perfil · Arquivar em texto no fim |
 | Modelo de ordem de serviço ✅ | Configurações › Mensagens | Chips {motorista} {cliente} {carga} {origem} {destino} {data} — sem {valor} |
 | Novidades — lista e detalhe ✅ | Mais › Ajustes · cartão FRETINEWS dispensado na dashboard | Linha → Detalhe da mensagem · no máximo uma ação por mensagem |
-| Entrar ✅ ⚠️ **SUPERADO — ver nota** | Abrir o app sem sessão · Sair da conta | Código no WhatsApp → Primeiro acesso · Criar conta · Esqueci a senha |
-| Criar conta ✅ ⚠️ **SUPERADO — ver nota** | Entrar | Nome da empresa + telefone + a única pergunta de pesquisa do produto → Primeiro acesso |
-| Pouso pós-login 🚧 **PROVISÓRIO, não é Primeiro acesso** | Criar conta (destino de hoje, em vez de Primeiro acesso — que ainda não existe) · Sair da conta | Nome da empresa · Sair da conta. Registrado em `src/app/(app)/page.tsx`. Sai quando Primeiro acesso for construído (`docs/especificacao.md` §9, ordem de construção) |
-| Esqueci a senha ✅ ⚠️ **SUPERADO — ver nota** | Entrar | CNPJ → mostra em qual telefone a conta está |
+| Entrar ✅ | Abrir o app sem sessão · Sair da conta | **E-mail e senha** → Primeiro acesso · Criar conta · Esqueci a senha. O app nunca envia mensagem sozinho, então não há código por WhatsApp |
+| Criar conta ✅ | Entrar | Nome da empresa + **e-mail** + **senha** + **seu nome** (obrigatório, distingue os dois usuários) + telefone (contato, não login) + a única pergunta de pesquisa do produto → Primeiro acesso |
+| Redefinir senha ✅ | Link do e-mail de recuperação. Na demonstração, por "Abrir o link" em Recuperação enviada | Salvar senha e entrar → dashboard. Sem voltar: quem chega pelo link não tem tela anterior |
+| Link expirado ✅ | Link do e-mail depois de 1 hora. Na demonstração, por "Abrir depois de 1 hora" em Recuperação enviada | Mandar link novo → Recuperação enviada · Voltar pra entrada |
+| Recuperação enviada ✅ | Esqueci a senha, depois de mandar | Mandar link de recuperação (reenviar) · Usar outro e-mail → Esqueci a senha · Voltar pra entrada |
+| Esqueci a senha ✅ | Entrar | E-mail da conta → link de recuperação por e-mail |
 | Usuários — lista, convite, detalhe ✅ | Conta da empresa › Usuários | COM ACESSO + CONVITE ENVIADO (aguardando, reenviar, cancelar) · Linha → Detalhe · + Convidar → nome, WhatsApp, prévia da mensagem → abre a conversa · Detalhe → Remover acesso, **só para o dono**; o acesso do dono não é removível. **É a única tela de convidar** — o estado duplicado que existia em Entrar foi removido |
-| Aceitar convite ✅ | Link do WhatsApp, fora do app. Na demonstração, por "Ver o que ela recebe" no convite pendente | Marca da empresa + o que a pessoa vai poder fazer → Entrar na conta · Não conheço essa empresa. Sem barra de navegação: quem abre ainda não está dentro do app |
+| Aceitar convite ✅ | Link do WhatsApp, fora do app. Na demonstração, por "Ver o que ela recebe" no convite pendente | Marca da empresa + o que a pessoa vai poder fazer → Entrar na conta (ela cria a senha dela) · Não conheço essa empresa. Sem barra de navegação: quem abre ainda não está dentro do app |
 | Termos de uso e privacidade ✅ | Criar conta · Conta da empresa | Duas abas no mesmo documento. Vindo do cadastro, termina em "Li e aceito"; vindo de Ajustes, é só leitura |
 | Planos ✅ | Mais (plano gratuito) · limite do gratuito · assinatura | Anual R$ 990 em destaque, 12x de R$ 82,50, economia de R$ 798 · Mensal R$ 149 |
 | Minha assinatura ✅ | Conta da empresa | Plano, próxima cobrança, cartão, acessos · Trocar de plano → Planos |
@@ -61,26 +66,6 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 | Assinatura vencida ✅ | Cobrança recusada | Leitura e exportação seguem · Atualizar o cartão · Baixar meus relatórios |
 | Primeiro acesso ✅ | Criar conta · Entrar pela primeira vez | Duas opções em pé de igualdade: Trazer os fretes que já fiz → Importar · Começar do zero → Lançar frete |
 | Guia de progresso ✅ | Topo da dashboard, depois do primeiro acesso | No máximo 3 itens · cada um sai ao ser cumprido · o bloco desaparece ao completar |
-
-> ⚠️ **Nota — as três telas de entrada estão superadas.** O texto acima descreve
-> entrada por telefone e código no WhatsApp, e recuperação por CNPJ. **Não é mais
-> assim.** A decisão em vigor é **e-mail e senha**, com recuperação por link no
-> e-mail: envio automático por WhatsApp é proibido pelo `CLAUDE.md` §12, e o
-> schema da tarefa 3 já foi construído sobre e-mail e senha. Quem manda no que
-> essas três telas **contêm** é `docs/componentes.md` (telas `Entrar`, `Criar
-> conta` e `Esqueci a senha`), que já está correto — ver a precedência no
-> `CLAUDE.md` §13.
->
-> O trecho fica como está de propósito — **a reescrita é da tarefa 10**. A nota
-> existe porque esta linha já induziu a erro uma vez, fazendo um resumo de
-> retomada anunciar um bloqueio que não existia mais.
->
-> Duas coisas **não** esperaram a tarefa 10, porque nenhuma delas é descrição
-> vencida: o nome da tela virou `Esqueci a senha`, que é como ela se chama no
-> `docs/componentes.md` (§8 — uma ação, um nome, em todo lugar), e "nome da
-> transportadora" virou "nome da empresa" (§8 — dentro do produto é sempre
-> empresa). O que sobra para a tarefa 10 é o **mecanismo**: telefone, código no
-> WhatsApp e CNPJ.
 
 
 ## Dados que hoje não têm onde ser preenchidos
