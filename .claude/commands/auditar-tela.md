@@ -28,11 +28,21 @@ de fonte saem de `docs/estilo.md`. Sinalize:
   `p-16` é 16px. Não confunda com o padrão do Tailwind.
 
 **2. Botão fora do inventário** — `docs/componentes.md` tem inventário
-**fechado**: seis variantes, mais o aviso do sistema, a família FretiNews, os
-ícones e a barra. Sinalize botão que não seja uma delas, e **nome de ação fora
-do vocabulário** ("Relatório" sozinho onde a regra manda "Gerar relatório" ou
-"Ver relatório"). Confira também a seção "Onde cada tela usa o quê" — se a tela
-estiver lá, o que ela usa tem que bater.
+**fechado**, hoje com dez itens numerados (01–06 as variantes de botão, 07 aviso
+do sistema, 08 FretiNews, 09 ícones, 10 barra de navegação), mais "Iniciais da
+empresa" e os chips de seleção. Sinalize botão que não seja um deles, e **nome
+de ação fora do vocabulário** ("Relatório" sozinho onde a regra manda "Gerar
+relatório" ou "Ver relatório").
+
+A tabela **"Onde cada tela usa o quê" está completa** — cobre as telas todas,
+inclusive Entrar, Criar conta, Esqueci a senha e Termos. Então: **se a tela
+estiver na tabela, o que ela usa tem que bater item a item**, e o que aparecer a
+mais é divergência. Tela fora da tabela é lacuna, não licença.
+
+Leia também a seção **"Auditoria da regra de posição"**: ela registra as
+exceções já conferidas no DOM e requisitos extras por tela — por exemplo, no
+detalhe da cobrança a ação principal precisa ficar **visível sem rolar**, com a
+dobra útil no topo do (+).
 
 **3. Mais de uma ação principal** — uma por tela, e é a que avança o dinheiro ou
 o estado. Tela de consulta (dashboard, listas) **não tem** principal: o (+) da
@@ -44,7 +54,9 @@ barra é chrome global. Duas verdes sólidas na mesma tela é sempre divergênci
 - nenhum texto vaza do campo: quebra em duas linhas ou corta com reticências,
   com a altura crescendo;
 - nada encolhe para caber conteúdo — a tela rola ou recolhe;
-- toda tela rolável reserva folga no fim, medida do topo do (+);
+- toda tela rolável reserva folga no fim, medida do topo do (+), e o valor é
+  **único para todas as telas** — valor de folga próprio de uma tela é sempre
+  divergência, mesmo que pareça melhor ali;
 - área segura = a do dispositivo + 8px;
 - três superfícies, três significados: clara = dado do usuário, escura =
   mensagem do sistema, lilás = plataforma. Nunca compartilham tratamento;

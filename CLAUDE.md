@@ -232,9 +232,13 @@ Vieram de defeitos reais encontrados nos protótipos. São obrigatórias.
   altura definida.
 - **Só a barra de navegação flutua.** Bloco de ações fica dentro do fluxo
   rolável, depois do resumo e antes de listas. Formulário tem o salvar no fim,
-  rolando junto. Teclado numérico é sobreposição, nunca ocupa lugar no fluxo.
+  rolando junto. Teclado numérico é sobreposição, nunca ocupa lugar no fluxo —
+  e o salvar **sobe junto, acima do teclado**, nunca fica coberto.
 - **Toda tela rolável reserva folga no fim** para nada ficar sob a barra,
-  medida a partir do topo do (+), que sobe acima da linha da barra.
+  medida a partir do topo do (+), que sobe acima da linha da barra. O valor é
+  **único para todas as telas**. Folga própria de uma tela é defeito, mesmo que
+  pareça melhor ali — foi assim que nasceram os três valores diferentes que
+  precisaram ser unificados depois.
 - **Área segura** = a do dispositivo + 8px. Nenhum conteúdo sob a barra de
   status ou a ilha dinâmica.
 - **Três superfícies, três significados** — nunca compartilham tratamento:

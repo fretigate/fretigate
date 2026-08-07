@@ -6,6 +6,84 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 06/08/2026 — `docs/componentes.md` completo, e o que ele destravou
+
+O Design preencheu a especificação de ícones, completou a tabela "Onde cada tela
+usa o quê" com as 15 telas que faltavam, e a barra de navegação entrou como item
+10 do inventário, com a folga de rolagem unificada num valor único.
+
+### Destravou
+
+**A tarefa 8 não está mais bloqueada** — era o bloqueio conhecido desde o começo
+do item 1: `Entrar`, `Criar conta` e `Termos` não estavam na tabela, e o
+`CLAUDE.md` §8 proíbe botão fora do inventário. Agora estão.
+
+Duas correções que estavam na fila da **tarefa 10** já vieram resolvidas: as
+duas seções numeradas 07 (agora 07 aviso do sistema, 08 FretiNews) e a tabela
+final sem título próprio.
+
+### 🔴 Aberto: a tela Entrar reintroduz uma decisão já derrubada
+
+A tabela nova diz, para a tela `Entrar`:
+
+> principal **Receber código no WhatsApp**, com estado carregando
+
+Isso é login por código no WhatsApp, que **exige envio automático de mensagem
+por API de WhatsApp** — item explicitamente proibido no `CLAUDE.md` §12. É a
+mesma coisa que já tinha sido derrubada nesta sessão, quando `docs/navegacao.md`
+linhas 49-51 descreviam telefone e código: a decisão registrada foi **login por
+e-mail e senha**, e o schema da tarefa 3 foi construído em cima dela — `usuario`
+tem `email` único, e o Better Auth guarda o hash em `account` com o provedor
+`credential`.
+
+**Não mexi no documento.** A decisão é do fundador: ou a tabela volta para
+e-mail e senha, ou o §12 muda — e nesse caso a tarefa 3 e a tarefa 7 mudam
+junto. Enquanto não decidir, **a tarefa 8 fica bloqueada por outro motivo**, não
+mais por lacuna.
+
+### 🟡 Aberto: três valores divergindo do `docs/estilo.md`
+
+O `CLAUDE.md` §8 diz que valor sai de `docs/estilo.md`. O `componentes.md` novo
+diz que as medidas dele foram tiradas do DOM, não estimadas. Nos três pontos
+abaixo os dois documentos discordam:
+
+| | `docs/estilo.md` | `docs/componentes.md` |
+|---|---|---|
+| Respiro interno da barra | `11px` em cima e embaixo (igual) | `12px` no topo, `11px` na base |
+| Elevação do (+) | `17,5px` | `18px` |
+| Topo do (+) até a base | `100,5px` | `101px` |
+
+Os dois últimos são a mesma divergência se propagando (`26 + 57 + 17,5 = 100,5`
+contra `26 + 57 + 18 = 101`).
+
+O que **não** diverge, conferido: a folga de rolagem
+(`max(138px, calc(env(safe-area-inset-bottom) + 132px))`), o aviso do sistema
+(`max(112px, …)`), a área segura de 66px e a espessura de traço unificada em
+1.8px. Os três valores antigos de folga (`132`, `142`, `150`) eram por tela
+dentro do `componentes.md`; o `estilo.md` já tinha só o unificado.
+
+Há também uma incoerência interna a resolver: o `componentes.md` chama o respiro
+de "igualados de propósito" e em seguida dá dois números diferentes.
+
+**Recomendação:** o `componentes.md` foi medido agora, então provavelmente é ele
+que está certo, e o `estilo.md` é que envelheceu. Mas quem manda em valor, pelo
+§8, é o `estilo.md` — então a correção certa é atualizar o `estilo.md` para os
+valores medidos, e isso é decisão do fundador, não minha.
+
+### O que mudou no que já estava escrito
+
+- **`CLAUDE.md` §8** — a folga de rolagem passou a dizer que o valor é **único
+  para todas as telas**, com o motivo (foi assim que nasceram os três valores
+  que precisaram ser unificados). E ficou registrado que o salvar **sobe acima
+  do teclado numérico** em vez de só "não ser coberto".
+- **`/auditar-tela`** — atualizado para o inventário de dez itens numerados,
+  para a tabela de telas agora completa (tela fora dela é lacuna, não licença),
+  e para a seção nova "Auditoria da regra de posição", que traz requisitos
+  extras por tela, como a ação principal do detalhe da cobrança ter que ficar
+  visível sem rolar.
+
+---
+
 ## 06/08/2026 — tarefa 4 (parte 2): papel da autenticação, e um buraco fechado
 
 Migrations `20260806222818_papel_da_autenticacao` e
@@ -537,15 +615,15 @@ achado sobre string vazia que muda a política de RLS da tarefa 4.
 
 ### Bloqueios conhecidos
 
-**Tarefa 8 está travada pelo `docs/componentes.md`.** O documento marca que as
-telas de Entrar, criar conta e Termos ainda não estão na tabela "Onde cada tela
-usa o quê", e manda perguntar antes de construir qualquer tela ausente dela —
-o `CLAUDE.md` §8 proíbe botão fora do inventário. As tarefas 2 a 7 não desenham
-tela e seguem sem depender disso.
+~~**Tarefa 8 está travada pelo `docs/componentes.md`**~~ — **resolvido.** O
+Design completou a tabela "Onde cada tela usa o quê" e a especificação de
+ícones. Ver a entrada de 06/08/2026 no topo deste arquivo.
 
-Falta também, no mesmo documento, a especificação de ícones: tamanho por
-contexto, espessura de traço, gap, alinhamento e a regra de que o traço herda a
-cor do texto.
+**A tarefa 8 continua bloqueada, mas por outro motivo:** a tabela nova descreve
+a tela `Entrar` com **"Receber código no WhatsApp"**, que exige envio automático
+por API de WhatsApp — proibido pelo `CLAUDE.md` §12, e contrário à decisão de
+login por e-mail e senha em cima da qual a tarefa 3 já foi construída. Precisa
+de decisão do fundador.
 
 ### Decisões tomadas nesta sessão
 
