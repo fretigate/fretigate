@@ -309,6 +309,38 @@ parabéns.**
 cadastrar além do permitido, **não bloqueia o que já existe**, explica o que
 muda e leva aos planos.
 
+**Cadastro:** campos **NOME DA TRANSPORTADORA** · **E-MAIL** · **SENHA** ·
+**SEU NOME** · **SEU TELEFONE**, nessa ordem. O telefone é para o cliente falar
+com a transportadora, **não é login** — login é e-mail e senha. `SEU NOME` é
+obrigatório, e o porquê está em §6, em `Usuario`.
+
+### E-mail transacional
+
+O produto manda e-mail em três momentos, e só nesses três: **recuperação de
+senha**, **verificação de e-mail** e **convite de usuário**. Nenhum deles é
+opcional para o produto funcionar — quem perde a senha só volta por e-mail.
+
+| | |
+|---|---|
+| Provedor | **Resend** |
+| Domínio | `fretigate.com` |
+| Subdomínio de envio | `envio.fretigate.com`, verificado |
+| Remetente | `contato@envio.fretigate.com` |
+| Variáveis | `RESEND_API_KEY` e `EMAIL_REMETENTE` |
+
+**Por que subdomínio separado para envio.** A reputação de envio fica isolada do
+domínio principal. Se um dia sair mala direta, ela vai por outro subdomínio, e
+um problema de reputação lá **não derruba a recuperação de senha**. Transacional
+e marketing nunca compartilham reputação.
+
+**O envio precisa ser conferido de verdade**, com mensagem chegando à caixa de
+entrada, antes de a autenticação ser dada por pronta. Domínio verificado no
+painel do provedor prova que o DNS está certo, **não** que a mensagem chega:
+conteúdo, remetente e reputação também decidem. Recuperação que cai em spam é
+cliente perdido em silêncio — ele não reclama, ele some.
+
+**O Resend é subprocessador** e está declarado no `CLAUDE.md` §11.
+
 ---
 
 ## 5. Fora do escopo do MVP

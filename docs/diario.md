@@ -79,9 +79,33 @@ tornar a coluna nula: é esse campo que distingue os dois usuários no registro 
 lista, para Criar conta, os campos NOME DA TRANSPORTADORA · E-MAIL · SENHA ·
 SEU TELEFONE. Falta SEU NOME, entre SENHA e SEU TELEFONE.
 
-**Provedor de e-mail transacional entrou no `CLAUDE.md` §14**, junto com as duas
-coisas de que depende: domínio próprio autenticado, e a declaração como
-subprocessador na política de privacidade.
+**Provedor de e-mail: RESOLVIDO no mesmo dia.** Resend, domínio
+`fretigate.com` comprado, subdomínio `envio.fretigate.com` verificado,
+remetente `contato@envio.fretigate.com`. `RESEND_API_KEY` e `EMAIL_REMETENTE`
+no `.env`. Entrou no `CLAUDE.md` §5 (stack) e o Resend virou subprocessador
+declarado no §11, que agora tem a tabela completa: Supabase, Vercel, Resend e o
+fornecedor de IA ainda a decidir.
+
+### 🔴 A tarefa 7 NÃO fecha sem envio conferido de verdade
+
+Domínio verificado no painel do provedor prova que o DNS está certo — **não**
+prova que a mensagem chega. Conteúdo, remetente e reputação também decidem, e
+nada disso aparece no painel.
+
+Então a tarefa 7 só é dada por pronta depois de **um e-mail de recuperação de
+senha real chegar à caixa de entrada**, disparado pelo fluxo do produto e não
+por um teste de API. Se cair em spam, a tarefa não está pronta, mesmo com todo
+o código funcionando.
+
+O motivo é o mesmo que está no §14: **recuperação que cai em spam é cliente
+perdido em silêncio.** Ele não abre chamado, não reclama — some, e a métrica
+some junto.
+
+**Ponto a resolver junto:** o remetente é `contato@envio.fretigate.com`, e o
+subdomínio `envio.` existe para enviar, não para receber. Quem responder a esse
+e-mail provavelmente fala com o vazio. Ou o subdomínio ganha MX, ou a mensagem
+leva `Reply-To` para um endereço que alguém lê. Cliente que responde pedindo
+ajuda e não recebe resposta é pior do que não ter escrito.
 
 ### Próximo passo — tarefa 6
 

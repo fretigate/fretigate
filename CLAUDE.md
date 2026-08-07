@@ -159,6 +159,7 @@ declarado na política de privacidade junto com o nome do subprocessador.
 | Estilo | Tailwind |
 | Hospedagem | Vercel |
 | Arquivos | storage do provedor do banco, com URL assinada |
+| E-mail transacional | Resend, enviando por `envio.fretigate.com` |
 
 Se achar que alguma escolha está errada para o caso, **argumente antes**, não
 troque no meio da tarefa.
@@ -409,6 +410,22 @@ Assinatura vencida bloqueia escrita, mantém leitura e exportação por 90 dias.
 - Termos e política de privacidade precisam existir antes do primeiro cliente e
   declarar os subprocessadores, incluindo o fornecedor de IA.
 
+### Subprocessadores declarados
+
+A lista tem que estar na política de privacidade **antes do primeiro usuário** —
+declarar depois não conserta, porque não se pede autorização retroativa.
+
+| Subprocessador | O que ele enxerga | Por quê |
+|---|---|---|
+| **Supabase** | todo o banco e os arquivos | banco de dados e armazenamento |
+| **Vercel** | o tráfego da aplicação | hospedagem |
+| **Resend** | nome e e-mail de quem recebe a mensagem | e-mail transacional: recuperação de senha, verificação de e-mail e convite de usuário |
+| **fornecedor de IA** *(a decidir — §14)* | o conteúdo da conversa colada na importação | extração dos fretes |
+
+O do e-mail e o da IA são os que mais pesam: os dois enxergam **dado de
+terceiro**, do qual a transportadora é controladora e o FretiGate é operador.
+Subprocessador novo entra nesta tabela **e** na política, no mesmo commit.
+
 ---
 
 ## 12. O que NÃO construir
@@ -462,22 +479,11 @@ Não invente resposta. Pergunte.
 - **Modelo de IA da importação** — testar a extração com o material real do
   usuário antes de escolher. Decidir por acerto, não por preço: a diferença de
   custo entre os candidatos é inferior a 2% da receita por cliente.
-- **Provedor de e-mail transacional** — o produto não envia e-mail hoje, mas
-  recuperação de senha, verificação de e-mail e convite de usuário dependem
-  disso, e nada disso funciona sem provedor. **Recuperação que cai em spam é
-  cliente perdido em silêncio**: ele não reclama, some. Não é marketing —
-  é transacional, e os dois nunca compartilham reputação de envio.
-
-- **Domínio próprio, autenticado** — pré-requisito do item acima, não detalhe de
-  implantação. Sem domínio com SPF, DKIM e DMARC configurados, não existe envio
-  confiável: e-mail de remetente não autenticado vai para spam por padrão nos
-  provedores grandes. Decidir o domínio vem **antes** de decidir o provedor.
-
-- **O provedor de e-mail é subprocessador** e precisa estar declarado na
-  política de privacidade (§11), junto com o fornecedor de IA. Ele enxerga o
-  e-mail e o nome de quem recebe — dado de terceiro, do qual a transportadora é
-  controladora e o FretiGate é operador. Declarar depois não conserta: não se
-  pede autorização retroativa.
+- ~~Provedor de e-mail transacional~~ · ~~domínio próprio autenticado~~ —
+  **RESOLVIDOS em 06/08/2026.** Resend, domínio `fretigate.com` com envio por
+  `envio.fretigate.com` verificado. Ver §5 e §11. Continua valendo o motivo:
+  **recuperação que cai em spam é cliente perdido em silêncio** — ele não
+  reclama, some. Por isso a tarefa 7 não fecha sem envio conferido de verdade.
 
 - Gateway de pagamento
 - Revisão do valor do plano anual — R$ 840 dá 53% de desconto sobre o mensal, o

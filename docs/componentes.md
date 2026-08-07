@@ -280,7 +280,7 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Novidades — lista | sem principal · linha não lida em lilás com ponto; lida volta ao claro |
 | Novidades — detalhe | no máximo **uma** ação por mensagem, como principal |
 | Entrar | campos **E-MAIL** e **SENHA** · principal **Entrar**, com estado carregando · secundária **Criar conta** · texto neutra **Esqueci a senha**. Login é e-mail e senha; o app **nunca** envia mensagem sozinho, então não existe código por WhatsApp aqui |
-| Criar conta | campos **NOME DA TRANSPORTADORA** · **E-MAIL** · **SENHA** · **SEU TELEFONE** (o telefone é para o cliente falar com ela, não para login) · principal **Criar conta** · secundária **Já tenho conta** · chips da única pergunta de pesquisa do produto + campo livre · links para Termos |
+| Criar conta | campos **NOME DA TRANSPORTADORA** · **E-MAIL** · **SENHA** · **SEU NOME** (obrigatório — é o que distingue os dois usuários no "cobrado por" e na tela de Usuários; o nome da empresa ali deixaria os dois idênticos justamente na tela que existe para diferenciá-los) · **SEU TELEFONE** (contato para o cliente, não login) · principal **Criar conta** · secundária **Já tenho conta** · chips da única pergunta de pesquisa do produto + campo livre · links para Termos |
 | Esqueci a senha | campo **E-MAIL DA CONTA** · principal **Mandar link de recuperação** · secundária **Voltar pra entrada**. Recuperação por e-mail, nunca por WhatsApp |
 | Termos e privacidade | duas abas · vindo do cadastro termina em principal **Li e aceito**; vindo de Ajustes é só leitura · **sem barra** no modo cadastro |
 | Planos | principal **Assinar o anual** · secundária **Assinar o mensal** · o anual mostra parcelamento e economia |
