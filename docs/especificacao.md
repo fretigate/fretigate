@@ -417,6 +417,20 @@ O prazo é fixado no código, não herdado do padrão da biblioteca: o e-mail di
 ao cliente quanto tempo ele tem, e uma atualização da biblioteca não pode fazer
 essa frase virar mentira sem ninguém tocar em nada.
 
+#### "Confira a caixa de spam" — decidido em 07/08/2026
+
+Medido em produção: nota 10/10 no mail-tester.com (SPF, DKIM, DMARC e conteúdo
+corretos) e a mensagem chegando na caixa de entrada do Gmail, mas caindo em
+spam no Outlook. Domínio novo não tem histórico de envio, e é o histórico que
+o Outlook usa para decidir — não algo que configuração resolve. Vai acontecer
+de novo com cliente real nas primeiras semanas.
+
+Por isso, a tela que confirma o pedido de recuperação de senha, e onde quer
+que a confirmação de cadastro apareça, **precisam trazer**: *"Não achou?
+Confira a caixa de spam."* Sem essa linha, quem não vê o e-mail conclui que o
+produto está quebrado, e some — o mesmo desfecho descrito acima para quem
+recebe e ignora. Ver a tela `Esqueci a senha` em `docs/componentes.md`.
+
 ### Trava de tentativas
 
 O §4 do `CLAUDE.md` exige rate limit em login, recuperação de senha e toda rota

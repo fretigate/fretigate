@@ -8,10 +8,46 @@ retomar sem reconstruir contexto.
 
 ## 07/08/2026 — tarefa 7: Better Auth, `lib/auth` e a trava de tentativas
 
-**A tarefa NÃO está fechada.** O critério de fechamento exige e-mail real
-chegando à caixa de entrada, e isso depende de dois endereços que o fundador
-ainda vai passar. O que está pronto e provado está abaixo; o que falta está no
-fim.
+**Tarefa fechada**, com o e-mail real testado contra três caixas.
+
+### O resultado medido
+
+`POST /api/auth/request-password-reset` disparado de verdade para três
+endereços que o fundador passou: um de teste de entrega, um Gmail e um
+Outlook.
+
+| Onde | Resultado |
+|---|---|
+| mail-tester.com | **10/10** — SPF, DKIM, DMARC e conteúdo corretos |
+| Gmail | caixa de entrada |
+| Outlook | **caixa de spam** |
+
+O 10/10 descarta erro de configuração: SPF, DKIM, DMARC e conteúdo já estão
+certos. O Outlook usa reputação própria de domínio, separada dessas
+checagens, e julga pelo **histórico de envio** — que um domínio novo ainda não
+tem. É o mesmo raciocínio já registrado para o DMARC em `p=none`: domínio novo
+começa sem reputação, e isso não se resolve mudando configuração, só com
+envio limpo e tempo. Decisão do fundador em 07/08/2026: fechar a tarefa 7
+registrando o Outlook como limitação conhecida, não como pendência.
+
+Três desdobramentos, também decididos nesta data:
+
+1. **Critério novo para a tarefa 8.** A tela que confirma o pedido de
+   recuperação de senha precisa trazer **"Não achou? Confira a caixa de
+   spam."** — o mesmo vale onde quer que a confirmação de cadastro apareça
+   (hoje é a pendência de e-mail não confirmado na dashboard, cujo rótulo e
+   forma ainda são do Design — ver "Pendente com o Design" mais abaixo). Vai
+   acontecer com cliente real nas primeiras semanas; sem essa linha, ele
+   conclui que o produto está quebrado. Registrado também em
+   `docs/componentes.md`, na linha da tela `Esqueci a senha`.
+2. **Ponto de reteste: antes de ligar os anúncios**, não "depois de algumas
+   semanas" — é o gatilho real, porque é o momento em que cliente de verdade
+   passa a criar conta e pedir recuperação de senha. Repetir o teste de
+   mail-tester.com e as duas caixas nesse momento. Se o Outlook ainda cair em
+   spam ali, avaliar pedir orientação de aquecimento ao Resend.
+3. **A empresa de teste "Transportes Conferencia de Email" foi apagada** do
+   banco de desenvolvimento — resíduo de sessão anterior, um usuário sem
+   conta nem sessão vinculada, sem valor em manter.
 
 ### O que entrou
 
@@ -150,15 +186,12 @@ reprovou por dois caminhos independentes: a verificação de privilégio e o
 **contador de verificações**, que acusou que uma verificação não chegou a
 rodar. Concessão removida, 32/32 de volta.
 
-### Para fechar a tarefa 7
+### O que fechou a tarefa 7
 
-1. Os dois endereços — **Gmail e Outlook**. O provedor brasileiro foi cortado
-   pelo fundador: os principais hoje são pagos, e abrir conta só para isso
-   atrasa sem ganho.
-2. Passar a mensagem por uma **ferramenta de teste de entrega** que dê nota de
-   spam e confira SPF, DKIM e DMARC. Com domínio novo, saber *o que* está
-   errado vale mais do que saber que caiu em spam. A ferramenta bloqueia acesso
-   automatizado, então esse passo é manual.
+Os dois endereços passados pelo fundador — **Gmail e Outlook** (o provedor
+brasileiro foi cortado: os principais hoje são pagos, e abrir conta só para
+isso atrasa sem ganho) — e um endereço de **mail-tester.com**, testados juntos
+em 07/08/2026. Resultado no topo deste arquivo.
 
 ### Segundo passe do revisor
 
