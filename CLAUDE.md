@@ -462,6 +462,23 @@ Não invente resposta. Pergunte.
 - **Modelo de IA da importação** — testar a extração com o material real do
   usuário antes de escolher. Decidir por acerto, não por preço: a diferença de
   custo entre os candidatos é inferior a 2% da receita por cliente.
+- **Provedor de e-mail transacional** — o produto não envia e-mail hoje, mas
+  recuperação de senha, verificação de e-mail e convite de usuário dependem
+  disso, e nada disso funciona sem provedor. **Recuperação que cai em spam é
+  cliente perdido em silêncio**: ele não reclama, some. Não é marketing —
+  é transacional, e os dois nunca compartilham reputação de envio.
+
+- **Domínio próprio, autenticado** — pré-requisito do item acima, não detalhe de
+  implantação. Sem domínio com SPF, DKIM e DMARC configurados, não existe envio
+  confiável: e-mail de remetente não autenticado vai para spam por padrão nos
+  provedores grandes. Decidir o domínio vem **antes** de decidir o provedor.
+
+- **O provedor de e-mail é subprocessador** e precisa estar declarado na
+  política de privacidade (§11), junto com o fornecedor de IA. Ele enxerga o
+  e-mail e o nome de quem recebe — dado de terceiro, do qual a transportadora é
+  controladora e o FretiGate é operador. Declarar depois não conserta: não se
+  pede autorização retroativa.
+
 - Gateway de pagamento
 - Revisão do valor do plano anual — R$ 840 dá 53% de desconto sobre o mensal, o
   que pode sinalizar que o mensal é inflado. Recomendação em aberto: R$ 990.

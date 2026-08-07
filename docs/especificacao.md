@@ -371,8 +371,19 @@ contas gratuitas e driblar o limite de 1 caminhão.
 no cadastro, então não existe Empresa sem aceite.
 
 ### Usuario
-`nome` · `email` · `senha_hash` · `papel` (`dono` | `operador`) ·
-`ultimo_acesso_em`
+`nome` · `email` · `papel` (`dono` | `operador`) · `ultimo_acesso_em`
+
+**`nome` é obrigatório e é coletado no cadastro**, no campo **SEU NOME**, que
+fica **antes de SEU TELEFONE** na tela Criar conta. Primeiro nome basta.
+
+Não é firula: é o que distingue os dois usuários no registro de "cobrado por" e
+na tela de Usuários. Preencher com o nome da transportadora deixaria os dois
+iguais na tela que existe justamente para diferenciá-los, e deixar a coluna
+aceitar nulo empurraria o problema para toda tela que exibe quem fez o quê.
+
+**`senha_hash` não existe.** O Better Auth guarda o hash na tabela `account`,
+com o provedor `credential`. O `CLAUDE.md` §4 continua atendido — hash forte,
+nunca reversível, nunca em log.
 
 ### Convite
 `email` · `nome` · `papel` · `token` · `status` · `enviado_em` · `aceito_em`

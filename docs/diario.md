@@ -68,17 +68,20 @@ reprova se forem menos que o esperado.** Aplicada já neste teste, e ela pegou u
 erro na primeira tentativa: eu tinha declarado 16 esperadas e existem 14. Errou
 para o lado seguro, que é o certo.
 
-### Ainda em aberto, aparecido ao conferir a tabela nova
+### As duas pendências, decididas
 
-**A tela `Criar conta` não coleta o nome da pessoa.** Ela pede NOME DA
-TRANSPORTADORA, E-MAIL, SENHA e SEU TELEFONE — mas `usuario.nome` é obrigatório
-no banco. Ou a tela ganha um campo, ou o cadastro preenche com alguma coisa
-(o nome da transportadora?), ou a coluna passa a aceitar nulo. **Decisão de
-produto, não minha.** Aparece na tarefa 8.
+**A tela `Criar conta` ganha o campo SEU NOME**, obrigatório, antes de SEU
+TELEFONE. Primeiro nome basta. Nem preencher com o nome da transportadora, nem
+tornar a coluna nula: é esse campo que distingue os dois usuários no registro de
+"cobrado por" e na tela de Usuários. Registrado em `docs/especificacao.md` §6.
 
-**Recuperação de senha precisa de um provedor de e-mail**, que não está decidido
-em documento nenhum — não está nem no §14. Vira dependência da tarefa 7, e entra
-na política de privacidade como subprocessador (§11).
+**Precisa de correção na fonte do Design:** a tabela "Onde cada tela usa o quê"
+lista, para Criar conta, os campos NOME DA TRANSPORTADORA · E-MAIL · SENHA ·
+SEU TELEFONE. Falta SEU NOME, entre SENHA e SEU TELEFONE.
+
+**Provedor de e-mail transacional entrou no `CLAUDE.md` §14**, junto com as duas
+coisas de que depende: domínio próprio autenticado, e a declaração como
+subprocessador na política de privacidade.
 
 ### Próximo passo — tarefa 6
 
