@@ -218,14 +218,20 @@ Global e permanente: aparece em toda tela de nível 1 e continua nas telas de de
 - distância da borda inferior: `max(26px, calc(env(safe-area-inset-bottom) + 20px))` — `max()`, não fallback, porque `env()` vale `0px` em navegador e um fallback nunca dispararia
 - margem lateral: `max(16px, calc(env(safe-area-inset-left/right) + 16px))`
 
-**Folga de rolagem — valor único**
+**Folga de rolagem — valor único, só em tela com barra**
 
-Do topo do (+) até a base da tela são **`100,5px`** — medido no DOM, não calculado. Todo conteúdo rolável reserva **`max(138px, calc(env(safe-area-inset-bottom) + 132px))`** no fim: os 100,5px mais `37,5px` de respiro, para o último item chegar a ficar folgado acima da barra em vez de encostado nela.
+Do topo do (+) até a base da tela são **`100,5px`** — medido no DOM, não calculado. Toda tela **com barra de navegação** reserva **`max(138px, calc(env(safe-area-inset-bottom) + 132px))`** no fim do conteúdo rolável: os 100,5px mais `37,5px` de respiro, para o último item chegar a ficar folgado acima da barra em vez de encostado nela.
 
-Esse valor era `132`, `142` e `150` em telas diferentes — os três foram unificados no valor acima, em todas as telas. O **aviso do sistema** ancora em `max(112px, …)`, acima do topo do (+) e com espaço para o deslocamento de 18px da animação de entrada.
+Esse valor era `132`, `142` e `150` em telas diferentes — os três foram unificados no valor acima, em todas as telas com barra. O **aviso do sistema** ancora em `max(112px, …)`, acima do topo do (+) e com espaço para o deslocamento de 18px da animação de entrada.
+
+**Exceção (CLAUDE.md §8, 07/08/2026):** tela sem barra de navegação — Entrar, Criar conta, Esqueci a senha, Aceitar convite — não tem `(+)` para reservar folga contra, e usa margem inferior padrão em vez do valor acima. Lista fechada.
 
 
 ## 11 — Barra lateral (desktop)
+
+**Desenho aprovado, não escopo de construção.** `CLAUDE.md` §12 mantém
+"telas de desktop" fora do MVP — esta seção registra a especificação para
+quando a decisão de construir for tomada, não abre a tarefa agora.
 
 Substitui a pílula de navegação no desktop — **é a única diferença estrutural entre celular e desktop**. Escura pela mesma razão da pílula: é a barra de navegação, e barra de navegação é superfície escura. Tem **dois estados**: aberta (`240px`) e recolhida (`80px`), e o estado é lembrado entre sessões (`localStorage`).
 
@@ -323,11 +329,11 @@ O rótulo não muda de tinta com o estado: quem carrega erro é a mensagem, não
 | **Numérico** | mesmo campo com `font-variant-numeric: tabular-nums`, para o número não dançar enquanto se digita. **Valor em dinheiro não usa este campo** — usa o número-herói de `60px` no cartão escuro, com o teclado numérico próprio (Lançar frete, Despesas, vencimento do relatório) |
 | **Área de texto longa** | mesmo fundo, mesmo raio `18`, mesmo padding lateral `16`, com `16` também em cima e embaixo; texto `16px/600` com entrelinha `1.4` em vez de `1`. Modelo de cobrança e modelo de ordem de serviço. *Ver conflito 5* |
 
-**Conflitos** (nenhum decidido — todos precisam de um valor que a folha de estilo ainda não tem)
+**Conflitos** (dois resolvidos em 07/08/2026, na tarefa 8 — os outros quatro continuam precisando de um valor que a folha de estilo ainda não tem)
 
 1. **Altura: `56` ou `60`.** As duas estão em uso e a folha de estilo já registra as duas. Continua sem decisão. O `60` casa com o botão principal; o `56` é o que está na maioria dos formulários.
-2. **Foco.** Não existe nenhum tratamento de foco em nenhuma tela — nem de toque, nem de teclado. Duas saídas, e **nenhuma é grátis**: (a) escurecer o fundo para `#E4E0D6`, que é o pressionado da mesma família de neutros e não inventa cor, mas é uma diferença fraca e não ajuda quem navega por teclado; (b) um contorno, que **quebra a regra de que o app não tem borda nenhuma**. Se o desktop vai ter navegação por teclado — e vai, é a plataforma completa — isto precisa de decisão antes dos formulários.
-3. **Erro.** Nenhuma tela tem estado de erro desenhado. Proponho o fundo `#F6E6DD` (o mesmo da pastilha "Vencido", tom de alerta em superfície clara) com a mensagem em `#B3401A`: nenhuma cor nova, e usa a família que o produto já associa a problema. Falta aprovar.
+2. ~~**Foco.**~~ **RESOLVIDO em 07/08/2026.** Fundo escurece para `#E4E0D6` (o pressionado da mesma família de neutros — nenhuma cor nova). Sem contorno: mantém a regra de que o app não tem borda em lugar nenhum. A saída (b) do texto original — contorno — foi descartada por isso. Navegação por teclado no desktop continua em aberto, mas não bloqueia mais o campo de texto do celular.
+3. ~~**Erro.**~~ **RESOLVIDO em 07/08/2026.** Fundo `#F6E6DD` (o mesmo da pastilha "Vencido") — sem contorno, mesmo raciocínio do foco. A mensagem de erro abaixo do campo (linha 315 desta tabela) continua **obrigatória**: erro nunca é sinalizado só pela cor do fundo. Implementado em `src/components/ui/CampoTexto.tsx`.
 4. **Revelar senha.** Não existe ícone de olho na família, e desenhar um seria o 13º arquivo. Por isso a proposta usa botão de texto **Mostrar/Ocultar**, que não inventa nada. Se preferir o olho, é um ícone novo.
 5. **Altura da área de texto longa.** Não existe valor na folha. Precisa de um mínimo em linhas (3? 4?) e de dizer se cresce com o conteúdo ou rola por dentro.
 6. **Espaçamento.** Não existem valores para rótulo → campo, campo → apoio/erro, nem entre campos de um formulário. Os que faltam devem sair da escala existente (`4 · 6 · 7 · 8 · 9 · 10 · 12 · 14 · 16 · 18 · 20 · 22 · 24 · 26 · 40`), mas qual é qual não está decidido.
@@ -409,6 +415,7 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Limite do gratuito | principal **Ver os planos** · texto neutra **Depois** · nada do que já existe é bloqueado |
 | Assinatura vencida | principal **Renovar assinatura** · secundária **Baixar meus dados** · leitura e exportação seguem funcionando |
 | Primeiro acesso | **duas secundárias em pé de igualdade**: **Trazer os fretes que já fiz** + **Começar do zero** — nenhuma é destaque da outra, então nenhuma é a principal |
+| Pouso pós-login (provisório) | sem principal · nome da empresa · texto destrutiva **Sair da conta**. Fica no lugar de Primeiro acesso até ela existir — não é tela desenhada, é o mínimo para o cadastro não terminar numa página quebrada |
 | Guia de progresso (dashboard) | até três linhas tocáveis, cada uma sumindo ao ser cumprida; o bloco inteiro desaparece ao completar |
 
 ---

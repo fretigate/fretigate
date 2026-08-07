@@ -267,7 +267,15 @@ testes de isolamento falam com o **banco de verdade**, com os papéis de verdade
   tela.
 - **Nada de arquivo "para depois".** Sem abstração especulativa, sem camada sem
   dois casos de uso reais.
-- Se um arquivo passa de ~200 linhas ou junta coisas sem relação, separe.
+- **O teste é "junta coisas sem relação", não linha contada.** ~200 linhas é
+  sinal para ir olhar, não limite — arquivo comprido com um assunto só não
+  precisa separar por causa do número. Regra corrigida em 07/08/2026, depois
+  de `src/lib/servicos/cadastro.ts` passar de 200 linhas com um fluxo linear
+  só (validação → criar Empresa → criar Usuário → reverter se falhar → login)
+  e não ter nada de sobra para tirar: rate limit e criação de usuário já
+  moram em arquivo próprio. Picar mais teria só espalhado uma sequência que
+  se lê de cima a baixo por vários arquivos. Fica registrado para ninguém
+  reabrir essa discussão achando que é um limite a cumprir.
 - **`@/` aponta para `/src`.** `@/lib/db` é `/src/lib/db`.
 
 ### O que fica na raiz, e por quê
@@ -299,6 +307,19 @@ calado. Ao mover pasta, conferir `tsconfig.json` (`paths`), `.gitignore`
 - Toda tabela tem `criado_em` e `atualizado_em`.
 - **Nada é apagado.** Exclusão é `arquivado_em` preenchido.
 
+  **Exceção declarada** (tarefa 8, 07/08/2026): esta regra protege dado que
+  passou a existir de verdade no produto — algo que alguém chegou a ver ou
+  usar. Uma `Empresa` criada no meio de um cadastro que não terminou, sem
+  nenhum `Usuario` vinculado a ela, nunca existiu de verdade: nenhuma sessão
+  aponta pra ela, ninguém a viu. Apagar essa linha é **reverter um cadastro
+  incompleto**, não excluir um registro — por isso é `DELETE` de verdade, não
+  `arquivado_em`. A garantia de que isso nunca alcança uma empresa com
+  usuário vinculado não fica só no código da aplicação: vive na função de
+  banco `reverter_cadastro_incompleto` (`src/lib/servicos/cadastro.ts` é quem
+  chama), cuja guarda `NOT EXISTS (... usuario ...)` está escrita dentro da
+  própria função. Nenhuma outra tabela ganha essa exceção sem passar pela
+  mesma pergunta: "alguém chegou a ver isto?"
+
 ---
 
 ## 8. Regras de interface
@@ -319,11 +340,18 @@ Vieram de defeitos reais encontrados nos protótipos. São obrigatórias.
   rolável, depois do resumo e antes de listas. Formulário tem o salvar no fim,
   rolando junto. Teclado numérico é sobreposição, nunca ocupa lugar no fluxo —
   e o salvar **sobe junto, acima do teclado**, nunca fica coberto.
-- **Toda tela rolável reserva folga no fim** para nada ficar sob a barra,
-  medida a partir do topo do (+), que sobe acima da linha da barra. O valor é
-  **único para todas as telas**. Folga própria de uma tela é defeito, mesmo que
-  pareça melhor ali — foi assim que nasceram os três valores diferentes que
-  precisaram ser unificados depois.
+- **Toda tela com barra de navegação reserva folga no fim** para nada ficar
+  sob a barra, medida a partir do topo do (+), que sobe acima da linha da
+  barra. O valor é **único para todas as telas que têm barra**. Folga própria
+  de uma tela é defeito, mesmo que pareça melhor ali — foi assim que nasceram
+  os três valores diferentes que precisaram ser unificados depois.
+
+  **Exceção, e é isto — nenhuma outra**: telas sem barra de navegação não
+  reservam essa folga, porque não existe barra para não ficar embaixo dela.
+  São as telas de fora de sessão — **Entrar, Criar conta, Esqueci a senha e
+  Aceitar convite** — que usam margem inferior padrão. Lista fechada, para não
+  virar exceção decidida caso a caso: tela nova sem barra entra aqui só com
+  decisão explícita, não por analogia.
 - **Área segura** = a do dispositivo + 8px. Nenhum conteúdo sob a barra de
   status ou a ilha dinâmica.
 - **Três superfícies, três significados** — nunca compartilham tratamento:
@@ -335,6 +363,20 @@ Vieram de defeitos reais encontrados nos protótipos. São obrigatórias.
 - **Número incompleto não é exibido.** Lucro sem despesa lançada e R$/km sem km
   preenchido mostram convite, não valor. Com dado parcial, exibir a cobertura.
 - Alvo de toque mínimo 48px. Ação principal ao alcance do polegar.
+
+  **Exceção — link dentro de frase corrida** (decidida em 07/08/2026, tarefa
+  8). O mínimo de 48px vale para **controle isolado** — botão, chip, ícone
+  tocável. Um link dentro de texto normal ("Termos de uso", numa frase) não
+  consegue os 48px sem virar bloco próprio, e isso não é a exceção certa: a
+  saída é três condições, todas obrigatórias —
+  1. **sublinhado** — o link se anuncia por forma, não só por cor;
+  2. **espaçamento entre linhas ampliado** — o parágrafo ganha respiro para o
+     dedo não acertar a linha errada;
+  3. **o mesmo documento acessível também pelos Ajustes**, sem depender de
+     tocar o link dentro do texto corrido — quem errar o toque tem outro
+     caminho.
+
+  Sem as três, é a mesma falha do alvo pequeno com roupa nova.
 - Interface clara, não escura — o app é usado no pátio, sob sol forte.
 - Vocabulário do usuário: frete, cliente, caminhão, motorista, **relatório**.
   Nunca "registro", "entidade", "item", "transação", "extrato".
@@ -427,14 +469,29 @@ semente de teste.
 > para sempre, por causa de uma linha. Se o `INSERT` de empresa foi recusado,
 > **falta o `set_config`**, não sobra política.
 
-**Nenhuma conexão em execução ignora RLS.** São três papéis, e a separação é
-parte do desenho:
+**Nenhuma conexão em execução ignora RLS.** São quatro papéis, e a separação
+é parte do desenho:
 
 | Papel | Para quê | Enxerga |
 |---|---|---|
 | `fretigate_app` | todo o domínio | só a empresa do contexto. Sem `DELETE` — arquivar é `UPDATE` (§7) |
 | `fretigate_auth` | só o Better Auth | as tabelas que existem para autenticar e não têm `empresa_id` (ver abaixo). **Nada** de domínio |
+| `fretigate_reversor` | só reverter cadastro incompleto (tarefa 8) | `DELETE`/`SELECT` em `empresa`, `SELECT` em `usuario` — nomeados, nunca `BYPASSRLS`. Dono de `reverter_cadastro_incompleto`, chamada por `fretigate_app` via `SECURITY DEFINER` |
 | `postgres` | **só migrations** | tudo — por isso não roda no produto |
+
+**Por que `fretigate_reversor` existe, e não a função rodando como
+`postgres`.** A primeira versão de `reverter_cadastro_incompleto` era
+`SECURITY DEFINER` sem trocar o dono — rodava como `postgres`, que tem
+`rolbypassrls = true`, então o `DELETE` ignorava RLS por completo, não porque
+alguma política permitisse. Uma função **em execução** (chamada a cada
+cadastro que falha na metade) não pode se apoiar nisso: é o mesmo problema do
+`OR current_setting(...) IS NULL`, só que escondido atrás de um dono em vez
+de uma cláusula. A correção: a função chama `set_config('app.empresa_id',
+...)` antes do `DELETE`, e roda como um papel sem `BYPASSRLS` — a política
+`empresa_isolamento` passa a ser **satisfeita de verdade**, não ignorada.
+`tests/cadastro.test.ts` confere o dono e o `rolbypassrls`, não só o
+resultado — sem essa verificação, a regressão para "dono = postgres" passaria
+despercebida porque o resultado observável é idêntico.
 
 **O que `fretigate_auth` alcança é regra, não lista.** Ele enxerga as tabelas
 que existem para autenticar e que **não têm `empresa_id`**, porque são
@@ -486,7 +543,8 @@ Assinatura vencida bloqueia escrita, mantém leitura e exportação por 90 dias.
 
 - No cadastro, **uma única pergunta declarada**: "como você conheceu o
   FretiGate?" — com atribuição de origem por primeiro toque. Nenhum outro campo
-  de pesquisa em nenhum lugar do produto.
+  de pesquisa em nenhum lugar do produto. A pergunta está construída (tarefa
+  8); a atribuição por primeiro toque ainda não — ver o prazo no §14.
 - Todo o resto do conhecimento sobre o usuário vem do uso, não de formulário.
 - Os dados dos clientes e motoristas da transportadora **são de terceiros**: a
   empresa é controladora, o FretiGate é operador. Uso próprio só de forma
@@ -535,7 +593,11 @@ fora do escopo antes de fazer.
 - Recibo de pagamento
 - Agendamento com calendário e calculadora de orçamento
 - Filtro de data na dashboard
-- Telas de desktop
+- **O desktop está sendo desenhado, mas não é construído no MVP.**
+  `docs/componentes.md` já tem a barra lateral do desktop e telas equivalentes
+  documentadas — é desenho aprovado pelo Design, registrado com antecedência.
+  Nenhuma linha de código de desktop entra antes do celular estar pronto e a
+  decisão de construí-lo ser tomada explicitamente (decisão de 07/08/2026).
 - Multi-idioma, multi-moeda, tema configurável
 - Qualquer tela específica de guincho ou reboque
 
@@ -569,12 +631,36 @@ descrição vencida por definição, e "código no WhatsApp" continua proibido p
 A paleta azul da primeira versão da Tela 1 foi descartada. Se aparecer qualquer
 arquivo com `#2B62E8` como cor de ação, é resíduo — ignore.
 
+**Exportação do Design por cima de `docs/estilo.md` ou `docs/componentes.md`
+é commit à parte, antes de começar a tarefa.** Quando o fundador substitui um
+desses dois arquivos por uma exportação do Claude Design, ele avisa, e o
+commit dessa troca entra **sozinho**, com mensagem própria, antes de
+qualquer código da tarefa que dependia da lacuna que a exportação
+preencheu — nunca misturado no mesmo commit do código. Regra registrada em
+07/08/2026 depois de confusão pela terceira vez: a paleta azul residual
+acima, "código no WhatsApp" que voltou em `docs/navegacao.md` (§13), e uma
+sessão que leu a especificação de campo de texto do Design sem saber que
+estava sem commit.
+
 ---
 
 ## 14. Decisões ainda em aberto
 
 Não invente resposta. Pergunte.
 
+- **BLOQUEIO DE LANÇAMENTO — forma do aceite dos Termos e a redação deles.**
+  A tela Criar conta (tarefa 8) grava `termos_aceitos_em`/`termos_versao` com
+  aceite implícito (texto acima do botão, sem caixa de marcação) e uma versão
+  provisória, porque nem a forma do aceite nem o texto dos Termos e da
+  Política de Privacidade passaram por revisão jurídica ainda. Isso **não
+  pode ir ao ar** — nem anúncio, nem cliente pagante — antes de resolver as
+  duas coisas. Decidido em 07/08/2026.
+- **PRAZO — `origem_cadastro` (atribuição de origem por primeiro toque).**
+  O cadastro (tarefa 8) grava só `origem_declarada` (a resposta da pergunta
+  tocável); `origem_cadastro` fica nulo, porque capturar UTM/referrer é um
+  mecanismo à parte que ninguém construiu ainda. **Precisa existir antes de
+  ligar os anúncios** — o mesmo marco já usado para o reteste do e-mail
+  transacional (§ tarefa 7 no diário). Decidido em 07/08/2026.
 - **Modelo de IA da importação** — testar a extração com o material real do
   usuário antes de escolher. Decidir por acerto, não por preço: a diferença de
   custo entre os candidatos é inferior a 2% da receita por cliente.

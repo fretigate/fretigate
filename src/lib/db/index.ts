@@ -125,3 +125,33 @@ export function emTransacao<T>(
     return fn(tx);
   });
 }
+
+/**
+ * Reverte um cadastro que não terminou (tarefa 8) — apaga a `Empresa` criada
+ * por `emTransacao`, mas só se nenhum `Usuario` chegou a ser vinculado a ela.
+ *
+ * Chama a função de banco `reverter_cadastro_incompleto`
+ * (`prisma/migrations/20260807090000_reverter_cadastro_incompleto`), que é
+ * `SECURITY DEFINER`, dona de um papel próprio (`fretigate_reversor`, sem
+ * `BYPASSRLS`) — a garantia de nunca apagar uma empresa com usuário não
+ * depende de quem chama daqui: a função faz o próprio `set_config` e a
+ * guarda `NOT EXISTS` fica escrita dentro dela.
+ *
+ * Não passa por `db()`/`emTransacao()` **desta conexão**: quem define
+ * `app.empresa_id` é a própria função de banco, na conexão dela — não este
+ * arquivo.
+ *
+ * ⚠️ NUNCA chame isto de dentro de um `emTransacao(...)` em andamento. As
+ * duas coisas usam a mesma `clienteBase`, e o `set_config` interno da função
+ * (`true` = vale só na transação atual) passaria a valer para o resto da
+ * transação externa também — a mesma classe de vazamento de contexto entre
+ * pedidos que a tarefa 2 mediu com `set_config(..., false)`. O uso correto é
+ * sempre depois que a transação que criou a Empresa já terminou (comitada ou
+ * não), nunca dentro de uma.
+ */
+export function reverterCadastroIncompleto(empresaId: string): Promise<number> {
+  const empresa = exigirEmpresaId(empresaId);
+  // `$executeRaw`, não `$queryRaw`: a função devolve `void`, e o Prisma não
+  // sabe desserializar coluna de tipo `void` num `SELECT` comum.
+  return clienteBase.$executeRaw`SELECT reverter_cadastro_incompleto(${empresa}::uuid)`;
+}

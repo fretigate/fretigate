@@ -186,11 +186,40 @@ valor específico por modelo.
 | Botão texto | 44px |
 | Pílula em linha | 38px |
 
-**Folga de rolagem.** Todo conteúdo rolável reserva **138px** no fim — medidos
-a partir do topo do (+), que fica a 100,5px do fundo da tela (26 da margem +
-57 da pílula + 17,5 de saliência), com ~37px de respiro. A pílula de navegação
-flutua sobre o conteúdo durante a rolagem; a folga garante que o último item
-chegue a ficar totalmente acima dela. O aviso do sistema ancora em **112px** — acima do topo do (+), com espaço para o deslocamento de 18px da animação de entrada.
+**Nota (07/08/2026):** rótulo, apoio, erro e o tratamento de foco/erro do
+Campo de texto estão em `docs/componentes.md`, seção "Rótulo, apoio e erro" —
+não aqui. Esta seção só define altura. Uma versão anterior desta nota dizia
+que foco e erro não tinham valor documentado nenhum; não era exato — só
+tinham conflito aberto em `componentes.md`, e dois dos seis já foram
+resolvidos (ver lá, "Conflitos" 2 e 3).
+
+**Folga de rolagem.** Toda tela **com barra de navegação** reserva **138px**
+no fim do conteúdo rolável — medidos a partir do topo do (+), que fica a
+100,5px do fundo da tela (26 da margem + 57 da pílula + 17,5 de saliência),
+com ~37px de respiro. A pílula de navegação flutua sobre o conteúdo durante a
+rolagem; a folga garante que o último item chegue a ficar totalmente acima
+dela. O aviso do sistema ancora em **112px** — acima do topo do (+), com
+espaço para o deslocamento de 18px da animação de entrada.
+
+**Exceção (CLAUDE.md §8, 07/08/2026):** tela sem barra de navegação — Entrar,
+Criar conta, Esqueci a senha, Aceitar convite — não reserva essa folga, porque
+não existe barra para não ficar embaixo dela. Usa margem inferior padrão.
+Lista fechada; tela nova sem barra entra por decisão explícita, não por
+analogia.
+
+**Lacuna aberta — "margem inferior padrão" ainda não é um valor formal
+desta folha.** A tela Criar conta (`src/app/(auth)/criar-conta/page.tsx`)
+usa `max(24px, calc(env(safe-area-inset-bottom) + 16px))` — mesmo formato
+`max()` dos outros anchors desta seção, só que sem o respiro extra da barra.
+Valor que só existe no código é o que o §8 proíbe (`CLAUDE.md`: "nenhum
+valor fora do sistema"); fica registrado aqui até o Design formalizar como
+token, com o mesmo nome nas próximas telas sem barra.
+
+**Mesma lacuna, segundo valor:** a exceção de link em frase corrida
+(`CLAUDE.md` §8, "Alvo de toque mínimo") pede "espaçamento entre linhas
+ampliado" sem dar o número. `FormularioCriarConta.tsx` usa `leading-[1.7]`
+no parágrafo de aceite dos Termos — maior que o `1.4` de `--text-apoio`, sem
+ser um valor formal ainda. Mesmo destino: token quando o Design decidir.
 
 ---
 

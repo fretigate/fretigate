@@ -6,6 +6,144 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 07/08/2026 — tarefa 8 (fatia 1): tela Criar conta
+
+**Fechada** — cadastro completo (Empresa + Usuário dono, na mesma operação),
+testado pelo navegador de ponta a ponta e por suíte automatizada. Entrar,
+Esqueci a senha e Termos ficam para a próxima fatia, como decidido no início
+da tarefa.
+
+### O que entrou
+
+- `src/app/(auth)/criar-conta/` — a tela: campos, chips da pergunta de
+  origem, aceite dos Termos por texto (não checkbox — ver abaixo).
+- `src/lib/servicos/cadastro.ts` — o Server Action, em três passos (Empresa
+  → Usuário → reversão se o segundo falhar), com `src/lib/servicos/
+  trava-de-cadastro.ts` (rate limit próprio, 5/10min) e
+  `src/lib/servicos/criar-usuario-dono.ts` (isolando o uso de
+  `ctx.internalAdapter` do Better Auth) como arquivos à parte.
+- `src/components/ui/` — primeiro commit da biblioteca de componentes:
+  `Botao` (três variantes do inventário fechado), `CampoTexto`, `ChipEscolha`.
+- `src/app/(app)/` — pouso mínimo pós-login (nome da empresa + Sair da
+  conta), provisório até Primeiro acesso existir. Substitui
+  `src/app/page.tsx` (a página de teste da instalação, que também saía
+  nesta tarefa e não tinha saído na 7).
+- `prisma/migrations/20260807090000_reverter_cadastro_incompleto` — a função
+  que reverte um cadastro incompleto, e o papel `fretigate_reversor`.
+- `tests/cadastro.test.ts` — 14 conferências: cadastro normal, e-mail
+  duplicado, o contraste da reversão, a guarda da função, e que a reversão
+  não depende de `postgres` ignorar RLS.
+
+### A decisão mais cara: a Empresa órfã, e como revertê-la sem furar RLS
+
+Empresa e Usuário nascem em duas conexões diferentes (`fretigate_app` e
+`fretigate_auth`, sem transação em comum — ver o comentário em
+`src/lib/db/index.ts`). Se a Empresa for criada e o Usuário falhar depois,
+ela fica órfã. Decisão do fundador: apagar de verdade (não arquivar) — nunca
+existiu usuário apontando pra ela, então nunca existiu de verdade no produto
+(`CLAUDE.md` §7 ganhou essa exceção, com essa distinção).
+
+A primeira versão da função que faz isso rodava como `postgres`
+(`SECURITY DEFINER` sem trocar o dono), e `postgres` ignora RLS —
+funcionava, mas contrariava a regra central do produto ("nenhuma conexão em
+execução ignora RLS"). Bloqueio do fundador: redesenhada para rodar como um
+papel novo, `fretigate_reversor` — sem `BYPASSRLS`, com `set_config` dentro
+da própria função, então a política de RLS é satisfeita de verdade, não
+ignorada. `CLAUDE.md` §9 ganhou a explicação completa.
+
+### `/revisar` rodou três vezes — e a lição de cada uma
+
+Não por a tarefa não terminar (a regra da seção 2 é sobre achado de classe
+nova, e cada passe achou classe nova de verdade):
+1º passe achou o desenho antigo da função (bloqueio) e o uso de
+`ctx.internalAdapter` sem alternativa avaliada. 2º passe, depois da
+correção, achou um `GRANT CREATE` esquecido (nunca revogado) e o `wdth`
+que faltava no título. 3º passe achou comentário desatualizado em
+`lib/db/index.ts` (dizia que a função "não olha `app.empresa_id`" — não é
+mais verdade, depois do redesenho) e confirmou que uma seção inteira de
+telas de desktop já existia em `docs/componentes.md` **antes** desta
+tarefa, contrariando o `CLAUDE.md` §12 — não é desta tarefa, fica
+registrado aqui para alguém notar.
+
+### O checkbox que virou texto
+
+O `/auditar-tela` pegou dois problemas no aceite dos Termos: o checkbox não
+estava em nenhum documento, e o alvo de toque dele (16px) furava o mínimo de
+48px. Virou texto acima do botão ("Ao criar conta, você aceita..."), com os
+nomes dos documentos como link. Isso abriu uma pergunta maior — link dentro
+de frase corrida nunca alcança 48px — resolvida com uma exceção nova no
+`CLAUDE.md` §8: três condições (sublinhado, entrelinha ampliada, o mesmo
+documento também pelos Ajustes), todas obrigatórias.
+
+### Pendências, registradas nos documentos, não só aqui
+
+- **Bloqueio de lançamento** (`CLAUDE.md` §14): a forma do aceite dos Termos
+  e a redação deles não passaram por revisão jurídica. Não pode ir ao ar.
+- **Prazo** (`CLAUDE.md` §14): `origem_cadastro` (atribuição por primeiro
+  toque) fica nulo nesta fatia — precisa existir antes de ligar os anúncios.
+- `/entrar` e `/termos` ainda não existem (próxima fatia) — os links da tela
+  levam a 404 hoje.
+- Estilo de campo de texto: foco e erro **saíram do "falta aprovar"** nesta
+  tarefa (`docs/componentes.md`, conflitos 2 e 3, resolvidos). Espaçamento
+  entre campos e a margem inferior de tela sem barra continuam sem token
+  formal — registrados como lacuna em `docs/estilo.md`.
+
+### Próxima
+
+Tarefa 8, fatia 2: Entrar, Esqueci a senha (ciclo completo de recuperação) e
+Termos.
+
+---
+
+## 07/08/2026 — incidente: checksum divergente na migration da trava de tentativas
+
+Ao começar a tarefa 8, `prisma migrate dev --create-only` recusou rodar:
+*"a migration `20260807074414_trava_de_tentativas` foi modificada depois de
+aplicada"*, propondo resetar o banco de desenvolvimento inteiro — o que não
+foi feito.
+
+**Causa:** na própria tarefa 7, o comentário final de
+`prisma/migrations/20260807074414_trava_de_tentativas/migration.sql` foi
+reescrito depois que a migration já tinha sido aplicada — duas versões
+anteriores desse comentário prometiam garantia maior do que o teste
+realmente confere, e a correção veio depois do `prisma migrate dev` que
+aplicou a migration. O arquivo commitado (o que está em `git log`) nunca
+mudou depois disso; só o *checksum gravado no banco* no momento da aplicação
+ficou preso à versão anterior do comentário.
+
+**Verificado antes de mexer em qualquer coisa**, campo a campo, banco de
+desenvolvimento contra o `.sql` commitado: colunas de `rate_limit` (tipo,
+nulidade, default), chave primária, índice único de `key`, RLS ligado e
+forçado, a política `rate_limit_autenticacao` (papel, `USING`/`WITH CHECK`),
+e os `GRANT`s de `fretigate_auth` — tudo bate, e nenhum privilégio extra para
+`anon`/`authenticated`. Para confirmar que o método de checksum era o mesmo
+do Prisma, o sha256 dos outros seis arquivos de migration foi comparado ao
+valor gravado em `_prisma_migrations` — os seis batem exatamente, só o
+sétimo diverge. Ou seja: a estrutura do banco está correta; só o registro do
+Prisma sobre *qual versão do arquivo* rodou estava desatualizado.
+
+**Conserto:** `UPDATE _prisma_migrations SET checksum = ...` só naquela
+linha, pelo sha256 do arquivo atual — sem tocar em nenhuma tabela ou dado do
+produto. `prisma migrate status` voltou a dizer "Database schema is up to
+date!" depois disso.
+
+**A lição, para não repetir:** editar o `.sql` de uma migration **depois**
+dela já ter sido aplicada — mesmo só o comentário, sem mudar nenhuma
+instrução — quebra a conferência de integridade do Prisma. O arquivo vira
+"fonte da verdade" para quem lê o código, mas o banco guarda a impressão
+digital de quem *rodou* primeiro. Se o texto de uma migration já aplicada
+precisar de correção, o caminho limpo é uma migration nova só com o
+comentário certo, ou aceitar o descompasso e resolvê-lo assim — nunca editar
+o arquivo já aplicado sem em seguida atualizar o registro no banco.
+
+**Por que isso importa além de hoje:** um ambiente novo (outro banco de
+desenvolvimento, produção) aplica as migrations do zero, direto do arquivo —
+nesse caminho o descompasso nunca apareceria, porque não há "checksum
+anterior" para comparar. O risco real era só neste banco, que já tinha a
+tarefa 7 aplicada com o comentário antigo. Verificado, não suposto.
+
+---
+
 ## 07/08/2026 — tarefa 7: Better Auth, `lib/auth` e a trava de tentativas
 
 **Tarefa fechada**, com o e-mail real testado contra três caixas.
@@ -1187,6 +1325,24 @@ achado sobre string vazia que muda a política de RLS da tarefa 4.
     desconhecido recusa, e **formato irreconhecível também recusa** — este
     último é o caso que separa falha fechada de falha aberta. Vai junto da
     tarefa 9 porque as duas são trava de infraestrutura, não de produto
+9c. **Privilégio de execução de função, para `anon`/`authenticated`.**
+    Achado na tarefa 8: o Postgres concede `EXECUTE` a `PUBLIC` por padrão em
+    função nova (diferente de tabela, que já nasce fechada desde a migration
+    `20260806223138_fecha_acesso_pela_api_publica`) — e `PUBLIC` alcança todo
+    papel, `anon`/`authenticated` incluídos, mesmo com o `REVOKE` nomeado que
+    essa migration já faz para os dois. `reverter_cadastro_incompleto`
+    (tarefa 8) foi fechada na mão; a próxima função nasce aberta se alguém
+    esquecer. Duas partes, as duas obrigatórias — mesmo padrão que já valeu
+    para tabela, e pelo mesmo motivo: **prevenir sozinho** some quando
+    alguém contorna ou esquece; **testar sozinho** só avisa depois do fato.
+    - **Prevenir**: `ALTER DEFAULT PRIVILEGES ... REVOKE ALL ON FUNCTIONS
+      FROM PUBLIC` (e, por clareza, de `anon`/`authenticated` também, mesmo
+      que `PUBLIC` já cubra os dois) — função nova nasce fechada, do mesmo
+      jeito que tabela nova já nasce.
+    - **Detectar**: `tests/isolamento/privilegios.test.ts` passa a conferir
+      `information_schema.routine_privileges` (função), não só
+      `role_table_grants` (tabela) — mesma forma, mesmo contraste, mesma
+      contagem de verificações.
 10. Correções nos documentos e a pendência do Storage
 
 ### Bloqueios conhecidos

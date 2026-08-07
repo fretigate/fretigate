@@ -323,6 +323,29 @@ Cadastro, login, recuperação de senha, aceitar convite, termos e privacidade.
 com opções tocáveis e campo livre, junto com atribuição de origem por primeiro
 toque.
 
+**As opções, decididas em 07/08/2026, nesta ordem:**
+
+1. Anúncio no Instagram ou Facebook
+2. Pesquisei no Google
+3. Alguém me indicou
+4. Vi outra empresa usando
+5. Outro — libera campo livre
+
+Sem TikTok (não é canal ativo hoje — entra quando existir) e sem "já
+conhecia" (o produto acabou de nascer, ninguém já conhecia).
+
+**Por que é essa lista, e não outra.** A atribuição por primeiro toque já
+captura canal e campanha sozinha, sem perguntar nada — é dado de tráfego, não
+resposta de formulário. A pergunta declarada existe só para o que essa
+atribuição **não enxerga**: indicação de alguém e "vi outra empresa usando"
+são as duas respostas que mais valem, porque nenhum outro dado do sistema as
+revela. Opção que a atribuição automática já cobre é opção redundante, e não
+entra.
+
+Resposta de **"Outro" precisa ficar consultável**: grava o texto que a pessoa
+digitou em `origem_declarada`, nunca o rótulo genérico "Outro" — é dali que
+sai canal que ninguém previu.
+
 **Primeiro acesso:** duas opções **em pé de igualdade** — trazer os fretes que já
 fiz (importação) e começar do zero (lançamento). Nenhuma é destaque da outra.
 Depois, guia de progresso no topo da dashboard com **no máximo três itens**,
@@ -442,10 +465,15 @@ que gere custo. Os números, aprovados em 07/08/2026:
 | Mandar link de recuperação | **3 por 5 minutos** |
 | Reenviar confirmação de e-mail | **3 por 5 minutos** |
 | Redefinir a senha pelo link | **5 por 5 minutos** |
+| Criar conta | **5 por 10 minutos** |
 
 A contagem é por endereço de rede e por rota, e fica **no banco** — a
 hospedagem roda várias instâncias, e contagem em memória viraria uma contagem
-por instância.
+por instância. A trava de **Criar conta** não é uma rota do Better Auth (é
+Server Action própria — `src/lib/servicos/trava-de-cadastro.ts`), mas usa a
+mesma tabela `rate_limit` e o mesmo mecanismo atômico; está aqui, e não só no
+código, para as duas listas nunca divergirem de novo — já aconteceu três
+vezes.
 
 **A mensagem de travado não é um erro seco.** Quem bate no limite é, quase
 sempre, cliente legítimo que errou a senha — não invasor. A tela precisa:
@@ -456,6 +484,13 @@ sempre, cliente legítimo que errou a senha — não invasor. A tela precisa:
 
 Sem a terceira, quem esqueceu a senha bate na parede e conclui que o produto
 está quebrado — e some, que é o mesmo desfecho da recuperação que cai em spam.
+
+**Exceção no cadastro: o terceiro item vira contato, não recuperação de
+senha.** Quem trava em **Criar conta** ainda não tem conta — não perdeu
+senha, não tem "esqueci a senha" como saída, e acabou de pagar sem conseguir
+usar o produto. É o único ponto do produto em que a saída da mensagem de
+trava é falar com a empresa, não um link de autoatendimento. Decisão do
+fundador, 07/08/2026.
 
 ---
 
@@ -517,6 +552,20 @@ contas gratuitas e driblar o limite de 1 caminhão.
 
 **`termos_aceitos_em` e `termos_versao`** são obrigatórios — o aceite acontece
 no cadastro, então não existe Empresa sem aceite.
+
+**A forma do aceite, decidida em 07/08/2026:** texto acima do botão **Criar
+conta** — "Ao criar conta, você aceita os Termos de uso e a Política de
+privacidade", com os dois nomes como link — em vez de caixa de marcação. Saiu
+do `/auditar-tela`: o checkbox não estava em nenhum documento e o alvo de
+toque dele (16px) furava o mínimo de 48px do `CLAUDE.md` §8. Clicar em
+**Criar conta** é o aceite.
+
+**BLOQUEIO DE LANÇAMENTO** (ver `CLAUDE.md` §14): essa forma de aceite —
+texto implícito, em vez de marcação explícita — ainda precisa de confirmação
+jurídica, junto com a redação dos Termos e da Política de Privacidade, que
+também não existe ainda. `termos_versao` guarda um identificador provisório
+(`src/lib/servicos/cadastro.ts`). **Não pode ir ao ar** — nem anúncio, nem
+cliente pagante — antes de resolver as duas coisas.
 
 ### Usuario
 `nome` · `email` · `papel` (`dono` | `operador`) · `ultimo_acesso_em`
