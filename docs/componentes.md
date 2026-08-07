@@ -200,15 +200,15 @@ Global e permanente: aparece em toda tela de nível 1 e continua nas telas de de
 **Medidas** (medidas no DOM, não estimadas)
 
 - pílula `57px` de altura · raio `999` · fundo `#141A17` · padding `0 4px`
-- respiro interno **`12px` no topo · `11px` na base** — igualados de propósito; antes o topo tinha 18px e a barra parecia desequilibrada
+- respiro interno **`11px` em cima e embaixo** — igualados de propósito; antes o topo tinha 18px e a barra parecia desequilibrada
 - ícone `19–21px` e rótulo `10.5px` com gap `5px`; item ativo em `#7FCB9B` peso 700, inativo em `rgba(255,255,255,.5)` peso 600
-- **(+)** `48×48` · sobe **`18px`** acima da linha da pílula · fundo `#1B6B3A` · rótulo "Novo" em branco
+- **(+)** `48×48` · sobe **`17,5px`** acima da linha da pílula · fundo `#1B6B3A` · rótulo "Novo" em branco
 - distância da borda inferior: `max(26px, calc(env(safe-area-inset-bottom) + 20px))` — `max()`, não fallback, porque `env()` vale `0px` em navegador e um fallback nunca dispararia
 - margem lateral: `max(16px, calc(env(safe-area-inset-left/right) + 16px))`
 
 **Folga de rolagem — valor único**
 
-Do topo do (+) até a base da tela são **`101px`**. Todo conteúdo rolável reserva **`max(138px, calc(env(safe-area-inset-bottom) + 132px))`** no fim: os 101px mais `37px` de respiro, para o último item chegar a ficar folgado acima da barra em vez de encostado nela.
+Do topo do (+) até a base da tela são **`100,5px`** — medido no DOM, não calculado. Todo conteúdo rolável reserva **`max(138px, calc(env(safe-area-inset-bottom) + 132px))`** no fim: os 100,5px mais `37,5px` de respiro, para o último item chegar a ficar folgado acima da barra em vez de encostado nela.
 
 Esse valor era `132`, `142` e `150` em telas diferentes — os três foram unificados no valor acima, em todas as telas. O **aviso do sistema** ancora em `max(112px, …)`, acima do topo do (+) e com espaço para o deslocamento de 18px da animação de entrada.
 
@@ -279,9 +279,9 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Mais | sem principal · cartão de identidade tocável · pílula em linha **Assinar e liberar a frota** no plano gratuito · texto destrutiva **Sair da conta** |
 | Novidades — lista | sem principal · linha não lida em lilás com ponto; lida volta ao claro |
 | Novidades — detalhe | no máximo **uma** ação por mensagem, como principal |
-| Entrar | principal **Receber código no WhatsApp**, com estado carregando · texto neutras **Criar conta** e **Recuperar acesso** |
-| Criar conta | principal **Criar conta** · chips da única pergunta de pesquisa do produto + campo livre · links para Termos |
-| Recuperar acesso | principal **Procurar minha conta** |
+| Entrar | campos **E-MAIL** e **SENHA** · principal **Entrar**, com estado carregando · secundária **Criar conta** · texto neutra **Esqueci a senha**. Login é e-mail e senha; o app **nunca** envia mensagem sozinho, então não existe código por WhatsApp aqui |
+| Criar conta | campos **NOME DA TRANSPORTADORA** · **E-MAIL** · **SENHA** · **SEU TELEFONE** (o telefone é para o cliente falar com ela, não para login) · principal **Criar conta** · secundária **Já tenho conta** · chips da única pergunta de pesquisa do produto + campo livre · links para Termos |
+| Esqueci a senha | campo **E-MAIL DA CONTA** · principal **Mandar link de recuperação** · secundária **Voltar pra entrada**. Recuperação por e-mail, nunca por WhatsApp |
 | Termos e privacidade | duas abas · vindo do cadastro termina em principal **Li e aceito**; vindo de Ajustes é só leitura · **sem barra** no modo cadastro |
 | Planos | principal **Assinar o anual** · secundária **Assinar o mensal** · o anual mostra parcelamento e economia |
 | Minha assinatura | secundárias **Trocar de plano** + **Ver recibos** · texto destrutiva **Cancelar assinatura** |
@@ -294,4 +294,4 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 
 ## Conflitos
 
-Nada divergindo entre telas neste momento. Os três valores de folga de rolagem (`132`, `142`, `150`) e as duas espessuras da barra (`1.7` e `1.8`) foram unificados — o valor vigente está registrado acima.
+Nada divergindo entre telas neste momento. As medidas da barra divergiam entre este documento e a folha de estilo (respiro `12`/`11` contra `11`/`11`, elevação `18` contra `17,5`, dobra `101` contra `100,5`): o documento arredondava, e o valor vigente é o **medido no DOM** — `11`/`11`, `17,5` e `100,5`. Os três valores de folga de rolagem (`132`, `142`, `150`) e as duas espessuras da barra (`1.7` e `1.8`) foram unificados — o valor vigente está registrado acima.

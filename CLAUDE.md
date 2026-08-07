@@ -92,6 +92,20 @@ substituída pelas outras.
 3. **Os três jeitos de não ter contexto.** A política negando com nulo, com
    string vazia e com valor inválido (ver §9).
 
+4. **Contagem de verificações.** Todo teste conta quantas verificações
+   executou e **reprova se esse número for menor que o esperado**. Não basta
+   nenhuma ter falhado: se rodaram menos do que deviam, o teste falhou.
+
+   **Teste que não distingue "passou" de "não rodou" é pior que teste nenhum,
+   porque dá confiança falsa.** Sem ele, alguém desconfia e vai olhar; com ele,
+   ninguém olha.
+
+   > Isto está escrito porque aconteceu. Um teste de isolamento imprimiu
+   > aprovação **sem ter verificado nada**: uma exceção estourou na primeira
+   > linha e foi engolida por um `finally` com `process.exit`, que suprime o
+   > erro. Todas as verificações foram puladas, o contador de falhas ficou em
+   > zero, e a última linha dizia que estava tudo certo.
+
 Isso vale para sempre, não para a primeira vez. Teste que prova o isolamento
 hoje e não roda amanhã não protege contra a regressão de amanhã.
 

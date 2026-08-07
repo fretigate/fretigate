@@ -6,6 +6,88 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 06/08/2026 — tarefa 5: `lib/db`, o filtro que não dá para esquecer
+
+Os dois bloqueios do inventário estão **fechados** (abaixo), e a tarefa 5 está
+pronta e provada.
+
+### Os dois bloqueios, fechados
+
+**Bloqueio 1 — tela Entrar.** O Design corrigiu na fonte. A tabela agora diz
+campos **E-MAIL** e **SENHA**, principal **Entrar**, secundária **Criar conta**,
+texto **Esqueci a senha** — e registra por escrito que *"o app nunca envia
+mensagem sozinho, então não existe código por WhatsApp aqui"*. `Esqueci a senha`
+virou link por e-mail. Bate com o schema da tarefa 3. **A tarefa 8 está
+destravada.**
+
+**Bloqueio 2 — os três valores.** Unificados, com o `estilo.md` prevalecendo:
+respiro interno `11px` em cima e embaixo, elevação do (+) `17,5px`, e `100,5px`
+do topo do (+) até a base. O `componentes.md` registra que estava arredondando.
+Os dois documentos agora dizem a mesma coisa, conferido linha a linha.
+
+### O que a tarefa 5 entrega
+
+`src/lib/db/index.ts` — **`db(empresaId)`**. Toda operação vira
+`$transaction([set_config, consulta])` sozinha. Quem escreve
+`banco.empresa.findMany()` não passa filtro nenhum e mesmo assim só recebe a
+própria empresa. É a frase do §3 — "tem que ser impossível esquecer" — em
+código.
+
+Também: **`emTransacao()`** para várias consultas atômicas entre si, e recusa de
+`empresa_id` malformado antes de chegar ao banco, só para o erro aparecer
+legível em vez de virar erro de conversão de tipo três camadas abaixo.
+
+`src/lib/db/sem-filtro-de-empresa.ts` — a saída de emergência do Better Auth.
+Nome longo e feio de propósito: tem que saltar aos olhos numa revisão. **Não é
+um cliente com poderes de administrador** — conecta pelo `fretigate_auth`, que
+não ignora RLS e não enxerga `empresa`.
+
+### Provado — 14 de 14 verificações
+
+Com as conexões reais dos dois papéis, não com `postgres`. O filtro saindo
+sozinho em `findMany`, `findUnique`, `count` e `updateMany`; o contraste (o
+mesmo código com a outra empresa devolve a outra empresa, e só ela); escrita na
+empresa alheia recusada pelo banco; `emTransacao` filtrando as duas consultas;
+`empresa_id` malformado recusado, inclusive um com tentativa de injeção; e a
+saída de emergência achando usuário pelo e-mail sem contexto **e falhando ao
+ler `empresa`**.
+
+### O defeito que virou regra no `CLAUDE.md` §3
+
+A primeira execução deste teste imprimiu **"VEREDITO: o lib/db filtra sozinho"
+sem ter verificado nada**. Uma exceção estourou na primeira linha e foi engolida
+por um `finally` com `process.exit`, que suprime o erro. O contador de falhas
+ficou em zero e a última linha dizia que estava tudo certo.
+
+Se eu olhasse só a última linha, teria fechado a tarefa 5 como aprovada com o
+banco inalcançável. Foi o terceiro teste do dia a falhar por defeito próprio, e
+o único que falhou **para o lado perigoso**.
+
+Virou regra: **§3, item 4 — todo teste conta quantas verificações executou e
+reprova se forem menos que o esperado.** Aplicada já neste teste, e ela pegou um
+erro na primeira tentativa: eu tinha declarado 16 esperadas e existem 14. Errou
+para o lado seguro, que é o certo.
+
+### Ainda em aberto, aparecido ao conferir a tabela nova
+
+**A tela `Criar conta` não coleta o nome da pessoa.** Ela pede NOME DA
+TRANSPORTADORA, E-MAIL, SENHA e SEU TELEFONE — mas `usuario.nome` é obrigatório
+no banco. Ou a tela ganha um campo, ou o cadastro preenche com alguma coisa
+(o nome da transportadora?), ou a coluna passa a aceitar nulo. **Decisão de
+produto, não minha.** Aparece na tarefa 8.
+
+**Recuperação de senha precisa de um provedor de e-mail**, que não está decidido
+em documento nenhum — não está nem no §14. Vira dependência da tarefa 7, e entra
+na política de privacidade como subprocessador (§11).
+
+### Próximo passo — tarefa 6
+
+Testes de isolamento permanentes: o que lê o próprio schema e o de vazamento
+entre duas empresas. Agora com os quatro requisitos do §3 por escrito, incluindo
+a contagem de verificações.
+
+---
+
 ## 06/08/2026 — `docs/componentes.md` completo, e o que ele destravou
 
 O Design preencheu a especificação de ícones, completou a tabela "Onde cada tela
@@ -29,7 +111,7 @@ final sem título próprio.
 > uma versão antiga. **As duas correções abaixo são pedidas na fonte do Design,
 > não aplicadas neste repositório.**
 
-### 🔴 BLOQUEIO 1 — a tela Entrar reintroduz uma decisão já derrubada
+### ✅ BLOQUEIO 1 (FECHADO) — a tela Entrar reintroduz uma decisão já derrubada
 
 A tabela nova diz, para a tela `Entrar`:
 
@@ -50,7 +132,7 @@ decisão. **A tabela vai ser corrigida na fonte do Design.**
 **Bloqueia a tarefa 8** até a correção chegar por exportação. As tarefas 5, 6, 7
 e 9 não desenham tela e seguem sem depender disto.
 
-### 🟡 BLOQUEIO 2 — três valores divergindo do `docs/estilo.md`
+### ✅ BLOQUEIO 2 (FECHADO) — três valores divergindo do `docs/estilo.md`
 
 O `CLAUDE.md` §8 diz que valor sai de `docs/estilo.md`. O `componentes.md` novo
 diz que as medidas dele foram tiradas do DOM, não estimadas. Nos três pontos
