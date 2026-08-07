@@ -358,8 +358,12 @@ opcional para o produto funcionar — quem perde a senha só volta por e-mail.
 
 **Sai de um endereço e responde para outro, de propósito.** O subdomínio de
 envio não recebe mensagem — responder ao remetente seria falar com o vazio. O
-`Reply-To` aponta para `contato@` no **domínio raiz**, redirecionado pelo
-registrador para a caixa de quem lê.
+`Reply-To` aponta para `contato@` no **domínio raiz**, que a **Cloudflare Email
+Routing** redireciona para a caixa de quem lê, com catch-all ativo.
+
+O redirecionamento fica no domínio raiz, e o envio no subdomínio: as duas coisas
+não se atrapalham. O `MX` de recebimento é do raiz; o `SPF` e o `DKIM` de envio
+são do `envio.`, e continuam valendo sozinhos.
 
 Cliente que perdeu a senha, recebe o link e responde *"não consegui, me ajuda"*
 é comportamento comum, não caso de canto. Resposta que some é pior do que não

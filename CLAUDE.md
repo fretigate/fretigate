@@ -424,6 +424,7 @@ declarar depois não conserta, porque não se pede autorização retroativa.
 | **Supabase** | todo o banco e os arquivos | banco de dados e armazenamento |
 | **Vercel** | o tráfego da aplicação | hospedagem |
 | **Resend** | nome e e-mail de quem recebe a mensagem | e-mail transacional: recuperação de senha, verificação de e-mail e convite de usuário |
+| **Cloudflare** | o conteúdo das respostas que chegam em `contato@` | redirecionamento do e-mail de contato. Quem responde pedindo ajuda costuma colar dado do próprio negócio na mensagem |
 | **fornecedor de IA** *(a decidir — §14)* | o conteúdo da conversa colada na importação | extração dos fretes |
 
 O do e-mail e o da IA são os que mais pesam: os dois enxergam **dado de

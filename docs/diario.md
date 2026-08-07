@@ -128,13 +128,26 @@ O endereço de resposta fica em **`EMAIL_RESPOSTA`**, variável de ambiente, nun
 literal no código: ele vai mudar quando houver caixa própria, e trocar endereço
 de contato não pode exigir alterar código e publicar de novo.
 
-**Plano B, se o registrador não oferecer redirecionamento:** `EMAIL_RESPOSTA`
-aponta temporariamente para o endereço pessoal do fundador. Fica registrado
-aqui como **ponto a corrigir**, não como solução — e tem uma consequência que
-não é óbvia: resposta de cliente pode conter dado da transportadora, e esse dado
-passaria a ficar numa caixa pessoal, fora dos subprocessadores declarados no
-§11. Aceitável enquanto é provisório e o volume é zero; não aceitável depois do
-primeiro cliente pagante.
+**O plano B não foi preciso.** O redirecionamento está configurado na
+**Cloudflare Email Routing**, com catch-all: `contato@fretigate.com` cai na
+caixa do fundador. `EMAIL_RESPOSTA=contato@fretigate.com` já está no `.env`.
+
+Com isso o risco que estava registrado aqui **fechou**: o endereço de contato é
+do domínio do produto, não pessoal, e trocar para quem lê é mudar uma regra de
+redirecionamento — não mexer em código nem em variável.
+
+**A Cloudflare entrou na tabela de subprocessadores do `CLAUDE.md` §11.** Ela
+passa a ver o conteúdo das respostas que chegam, e quem responde pedindo ajuda
+costuma colar dado do próprio negócio na mensagem. Pela regra do próprio §11,
+subprocessador novo entra na tabela **e** na política, no mesmo commit.
+
+**Duas coisas a saber sobre o catch-all**, nenhuma bloqueante:
+
+- qualquer endereço `@fretigate.com` passa a chegar, inclusive os que ninguém
+  divulgou. Endereço curinga é ímã de spam, e a caixa é pessoal;
+- o `MX` de recebimento fica no domínio raiz e o `SPF`/`DKIM` de envio no
+  `envio.`. **As duas coisas não se atrapalham** — foi por isso que o envio
+  nasceu em subdomínio separado.
 
 ### Próximo passo — tarefa 6
 
