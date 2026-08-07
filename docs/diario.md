@@ -119,11 +119,22 @@ O motivo é o mesmo que está no §14: **recuperação que cai em spam é client
 perdido em silêncio.** Ele não abre chamado, não reclama — some, e a métrica
 some junto.
 
-**Ponto a resolver junto:** o remetente é `contato@envio.fretigate.com`, e o
-subdomínio `envio.` existe para enviar, não para receber. Quem responder a esse
-e-mail provavelmente fala com o vazio. Ou o subdomínio ganha MX, ou a mensagem
-leva `Reply-To` para um endereço que alguém lê. Cliente que responde pedindo
-ajuda e não recebe resposta é pior do que não ter escrito.
+**Resolvido: `Reply-To` separado do remetente.** A mensagem sai de
+`contato@envio.fretigate.com` e responde para `contato@fretigate.com`, no
+domínio raiz, redirecionado pelo registrador para a caixa de quem lê. No Resend
+não muda nada — o remetente continua sendo o do subdomínio verificado.
+
+O endereço de resposta fica em **`EMAIL_RESPOSTA`**, variável de ambiente, nunca
+literal no código: ele vai mudar quando houver caixa própria, e trocar endereço
+de contato não pode exigir alterar código e publicar de novo.
+
+**Plano B, se o registrador não oferecer redirecionamento:** `EMAIL_RESPOSTA`
+aponta temporariamente para o endereço pessoal do fundador. Fica registrado
+aqui como **ponto a corrigir**, não como solução — e tem uma consequência que
+não é óbvia: resposta de cliente pode conter dado da transportadora, e esse dado
+passaria a ficar numa caixa pessoal, fora dos subprocessadores declarados no
+§11. Aceitável enquanto é provisório e o volume é zero; não aceitável depois do
+primeiro cliente pagante.
 
 ### Próximo passo — tarefa 6
 

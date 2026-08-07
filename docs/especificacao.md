@@ -352,8 +352,23 @@ opcional para o produto funcionar — quem perde a senha só volta por e-mail.
 | Provedor | **Resend** |
 | Domínio | `fretigate.com` |
 | Subdomínio de envio | `envio.fretigate.com`, verificado |
-| Remetente | `contato@envio.fretigate.com` |
-| Variáveis | `RESEND_API_KEY` e `EMAIL_REMETENTE` |
+| Remetente (`From`) | `contato@envio.fretigate.com` |
+| Resposta (`Reply-To`) | `contato@fretigate.com`, no domínio raiz |
+| Variáveis | `RESEND_API_KEY`, `EMAIL_REMETENTE`, `EMAIL_RESPOSTA` |
+
+**Sai de um endereço e responde para outro, de propósito.** O subdomínio de
+envio não recebe mensagem — responder ao remetente seria falar com o vazio. O
+`Reply-To` aponta para `contato@` no **domínio raiz**, redirecionado pelo
+registrador para a caixa de quem lê.
+
+Cliente que perdeu a senha, recebe o link e responde *"não consegui, me ajuda"*
+é comportamento comum, não caso de canto. Resposta que some é pior do que não
+ter recebido o e-mail: a pessoa acha que falou com alguém.
+
+**O endereço de resposta é variável de ambiente (`EMAIL_RESPOSTA`), nunca
+literal no código.** Ele vai mudar — hoje é redirecionamento do registrador,
+depois vira caixa própria. Trocar endereço de contato não pode exigir alterar
+código e publicar de novo.
 
 **Por que subdomínio separado para envio.** A reputação de envio fica isolada do
 domínio principal. Se um dia sair mala direta, ela vai por outro subdomínio, e
