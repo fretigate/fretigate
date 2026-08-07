@@ -27,6 +27,10 @@ const SEM_EMPRESA_ID = {
   account: "infraestrutura do Better Auth — guarda o hash da senha",
   verification: "infraestrutura do Better Auth — token de verificação",
   empresa: "é a própria empresa: o escopo dela é o próprio `id`",
+  rate_limit:
+    "trava de tentativas — a contagem acontece ANTES de existir sessão, " +
+    "então não há empresa para filtrar. Quem tenta adivinhar senha não está " +
+    "logado",
 } as const;
 
 /** Gerada e mantida pelo Prisma. Não é tabela de domínio. */

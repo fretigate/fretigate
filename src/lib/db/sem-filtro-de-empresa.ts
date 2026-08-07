@@ -16,7 +16,11 @@ import { PrismaClient } from "@/lib/generated/prisma/client";
  * Ele conecta com o papel `fretigate_auth`, que:
  *
  *   - NÃO tem `BYPASSRLS` — o RLS continua ligado e valendo;
- *   - alcança `session`, `account`, `verification` e `usuario`, e nada mais;
+ *   - alcança **as tabelas que existem para autenticar e que não têm
+ *     `empresa_id`**, porque são consultadas antes de existir empresa. Hoje são
+ *     cinco: `session`, `account`, `verification`, `usuario` e `rate_limit`.
+ *     A lista é fotografia; quem manda é a regra, e quem confere é o teste que
+ *     lê o catálogo;
  *   - **não enxerga `empresa`** nem nenhuma tabela de domínio. Frete, cliente,
  *     cobrança e despesa são invisíveis para ele, hoje e quando existirem.
  *

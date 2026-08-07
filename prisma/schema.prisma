@@ -239,3 +239,45 @@ model Verification {
   @@index([identifier])
   @@map("verification")
 }
+
+/// A trava de tentativas do §4 — "rate limit em login, recuperação de senha e
+/// toda rota que gere custo".
+///
+/// NÃO tem `empresa_id`, e não é esquecimento: a contagem acontece ANTES de
+/// existir empresa. Quem tenta adivinhar senha não está logado, então não há
+/// contexto de empresa para filtrar. A chave é o endereço de rede mais a rota,
+/// montada pelo Better Auth. O teste de isolamento registra essa exceção pelo
+/// nome, com este mesmo motivo.
+///
+/// Fica no banco, e não em memória, porque a Vercel roda várias instâncias: com
+/// contagem em memória, cada instância teria a sua e o limite de 5 tentativas
+/// viraria 5 vezes o número de instâncias. Trava que só vale numa instância não
+/// é trava.
+model RateLimit {
+  id String @id
+
+  /// Quem está sendo contado. Único porque a contagem é uma linha por chave —
+  /// duas linhas para a mesma chave dividiriam o contador ao meio.
+  key String @unique
+
+  count Int
+
+  /// Momento da última tentativa, em milissegundos. `BigInt` porque é assim que
+  /// o Better Auth grava (`bigint: true` na definição da biblioteca), não por
+  /// escolha nossa.
+  lastRequest BigInt
+
+  /// §7 — "toda tabela tem `criado_em` e `atualizado_em`", sem ressalva.
+  ///
+  /// O `lastRequest` acima marca tempo e seria tentador chamar de suficiente,
+  /// mas ele é da biblioteca: mede a janela da trava, não a vida da linha. E
+  /// abrir exceção numa regra absoluta enfraquece a regra — quem for
+  /// acrescentar tabela depois vai achar a exceção antes de achar a regra.
+  ///
+  /// Não tem `arquivado_em`: "nada é apagado" vale para o domínio, e contador
+  /// de tentativa vencido some mesmo — a própria biblioteca o apaga.
+  criado_em     DateTime @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("rate_limit")
+}

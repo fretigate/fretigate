@@ -6,6 +6,211 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 07/08/2026 — tarefa 7: Better Auth, `lib/auth` e a trava de tentativas
+
+**A tarefa NÃO está fechada.** O critério de fechamento exige e-mail real
+chegando à caixa de entrada, e isso depende de dois endereços que o fundador
+ainda vai passar. O que está pronto e provado está abaixo; o que falta está no
+fim.
+
+### O que entrou
+
+`src/lib/auth/index.ts` — a configuração do Better Auth, ligada ao banco pelo
+papel `fretigate_auth`. `sessao.ts` — `exigirSessao()` e `exigirDono()`.
+`email.ts` — o envio pelo Resend. E `src/app/api/auth/[...all]/route.ts`, o
+endereço por onde o navegador fala com a autenticação.
+
+A partir daqui existe "estar logado": o `empresa_id` que alimenta o filtro do
+§3 passa a sair da sessão, e não de um argumento que alguém lembra de passar.
+
+### O ponto que podia furar o isolamento, e não furou
+
+`empresa_id` e `papel` precisam existir na sessão, e o Better Auth expõe campos
+extras com `input: true` por padrão — ou seja, **preenchíveis pelo cliente**.
+Deixados assim, um cadastro conseguiria mandar o `empresa_id` de outra empresa
+no formulário, que é exatamente a linha que o §3 proíbe.
+
+Os quatro campos extras estão com `input: false`. Foi conferido por tipo, não
+por leitura: uma sonda de compilação confirmou que `empresa_id` e `papel`
+chegam tipados na sessão e que campo inexistente falha — se a inferência
+estivesse caindo em `any`, um erro de digitação passaria calado.
+
+### O cadastro genérico está fechado, de propósito
+
+`disableSignUp: true`. Criar conta no FretiGate é criar uma **empresa** e o
+usuário dono dela na mesma transação, e o papel da autenticação não enxerga
+`empresa` — o endpoint genérico gravaria usuário sem empresa, que o banco
+recusa. Rota que só sabe dar erro não fica aberta. A tela de criar conta é a
+tarefa 8.
+
+### A trava de tentativas — medida, não suposta
+
+Tabela `rate_limit` nova, e ela nasceu isolada no mesmo commit: RLS ligado,
+forçado, política nomeada para `fretigate_auth`, e a exceção registrada no
+teste com o motivo. Ela não tem `empresa_id` porque a contagem acontece **antes
+de existir sessão** — quem tenta adivinhar senha não está logado.
+
+No banco e não em memória porque a Vercel roda várias instâncias: com contagem
+em memória o limite de 5 viraria 5 vezes o número de instâncias, e em
+desenvolvimento — uma instância só — o número bateria, escondendo o defeito.
+
+**Sete tentativas de login seguidas: 401, 401, 401, 401, 401, 429, 429.** Trava
+exatamente na sexta. E as linhas foram conferidas na tabela depois, com
+contagem 5 na chave do login — a contagem está no banco, não na memória do
+processo.
+
+### O que foi provado do e-mail, e o que não foi
+
+**Provado:**
+
+| | |
+|---|---|
+| DNS do envio | SPF em `send.envio.fretigate.com` (`include:amazonses.com`), DKIM em `resend._domainkey.envio.fretigate.com`, retorno de bounce no `feedback-smtp.sa-east-1` |
+| DMARC | existe no domínio raiz, `p=none`, e vale para o subdomínio por herança |
+| Alinhamento | tanto SPF quanto DKIM alinham com `fretigate.com` — o DMARC passa por dois caminhos, não por um |
+| A corrente do produto | `POST /api/auth/request-password-reset` responde 200 e roda o envio sem erro |
+| O fornecedor | o módulo `email.ts` mandou de verdade e o Resend devolveu identificador — `Reply-To` saindo de `EMAIL_RESPOSTA`, nunca literal |
+
+**Não provado, e é o que falta para fechar:** que a mensagem **chega à caixa de
+entrada**. Domínio verificado e DNS certo provam que o caminho existe, não que
+o filtro aceita — conteúdo e reputação também decidem, e o domínio é novo.
+
+### Uma observação que não bloqueia
+
+O DMARC está em `p=none`, que é só monitoramento: um filtro que reprove o
+alinhamento não recebe instrução de rejeitar. Para domínio novo é o começo
+correto, e não se sobe direto para `reject`. Fica anotado para revisitar depois
+que os relatórios de `rua=` mostrarem algumas semanas de envio limpo.
+
+### Fora da tarefa, feito no mesmo dia
+
+O repositório foi para o GitHub — `fretigate/fretigate`, privado, conferido por
+consulta anônima. O endereço do remoto estava certo e a **conta** é que estava
+errada: a máquina tinha guardada a credencial de `ogestorflow`, e o GitHub
+responde "não existe" para repositório privado de quem não tem acesso, o que
+parece endereço errado. O remoto agora carrega a conta no endereço.
+
+A identidade de commit foi fixada **só neste repositório** para o endereço
+`noreply` da conta `fretigate`. Os 28 commits anteriores ficaram como estavam,
+por decisão do fundador: um e-mail só fica verificado numa conta do GitHub por
+vez, então adicionar o antigo à conta nova não funcionaria.
+
+### O que o revisor pegou, e o que virou correção
+
+Cinco divergências. Quatro aceitas, uma recusada pelo fundador.
+
+**O e-mail sai em texto puro, sem HTML.** A primeira versão trazia dois cinzas
+e três tamanhos de fonte que não existem em documento nenhum — valor fora do
+sistema, §8. A decisão do fundador não foi escolher as cores certas: foi
+**tirar o HTML**. Texto puro tem nota de spam melhor, e com domínio novo isso
+pesa mais que estética. Por isso o `estilo.md` não ganha seção de e-mail — não
+há o que estilizar.
+
+**`rate_limit` ganhou `criado_em` e `atualizado_em`.** O §7 não tem ressalva. O
+argumento de que o `lastRequest` já marca tempo era raciocínio contra regra
+escrita, e abrir exceção enfraquece uma regra absoluta: quem for acrescentar
+tabela depois acha a exceção antes de achar a regra. Como a migration ainda não
+tinha sido commitada, ela foi **refeita inteira** em vez de empilhar uma
+segunda — uma mudança lógica, uma migration.
+
+**Um comentário meu prometia um teste que não existia.** Na migration estava
+escrito que a ausência de privilégio de `anon` era "conferida pelo teste". Não
+era: nenhum teste olhava privilégio. É o defeito exato do §3, item 4 — com a
+frase, ninguém vai olhar. O fundador mandou **escrever o teste**, não apagar a
+frase.
+
+### O teste novo achou duas coisas antes de existir
+
+`tests/isolamento/privilegios.test.ts` confere a camada **antes** do RLS: RLS
+decide quais linhas um papel enxerga, privilégio decide se ele alcança a
+tabela. O `schema.test.ts` só olhava a primeira.
+
+Escrevê-lo obrigou a olhar o banco de verdade, e apareceram duas coisas que
+ninguém sabia:
+
+1. **O `REVOKE USAGE ON SCHEMA public` da migration anterior não teve efeito.**
+   `has_schema_privilege('anon','public','USAGE')` continua verdadeiro, porque
+   o schema `public` concede USAGE ao pseudo-papel `PUBLIC`, do qual todo mundo
+   faz parte — revogar de `anon` não tira o que veio por ali. **Não é buraco:**
+   USAGE no schema sem privilégio em tabela não alcança dado nenhum. Mas a
+   migration dá a entender que revogou, e não revogou.
+
+2. **Os privilégios padrão do `supabase_admin` ainda concedem tudo a `anon` e
+   `authenticated` em tabela futura.** A migration anterior alterou o padrão do
+   `postgres`, que é quem roda as migrations — por isso a `rate_limit` nasceu
+   fechada, conferido. O padrão do `supabase_admin` continua aberto e só
+   morderia se alguma tabela fosse criada por ele. É arma carregada guardada,
+   não tiro dado.
+
+O teste cobre o que importa hoje: nenhuma concessão a `anon`/`authenticated` em
+tabela nenhuma, e o padrão do `postgres` não deixando a próxima nascer aberta.
+
+**Foi testado contra si mesmo.** `GRANT SELECT ON rate_limit TO anon` e a suíte
+reprovou por dois caminhos independentes: a verificação de privilégio e o
+**contador de verificações**, que acusou que uma verificação não chegou a
+rodar. Concessão removida, 32/32 de volta.
+
+### Para fechar a tarefa 7
+
+1. Os dois endereços — **Gmail e Outlook**. O provedor brasileiro foi cortado
+   pelo fundador: os principais hoje são pagos, e abrir conta só para isso
+   atrasa sem ganho.
+2. Passar a mensagem por uma **ferramenta de teste de entrega** que dê nota de
+   spam e confira SPF, DKIM e DMARC. Com domínio novo, saber *o que* está
+   errado vale mais do que saber que caiu em spam. A ferramenta bloqueia acesso
+   automatizado, então esse passo é manual.
+
+### Segundo passe do revisor
+
+Ele achou três coisas, e duas estavam no arquivo que eu tinha acabado de
+escrever para atender o §3 — o que é o argumento inteiro a favor de um revisor
+que não vê a conversa.
+
+**O teste de privilégio tinha o defeito que ele existe para impedir.** A
+verificação de "tabela futura" percorria uma lista sem guarda contra lista
+vazia, com o contador incrementando fora do laço: zero linhas e ela fechava
+4 de 4 tendo comparado nada. Guarda acrescentada.
+
+**A `rate_limit` virou a quinta tabela do papel da autenticação, e dois lugares
+ainda diziam quatro.** O fundador não mandou acrescentar a quinta à lista —
+mandou **trocar a lista por regra**: o papel enxerga as tabelas que existem para
+autenticar e não têm `empresa_id`. A lista é fotografia, a regra é o que manda,
+e quem confere é o teste que lê o catálogo. Lista enumerada envelhece a cada
+tabela nova, que foi exatamente o que acabou de acontecer.
+
+**O comentário da migration prometia mais do que o teste confere.** Segunda vez
+na mesma tarefa, duas linhas abaixo da primeira correção: dizia "toda tabela
+futura" onde o teste olha só o padrão do `postgres`. Agora ele separa em voz
+alta o que é conferido do que não é.
+
+### O link de recuperação, decidido
+
+**2 horas, fixado no código**, não herdado do padrão da biblioteca — o e-mail
+diz o prazo ao cliente, e uma atualização da biblioteca não pode fazer essa
+frase virar mentira sozinha. Duas e não uma porque a pessoa pode não abrir o
+e-mail na hora.
+
+**Uso único, confirmado no código da biblioteca:** ao redefinir a senha o token
+é consumido e a linha some de `verification`. Não foi suposto pelo nome da
+função — foi lido.
+
+### Registrado para a tarefa 8
+
+**A tarefa 8 não fecha com o e-mail chegando.** Ela fecha com o **ciclo
+inteiro**: o e-mail chega, o link abre a tela, a senha é redefinida, e a pessoa
+entra com a senha nova. Hoje o link de recuperação aponta para uma tela que não
+existe — ele dá 404, e isso é esperado nesta altura.
+
+**E fecha também com a tela de link expirado**, que precisa dizer que expirou e
+oferecer **reenviar em um toque**, sem a pessoa digitar o e-mail de novo. Quem
+chega nessa tela já perdeu a senha uma vez; obrigá-la a recomeçar do zero é o
+segundo tapa seguido.
+
+**Pendente com o Design:** o rótulo e a forma da pendência de e-mail não
+confirmado, para `docs/componentes.md`. Não bloqueia — a dashboard é o item 8.
+
+---
+
 ## 07/08/2026 — o revisor, e três regras ditadas pelo fundador
 
 O `/revisar` entrou em uso: subagente que enxerga o diff e os documentos e

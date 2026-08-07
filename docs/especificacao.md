@@ -231,9 +231,9 @@ Tela inicial. Só entra número que muda o que ele faz depois de ver.
   colorido**, para não confundir com o arraste das listas — e por um "×" visível.
   Ao dispensar, aviso "Guardado em Novidades" com Desfazer.
 - **"Precisa de você"**: fretes em andamento (indicando quantos sem ordem
-  enviada), fretes a faturar, cobranças vencidas, e sugestão de relatório quando
-  um cliente acumula fretes não faturados de um mês fechado. **O sistema nunca
-  gera relatório sozinho.**
+  enviada), fretes a faturar, cobranças vencidas, sugestão de relatório quando
+  um cliente acumula fretes não faturados de um mês fechado, e **e-mail ainda
+  não confirmado**. **O sistema nunca gera relatório sozinho.**
 - **Barras dos últimos 6 meses**, sem eixo, legenda ou grade. **Tocáveis:** cada
   mês leva a Fretes filtrado naquele período.
 
@@ -386,6 +386,62 @@ conteúdo, remetente e reputação também decidem. Recuperação que cai em spa
 cliente perdido em silêncio — ele não reclama, ele some.
 
 **O Resend é subprocessador** e está declarado no `CLAUDE.md` §11.
+
+#### E-mail não confirmado **não impede entrar**
+
+Decisão do fundador em 07/08/2026. A verificação roda em segundo plano: a
+pessoa entra e usa o produto normalmente, e o lembrete aparece como pendência
+na dashboard, no bloco **"Precisa de você"**.
+
+**Sem janela modal e sem barra permanente.** Quem acabou de pagar sem ter visto
+o produto não pode esbarrar numa parede — e o domínio é novo, sem histórico de
+envio, então a mensagem pode legitimamente cair em spam. Travar o acesso nesse
+caso transformaria um problema de entrega em cliente perdido no primeiro
+minuto, que é o pior momento possível.
+
+A confirmação continua importando, e é por isso que ela vira pendência visível
+em vez de sumir: **é ela que garante que a recuperação de senha vai funcionar
+no dia em que for preciso.** O texto do lembrete diz isso, não "confirme seu
+e-mail" sem motivo.
+
+O **rótulo exato e a forma** da pendência são do Design e entram em
+`docs/componentes.md` — pendente, e não bloqueia: a dashboard é o item 8 da
+ordem de construção.
+
+#### O link de recuperação
+
+Vale **2 horas** e é de **uso único** — usado uma vez, deixa de valer. Duas
+horas, e não uma, porque a pessoa pode não abrir o e-mail na hora.
+
+O prazo é fixado no código, não herdado do padrão da biblioteca: o e-mail diz
+ao cliente quanto tempo ele tem, e uma atualização da biblioteca não pode fazer
+essa frase virar mentira sem ninguém tocar em nada.
+
+### Trava de tentativas
+
+O §4 do `CLAUDE.md` exige rate limit em login, recuperação de senha e toda rota
+que gere custo. Os números, aprovados em 07/08/2026:
+
+| Onde | Limite |
+|---|---|
+| Entrar | **5 tentativas por minuto** |
+| Mandar link de recuperação | **3 por 5 minutos** |
+| Reenviar confirmação de e-mail | **3 por 5 minutos** |
+| Redefinir a senha pelo link | **5 por 5 minutos** |
+
+A contagem é por endereço de rede e por rota, e fica **no banco** — a
+hospedagem roda várias instâncias, e contagem em memória viraria uma contagem
+por instância.
+
+**A mensagem de travado não é um erro seco.** Quem bate no limite é, quase
+sempre, cliente legítimo que errou a senha — não invasor. A tela precisa:
+
+1. dizer **o que aconteceu**, sem jargão e sem culpa;
+2. dizer **quando ele poderá tentar de novo**;
+3. oferecer a **recuperação por e-mail** ali mesmo.
+
+Sem a terceira, quem esqueceu a senha bate na parede e conclui que o produto
+está quebrado — e some, que é o mesmo desfecho da recuperação que cai em spam.
 
 ---
 

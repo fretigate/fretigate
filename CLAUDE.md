@@ -171,6 +171,20 @@ hoje e não roda amanhã não protege contra a regressão de amanhã.
 - Log nunca contém dado pessoal, senha, token ou conteúdo de mensagem.
 - Backup do banco configurado antes do primeiro cliente pagante.
 
+### Os papéis embutidos do Supabase
+
+Eles ficam **como o Supabase os entrega**. Revogamos apenas `anon` e
+`authenticated` — são os dois que a internet alcança, porque são os papéis da
+API REST pública, usada com a chave que **por desenho** fica no navegador.
+
+`service_role` continua com privilégio, e isso é decisão, não esquecimento: é a
+chave secreta, que nunca vai ao navegador. Vazar essa chave já seria incidente
+por conta própria, e revogá-la aqui não mudaria isso.
+
+Quem confere é `tests/isolamento/privilegios.test.ts`, e ele confere o que esta
+regra manda conferir: nenhuma concessão a `anon` ou `authenticated`, em nenhuma
+tabela, hoje e nas que vierem.
+
 ### Upload de imagem (comprovante e logo)
 
 O risco não é vírus — é arquivo que o navegador executa.
@@ -419,8 +433,19 @@ parte do desenho:
 | Papel | Para quê | Enxerga |
 |---|---|---|
 | `fretigate_app` | todo o domínio | só a empresa do contexto. Sem `DELETE` — arquivar é `UPDATE` (§7) |
-| `fretigate_auth` | só o Better Auth | `session`, `account`, `verification` e `usuario`. **Nada** de domínio |
+| `fretigate_auth` | só o Better Auth | as tabelas que existem para autenticar e não têm `empresa_id` (ver abaixo). **Nada** de domínio |
 | `postgres` | **só migrations** | tudo — por isso não roda no produto |
+
+**O que `fretigate_auth` alcança é regra, não lista.** Ele enxerga as tabelas
+que existem para autenticar e que **não têm `empresa_id`**, porque são
+consultadas antes de existir empresa. Hoje são cinco: `session`, `account`,
+`verification`, `usuario` e `rate_limit`. **A lista é fotografia; quem manda é
+a regra, e quem confere é o teste que lê o catálogo.**
+
+Está escrito assim porque a lista enumerada envelhece a cada tabela nova, e foi
+exatamente o que aconteceu: a `rate_limit` entrou e as quatro enumeradas viraram
+mentira no mesmo commit, aqui e no comentário do
+`src/lib/db/sem-filtro-de-empresa.ts`.
 
 `fretigate_auth` precisa de política própria em `usuario` porque, no login, não
 existe contexto de empresa: só se sabe de que empresa a pessoa é depois de
