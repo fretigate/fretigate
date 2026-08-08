@@ -54,8 +54,8 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 | Entrar ✅ | Abrir o app sem sessão · Sair da conta | **E-mail e senha** → Primeiro acesso · Criar conta · Esqueci a senha. O app nunca envia mensagem sozinho, então não há código por WhatsApp |
 | Criar conta ✅ | Entrar | Nome da empresa + **e-mail** + **senha** + **seu nome** (obrigatório, distingue os dois usuários) + telefone (contato, não login) + a única pergunta de pesquisa do produto → Primeiro acesso |
 | Redefinir senha ✅ | Link do e-mail de recuperação. Na demonstração, por "Abrir o link" em Recuperação enviada | Salvar senha e entrar → dashboard. Sem voltar: quem chega pelo link não tem tela anterior |
-| Link expirado ✅ | Link do e-mail depois de 1 hora. Na demonstração, por "Abrir depois de 1 hora" em Recuperação enviada | Mandar link novo → Recuperação enviada · Voltar pra entrada |
-| Recuperação enviada ✅ | Esqueci a senha, depois de mandar | Mandar link de recuperação (reenviar) · Usar outro e-mail → Esqueci a senha · Voltar pra entrada |
+| Link expirado ✅ | Link do e-mail depois de 2 horas. Na demonstração, por "Abrir depois de 2 horas" em Recuperação enviada | Mandar link novo → Recuperação enviada · Voltar pra entrada |
+| Recuperação enviada ✅ | Esqueci a senha, depois de mandar | Mandar link novo (reenviar) · Usar outro e-mail → Esqueci a senha · Voltar pra entrada |
 | Esqueci a senha ✅ | Entrar | E-mail da conta → link de recuperação por e-mail |
 | Usuários — lista, convite, detalhe ✅ | Conta da empresa › Usuários | COM ACESSO + CONVITE ENVIADO (aguardando, reenviar, cancelar) · Linha → Detalhe · + Convidar → nome, WhatsApp, prévia da mensagem → abre a conversa · Detalhe → Remover acesso, **só para o dono**; o acesso do dono não é removível. **É a única tela de convidar** — o estado duplicado que existia em Entrar foi removido |
 | Aceitar convite ✅ | Link do WhatsApp, fora do app. Na demonstração, por "Ver o que ela recebe" no convite pendente | Marca da empresa + o que a pessoa vai poder fazer → Entrar na conta (ela cria a senha dela) · Não conheço essa empresa. Sem barra de navegação: quem abre ainda não está dentro do app |

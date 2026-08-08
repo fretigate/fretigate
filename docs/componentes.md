@@ -159,6 +159,16 @@ Vale para a empresa. **Pessoa é outra regra**: sempre a primeira letra dos dois
 
 Círculo: `30px` no cartão da dashboard · `40px` em linha de lista · `48px` em Mais · `56px` em Conta e no convite · `46px` quadrado de raio 6 no A4. Fundo `#1B6B3A` com texto branco (contorno preto no A4, que é impresso), `letter-spacing:.02em`.
 
+## Números de regra de produto
+
+**Prazo, limite e número de regra vêm da especificação, não do desenho.** O `componentes.md` manda no que a tela contém — texto, rótulo, ordem, variante — mas nunca inventa nem "arredonda" um valor de regra. Quando um número desses aparece em tela, ele é citação: se a especificação mudar, a tela muda atrás dela.
+
+| Número | Valor | Onde aparece |
+|---|---|---|
+| Validade do link de recuperação | **2 horas** | Recuperação enviada · Link expirado. O usuário pode não abrir o e-mail na hora |
+| Senha mínima | 6 caracteres | Redefinir senha · Criar conta |
+| Prazo padrão de vencimento | 15 dias | Configurações · perfil do cliente (herdado) |
+
 ## Corpo de texto fora de sessão
 
 As telas de fora de sessão (entrar, criar conta, recuperação, redefinir senha, termos, aceitar convite) precisam de um papel que não existia: **parágrafo de leitura**, mais longo que um subtítulo e sem ser rótulo.
@@ -335,10 +345,10 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Novidades — detalhe | no máximo **uma** ação por mensagem, como principal |
 | Entrar | campos **E-MAIL** e **SENHA** · principal **Entrar**, com estado carregando · secundária **Criar conta** · texto neutra **Esqueci a senha**. Login é e-mail e senha; o app **nunca** envia mensagem sozinho, então não existe código por WhatsApp aqui |
 | Criar conta | campos **NOME DA EMPRESA** · **E-MAIL** · **SENHA** · **SEU NOME** (obrigatório — é o que distingue os dois usuários no "cobrado por" e na tela de Usuários; o nome da empresa ali deixaria os dois idênticos justamente na tela que existe para diferenciá-los) · **SEU TELEFONE** (contato para o cliente, não login) · principal **Criar conta** · secundária **Já tenho conta** · chips da única pergunta de pesquisa do produto + campo livre · links para Termos |
-| Esqueci a senha | campo **E-MAIL DA CONTA** · principal **Mandar link de recuperação** · secundária **Voltar pra entrada**. Recuperação por e-mail, nunca por WhatsApp |
-| Recuperação enviada | sem campos · principal **Mandar link de recuperação** (reenviar) · secundária **Voltar pra entrada** · pílula em linha **Usar outro e-mail** · corpo explicando que o link vale 1 hora e o que fazer se não chegar. Era a tela sem saída nenhuma |
-| Redefinir senha — link válido | campos **SENHA NOVA** · **REPETIR A SENHA** · principal **Salvar senha e entrar**, que só habilita com 6+ caracteres e as duas iguais · **sem voltar e sem secundária**: quem chegou pelo link do e-mail não tem tela anterior · sem barra de navegação |
-| Redefinir senha — link expirado | sem campos · principal **Mandar link novo** · secundária **Voltar pra entrada** · bloco de corpo sobre `#F6E6DD` dizendo que o link vale 1 hora e que a conta e os fretes seguem intactos · **não pede o e-mail de novo** — o link já identifica a conta |
+| Esqueci a senha | campo **E-MAIL DA CONTA** · principal **Mandar link novo** (mesmo nome em Recuperação enviada e Link expirado — é a mesma ação nas três) · secundária **Voltar pra entrada**. Recuperação por e-mail, nunca por WhatsApp |
+| Recuperação enviada | sem campos · principal **Mandar link novo** (reenviar — mesmo nome da ação em Link expirado) · secundária **Voltar pra entrada** · pílula em linha **Usar outro e-mail** · corpo explicando que o link vale 2 horas e o que fazer se não chegar. Era a tela sem saída nenhuma |
+| Redefinir senha — link válido | campo único **SENHA NOVA** com **revelar** (variante do inventário — sem "repetir a senha": conferir digitando duas vezes no escuro erra mais que ver uma vez) · principal **Salvar senha e entrar**, que habilita com 6+ caracteres · **sem voltar e sem secundária**: quem chegou pelo link do e-mail não tem tela anterior · sem barra de navegação |
+| Redefinir senha — link expirado | sem campos · principal **Mandar link novo** · secundária **Voltar pra entrada** · bloco de corpo sobre `#F6E6DD` dizendo que o link vale 2 horas e que a conta e os fretes seguem intactos · **não pede o e-mail de novo** — o link já identifica a conta |
 | Termos e privacidade | duas abas · vindo do cadastro termina em principal **Li e aceito**; vindo de Ajustes é só leitura · **sem barra** no modo cadastro |
 | Planos | principal **Assinar o anual** · secundária **Assinar o mensal** · o anual mostra parcelamento e economia |
 | Minha assinatura | secundárias **Trocar de plano** + **Ver recibos** · texto destrutiva **Cancelar assinatura** |
