@@ -26,7 +26,7 @@
  * a URL trocaria a expectativa junto, e a trava aprovaria o desastre.
  * Identificador de projeto Supabase não é segredo — aparece na URL pública.
  */
-const PROJETOS_DE_TESTE = ["ysldmzvszjxdgcbtaurh"];
+const PROJETOS_DE_TESTE = ["ysldmzvszjxdgcbtaurh", "qutzsvrkaqvpluqxbhmp"];
 
 const VARIAVEIS = ["DATABASE_URL", "AUTH_DATABASE_URL", "DIRECT_URL"] as const;
 

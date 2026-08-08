@@ -6,6 +6,31 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 08/08/2026 — preparação da tarefa 9: projeto de teste no Supabase, e a pegadinha da pausa
+
+Antes do primeiro passo da tarefa 9 — a suíte de isolamento sai do banco de
+desenvolvimento e passa a rodar contra um projeto próprio, só de teste, na
+esteira do GitHub Actions — conferido na documentação do Supabase: **cabe no
+plano gratuito**. O limite é 2 projetos ativos por organização, e o FretiGate
+hoje usa 1. Sem custo novo.
+
+**A pegadinha, registrada para não custar meia hora de investigação depois:**
+projeto gratuito do Supabase pausa sozinho depois de **7 dias sem atividade
+suficiente** — a própria documentação diz que poucas consultas por dia ao
+longo da semana evitam a pausa. Chega aviso por e-mail uma semana antes, e
+depois de pausado a restauração é **só manual, pelo painel do Supabase** —
+não existe endpoint de API nem comando de CLI para isso, então a esteira não
+se recupera sozinha.
+
+Como a esteira roda a cada push, na prática isso só acontece se ficar **mais
+de uma semana sem nenhum commit**. Quando acontecer: a esteira falha com erro
+de conexão recusada, e esse erro **parece defeito no código ou na
+migration** — não é. Primeiro lugar a olhar, antes de investigar qualquer
+outra coisa: painel do Supabase → projeto de teste → botão de retomar o
+projeto.
+
+---
+
 ## 08/08/2026 — tarefa 8 (fatia 2): Entrar, Esqueci a senha, Redefinir senha, Termos
 
 **Fechada** — fecha o ciclo de recuperação de senha por inteiro: o e-mail
