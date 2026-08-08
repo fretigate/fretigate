@@ -6,6 +6,106 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 08/08/2026 — exportação do Design conferida antes de commitar (a quarta com problema)
+
+Enquanto a tarefa 10 fechava, `docs/componentes.md` e `docs/navegacao.md`
+mudaram sozinhos — uma exportação do Design chegando por fora desta sessão.
+Pelo `CLAUDE.md` §13 ela entra em commit próprio, antes de código de tarefa.
+Antes de commitar, conferida com o mesmo rigor das três anteriores (regra de
+posição revertida, login por WhatsApp de volta, prazo do link para 1 hora,
+exceção de barra apagada) — porque, junto com aquelas, esta é a **quarta**.
+
+### O que ela apagou, que tinha sido acrescentado à mão
+
+- **O parágrafo de exceção da barra do `CLAUDE.md` §8**, em
+  `docs/componentes.md`. Ele já vinha marcado, por escrito, como reaplicado à
+  mão porque a exportação de 07/08/2026 não trazia: "(Esta nota não vem nas
+  exportações do Design de 07/08/2026 — reaplicada aqui...)". Esta
+  exportação apagou de novo — é a mesma perda de antes, pela segunda vez.
+- **O parágrafo sobre Termos no modo Ajustes** (mesma vizinhança do anterior),
+  que dizia que os dois modos de `/termos` usam a margem provisória do
+  cadastro **enquanto Ajustes não existir**. Apagado, e o que entrou no lugar
+  contradiz — ver abaixo.
+- **A seção inteira "Lacunas registradas — tarefa 8, fatia 2"**, com duas
+  coisas que só existiam ali: o detalhe de acessibilidade do `ChipEscolha`
+  usado como aba (`role="radio"`, não `role="tab"`, pendente do Design
+  desenhar aba de verdade — não sobrou em nenhum outro lugar do arquivo,
+  conferido) e o registro de que a seção "Campo de texto" nunca veio em
+  nenhuma exportação. **Conferido: a seção "Campo de texto" continua sem
+  existir no arquivo** — a pendência foi apagada, o problema que ela
+  rastreava não foi resolvido.
+
+### O que contradiz decisão já registrada
+
+- A seção nova "Barra de navegação: exceção fora de sessão" acrescenta
+  **Link expirado** e **Primeiro acesso** à lista de telas sem barra. O
+  `CLAUDE.md` §8 registra essa lista como **fechada**: "tela nova sem barra
+  entra aqui só com decisão explícita, não por analogia." Nenhuma das duas
+  entrou por decisão do fundador — e "Primeiro acesso" nem é claramente "fora
+  de sessão" pela própria definição do §8: a pessoa já tem conta criada e
+  login feito nesse ponto.
+- A mesma seção afirma que **Termos vindo de Ajustes "ganha barra"** — direto
+  contra o parágrafo que a própria exportação apagou (item acima) e contra o
+  `CLAUDE.md` §8, que diz que nenhum dos dois modos de `/termos` tem barra de
+  verdade **até Ajustes existir**.
+
+### O que veio corrompido
+
+- **`docs/navegacao.md`** — o título "## Regras de navegação" saiu partido: a
+  pílula nova foi inserida no meio do texto do título, deixando "## Regras"
+  como título e "de navegação" sobrando sozinho numa linha, sem sentido.
+  Defeito mecânico, não de conteúdo — **corrigido à mão nesta sessão**,
+  restaurando o título e mantendo o conteúdo novo.
+- **`docs/componentes.md`** — colisão de numeração e duplicação de conteúdo.
+  A seção nova entrou como **"## 11 — Folha de campo faltante"**, mas já
+  existem, mais abaixo, **"## 11 — Cadastro rápido"** (conteúdo antigo,
+  intocado) e **"## 12 — Folha do campo que falta"** — que descreve o
+  **mesmo padrão** (folha curta ao tocar ação com campo faltante), com
+  detalhes que não batem com a seção nova:
+  - a seção 12 (antiga) diz que o botão principal usa **o nome da ação
+    original** ("Cobrar no WhatsApp"); a seção 11 (nova) diz que o botão diz
+    **para onde a ação segue** ("Salvar e cobrar", "Salvar e enviar ordem") —
+    regras diferentes para a mesma peça;
+  - a seção 12 lista três gatilhos, incluindo "Gerar relatório com Pix sem
+    chave Pix"; a seção 11 lista dois gatilhos mais "campo vazio no perfil do
+    cliente" e **não menciona o gatilho do Pix**.
+  Duas seções, mesmo número, descrevendo a mesma coisa de dois jeitos que não
+  concordam entre si. **Não corrigido** — não é defeito mecânico, é decisão
+  de conteúdo (ver pendências abaixo).
+
+### Pendências desta exportação — decisão do fundador, não decidida aqui
+
+1. **Lista de telas sem barra**: aceitar a ampliação (Link expirado,
+   Primeiro acesso) e registrar a decisão explícita no `CLAUDE.md` §8; ou
+   recusar e pedir correção na fonte do Design, mantendo a lista em seis.
+2. **Termos no modo Ajustes**: manter a decisão já registrada (sem barra até
+   Ajustes existir, pedir correção na fonte); ou aceitar a antecipação da
+   exportação, o que exige decidir a folga de rolagem dessa tela isolada —
+   algo que o `CLAUDE.md` hoje trata como "não fazer antes de Ajustes
+   existir".
+3. **Seções 11/12 duplicadas**: a seção 12 (antiga) é a válida e a 11 (nova)
+   é lixo de exportação a descartar; ou a seção 11 é a atualização
+   pretendida e deveria substituir/renumerar a 12; ou perguntar ao Design
+   qual é a intenção antes de decidir.
+
+### Pendências pedidas ao Design (fonte), acumuladas — conferir a cada exportação nova
+
+- O parágrafo de exceção da barra do `CLAUDE.md` §8 precisa **vir** na
+  exportação, não ser reaplicado à mão a cada vez — já é a segunda perda.
+- A seção "Campo de texto" nunca veio em exportação nenhuma desde
+  07/08/2026.
+- O defeito mecânico de título partido (este, em `docs/navegacao.md`) —
+  registrar para conferir se o próximo lote vem limpo ou repete o problema.
+
+### O que não mudou de conteúdo, e por isso não entrou nas listas acima
+
+A seção nova "Folha de campo faltante" em `docs/componentes.md`, fora a
+colisão de número e a divergência de detalhe já registradas, e a linha nova
+em `docs/navegacao.md` ("Folha de campo faltante não é tela...") — conteúdo
+aditivo, sem contradição encontrada além do já listado.
+
+---
+
 ## 08/08/2026 — tarefa 10 fechada: as duas correções de documento do item 1, e o item 1 concluído
 
 **Fechada.** As duas pendências que a tarefa 10 herdou da fila do item 1 —
@@ -42,9 +142,26 @@ concluído** — as dez tarefas fecharam.
 Cliente, veículo, motorista, tipo de operação e municípios — a base sobre a
 qual o item 3 (lançamento de frete) se apoia.
 
-**Duas decisões técnicas pendentes de aprovação, recomendação trazida nesta
-sessão, nada instalado ainda:** fonte dos municípios do IBGE com coordenada do
-centro, e biblioteca de validação de CPF/CNPJ.
+**As duas bibliotecas já foram aprovadas pelo fundador** (08/08/2026, nada
+instalado ainda): fonte dos municípios — `kelvins/municipios-brasileiros`
+(MIT, derivado do IBGE, 5.570 registros com latitude/longitude do centro,
+seed estática comitada, não dependência de runtime) — e validação de
+CPF/CNPJ — pacote `cpf-cnpj-validator` (zero dependências, adaptador Zod,
+já atualizado para o CNPJ alfanumérico da Receita).
+
+**Duas exigências já registradas para a seed de municípios**, a valer quando
+ela for escrita: (1) conferência na carga — contagem de 5.570, nenhuma
+coordenada nula/zerada, todas dentro dos limites do Brasil, a seed recusa se
+algo falhar em vez de carregar dado ruim; (2) procedência registrada no
+repositório — de onde veio o arquivo, data do download, licença.
+
+**A correção do CNPJ para o formato alfanumérico da Receita já fechou**,
+commit `ffc8e1e`, 08/08/2026 — normalização, trava de unicidade reforçada
+por `CHECK` no banco (`empresa_cnpj_formato`, testado em 7 casos) e
+confirmação de que o CPF não muda. Ver entrada própria mais abaixo (a que
+fechava a tarefa 10) para o detalhe original, e a entrada da exportação do
+Design logo acima para o que ficou pendente antes do plano do item 2 poder
+começar.
 
 **Pendente com o Design, registrado antes de começar:** o formulário de
 cadastro/edição de Caminhão ainda não foi desenhado. `docs/navegacao.md` tem

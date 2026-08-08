@@ -159,6 +159,39 @@ Vale para a empresa. **Pessoa é outra regra**: sempre a primeira letra dos dois
 
 Círculo: `30px` no cartão da dashboard · `40px` em linha de lista · `48px` em Mais · `56px` em Conta e no convite · `46px` quadrado de raio 6 no A4. Fundo `#1B6B3A` com texto branco (contorno preto no A4, que é impresso), `letter-spacing:.02em`.
 
+## 11 — Folha de campo faltante
+
+Padrão reutilizável. O cadastro rápido pede o mínimo **de propósito**, então há campos que ficam vazios. Eles **não viram marca de "cadastro incompleto"** no perfil: marcar acusa a pessoa de um erro que ela não cometeu, e com vinte cadastros pela metade todo perfil vira repreensão.
+
+**A falta aparece no momento em que atrapalha.** Ao tocar numa ação que precisa do campo, abre uma folha curta pedindo **só aquele campo**, e a ação continua depois de salvar. Não interrompe, completa.
+
+| Medida | Valor |
+|---|---|
+| Folha | `border-radius: 28px 28px 0 0` · `padding: 16px 20px 40px` · fundo `#FAF8F4` sobre `rgba(20,26,23,.42)` · alça `38×4` em `#DAD5CA` |
+| Título | `21px / 800 / 1.15` em `#141A17` — nomeia quem falta: "Falta o telefone de Lojas Miranda" |
+| Apoio | `14px / 500 / 1.45` em `#3C443E` — diz por que o app precisa e que é uma vez só |
+| Campo | o mesmo do formulário: `min-height 78px`, raio `18`, rótulo `11px/.16em` |
+| Principal | 60px, e o rótulo **diz para onde a ação segue**: "Salvar e cobrar", "Salvar e enviar ordem", "Salvar no cadastro" |
+| Escape | "Agora não" em texto neutro `#6E7770`, 44px — fecha sem salvar e **sem executar a ação** |
+
+**Onde dispara hoje:** "Cobrar no WhatsApp" sem telefone do cliente (Cobranças, lista e detalhe) · "Enviar ordem" sem telefone do motorista (detalhe do frete) · qualquer campo vazio tocado no perfil do cliente.
+
+**Validação antes de salvar.** Telefone inválido salvo abre o WhatsApp em nada, e a culpa cai no produto — então a folha valida no próprio campo, usando o estado de erro do inventário: fundo `#F6E6DD`, rótulo `#B3401A`, e uma linha de `13px / 600 / 1.4` em `#B3401A` abaixo do campo dizendo o que está errado. A principal só habilita quando passa.
+
+| Campo | Regra | Mensagem |
+|---|---|---|
+| TELEFONE | 10 ou 11 dígitos com DDD; DDD ≥ 11 | "Faltam dígitos. Com DDD são 10 ou 11." · "Número comprido demais…" · "Esse DDD não existe." |
+| E-MAIL | tem `@` e domínio com ponto | "Falta o @ ou o final do endereço." |
+| Demais | qualquer texto não vazio | — |
+
+A validação começa a falar **depois do primeiro dígito**, nunca com o campo vazio: campo vazio é o estado inicial esperado, não erro.
+
+**"Agora não" fecha o ciclo com aviso.** Sem ele a pessoa toca numa ação e nada acontece, o que lê como defeito. Ao fechar sem salvar, o aviso do sistema (superfície escura) diz o porquê: **"Sem o telefone não dá para cobrar por aqui."** · **"Sem o telefone não dá para mandar a ordem por aqui."** · no perfil, para campo não essencial, "Campo continua vazio. Dá para preencher quando precisar."
+
+**Fonte única do dado.** O telefone de cliente vive em `CLIENTES` (TelaClientes) e o de motorista em `MOTORISTAS` (TelaMotoristas). Os mapas `TELEFONES` e `TEL_MOTORISTA` das outras telas são **espelhos** desses cadastros, não uma segunda verdade: esvaziar um sem esvaziar o outro faz o app se contradizer em dois toques — a mesma classe de defeito das iniciais da empresa e dos dias da semana. Quem entra sem telefone é **Lojas Miranda** (cliente) e **Cícero** (motorista), nas duas pontas.
+
+**No perfil, campo vazio aparece vazio e tocável:** um **"adicionar"** discreto em `#5C6660` no lugar do valor, com a mesma métrica do valor preenchido. Não é aviso — é o campo sendo acessível.
+
 ## Números de regra de produto
 
 **Prazo, limite e número de regra vêm da especificação, não do desenho.** O `componentes.md` manda no que a tela contém — texto, rótulo, ordem, variante — mas nunca inventa nem "arredonda" um valor de regra. Quando um número desses aparece em tela, ele é citação: se a especificação mudar, a tela muda atrás dela.
@@ -168,6 +201,16 @@ Círculo: `30px` no cartão da dashboard · `40px` em linha de lista · `48px` e
 | Validade do link de recuperação | **2 horas** | Recuperação enviada · Link expirado. O usuário pode não abrir o e-mail na hora |
 | Senha mínima | 6 caracteres | Redefinir senha · Criar conta |
 | Prazo padrão de vencimento | 15 dias | Configurações · perfil do cliente (herdado) |
+
+## Barra de navegação: exceção fora de sessão
+
+A barra de navegação é permanente **dentro** da sessão. Fora dela, não existe — quem ainda não entrou não tem para onde a barra levar, e mostrá-la vira atalho para pular o cadastro. Já aconteceu: a tela de Termos herdou a barra no modo cadastro e dava para chegar em Fretes sem criar conta.
+
+**Sem barra:** Entrar · Criar conta · Esqueci a senha · Recuperação enviada · Redefinir senha · Link expirado · Termos **vindo do cadastro** · Aceitar convite · Primeiro acesso.
+
+**Com barra:** todo o resto, inclusive Termos **vindo de Ajustes** — ali a pessoa está logada e lendo, e tirar a barra a prenderia na tela.
+
+A distinção não é a tela, é a **origem**: o mesmo componente de Termos aparece dos dois jeitos, e quem decide é a prop `origem`. Nenhuma tela fora de sessão reserva a folga de rolagem de `138px` — sem barra, o conteúdo termina no respiro normal de `40px`.
 
 ## Corpo de texto fora de sessão
 
@@ -236,10 +279,6 @@ Global e permanente: aparece em toda tela de nível 1 e continua nas telas de de
 Do topo do (+) até a base da tela são **`100,5px`** — medido no DOM, não calculado. Todo conteúdo rolável reserva **`max(138px, calc(env(safe-area-inset-bottom) + 132px))`** no fim: os 100,5px mais `37,5px` de respiro, para o último item chegar a ficar folgado acima da barra em vez de encostado nela.
 
 Esse valor era `132`, `142` e `150` em telas diferentes — os três foram unificados no valor acima, em todas as telas. O **aviso do sistema** ancora em `max(112px, …)`, acima do topo do (+) e com espaço para o deslocamento de 18px da animação de entrada.
-
-**Exceção (CLAUDE.md §8, 07/08/2026):** tela sem barra de navegação — Entrar, Criar conta, Esqueci a senha, Redefinir senha, Recuperação enviada, Termos e privacidade (modo cadastro), Aceitar convite — não tem `(+)` para reservar folga contra, e usa margem inferior padrão em vez do valor acima. Lista fechada; tela nova sem barra entra por decisão explícita, não por analogia. (Esta nota não vem nas exportações do Design de 07/08/2026 — reaplicada aqui porque `CLAUDE.md` §8 e `docs/estilo.md` continuam exigindo a regra.)
-
-Termos no **modo Ajustes** fica fora desta lista — é dentro da sessão e, na regra final, ganha barra. Mas sem Ajustes construído não existe barra para reservar folga contra: até lá, os dois modos de `/termos` usam a mesma margem provisória do modo cadastro.
 
 
 ## 11 — Cadastro rápido
@@ -354,32 +393,13 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Redefinir senha — link válido | campo único **SENHA NOVA** com **revelar** (variante do inventário — sem "repetir a senha": conferir digitando duas vezes no escuro erra mais que ver uma vez) · principal **Salvar senha e entrar**, que habilita com 6+ caracteres · **sem voltar e sem secundária**: quem chegou pelo link do e-mail não tem tela anterior · sem barra de navegação |
 | Redefinir senha — link expirado | sem campos · principal **Mandar link novo** · secundária **Voltar pra entrada** · bloco de corpo sobre `#F6E6DD` dizendo que o link vale 2 horas e que a conta e os fretes seguem intactos · **não pede o e-mail de novo** — o link já identifica a conta |
 | Termos e privacidade | duas abas · vindo do cadastro termina em principal **Li e aceito**; vindo de Ajustes é só leitura · **sem barra** no modo cadastro |
+| Termos e privacidade — abas | **lacuna registrada:** as duas abas usam pílula de cabeçalho como se fossem filtro, e não há variante de aba no inventário. Funciona, mas é empréstimo: pílula de cabeçalho é ação, aba é navegação entre irmãos. Enquanto não houver variante própria, fica assim e não deve ser copiada para outra tela |
 | Planos | principal **Assinar o anual** · secundária **Assinar o mensal** · o anual mostra parcelamento e economia |
 | Minha assinatura | secundárias **Trocar de plano** + **Ver recibos** · texto destrutiva **Cancelar assinatura** |
 | Limite do gratuito | principal **Ver os planos** · texto neutra **Depois** · nada do que já existe é bloqueado |
 | Assinatura vencida | principal **Renovar assinatura** · secundária **Baixar meus dados** · leitura e exportação seguem funcionando |
 | Primeiro acesso | **duas secundárias em pé de igualdade**: **Trazer os fretes que já fiz** + **Começar do zero** — nenhuma é destaque da outra, então nenhuma é a principal |
 | Guia de progresso (dashboard) | até três linhas tocáveis, cada uma sumindo ao ser cumprida; o bloco inteiro desaparece ao completar |
-
----
-
-## Lacunas registradas — tarefa 8, fatia 2 (07/08/2026)
-
-**Duas abas de Termos e privacidade viram o chip de seleção.** Não existe
-componente de aba em nenhum documento do Design — a exportação pede "duas
-abas" sem especificar a peça. `ConteudoTermos.tsx` reaproveita o
-`ChipEscolha` (a mesma peça da pergunta "como você conheceu o FretiGate?" no
-cadastro): controle de "escolha uma entre duas", mesmo mecanismo, contexto
-novo. Decisão do fundador. Pendência de acessibilidade: o chip usa
-`role="radio"`, não `role="tab"` — a semântica de aba de verdade fica
-pendente de o Design desenhar a própria peça.
-
-**A seção "Campo de texto" não veio em nenhuma das exportações de
-07/08/2026.** O componente (rótulo, estados, mensagem de erro, e agora a
-variação "revelar" desta fatia) continua implementado em
-`src/components/ui/CampoTexto.tsx`, com a especificação no próprio
-comentário do arquivo — a versão anterior deste documento é a fonte dela.
-Fica registrado para a próxima exportação trazer a seção de volta.
 
 ---
 
