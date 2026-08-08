@@ -28,12 +28,33 @@ jobs:
       # tentaria interpretar em vez de gravar o valor literal. Caractere
       # especial em senha já custou três rodadas neste projeto — ver
       # `docs/diario.md`, 08/08/2026.
+      #
+      # As quatro últimas linhas (fora BETTER_AUTH_SECRET) são valor FIXO, não
+      # secret — de propósito. `src/lib/auth/index.ts` e `src/lib/auth/email.ts`
+      # lançam erro no carregamento se qualquer uma faltar, mas nenhum teste
+      # desta suíte manda e-mail de verdade nem assina sessão de cliente real —
+      # só precisam existir para o módulo carregar. Colocar chave de verdade do
+      # Resend aqui mandaria e-mail a cada execução da esteira, sem necessidade.
+      # EMAIL_REMETENTE/EMAIL_RESPOSTA em endereços diferentes de propósito —
+      # mesmo padrão do valor real (subdomínio de envio / domínio raiz,
+      # `docs/especificacao.md`), só que com valor fake.
+      #
+      # BETTER_AUTH_SECRET É SECRET DO GITHUB, não valor fixo como os outros
+      # quatro — mesmo sem proteger sessão real (`docs/diario.md`, 08/08/2026):
+      # um valor com FORMA de segredo, versionado, aciona scanner de segredo
+      # (inclusive o do próprio GitHub) e ensina a ignorar alerta. Endereço de
+      # e-mail e URL não têm essa forma, por isso ficam fixos.
       - name: Criar .env de teste
         run: |
           cat <<'EOF' > .env
           DIRECT_URL=${{ secrets.DIRECT_URL }}
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           AUTH_DATABASE_URL=${{ secrets.AUTH_DATABASE_URL }}
+          RESEND_API_KEY=ci-nao-e-segredo-nenhum-teste-manda-email
+          EMAIL_REMETENTE=ci@envio.fretigate.com
+          EMAIL_RESPOSTA=ci@fretigate.com
+          BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET_CI }}
+          NEXT_PUBLIC_APP_URL=http://localhost:3000
           EOF
 
       # A mesma trava que protege `npm test` (tests/guarda-de-banco.ts), rodada

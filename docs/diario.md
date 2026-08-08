@@ -6,6 +6,36 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 08/08/2026 — a esteira falhou por falta de `RESEND_API_KEY`, e por que só `BETTER_AUTH_SECRET` virou secret do GitHub
+
+Primeira execução real do `ci.yml` (tarefa 9): as 25 verificações de
+isolamento passaram, e `tests/cadastro.test.ts` nem chegou a rodar — parou ao
+carregar, por falta de `RESEND_API_KEY`. **Falhou pelo motivo certo**: o
+teste não manda e-mail, só precisa que o módulo carregue, mas
+`src/lib/auth/email.ts` lança erro no carregamento se a variável faltar (a
+mesma defesa que protege a publicação — ver "Ambientes" no `CLAUDE.md` §5).
+
+Resolvido com cinco variáveis a mais no `.env` que a esteira monta:
+`RESEND_API_KEY`, `EMAIL_REMETENTE`, `EMAIL_RESPOSTA`, `BETTER_AUTH_SECRET` e
+`NEXT_PUBLIC_APP_URL` — nenhuma delas precisa de valor real, porque nenhum
+teste da suíte manda e-mail de verdade nem depende do domínio de produção.
+
+**Por que só `BETTER_AUTH_SECRET` virou secret do GitHub, e as outras quatro
+ficaram fixas no `ci.yml`:** o perigo funcional dos cinco é o mesmo — zero,
+porque nenhum protege dado real no projeto de teste. A diferença é a *forma*
+do valor. Endereço de e-mail e URL não parecem segredo para ninguém,
+inclusive para um scanner automático. `BETTER_AUTH_SECRET` parece — é uma
+string de alta entropia, do tipo que o scanner de segredo do próprio GitHub
+(e qualquer ferramenta parecida) foi feito para achar. Deixar essa forma
+fixa no repositório, mesmo inofensiva, teria dois custos: um alerta que
+dispara sem motivo real, e o hábito de aprender a ignorar esse alerta
+específico — que é exatamente o hábito que faz um alerta de verdade passar
+despercebido depois. Mover um valor para secret custa um cadastro de um
+minuto; o alerta falso ensinando a ignorar custa mais caro, e não tem como
+desfazer depois de instalado. Decisão do fundador, 08/08/2026.
+
+---
+
 ## 08/08/2026 — caractere especial em senha, terceira rodada: heredoc sem aspas no `ci.yml`
 
 Ao escrever `.github/workflows/ci.yml` (tarefa 9), o passo que grava as três

@@ -239,22 +239,66 @@ declarado na política de privacidade junto com o nome do subprocessador.
 Se achar que alguma escolha está errada para o caso, **argumente antes**, não
 troque no meio da tarefa.
 
-### Ambientes (projetos Supabase)
+### Ambientes
 
-Stack é tecnologia; isto aqui é **ambiente** — quais instâncias existem e para
-que serve cada uma. Não é a mesma coisa, mas fica aqui por não ter seção
-própria e por variar junto da stack de banco.
+Stack é tecnologia; isto aqui é **ambiente** — quais instâncias existem, para
+que serve cada uma, e que variável precisa existir em cada lugar. Não é a
+mesma coisa, mas fica aqui por não ter seção própria e por variar junto da
+stack de banco e de e-mail.
+
+#### Projetos Supabase
 
 | Projeto Supabase | Para quê | Quem usa |
 |---|---|---|
 | `ysldmzvszjxdgcbtaurh` | Desenvolvimento | máquina de quem programa, `.env` local |
 | `qutzsvrkaqvpluqxbhmp` | Teste automatizado | esteira de CI (GitHub Actions), `tests/isolamento/*` |
+| *(a criar)* | Produção | Vercel — precisa existir **antes** do primeiro cliente pagante, não junto com ele: a venda é autoatendida, sem demonstração (§1), e o §4 já exige backup configurado antes do primeiro pagante |
 
-Os dois estão na lista de projetos permitidos em `tests/guarda-de-banco.ts` —
-é o que impede a suíte de rodar (e apagar linha) em qualquer outro banco,
-produção incluída, no dia em que produção existir. Nenhum dos dois recebe dado
-real de cliente: o de teste é semeado e apagado pelos próprios testes a cada
-execução (ver §3, "Concorrência real").
+Os dois primeiros estão na lista de projetos permitidos em
+`tests/guarda-de-banco.ts` — é o que impede a suíte de rodar (e apagar linha)
+em qualquer outro banco, produção incluída, no dia em que produção existir.
+Nenhum dos dois recebe dado real de cliente: o de teste é semeado e apagado
+pelos próprios testes a cada execução (ver §3, "Concorrência real").
+
+#### Variáveis de ambiente, por lugar
+
+Todo módulo que precisa de uma variável obrigatória **falha alto, no
+carregamento** (`src/lib/auth/index.ts`, `src/lib/auth/email.ts`): se ela não
+estiver definida, o módulo lança um erro explicando qual falta e por quê, antes
+de qualquer rota responder. Isso não é acidente nem falta de tratamento de
+erro — é a defesa querida. Foi assim que a esteira encontrou a falta de
+`RESEND_API_KEY` (08/08/2026): o teste nem manda e-mail, só carrega o módulo, e
+mesmo assim a falta apareceu, porque é isso que a checagem faz.
+
+**Isso NÃO garante que a publicação na Vercel para com uma variável faltando.**
+`src/app/api/auth/[...all]/route.ts` é rota de API, e o resto de quem importa
+`@/lib/auth` (`servicos/`, `acoes.ts`) é Server Action — nenhum dos dois é
+avaliado durante `next build`, só quando um pedido de verdade chega. O mais
+provável: a publicação **termina com sucesso**, e o erro só aparece no
+**primeiro pedido real** que tocar login ou sessão — o que, na prática, é quase
+todo pedido, mas é falha **no ar**, não falha **ao publicar**. Ver a pendência
+"CONFERIR ANTES DE PUBLICAR" no §14.
+
+| Variável | Minha máquina (`.env`) | Esteira (CI) | Publicação (Vercel) |
+|---|---|---|---|
+| `DATABASE_URL`, `AUTH_DATABASE_URL`, `DIRECT_URL` | projeto de desenvolvimento | **secret do GitHub** — projeto de teste (configurado, tarefa 9) | **variável de ambiente da Vercel** — projeto de produção, ainda não existe |
+| `RESEND_API_KEY` | chave real do Resend | **valor fixo, escrito direto em `ci.yml`, não é segredo** — nenhum teste manda e-mail de verdade, só o módulo precisa carregar | **variável de ambiente da Vercel** — chave real, senão recuperação de senha não sai |
+| `EMAIL_REMETENTE`, `EMAIL_RESPOSTA` | endereços reais (`envio.fretigate.com` / `fretigate.com`) | **valor fixo em `ci.yml`, não é segredo** — endereços diferentes, mesmo padrão do valor real, só fake | **variável de ambiente da Vercel** — endereços reais |
+| `BETTER_AUTH_SECRET` | gerado uma vez, só desta máquina | **secret do GitHub** (`BETTER_AUTH_SECRET_CI`) — não protege sessão real (o projeto de teste não tem cliente nenhum), mas é a **única** das cinco com forma de segredo, e forma de segredo versionada aciona scanner mesmo sem risco funcional (`docs/diario.md`, 08/08/2026) | **variável de ambiente da Vercel**, gerada **uma vez, só para produção** — nunca a mesma de desenvolvimento (`.env.example`, bloco "Autenticação (Better Auth)": "UM POR AMBIENTE... se fossem o mesmo, um cookie assinado na máquina de quem programa valeria em produção") |
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | **valor fixo em `ci.yml`** (`http://localhost:3000`) — não é segredo, e nenhum e-mail sai de verdade para usar esse endereço | **variável de ambiente da Vercel** — domínio real de produção |
+
+**Por que quatro das cinco de e-mail/autenticação podem ser valor fixo na
+esteira, e as três do banco não:** as três do banco apontam para um banco de
+verdade — errar o projeto ali significa rodar `DELETE` ou `migrate deploy` no
+lugar errado (`tests/guarda-de-banco.ts`, `CLAUDE.md` §3). As quatro fixas só
+precisam existir para o módulo carregar sem lançar: nenhum teste da suíte
+chama `enviarEmail` (`tests/cadastro.test.ts` usa o adaptador interno do
+Better Auth direto, sem passar pelas rotas que mandam e-mail). Colocar uma
+chave de verdade do Resend no GitHub para isso seria segredo sem necessidade
+— e-mail saindo a cada execução da esteira, sem nenhum teste que precise
+disso. `BETTER_AUTH_SECRET` é a exceção nesse grupo: mesmo sem risco
+funcional, é secret do GitHub, não valor fixo — o motivo é a forma do valor,
+não o que ele protege.
 
 ---
 
@@ -722,6 +766,17 @@ Não invente resposta. Pergunte.
   mecanismo à parte que ninguém construiu ainda. **Precisa existir antes de
   ligar os anúncios** — o mesmo marco já usado para o reteste do e-mail
   transacional (§ tarefa 7 no diário). Decidido em 07/08/2026.
+- **CONFERIR ANTES DE PUBLICAR — variáveis de ambiente na Vercel.** Achado na
+  tarefa 9 (08/08/2026): nada verifica, hoje, que as oito variáveis da tabela
+  em "Ambientes" (§5) estão configuradas na Vercel antes da primeira
+  publicação. E o jeito como isso falha importa: `src/lib/auth/index.ts` e
+  `src/lib/auth/email.ts` lançam erro **no carregamento do módulo**, mas
+  nenhuma rota que os importa é avaliada durante `next build` (são rota de
+  API e Server Actions, não página estática) — então a publicação **termina
+  com sucesso** mesmo faltando uma variável, e o erro só aparece no
+  **primeiro pedido real** que tocar login ou sessão. Sem conferência
+  manual antes de publicar, isso apareceria com cliente pagante já usando o
+  produto, não durante o deploy.
 - **Modelo de IA da importação** — testar a extração com o material real do
   usuário antes de escolher. Decidir por acerto, não por preço: a diferença de
   custo entre os candidatos é inferior a 2% da receita por cliente.
