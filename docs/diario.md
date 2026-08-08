@@ -6,6 +6,26 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 08/08/2026 — caractere especial em senha, terceira rodada: heredoc sem aspas no `ci.yml`
+
+Ao escrever `.github/workflows/ci.yml` (tarefa 9), o passo que grava as três
+URLs de conexão num `.env` usava `cat <<EOF > .env` sem aspas no delimitador.
+Sem aspas, o shell interpreta `$` e crase dentro do heredoc — se qualquer
+senha tivesse um desses caracteres, o `.env` sairia com um valor diferente da
+credencial de verdade, ou pior, tentaria executar um comando embutido nela.
+Achado pelo `/revisar`, não visto na escrita.
+
+**Terceira vez que caractere especial em senha custa uma rodada neste
+projeto:** os colchetes `[senha]` copiados do painel do Supabase (tarefa 2,
+ver "Percalço no caminho, para não repetir" mais abaixo), a advertência que já
+existe em `.env.example` ("a senha, se tiver caractere especial, precisa ir
+codificada para URL"), e agora este heredoc. Corrigido para
+`cat <<'EOF' > .env` — delimitador entre aspas simples desliga toda
+interpretação do shell dentro do bloco, e o valor gravado passa a ser sempre o
+literal que veio do secret.
+
+---
+
 ## 08/08/2026 — preparação da tarefa 9: projeto de teste no Supabase, e a pegadinha da pausa
 
 Antes do primeiro passo da tarefa 9 — a suíte de isolamento sai do banco de
@@ -1477,6 +1497,18 @@ achado sobre string vazia que muda a política de RLS da tarefa 4.
       `information_schema.routine_privileges` (função), não só
       `role_table_grants` (tabela) — mesma forma, mesmo contraste, mesma
       contagem de verificações.
+9d. **`privilegios.test.ts` só confere ausência, nunca presença.** Achado
+    no `/revisar` da tarefa 9c: as verificações de "tabela/função futura não
+    nasce aberta" conferem que `anon`/`authenticated`/`PUBLIC` NÃO aparecem no
+    privilégio padrão — nunca que `service_role` aparece, que é o que o
+    `CLAUDE.md` §4 promete ("service_role continua com privilégio, decisão,
+    não esquecimento"). Hoje isso só foi confirmado à mão, por consulta direta
+    ao banco (`{postgres=X/postgres,service_role=X/postgres}`), não por teste
+    que rode de novo amanhã. Vale para os dois — tabela (`padraoFuturo`) e
+    função (`padraoFuturoFuncao`) — porque o buraco é o mesmo padrão nos dois
+    lugares, não uma regressão desta tarefa. Adiado de propósito: mesma
+    correção, um teste só, depois que alguém decidir a forma (provavelmente
+    uma verificação extra dentro de cada `it` já existente, não um `it` novo).
 10. Correções nos documentos e a pendência do Storage
 
 ### Bloqueios conhecidos

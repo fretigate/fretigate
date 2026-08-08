@@ -26,6 +26,15 @@ import { Client } from "pg";
 const PAPEIS_DA_API_PUBLICA = ["anon", "authenticated"];
 
 /**
+ * O mesmo, para função — mais `PUBLIC`. Tabela nunca precisou de `PUBLIC`
+ * aqui porque a migration que fecha tabela já revogava dele desde o início.
+ * Função não: o Postgres concede `EXECUTE` a `PUBLIC` por padrão, e é
+ * exatamente isso que a migration `20260808052831_fecha_execucao_de_funcao_para_public`
+ * fecha (tarefa 9c).
+ */
+const GRANTEES_FUNCAO = [...PAPEIS_DA_API_PUBLICA, "PUBLIC"];
+
+/**
  * Contagem de verificações — §3, item 4.
  *
  * Teste que não distingue "passou" de "não rodou" é pior que teste nenhum. Se
@@ -33,7 +42,7 @@ const PAPEIS_DA_API_PUBLICA = ["anon", "authenticated"];
  * que nenhuma verificação tenha falhado.
  */
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 4;
+const CONFERENCIAS_ESPERADAS = 8;
 
 const cliente = new Client({ connectionString: process.env.DIRECT_URL });
 await cliente.connect();
@@ -93,6 +102,57 @@ const tabelas = await cliente.query<{ total: string }>(
     WHERE n.nspname = 'public' AND c.relkind = 'r'`,
 );
 
+/** O mesmo bloco de consultas acima, espelhado para função (tarefa 9c). */
+
+/** Concessões diretas de EXECUTE, função por função. */
+const concessoesFuncoes = await cliente.query<{
+  grantee: string;
+  routine_name: string;
+  privilege_type: string;
+}>(
+  `SELECT grantee, routine_name, privilege_type
+     FROM information_schema.routine_privileges
+    WHERE routine_schema = 'public'
+      AND grantee = ANY($1)
+    ORDER BY routine_name, grantee`,
+  [GRANTEES_FUNCAO],
+);
+
+/**
+ * Contraste: `fretigate_app` TEM `EXECUTE` em `reverter_cadastro_incompleto`
+ * (a migration da tarefa 8 concedeu). Sem isto, um erro de digitação no nome
+ * da função ou do papel devolveria zero linhas acima e a verificação
+ * seguinte passaria aprovando o nada.
+ */
+const contrasteFuncao = await cliente.query<{ grantee: string }>(
+  `SELECT grantee
+     FROM information_schema.routine_privileges
+    WHERE routine_schema = 'public'
+      AND grantee = 'fretigate_app'
+      AND routine_name = 'reverter_cadastro_incompleto'`,
+);
+
+/**
+ * Privilégio padrão de função: o que FUNÇÃO QUE AINDA NÃO EXISTE vai receber
+ * ao nascer. `'f'` é função no catálogo do Postgres (`'r'` acima é tabela).
+ */
+const padraoFuturoFuncao = await cliente.query<{ acl: string }>(
+  `SELECT COALESCE(d.defaclacl::text, '') AS acl
+     FROM pg_default_acl d
+     JOIN pg_namespace n ON n.oid = d.defaclnamespace
+    WHERE n.nspname = 'public'
+      AND d.defaclobjtype = 'f'
+      AND pg_get_userbyid(d.defaclrole) = 'postgres'`,
+);
+
+/** Quantas funções existem, para nenhuma verificação passar sobre lista vazia. */
+const funcoes = await cliente.query<{ total: string }>(
+  `SELECT count(*)::text AS total
+     FROM pg_proc p
+     JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'`,
+);
+
 afterAll(async () => {
   await cliente?.end();
 });
@@ -142,7 +202,54 @@ describe("a API pública do Supabase não alcança nada nosso", () => {
     }
     conferencias++;
   });
+});
 
+describe("a API pública do Supabase não alcança nenhuma função", () => {
+  it("existe função para conferir", () => {
+    // Sem isto, um banco sem função nenhuma faria as verificações abaixo
+    // passarem sem ter olhado função nenhuma.
+    expect(Number(funcoes.rows[0].total)).toBeGreaterThan(0);
+    conferencias++;
+  });
+
+  it("a consulta enxerga concessão quando ela existe (contraste)", () => {
+    // `fretigate_app` TEM `EXECUTE` em `reverter_cadastro_incompleto` — a
+    // migration da tarefa 8 concedeu. Se isto vier vazio, a consulta está
+    // quebrada e a verificação seguinte não vale nada.
+    expect(contrasteFuncao.rowCount).toBeGreaterThan(0);
+    conferencias++;
+  });
+
+  it("`anon`, `authenticated` e `PUBLIC` não têm EXECUTE em nenhuma função", () => {
+    const encontradas = concessoesFuncoes.rows.map(
+      (r) => `${r.grantee} → ${r.routine_name} (${r.privilege_type})`,
+    );
+    expect(encontradas).toEqual([]);
+    conferencias++;
+  });
+
+  it("função futura não nasce aberta para a API pública", () => {
+    // Mesma guarda contra laço vazio da verificação equivalente de tabela.
+    expect(padraoFuturoFuncao.rowCount).toBeGreaterThan(0);
+
+    // O privilégio padrão de `postgres` para função não pode mencionar os
+    // papéis nomeados da API pública, nem conceder a `PUBLIC` — que é como
+    // este buraco foi encontrado na tarefa 8: revogar só de `anon` e
+    // `authenticated`, por nome, não fecha nada, porque os dois herdam de
+    // `PUBLIC` de qualquer forma. Na representação de ACL do Postgres,
+    // `PUBLIC` aparece como um item sem nome de papel antes do `=`
+    // (ex.: `=X/postgres`) — daí o regex, em vez de `.toContain("PUBLIC=")`.
+    for (const { acl } of padraoFuturoFuncao.rows) {
+      for (const papel of PAPEIS_DA_API_PUBLICA) {
+        expect(acl).not.toContain(`${papel}=`);
+      }
+      expect(acl).not.toMatch(/(^|[{,])=/);
+    }
+    conferencias++;
+  });
+});
+
+describe("cobertura", () => {
   it("rodou todas as verificações previstas", () => {
     expect(conferencias).toBe(CONFERENCIAS_ESPERADAS);
   });

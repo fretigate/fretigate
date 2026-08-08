@@ -1,12 +1,15 @@
 /**
- * Trava de banco: a suíte recusa rodar fora do projeto de desenvolvimento.
+ * Trava de banco: a suíte recusa rodar fora dos projetos permitidos —
+ * desenvolvimento (máquina de quem programa) ou teste (esteira de CI). Ver
+ * `CLAUDE.md` §5, "Ambientes".
  *
  * POR QUE ISTO EXISTE
  * Os testes de isolamento semeiam e APAGAM linhas — o `afterAll` de
- * `vazamento.test.ts` roda `DELETE` sem perguntar nada a ninguém. Hoje só
- * existe o banco de desenvolvimento e o estrago possível é zero. No dia em que
- * existir produção, um `.env` apontado para o lugar errado, ou uma variável
- * herdada de outro terminal, faz `npm test` apagar dado de cliente.
+ * `vazamento.test.ts` roda `DELETE` sem perguntar nada a ninguém. Hoje o
+ * estrago possível é zero, porque nenhum dos dois projetos permitidos recebe
+ * dado real de cliente. No dia em que existir produção, um `.env` apontado
+ * para o lugar errado, ou uma variável herdada de outro terminal, faz
+ * `npm test` apagar dado de cliente.
  *
  * Roda como `setupFiles` do vitest, que executa ANTES de o arquivo de teste ser
  * importado. Os testes conectam no topo do módulo, então este é o único ponto
@@ -26,7 +29,7 @@
  * a URL trocaria a expectativa junto, e a trava aprovaria o desastre.
  * Identificador de projeto Supabase não é segredo — aparece na URL pública.
  */
-const PROJETOS_DE_TESTE = ["ysldmzvszjxdgcbtaurh", "qutzsvrkaqvpluqxbhmp"];
+export const PROJETOS_DE_TESTE = ["ysldmzvszjxdgcbtaurh", "qutzsvrkaqvpluqxbhmp"];
 
 const VARIAVEIS = ["DATABASE_URL", "AUTH_DATABASE_URL", "DIRECT_URL"] as const;
 
@@ -37,7 +40,7 @@ const VARIAVEIS = ["DATABASE_URL", "AUTH_DATABASE_URL", "DIRECT_URL"] as const;
  * Devolve `null` quando não reconhece o formato — e quem chama trata `null`
  * como RECUSA, nunca como permissão.
  */
-function identificadorDoProjeto(url: string): string | null {
+export function identificadorDoProjeto(url: string): string | null {
   const usuario = url.match(/^postgres(?:ql)?:\/\/([^:@/]+)[:@]/)?.[1];
   if (!usuario) return null;
 
@@ -57,13 +60,14 @@ function recusar(motivo: string): never {
       motivo,
       "",
       "Estes testes SEMEIAM E APAGAM linhas no banco a que se conectam.",
-      "Rodar fora do projeto de desenvolvimento apaga dado de verdade.",
+      "Rodar fora dos projetos permitidos apaga dado de verdade.",
       "",
       `Projeto(s) permitido(s): ${PROJETOS_DE_TESTE.join(", ")}`,
       "",
       "O que fazer:",
       "  1. conferir as três URLs do `.env` — DATABASE_URL, AUTH_DATABASE_URL",
-      "     e DIRECT_URL — e apontar as três para o projeto de desenvolvimento;",
+      "     e DIRECT_URL — e apontar as três para um dos projetos permitidos",
+      "     (desenvolvimento, na máquina de quem programa; teste, na esteira);",
       "  2. conferir se alguma delas não veio do ambiente do terminal, herdada",
       "     de outro comando, em vez de vir do `.env`;",
       "  3. se um projeto novo de teste passou a existir, acrescentá-lo à lista",
@@ -73,38 +77,49 @@ function recusar(motivo: string): never {
   );
 }
 
-if (process.env.NODE_ENV === "production") {
-  recusar("NODE_ENV está como `production`.");
+/**
+ * A validação em si, parametrizada por `env` — nunca lê `process.env`
+ * diretamente. Isso permite `tests/guarda-de-banco.test.ts` chamar com
+ * valores forjados, sem mutar o ambiente global do processo (§3, item 4 do
+ * `CLAUDE.md`: a trava precisa de teste que rode sempre, não só a conferência
+ * manual que já foi feita uma vez).
+ */
+export function validar(env: Record<string, string | undefined>): void {
+  if (env.NODE_ENV === "production") {
+    recusar("NODE_ENV está como `production`.");
+  }
+
+  for (const nome of VARIAVEIS) {
+    const url = env[nome];
+
+    if (!url) {
+      recusar(`A variável ${nome} não está definida.`);
+    }
+
+    const ref = identificadorDoProjeto(url);
+
+    // FALHA FECHADA. Não reconhecer o formato recusa, e é a regra que decide se
+    // esta trava vale alguma coisa.
+    //
+    // O erro fácil seria escrever "achei um identificador e ele não está na
+    // lista, então recuso" — isso APROVA POR OMISSÃO tudo que não tem o formato
+    // esperado: endereço local, outro provedor, string malformada, um Postgres de
+    // produção em qualquer outro lugar. Recusar por não reconhecer, nunca aprovar
+    // por não encontrar.
+    if (ref === null) {
+      recusar(
+        `Não reconheci o projeto na variável ${nome}.\n` +
+          "Ela não tem o formato de conexão do Supabase (`usuario.identificador`).\n" +
+          "Pode ser um banco local, outro provedor, ou a URL estar malformada —\n" +
+          "e nenhum desses casos é aprovado por não ser reconhecido.",
+      );
+    }
+
+    if (!PROJETOS_DE_TESTE.includes(ref)) {
+      // Imprime só o identificador, que é público. NUNCA a URL, que traz a senha.
+      recusar(`A variável ${nome} aponta para o projeto \`${ref}\`.`);
+    }
+  }
 }
 
-for (const nome of VARIAVEIS) {
-  const url = process.env[nome];
-
-  if (!url) {
-    recusar(`A variável ${nome} não está definida.`);
-  }
-
-  const ref = identificadorDoProjeto(url);
-
-  // FALHA FECHADA. Não reconhecer o formato recusa, e é a regra que decide se
-  // esta trava vale alguma coisa.
-  //
-  // O erro fácil seria escrever "achei um identificador e ele não está na
-  // lista, então recuso" — isso APROVA POR OMISSÃO tudo que não tem o formato
-  // esperado: endereço local, outro provedor, string malformada, um Postgres de
-  // produção em qualquer outro lugar. Recusar por não reconhecer, nunca aprovar
-  // por não encontrar.
-  if (ref === null) {
-    recusar(
-      `Não reconheci o projeto na variável ${nome}.\n` +
-        "Ela não tem o formato de conexão do Supabase (`usuario.identificador`).\n" +
-        "Pode ser um banco local, outro provedor, ou a URL estar malformada —\n" +
-        "e nenhum desses casos é aprovado por não ser reconhecido.",
-    );
-  }
-
-  if (!PROJETOS_DE_TESTE.includes(ref)) {
-    // Imprime só o identificador, que é público. NUNCA a URL, que traz a senha.
-    recusar(`A variável ${nome} aponta para o projeto \`${ref}\`.`);
-  }
-}
+validar(process.env);

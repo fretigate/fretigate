@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-e-testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # `prisma.config.ts` chama process.loadEnvFile() no topo do módulo, e
+      # isso roda para qualquer subcomando do Prisma — generate incluído. Sem
+      # o arquivo, o passo seguinte já quebra com ENOENT.
+      #
+      # Delimitador do heredoc ENTRE ASPAS (`<<'EOF'`, não `<<EOF`) de
+      # propósito: sem isso, se alguma senha tivesse `$` ou crase, o shell
+      # tentaria interpretar em vez de gravar o valor literal. Caractere
+      # especial em senha já custou três rodadas neste projeto — ver
+      # `docs/diario.md`, 08/08/2026.
+      - name: Criar .env de teste
+        run: |
+          cat <<'EOF' > .env
+          DIRECT_URL=${{ secrets.DIRECT_URL }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          AUTH_DATABASE_URL=${{ secrets.AUTH_DATABASE_URL }}
+          EOF
+
+      # A mesma trava que protege `npm test` (tests/guarda-de-banco.ts), rodada
+      # como script avulso — ela já valida `process.env` na própria importação.
+      # Sem isto, só `npm test` era protegido: um secret do GitHub apontado
+      # para o projeto errado faria `prisma migrate deploy`, abaixo, aplicar
+      # DDL num banco que não é nem de desenvolvimento nem de teste, sem
+      # ninguém avisar — mais destrutivo que a suíte, e sem a mesma defesa.
+      - run: node --env-file=.env tests/guarda-de-banco.ts
+
+      - run: npx prisma generate
+
+      # A trava de ESLint (SQL cru só em src/lib/db e em /tests, CLAUDE.md
+      # §3). Roda antes de qualquer passo com credencial de banco: se falhar,
+      # a esteira para aqui.
+      - run: npm run lint
+
+      # Projeto de teste novo — aplica o que ainda não foi aplicado.
+      # Idempotente: _prisma_migrations já registra o que passou.
+      - run: npx prisma migrate deploy
+
+      # tests/guarda-de-banco.ts (setupFiles) confere sozinho que está
+      # rodando contra o projeto de teste certo antes de qualquer teste
+      # conectar.
+      - run: npm test

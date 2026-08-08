@@ -181,9 +181,19 @@ API REST pública, usada com a chave que **por desenho** fica no navegador.
 chave secreta, que nunca vai ao navegador. Vazar essa chave já seria incidente
 por conta própria, e revogá-la aqui não mudaria isso.
 
+**Isso vale mesmo depois de fechar `EXECUTE` de função para `PUBLIC` (tarefa
+9c).** `PUBLIC` não é um papel entre outros — é concedido implicitamente para
+todo mundo, e por isso a tabela/função nasce aberta por padrão. `service_role`
+não depende dessa concessão implícita: o próprio Supabase já dá a ele uma
+concessão **própria e nomeada**, separada de `PUBLIC` (confirmado direto no
+catálogo do banco: `{postgres=X/postgres,service_role=X/postgres}`, sem entrada
+de `PUBLIC`, depois do `REVOKE ... FROM PUBLIC`). Por isso revogar de `PUBLIC`
+nunca tira nada de `service_role`.
+
 Quem confere é `tests/isolamento/privilegios.test.ts`, e ele confere o que esta
-regra manda conferir: nenhuma concessão a `anon` ou `authenticated`, em nenhuma
-tabela, hoje e nas que vierem.
+regra manda conferir: nenhuma concessão a `anon`, `authenticated` ou `PUBLIC`,
+em nenhuma tabela ou função, hoje e nas que vierem (a parte de função e
+`PUBLIC` entrou na tarefa 9c).
 
 ### Upload de imagem (comprovante e logo)
 
@@ -224,9 +234,27 @@ declarado na política de privacidade junto com o nome do subprocessador.
 | Hospedagem | Vercel |
 | Arquivos | storage do provedor do banco, com URL assinada |
 | E-mail transacional | Resend, enviando por `envio.fretigate.com` |
+| Integração contínua | GitHub Actions |
 
 Se achar que alguma escolha está errada para o caso, **argumente antes**, não
 troque no meio da tarefa.
+
+### Ambientes (projetos Supabase)
+
+Stack é tecnologia; isto aqui é **ambiente** — quais instâncias existem e para
+que serve cada uma. Não é a mesma coisa, mas fica aqui por não ter seção
+própria e por variar junto da stack de banco.
+
+| Projeto Supabase | Para quê | Quem usa |
+|---|---|---|
+| `ysldmzvszjxdgcbtaurh` | Desenvolvimento | máquina de quem programa, `.env` local |
+| `qutzsvrkaqvpluqxbhmp` | Teste automatizado | esteira de CI (GitHub Actions), `tests/isolamento/*` |
+
+Os dois estão na lista de projetos permitidos em `tests/guarda-de-banco.ts` —
+é o que impede a suíte de rodar (e apagar linha) em qualquer outro banco,
+produção incluída, no dia em que produção existir. Nenhum dos dois recebe dado
+real de cliente: o de teste é semeado e apagado pelos próprios testes a cada
+execução (ver §3, "Concorrência real").
 
 ---
 
@@ -584,6 +612,13 @@ declarar depois não conserta, porque não se pede autorização retroativa.
 O do e-mail e o da IA são os que mais pesam: os dois enxergam **dado de
 terceiro**, do qual a transportadora é controladora e o FretiGate é operador.
 Subprocessador novo entra nesta tabela **e** na política, no mesmo commit.
+
+**GitHub fica de fora desta tabela** (guarda credencial do projeto de teste do
+Supabase e roda a suíte automatizada — §5, "Ambientes"), e a condição é esta:
+**o projeto de teste nunca recebe dado real de cliente**, só dado sintético que
+os próprios testes semeiam e apagam a cada execução. No dia em que isso deixar
+de valer — banco de teste populado com cópia de dado real, por exemplo — a
+resposta muda, e o GitHub entra na tabela.
 
 ---
 

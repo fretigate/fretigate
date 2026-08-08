@@ -22,6 +22,42 @@ const eslintConfig = defineConfig([
     "src/lib/generated/**",
     "prisma/generated/**",
   ]),
+  // Trava de SQL cru (CLAUDE.md §3, tarefa 9): "SQL cru só em src/lib/db e em
+  // /tests. Em nenhum outro lugar." /tests fica fora de src/**, então nem
+  // precisa de exceção nomeada aqui — só src/lib/db precisa.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "pg",
+              message:
+                "SQL cru só em src/lib/db e em /tests (CLAUDE.md §3).",
+            },
+          ],
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "MemberExpression[property.name=/^\\$(query|execute)Raw(Unsafe)?$/]",
+          message:
+            "SQL cru só em src/lib/db e em /tests (CLAUDE.md §3).",
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/lib/db/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": "off",
+      "no-restricted-syntax": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
