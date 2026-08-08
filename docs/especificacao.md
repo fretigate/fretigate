@@ -559,8 +559,14 @@ contas gratuitas e driblar o limite de 1 caminhão.
   linhas. Liberar no arquivamento reabriria exatamente o buraco — bastaria
   arquivar e cadastrar de novo. Quem volta **desarquiva** a linha que já existe,
   que é o que o §7 do `CLAUDE.md` já manda ao dizer que nada é apagado.
-- **Guardar só os dígitos.** Sem normalizar, `12.345.678/0001-90` e
-  `12345678000190` passam as duas e a trava não vale nada.
+- **Guardar só letra e número, maiúsculo, sem pontuação — nunca só dígito.**
+  Sem normalizar, `12.345.678/0001-90` e `12345678000190` passam as duas pela
+  restrição e a trava não vale nada. E desde 31/07/2026 a Receita emite CNPJ
+  **alfanumérico** para inscrição nova — 12 primeiras posições podem ter
+  letra (A-Z), os 2 dígitos verificadores finais continuam só número —
+  então "só dígito" recusaria CNPJ novo e válido. O CPF não muda: continua
+  só numérico, 11 dígitos. O formato é garantido também no banco, pela
+  restrição `empresa_cnpj_formato`.
 - **Guardar nulo, nunca `''`.** Vazio colide com vazio; nulo não colide com
   nulo. Duas empresas sem CNPJ preenchido são normais.
 - Mensagem de erro: **"já existe uma conta com esse CNPJ"**. Nunca o erro do

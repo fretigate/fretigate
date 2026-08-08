@@ -46,8 +46,17 @@ model Empresa {
   /// empresa. Guardar `''` em vez de nulo QUEBRA isso — duas contas vazias
   /// colidiriam. Grave nulo.
   ///
-  /// Guardado **só com dígitos**. Sem normalizar, `12.345.678/0001-90` e
-  /// `12345678000190` passam as duas pela restrição e a trava não vale nada.
+  /// Guardado **só com letra e número, maiúsculo, sem pontuação** — nunca só
+  /// dígito. Desde 31/07/2026 a Receita emite CNPJ alfanumérico para
+  /// inscrição nova: as 12 primeiras posições podem ter letra (A-Z), os 2
+  /// dígitos verificadores finais continuam só número. `12.345.678/0001-90`
+  /// e `12345678000190` têm que normalizar para o mesmo valor, senão a trava
+  /// não vale nada — e "só dígito" recusaria CNPJ alfanumérico válido. O
+  /// formato é garantido também no banco, pela restrição
+  /// `empresa_cnpj_formato`.
+  ///
+  /// O CPF (`Cliente.documento`, `Motorista.documento`) não muda: continua
+  /// só numérico, 11 dígitos — a mudança da Receita é só no CNPJ.
   cnpj String? @unique
 
   telefone String?

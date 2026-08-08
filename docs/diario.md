@@ -6,6 +6,57 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 08/08/2026 — tarefa 10 fechada: as duas correções de documento do item 1, e o item 1 concluído
+
+**Fechada.** As duas pendências que a tarefa 10 herdou da fila do item 1 —
+texto solto no `docs/navegacao.md` e um desvio não documentado no
+`docs/especificacao.md` — foram conferidas, e as duas já estavam corrigidas,
+resolvidas ao longo do próprio item 1 em vez de esperar por uma tarefa
+dedicada:
+
+- **`docs/navegacao.md`, tela `Entrar`** — não fala mais em código por
+  WhatsApp; a linha diz "**E-mail e senha** → Primeiro acesso · Criar conta ·
+  Esqueci a senha. O app nunca envia mensagem sozinho, então não há código
+  por WhatsApp", sem `⚠️` (conferido: nenhum `⚠️` resta no arquivo inteiro).
+  Veio pela segunda exportação do Design, na tarefa 8 fatia 2.
+- **`docs/especificacao.md` §6, `Usuario`** — já registra por escrito que
+  `senha_hash` não existe, com o motivo (Better Auth guarda o hash em
+  `account`, provedor `credential`). O desvio apontado na tarefa 3 está
+  documentado, não só corrigido no código.
+
+Também conferido, fora da fila formal da tarefa 10 mas do mesmo tipo: nenhum
+resíduo de "Nome da transportadora" sobra em `docs/navegacao.md`,
+`docs/especificacao.md` ou `docs/componentes.md` — só o uso correto do termo
+em contexto de marketing, previsto pelo próprio vocabulário do `CLAUDE.md` §8.
+
+**A pendência do Storage (isolamento do `storage.objects`, balde privado, URL
+assinada) continua em aberto** — ela nunca fez parte desta fila: o diário já a
+registrava como pendência **fora do item 1**, porque depende do item 5
+(upload) existir. Sem mudança aqui.
+
+Com isso, **o item 1 da ordem de construção (`docs/especificacao.md` §9) está
+concluído** — as dez tarefas fecharam.
+
+### Próximo — item 2: cadastros
+
+Cliente, veículo, motorista, tipo de operação e municípios — a base sobre a
+qual o item 3 (lançamento de frete) se apoia.
+
+**Duas decisões técnicas pendentes de aprovação, recomendação trazida nesta
+sessão, nada instalado ainda:** fonte dos municípios do IBGE com coordenada do
+centro, e biblioteca de validação de CPF/CNPJ.
+
+**Pendente com o Design, registrado antes de começar:** o formulário de
+cadastro/edição de Caminhão ainda não foi desenhado. `docs/navegacao.md` tem
+a linha "Caminhões — lista e perfil", e `docs/componentes.md` só cobre a linha
+da lista (apelido · placa · tipo) e o padrão de lista compartilhado com
+Clientes — ao contrário de Cliente, nenhum dos dois documentos tem a tela de
+cadastro/edição do caminhão em si. Já pedido ao Design pelo fundador. Bloqueia
+só a parte de `Veiculo` do item 2 — Cliente, Motorista, TipoOperacao e
+Municipio seguem sem depender disto.
+
+---
+
 ## 08/08/2026 — a esteira falhou por falta de `RESEND_API_KEY`, e por que só `BETTER_AUTH_SECRET` virou secret do GitHub
 
 Primeira execução real do `ci.yml` (tarefa 9): as 25 verificações de
@@ -1539,7 +1590,9 @@ achado sobre string vazia que muda a política de RLS da tarefa 4.
     lugares, não uma regressão desta tarefa. Adiado de propósito: mesma
     correção, um teste só, depois que alguém decidir a forma (provavelmente
     uma verificação extra dentro de cada `it` já existente, não um `it` novo).
-10. Correções nos documentos e a pendência do Storage
+10. ~~Correções nos documentos~~ — RESOLVIDO em 08/08/2026, ver entrada no
+    topo deste arquivo. A pendência do Storage segue em aberto, fora do item
+    1 (ver "Pendências fora do item 1" logo abaixo)
 
 ### Bloqueios conhecidos
 
