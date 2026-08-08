@@ -73,29 +73,65 @@ exceção de barra apagada) — porque, junto com aquelas, esta é a **quarta**.
   concordam entre si. **Não corrigido** — não é defeito mecânico, é decisão
   de conteúdo (ver pendências abaixo).
 
-### Pendências desta exportação — decisão do fundador, não decidida aqui
+### As três pendências, resolvidas pelo fundador (08/08/2026)
 
-1. **Lista de telas sem barra**: aceitar a ampliação (Link expirado,
-   Primeiro acesso) e registrar a decisão explícita no `CLAUDE.md` §8; ou
-   recusar e pedir correção na fonte do Design, mantendo a lista em seis.
-2. **Termos no modo Ajustes**: manter a decisão já registrada (sem barra até
-   Ajustes existir, pedir correção na fonte); ou aceitar a antecipação da
-   exportação, o que exige decidir a folga de rolagem dessa tela isolada —
-   algo que o `CLAUDE.md` hoje trata como "não fazer antes de Ajustes
-   existir".
-3. **Seções 11/12 duplicadas**: a seção 12 (antiga) é a válida e a 11 (nova)
-   é lixo de exportação a descartar; ou a seção 11 é a atualização
-   pretendida e deveria substituir/renumerar a 12; ou perguntar ao Design
-   qual é a intenção antes de decidir.
+1. **Lista de telas sem barra**: recusada a ampliação. `docs/componentes.md`
+   voltou aos sete itens já aceitos (os seis do `CLAUDE.md` §8 mais
+   "Recuperação enviada", que já estava na lista antes desta exportação —
+   ver `ffc8e1e`). "Link expirado" e "Primeiro acesso" saíram; nenhum dos
+   dois entrou por decisão explícita do fundador, e o §8 proíbe ampliar por
+   analogia.
+2. **Termos no modo Ajustes**: mantida a decisão já registrada. O parágrafo
+   apagado pela exportação foi reaplicado à mão em `docs/componentes.md`: os
+   dois modos de `/termos` seguem usando a margem provisória do modo
+   cadastro até Ajustes existir; o documento não volta a prometer barra que
+   não existe.
+3. **Seções 11/12 duplicadas**: unificadas em uma só, na posição 12 (a
+   posição 11 pertence a "Cadastro rápido", conteúdo antigo e intocado). O
+   conteúdo unificado ficou assim, por decisão do fundador:
+   - o rótulo do botão principal diz **para onde a ação leva** ("Salvar e
+     cobrar", "Salvar e enviar ordem", "Salvar e gerar relatório", "Salvar
+     no cadastro") — repetir o nome da ação original passaria a impressão de
+     que a primeira tentativa falhou. Isso não abre exceção na regra "uma
+     ação, um nome" (`docs/componentes.md` "Regras"): a regra vale para a
+     **mesma ação** em lugares diferentes, e "Salvar e cobrar" é **ação
+     composta** — salva e continua outra —, não a mesma ação de "Cobrar no
+     WhatsApp" com nome trocado. A regra ganhou essa distinção por escrito;
+   - a lista de gatilhos ficou com os **quatro**, porque nenhuma das duas
+     versões estava completa sozinha: Cobrar no WhatsApp sem telefone do
+     cliente · Enviar ordem sem telefone do motorista · Gerar relatório
+     **com cobrança marcada** sem chave Pix da empresa (relatório sem
+     cobrança não pede Pix) · campo vazio tocável no perfil. O gatilho do
+     Pix também é o único que **não bloqueia**: "Agora não" gera o
+     relatório do mesmo jeito, sem a chave, com aviso curto do sistema —
+     bloquear seria pior, o cliente ainda pode pagar por boleto ou
+     transferência;
+   - a cor do "adicionar" no perfil ficou em `#1B6B3A` como **texto**, não
+     como fundo preenchido — a exclusividade do verde sólido (`docs/
+     componentes.md` "Regras") é sobre fundo, não sobre cor de texto, e
+     verde como texto já marca elemento tocável em outros lugares do
+     inventário (pílula em linha, pílula de cabeçalho, chip selecionado).
+     `#5C6660` foi descartado por ser a cor de desabilitado — o oposto
+     semântico de um campo tocável.
+   `docs/navegacao.md` ganhou o gatilho do Pix/relatório que faltava na
+   frase equivalente da seção "Regras de navegação", pela mesma razão.
 
 ### Pendências pedidas ao Design (fonte), acumuladas — conferir a cada exportação nova
 
 - O parágrafo de exceção da barra do `CLAUDE.md` §8 precisa **vir** na
-  exportação, não ser reaplicado à mão a cada vez — já é a segunda perda.
+  exportação, não ser reaplicado à mão a cada vez — já é a segunda perda
+  desse parágrafo específico. O parágrafo de "Termos no modo Ajustes" é um
+  parágrafo à parte, vizinho dele, e essa foi a primeira vez que ele se
+  perdeu — os dois pedidos ao Design são independentes, não a mesma conta.
 - A seção "Campo de texto" nunca veio em exportação nenhuma desde
   07/08/2026.
 - O defeito mecânico de título partido (este, em `docs/navegacao.md`) —
   registrar para conferir se o próximo lote vem limpo ou repete o problema.
+- A seção "Folha de campo faltante" perdeu o gatilho de "Gerar relatório
+  sem chave Pix" ao ser reexportada — a fonte do Design precisa incluir os
+  quatro gatilhos (telefone do cliente, telefone do motorista, Pix do
+  relatório, campo vazio no perfil), senão a próxima exportação apaga de
+  novo.
 
 ### O que não mudou de conteúdo, e por isso não entrou nas listas acima
 

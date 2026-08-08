@@ -10,7 +10,7 @@ Seis variantes de botão, mais o estado carregando, o aviso do sistema, a famíl
 
 - **Verde sólido.** `#1B6B3A` preenchido é exclusivo da **ação principal** — mais o (+) da barra e o círculo de iniciais da empresa. Nenhum chip, de filtro ou de escolha, usa verde sólido: selecionado é sempre `#E4E9E5` com texto `#1B6B3A`.
 - **Hierarquia.** Uma principal por tela, sempre a ação que avança o dinheiro ou o estado. Nunca duas verdes na mesma tela. Telas de consulta (dashboard, listas) não têm principal — o (+) da barra é chrome global, não ação de tela.
-- **Nome.** Uma ação, um nome: **Gerar relatório** quando cria, **Ver relatório** quando já existe. Nunca “Relatório” sozinho. Igual para Faturar frete · Marcar recebido · Receber o resto · Cobrar no WhatsApp · Editar frete · Arquivar frete.
+- **Nome.** Uma ação, um nome: **Gerar relatório** quando cria, **Ver relatório** quando já existe. Nunca “Relatório” sozinho. Igual para Faturar frete · Marcar recebido · Receber o resto · Cobrar no WhatsApp · Editar frete · Arquivar frete. A regra vale para a **mesma ação** em lugares diferentes — não impede uma **ação composta**, que salva e continua outra, de ter nome próprio: o principal da folha de campo faltante (**12**) não repete "Cobrar no WhatsApp", diz "Salvar e cobrar", porque salvar-e-cobrar não é a mesma ação que só cobrar, e o nome diz para onde ela leva.
 - **Posição.** **Nenhuma tela tem barra de ação fixa.** Só a barra de navegação flutua sobre o conteúdo — ela pode, porque é escura, fina e sempre a mesma; um bloco de botões claros sobre fundo claro corta o texto de trás e lê como defeito. A ordem interna do bloco continua: principal → secundárias lado a lado → destrutiva em texto.
   - **Detalhe** (frete, cobrança, cliente, caminhão, motorista): bloco de ações **dentro do conteúdo rolável**, depois do resumo e dos campos, **antes** de qualquer lista ou histórico. Rola junto com a página.
   - **Formulários**: o salvar fica no fim do formulário, rolando junto. Destrutiva logo abaixo, em texto.
@@ -159,39 +159,6 @@ Vale para a empresa. **Pessoa é outra regra**: sempre a primeira letra dos dois
 
 Círculo: `30px` no cartão da dashboard · `40px` em linha de lista · `48px` em Mais · `56px` em Conta e no convite · `46px` quadrado de raio 6 no A4. Fundo `#1B6B3A` com texto branco (contorno preto no A4, que é impresso), `letter-spacing:.02em`.
 
-## 11 — Folha de campo faltante
-
-Padrão reutilizável. O cadastro rápido pede o mínimo **de propósito**, então há campos que ficam vazios. Eles **não viram marca de "cadastro incompleto"** no perfil: marcar acusa a pessoa de um erro que ela não cometeu, e com vinte cadastros pela metade todo perfil vira repreensão.
-
-**A falta aparece no momento em que atrapalha.** Ao tocar numa ação que precisa do campo, abre uma folha curta pedindo **só aquele campo**, e a ação continua depois de salvar. Não interrompe, completa.
-
-| Medida | Valor |
-|---|---|
-| Folha | `border-radius: 28px 28px 0 0` · `padding: 16px 20px 40px` · fundo `#FAF8F4` sobre `rgba(20,26,23,.42)` · alça `38×4` em `#DAD5CA` |
-| Título | `21px / 800 / 1.15` em `#141A17` — nomeia quem falta: "Falta o telefone de Lojas Miranda" |
-| Apoio | `14px / 500 / 1.45` em `#3C443E` — diz por que o app precisa e que é uma vez só |
-| Campo | o mesmo do formulário: `min-height 78px`, raio `18`, rótulo `11px/.16em` |
-| Principal | 60px, e o rótulo **diz para onde a ação segue**: "Salvar e cobrar", "Salvar e enviar ordem", "Salvar no cadastro" |
-| Escape | "Agora não" em texto neutro `#6E7770`, 44px — fecha sem salvar e **sem executar a ação** |
-
-**Onde dispara hoje:** "Cobrar no WhatsApp" sem telefone do cliente (Cobranças, lista e detalhe) · "Enviar ordem" sem telefone do motorista (detalhe do frete) · qualquer campo vazio tocado no perfil do cliente.
-
-**Validação antes de salvar.** Telefone inválido salvo abre o WhatsApp em nada, e a culpa cai no produto — então a folha valida no próprio campo, usando o estado de erro do inventário: fundo `#F6E6DD`, rótulo `#B3401A`, e uma linha de `13px / 600 / 1.4` em `#B3401A` abaixo do campo dizendo o que está errado. A principal só habilita quando passa.
-
-| Campo | Regra | Mensagem |
-|---|---|---|
-| TELEFONE | 10 ou 11 dígitos com DDD; DDD ≥ 11 | "Faltam dígitos. Com DDD são 10 ou 11." · "Número comprido demais…" · "Esse DDD não existe." |
-| E-MAIL | tem `@` e domínio com ponto | "Falta o @ ou o final do endereço." |
-| Demais | qualquer texto não vazio | — |
-
-A validação começa a falar **depois do primeiro dígito**, nunca com o campo vazio: campo vazio é o estado inicial esperado, não erro.
-
-**"Agora não" fecha o ciclo com aviso.** Sem ele a pessoa toca numa ação e nada acontece, o que lê como defeito. Ao fechar sem salvar, o aviso do sistema (superfície escura) diz o porquê: **"Sem o telefone não dá para cobrar por aqui."** · **"Sem o telefone não dá para mandar a ordem por aqui."** · no perfil, para campo não essencial, "Campo continua vazio. Dá para preencher quando precisar."
-
-**Fonte única do dado.** O telefone de cliente vive em `CLIENTES` (TelaClientes) e o de motorista em `MOTORISTAS` (TelaMotoristas). Os mapas `TELEFONES` e `TEL_MOTORISTA` das outras telas são **espelhos** desses cadastros, não uma segunda verdade: esvaziar um sem esvaziar o outro faz o app se contradizer em dois toques — a mesma classe de defeito das iniciais da empresa e dos dias da semana. Quem entra sem telefone é **Lojas Miranda** (cliente) e **Cícero** (motorista), nas duas pontas.
-
-**No perfil, campo vazio aparece vazio e tocável:** um **"adicionar"** discreto em `#5C6660` no lugar do valor, com a mesma métrica do valor preenchido. Não é aviso — é o campo sendo acessível.
-
 ## Números de regra de produto
 
 **Prazo, limite e número de regra vêm da especificação, não do desenho.** O `componentes.md` manda no que a tela contém — texto, rótulo, ordem, variante — mas nunca inventa nem "arredonda" um valor de regra. Quando um número desses aparece em tela, ele é citação: se a especificação mudar, a tela muda atrás dela.
@@ -206,9 +173,9 @@ A validação começa a falar **depois do primeiro dígito**, nunca com o campo 
 
 A barra de navegação é permanente **dentro** da sessão. Fora dela, não existe — quem ainda não entrou não tem para onde a barra levar, e mostrá-la vira atalho para pular o cadastro. Já aconteceu: a tela de Termos herdou a barra no modo cadastro e dava para chegar em Fretes sem criar conta.
 
-**Sem barra:** Entrar · Criar conta · Esqueci a senha · Recuperação enviada · Redefinir senha · Link expirado · Termos **vindo do cadastro** · Aceitar convite · Primeiro acesso.
+**Sem barra:** Entrar · Criar conta · Esqueci a senha (e o estado **Recuperação enviada**, mesma rota) · Redefinir senha (e o estado **Redefinir senha — link expirado**, mesma rota) · Termos **vindo do cadastro** · Aceitar convite. As seis rotas são as do `CLAUDE.md` §8 — lista fechada, tela nova sem barra entra aqui só com decisão explícita, não por analogia; os dois estados citados entre parênteses não contam como rota nova, porque `TelaRedefinirSenha` e `PedidoDeRecuperacao` já documentam os dois como estados de um componente só, não telas.
 
-**Com barra:** todo o resto, inclusive Termos **vindo de Ajustes** — ali a pessoa está logada e lendo, e tirar a barra a prenderia na tela.
+**Com barra:** todo o resto. Termos **vindo de Ajustes**, na regra final, também ganha barra — mas Ajustes ainda não existe, então os dois modos de `/termos` usam por enquanto a mesma margem provisória do modo cadastro, sem barra nenhuma para reservar folga contra. Não é o valor final do modo Ajustes; corrigir quando Ajustes for construído.
 
 A distinção não é a tela, é a **origem**: o mesmo componente de Termos aparece dos dois jeitos, e quem decide é a prop `origem`. Nenhuma tela fora de sessão reserva a folga de rolagem de `138px` — sem barra, o conteúdo termina no respiro normal de `40px`.
 
@@ -305,20 +272,34 @@ Folha curta que abre pelo **"+ Novo"** dentro da folha de busca, durante o lanç
 
 **A falta aparece no momento em que atrapalha, não antes.** Quando a pessoa toca numa ação que precisa de um campo não preenchido, abre uma folha curta pedindo **só aquele campo** — e a ação continua sozinha depois de salvar. Não interrompe: completa.
 
-| Ação | Campo que falta | Depois de salvar |
+| Medida | Valor |
+|---|---|
+| Folha | `border-radius: 28px 28px 0 0` · `padding: 16px 20px 40px` · fundo `#FAF8F4` sobre `rgba(20,26,23,.42)` · alça `38×4` em `#DAD5CA` |
+| Título | `21px / 800 / 1.15` em `#141A17` — nomeia quem falta: "Falta o telefone de Lojas Miranda"; quando quem falta é a própria empresa, não um cliente ou motorista, o título muda de sujeito: "Falta a chave Pix da sua empresa" |
+| Apoio | `14px / 500 / 1.45` em `#3C443E` — diz por que o app precisa e que é uma vez só |
+| Campo | o mesmo do formulário: `min-height 78px`, raio `18`, rótulo `11px/.16em` |
+| Principal | 60px, e o rótulo **diz para onde a ação segue**: "Salvar e cobrar", "Salvar e enviar ordem", "Salvar e gerar relatório", "Salvar no cadastro" — repetir o nome da ação original faz parecer que a primeira tentativa falhou |
+| Escape | "Agora não" em texto neutro `#6E7770`, 44px — fecha sem salvar e **sem executar a ação**, exceto no relatório com Pix (ver abaixo) |
+
+**Onde dispara hoje:** "Cobrar no WhatsApp" sem telefone do cliente (Cobranças, lista e detalhe) · "Enviar ordem" sem telefone do motorista (detalhe do frete) · "Gerar relatório" **com a opção "gerar cobrança" marcada** e sem chave Pix da empresa — relatório sem cobrança não pede Pix — · qualquer campo vazio tocado no perfil do cliente.
+
+**Validação antes de salvar.** Telefone inválido salvo abre o WhatsApp em nada, e a culpa cai no produto — então a folha valida no próprio campo, usando o estado de erro do inventário: fundo `#F6E6DD`, rótulo `#B3401A`, e uma linha de `13px / 600 / 1.4` em `#B3401A` abaixo do campo dizendo o que está errado. A principal só habilita quando passa.
+
+| Campo | Regra | Mensagem |
 |---|---|---|
-| Cobrar no WhatsApp | telefone do cliente | abre a conversa |
-| Enviar ordem no WhatsApp | telefone do motorista | abre a conversa |
-| Gerar relatório com Pix | chave Pix da empresa | gera o documento |
+| TELEFONE | 10 ou 11 dígitos com DDD; DDD ≥ 11 | "Faltam dígitos. Com DDD são 10 ou 11." · "Número comprido demais…" · "Esse DDD não existe." |
+| E-MAIL | tem `@` e domínio com ponto | "Falta o @ ou o final do endereço." |
+| Demais | qualquer texto não vazio | — |
 
-- mesma folha inferior de **11**, com **um campo só**
-- título nomeia a ação, não o erro: "Falta o telefone do Frigorífico São Luiz" — nunca "Campo obrigatório"
-- uma linha de apoio dizendo por que está sendo pedido agora: "É pra onde a cobrança vai."
-- principal com o **nome da ação original** (`Cobrar no WhatsApp`), não "Salvar" — é o que comunica que o fluxo continua
-- texto neutra **Agora não**, que fecha sem salvar e **cancela a ação**
-- o campo é salvo no cadastro, então a folha não reaparece na próxima vez
+A validação começa a falar **depois do primeiro dígito**, nunca com o campo vazio: campo vazio é o estado inicial esperado, não erro.
 
-**Campo vazio no perfil aparece vazio e tocável** — um "adicionar" discreto no lugar do valor, em `#1B6B3A` no mesmo `16px/600` do valor preenchido. Não é aviso nem alerta: é o campo sendo acessível. Nada de terracota, nada de ícone de atenção.
+**"Agora não" fecha o ciclo com aviso.** Sem ele a pessoa toca numa ação e nada acontece, o que lê como defeito. Ao fechar sem salvar, o aviso do sistema (superfície escura) diz o porquê: **"Sem o telefone não dá para cobrar por aqui."** · **"Sem o telefone não dá para mandar a ordem por aqui."** · no perfil, para campo não essencial, "Campo continua vazio. Dá para preencher quando precisar."
+
+**Exceção: o relatório com cobrança não bloqueia.** Bloquear seria pior aqui — quem tocou "Gerar relatório" queria o documento, e o cliente ainda pode pagar por boleto ou transferência sem a chave Pix. Por isso, só neste gatilho, "Agora não" **não cancela a ação**: o relatório é gerado do mesmo jeito, sem a chave, e o aviso do sistema é curto: **"Relatório gerado sem a chave Pix."**
+
+**Fonte única do dado.** O telefone de cliente vive em `CLIENTES` (TelaClientes) e o de motorista em `MOTORISTAS` (TelaMotoristas). Os mapas `TELEFONES` e `TEL_MOTORISTA` das outras telas são **espelhos** desses cadastros, não uma segunda verdade: esvaziar um sem esvaziar o outro faz o app se contradizer em dois toques — a mesma classe de defeito das iniciais da empresa e dos dias da semana. Quem entra sem telefone é **Lojas Miranda** (cliente) e **Cícero** (motorista), nas duas pontas.
+
+**No perfil, campo vazio aparece vazio e tocável:** um **"adicionar"** em `#1B6B3A` no lugar do valor, com a mesma métrica do valor preenchido. A exclusividade do verde sólido ("Regras" acima) é sobre **fundo preenchido**, não sobre cor de texto — verde como texto já marca elemento tocável em outros lugares do inventário (pílula em linha, pílula de cabeçalho, chip selecionado), e é isso que o "adicionar" precisa comunicar. Nunca `#5C6660`: é a cor de desabilitado, o oposto semântico de um campo tocável. Não é aviso — é o campo sendo acessível.
 
 ## Chips de seleção
 

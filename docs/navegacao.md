@@ -83,7 +83,7 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 
 ## Regras de navegação
 
-- **Folha de campo faltante** não é tela: é sobreposição sobre a tela em que a pessoa já está. Não entra no mapa como destino, e o botão do sistema volta para a mesma tela. Dispara em Cobranças (cobrar sem telefone), detalhe do frete (enviar ordem sem telefone do motorista) e perfil do cliente (tocar em campo vazio).
+- **Folha de campo faltante** não é tela: é sobreposição sobre a tela em que a pessoa já está. Não entra no mapa como destino, e o botão do sistema volta para a mesma tela. Dispara em Cobranças (cobrar sem telefone), detalhe do frete (enviar ordem sem telefone do motorista), Relatório (gerar com cobrança sem chave Pix da empresa) e perfil do cliente (tocar em campo vazio).
 - A **barra** é global: aparece em toda tela de nível 1 e continua visível nas telas de detalhe. Flutua sobre o conteúdo — é a única coisa que flutua.
 - O **(+)** abre Lançar frete de qualquer lugar. Não existe botão flutuante separado de novo frete.
 - Nenhuma tela de nível 1 tem ação principal própria. Só detalhes e formulários têm.
