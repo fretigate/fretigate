@@ -108,7 +108,10 @@ data pode ser futura.
   destino forem reconhecidos; editável. Nunca obrigatório, nunca bloqueia.
 - **Valor:** quando cliente e destino já têm histórico, mostrar sugestão tocável
   — "Última vez neste trecho: R$ 1.400". Um toque preenche. **Nunca preenche
-  sozinho.**
+  sozinho.** O mecanismo aceita mais de uma fonte de sugestão por desenho —
+  hoje só "última vez neste trecho", com uma segunda fonte já decidida para
+  fase 2 (R$/km, ver §11.1). Não construir amarrado a uma fonte só: acrescentar
+  a segunda depois vira remendo.
 
 **Obrigatório para salvar:** cliente, valor, data, tipo de operação.
 
@@ -753,3 +756,47 @@ Nada de 5 em diante começa antes de 1 a 4 funcionar de verdade.
 ## 10. Decisões em aberto
 
 Ver §14 do CLAUDE.md.
+
+---
+
+## 11. Fase 2 — decidido, não construído agora
+
+Registrado para não se perder, e para a tela de Lançar frete (§4.1) não
+nascer de um jeito que feche a porta para isto depois. Nada aqui entra na
+ordem de construção do §9.
+
+### 11.1 Sugestão de valor por R$/km
+
+Segunda fonte para o mecanismo de sugestão do campo Valor em §4.1 — não é
+funcionalidade nova, é uma segunda fonte para um mecanismo que já existe.
+Distância e R$/km já estão no modelo de dados (`DistanciaRota`, §6); o campo
+de valor já tem o mecanismo de sugestão tocável.
+
+Quando origem e destino estiverem definidos e não houver histórico daquele
+trecho com aquele cliente, o campo de valor sugere um preço calculado pelo
+R$/km derivado do histórico do próprio usuário — **nunca** de uma tabela que
+ele precise cadastrar e manter.
+
+Ordem das sugestões: última vez neste trecho → pelo seu R$/km → nenhuma.
+
+### 11.2 Mapa do mês
+
+Fora da tela de Lançar frete, definitivamente. Ela tem meta de 30 segundos
+(CLAUDE.md §1), e mapa carregando ali cobra peso e espera contra a única
+métrica que manda no produto. Mapa de uma rota também mostra ao dono o que
+ele já sabe: ele dirige aquele trecho toda semana.
+
+O que entra em fase 2 é outro mapa: o **do mês** — todas as rotas rodadas no
+período, desenhadas juntas, na dashboard ou em tela própria. Isso ele nunca
+viu. É o formato da operação dele: para onde a frota está puxando, qual
+cliente concentra o movimento.
+
+**Razão comercial, parte da decisão:** a venda é 100% por anúncio e sem
+demonstração — o criativo é a experiência do produto para quem compra. Uma
+linha entre duas cidades não impressiona; uma teia de rotas cobrindo o
+estado, com o faturamento do mês ao lado, sim.
+
+**Caminho de validação:** o mapa do mês pode ser testado como criativo antes
+de existir no produto — desenhado no Design e usado em anúncio. Se converter
+melhor que os outros criativos, vale construir; se não, economizou o
+trabalho.
