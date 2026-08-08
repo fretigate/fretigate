@@ -6,6 +6,115 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 08/08/2026 — tarefa 8 (fatia 2): Entrar, Esqueci a senha, Redefinir senha, Termos
+
+**Fechada** — fecha o ciclo de recuperação de senha por inteiro: o e-mail
+chega, o link abre a tela certa, a senha é redefinida e a pessoa já entra com
+ela. Três commits: duas exportações do Design chegaram no meio da tarefa, e
+as duas tiveram que entrar sozinhas, antes do código (`CLAUDE.md` §13).
+
+### O que entrou
+
+- `src/app/(auth)/entrar/` — e-mail e senha, com a trava do Better Auth e a
+  mensagem certa por tipo de erro.
+- `src/app/(auth)/esqueci-a-senha/` + `src/components/auth/
+  PedidoDeRecuperacao.tsx` — pedido do link e confirmação, reaproveitados
+  também no reenvio a partir do link vencido.
+- `src/app/(auth)/redefinir-senha/` — a tela que o link do e-mail abre.
+  Campo único de senha, com revelar (Mostrar/Ocultar). Link vencido: bloco
+  de alerta explicando que a conta e os fretes seguem intactos.
+- `src/app/(auth)/termos/` — Termos e Política, texto marcado como rascunho,
+  duas abas (reaproveitando `ChipEscolha` — sem componente de aba ainda).
+- `src/lib/servicos/trava-de-redefinicao.ts` (limite de consulta ao código,
+  por custo) · `src/components/ui/PilulaEmLinha.tsx` (peça 04 do inventário,
+  primeira vez em uso) · `CampoTexto.tsx` ganhou a variação "revelar".
+- Senha mínima passou a ser **6 caracteres**, fixada em `src/lib/auth/
+  index.ts` — decisão nova desta tarefa, não existia antes.
+- `Sair da conta` e sessão vencida agora vão para `/entrar` (antes iam para
+  `/criar-conta`, porque `/entrar` ainda não existia).
+
+### A decisão mais cara: o e-mail nunca sai do servidor
+
+O plano original guardava o e-mail na própria URL do link de recuperação,
+para o "mandar de novo" funcionar num toque só. O fundador travou: endereço
+na URL vira registro de servidor e histórico de navegador, e o `CLAUDE.md`
+§4 proíbe dado pessoal em log. Investigação, antes de escrever qualquer
+código: o Better Auth guarda o código de recuperação numa tabela ligada ao
+usuário, e ela não é apagada no instante em que vence — só como efeito
+colateral de alguém consultar QUALQUER código, de qualquer pessoa. Ou seja,
+o servidor geralmente ainda consegue descobrir a quem um código vencido
+pertencia, contanto que a consulta não passe primeiro pela rota própria do
+Better Auth (que apaga o código vencido antes de dar a chance de olhar).
+Solução: `sendResetPassword` (`src/lib/auth/index.ts`) manda o link direto
+para `/redefinir-senha?token=...`, nunca pela rota da biblioteca. A tela
+resolve o e-mail no servidor (`src/lib/servicos/redefinicao-de-senha.ts`) e
+só entrega para o navegador dentro dos próprios dados da página — nunca a
+URL. Quando o servidor não consegue mais achar (código já usado, ou varrido
+por outra consulta), a tela cai para pedir o e-mail de novo — o plano B que
+o fundador já tinha aprovado para esse caso.
+
+### Duas exportações do Design chegaram no meio, e as duas pararam a tarefa
+
+A primeira substituiu `docs/navegacao.md` e `docs/componentes.md` por
+inteiro. Trouxe conteúdo real para telas que eu tinha improvisado (nomes de
+botão, o papel tipográfico "Corpo de texto fora de sessão") — e contradisse
+duas decisões que a conversa tinha acabado de fechar: o nome do botão de
+reenvio, e se a tela de confirmação tem alguma saída. O fundador resolveu na
+hora: um campo de senha só (não "senha" + "repetir senha" — "quem erra
+digitando erra duas vezes"), nome unificado em **"Mandar link novo"** em
+toda parte, e as **2 horas** de validade do link mantidas — a exportação
+mencionava 1 hora, mas prazo é regra de produto da tarefa 7, com motivo
+registrado, e `componentes.md` manda no que a tela contém, não nisso.
+
+A segunda exportação sincronizou essas decisões de volta nos dois documentos
+— e trouxe "senha mínima: 6 caracteres" como se já fosse regra registrada.
+Não era: conferido, não estava em `docs/especificacao.md` em lugar nenhum.
+Perguntado, o fundador confirmou 6 como a regra real — primeira vez que ela
+existe no produto, e entrou junto desta tarefa (`src/lib/auth/index.ts`,
+`docs/especificacao.md`).
+
+Cada exportação virou commit próprio, nunca junto do código que dependia
+dela — CLAUDE.md §13, seguido as duas vezes.
+
+### `/auditar-tela` e `/revisar`
+
+`/auditar-tela` em Esqueci a senha, antes da primeira exportação chegar,
+achou dois problemas: erro de campo ("E-mail inválido") solto embaixo do
+botão em vez de preso ao próprio campo, e "Voltar pra entrada" sobrevivendo
+à tela de confirmação, que a documentação da época não listava para lá. Os
+dois corrigidos.
+
+`/revisar` no fim achou, entre outros: peso de fonte errado nos parágrafos
+de Termos (400 em vez de 600), a Política prometendo "remoção" de dado
+(contradiz `CLAUDE.md` §7 — trocado por "exportação"), duas lacunas do
+Design registradas só em comentário de código, nunca em `docs/`, e a
+consulta de `/redefinir-senha` sem trava nenhuma (virou
+`trava-de-redefinicao.ts` — por custo de rota sem limite, não por
+adivinhação do código).
+
+### Pendências, registradas nos documentos, não só aqui
+
+- Duas lacunas do Design em `docs/componentes.md`: abas via `ChipEscolha`
+  (sem componente de aba de verdade ainda) e a seção "Campo de texto", que
+  nenhuma das duas exportações trouxe de volta.
+- `CLAUDE.md` §14 ganhou um item somado ao bloqueio de lançamento já
+  existente: tocar em "Termos de uso" no meio do cadastro navega para longe
+  e perde o formulário preenchido. A correção certa é abrir os Termos por
+  cima do formulário (folha/modal), não guardar rascunho — não construída
+  nesta fatia.
+- Bloqueio de lançamento (forma do aceite e redação dos Termos, sem revisão
+  jurídica) continua de pé, sem mudança.
+
+### Próxima
+
+Tarefa 9 — travas de ESLint e SQL cru na integração contínua, mais duas
+sub-tarefas já registradas: 9b (teste permanente da trava de banco) e 9c
+(privilégio de execução de função para `anon`/`authenticated`, achado na
+tarefa 8). Lista completa perto do fim deste diário, na entrada mais antiga
+("Tarefas restantes do item 1").
+
+---
+
 ## 07/08/2026 — tarefa 8 (fatia 1): tela Criar conta
 
 **Fechada** — cadastro completo (Empresa + Usuário dono, na mesma operação),
