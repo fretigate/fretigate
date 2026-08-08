@@ -125,6 +125,15 @@
   --text-botao-secundario--line-height: 1;
   --text-busca: 14px;
   --text-busca--line-height: 1;
+  /* Corpo de texto fora de sessão — docs/componentes.md, exportação do
+     Design de 07/08/2026. Parágrafo de leitura das telas sem sessão (Entrar,
+     Criar conta, Esqueci a senha, Redefinir senha, Termos, Aceitar convite):
+     mais longo que um subtítulo, sem ser rótulo. Peso e tinta ficam na
+     classe de componente (`font-medium` + `text-tinta-apoio-forte`, ou
+     `text-vencido-apoio` na variante de alerta) — este token só define
+     tamanho e entrelinha, mesmo padrão dos demais desta folha. */
+  --text-corpo-fora-sessao: 15px;
+  --text-corpo-fora-sessao--line-height: 1.5;
   --text-apoio: 13px;
   --text-apoio--line-height: 1.4;
   --text-chip-filtro: 13px;

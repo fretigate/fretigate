@@ -202,10 +202,17 @@ dela. O aviso do sistema ancora em **112px** — acima do topo do (+), com
 espaço para o deslocamento de 18px da animação de entrada.
 
 **Exceção (CLAUDE.md §8, 07/08/2026):** tela sem barra de navegação — Entrar,
-Criar conta, Esqueci a senha, Aceitar convite — não reserva essa folga, porque
-não existe barra para não ficar embaixo dela. Usa margem inferior padrão.
-Lista fechada; tela nova sem barra entra por decisão explícita, não por
-analogia.
+Criar conta, Esqueci a senha, Redefinir senha, Termos e privacidade (modo
+cadastro) e Aceitar convite — não reserva essa folga, porque não existe barra
+para não ficar embaixo dela. Usa margem inferior padrão. Lista fechada; tela
+nova sem barra entra por decisão explícita, não por analogia. As duas
+últimas entraram na tarefa 8, fatia 2 (07/08/2026) — mesma razão das
+anteriores, telas de fora de sessão.
+
+Termos no **modo Ajustes** não está nesta lista — é dentro da sessão e, na
+regra final, ganha barra. Mas Ajustes ainda não existe, e sem Ajustes não há
+barra para reservar folga contra: até lá, os dois modos de `/termos` usam a
+mesma margem provisória do modo cadastro (CLAUDE.md §8, mesma nota).
 
 **Lacuna aberta — "margem inferior padrão" ainda não é um valor formal
 desta folha.** A tela Criar conta (`src/app/(auth)/criar-conta/page.tsx`)
@@ -220,6 +227,15 @@ token, com o mesmo nome nas próximas telas sem barra.
 ampliado" sem dar o número. `FormularioCriarConta.tsx` usa `leading-[1.7]`
 no parágrafo de aceite dos Termos — maior que o `1.4` de `--text-apoio`, sem
 ser um valor formal ainda. Mesmo destino: token quando o Design decidir.
+
+**Lacuna resolvida — corpo de texto em tela de fora de sessão.** Registrada
+em 07/08/2026 pelo `/auditar-tela` da tarefa 8, fatia 2 (o "Texto de campo"
+16/600 estava sendo reaproveitado por aproximação para parágrafo de
+leitura). A exportação do Design de 07/08/2026 trouxe o papel certo —
+"Corpo de texto fora de sessão", em `docs/componentes.md`: `15px/500/1.5`,
+tinta `#3C443E` (`--text-corpo-fora-sessao` em `src/app/globals.css`),
+variante de alerta na tinta `#8A5237`. Aplicado em `PedidoDeRecuperacao.tsx`,
+`TelaRedefinirSenha.tsx` e `ConteudoTermos.tsx`.
 
 ---
 

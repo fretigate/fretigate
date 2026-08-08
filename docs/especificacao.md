@@ -465,32 +465,45 @@ que gere custo. Os números, aprovados em 07/08/2026:
 | Mandar link de recuperação | **3 por 5 minutos** |
 | Reenviar confirmação de e-mail | **3 por 5 minutos** |
 | Redefinir a senha pelo link | **5 por 5 minutos** |
+| Consultar o código em `/redefinir-senha` (carregar a tela) | **20 por minuto** |
 | Criar conta | **5 por 10 minutos** |
 
 A contagem é por endereço de rede e por rota, e fica **no banco** — a
 hospedagem roda várias instâncias, e contagem em memória viraria uma contagem
-por instância. A trava de **Criar conta** não é uma rota do Better Auth (é
-Server Action própria — `src/lib/servicos/trava-de-cadastro.ts`), mas usa a
-mesma tabela `rate_limit` e o mesmo mecanismo atômico; está aqui, e não só no
-código, para as duas listas nunca divergirem de novo — já aconteceu três
-vezes.
+por instância. As travas de **Criar conta** e de **consultar o código em
+`/redefinir-senha`** não são rota do Better Auth (são Server Action e Server
+Component, respectivamente — `src/lib/servicos/trava-de-cadastro.ts` e
+`trava-de-redefinicao.ts`), mas usam a mesma tabela `rate_limit` e o mesmo
+mecanismo atômico; estão aqui, e não só no código, para as listas nunca
+divergirem de novo — já aconteceu três vezes.
+
+**A consulta do código de `/redefinir-senha` é limite de custo, não de
+adivinhação.** O código tem 24 caracteres aleatórios — não é o que essa trava
+tenta impedir. O que ela impede é uma rota sem limite nenhum, consultando o
+banco a cada carregamento, virar vetor de carga. Por isso o número é folgado:
+bem acima do que uma pessoa recarregando a própria tela bateria.
 
 **A mensagem de travado não é um erro seco.** Quem bate no limite é, quase
 sempre, cliente legítimo que errou a senha — não invasor. A tela precisa:
 
 1. dizer **o que aconteceu**, sem jargão e sem culpa;
 2. dizer **quando ele poderá tentar de novo**;
-3. oferecer a **recuperação por e-mail** ali mesmo.
+3. quando existir uma saída diferente de simplesmente esperar, oferecer ela
+   ali mesmo — **e não é sempre a mesma saída.**
 
-Sem a terceira, quem esqueceu a senha bate na parede e conclui que o produto
-está quebrado — e some, que é o mesmo desfecho da recuperação que cai em spam.
+Escrito assim porque uma regra genérica demais já gerou exceção falsa três
+vezes seguidas — a saída certa depende de qual travou:
 
-**Exceção no cadastro: o terceiro item vira contato, não recuperação de
-senha.** Quem trava em **Criar conta** ainda não tem conta — não perdeu
-senha, não tem "esqueci a senha" como saída, e acabou de pagar sem conseguir
-usar o produto. É o único ponto do produto em que a saída da mensagem de
-trava é falar com a empresa, não um link de autoatendimento. Decisão do
-fundador, 07/08/2026.
+| Onde travou | A saída, além de esperar |
+|---|---|
+| **Entrar** | recuperação de senha — o link "Esqueci a senha" já fica na tela |
+| **Criar conta** | falar com a empresa — quem trava aqui ainda não tem conta, "esqueci a senha" não é saída para quem nunca teve senha |
+| **Mandar link de recuperação · Reenviar confirmação de e-mail · Redefinir a senha pelo link** | nenhuma — esperar **é** a saída. Quem trava aqui já está dentro do próprio caminho de autoatendimento; oferecer "recuperar a senha" a quem já está recuperando a senha não ajuda, só confunde |
+
+Sem a saída certa, quem trava conclui que o produto está quebrado e some —
+mesmo desfecho da recuperação que cai em spam. Oferecer a saída errada (ex.:
+mandar quem já está redefinindo a senha para "esqueci a senha" de novo) é tão
+ruim quanto não oferecer nenhuma, porque não resolve nada e ainda confunde.
 
 ---
 
@@ -581,6 +594,13 @@ empurraria o problema para toda tela que exibe quem fez o quê.
 **`senha_hash` não existe.** O Better Auth guarda o hash na tabela `account`,
 com o provedor `credential`. O `CLAUDE.md` §4 continua atendido — hash forte,
 nunca reversível, nunca em log.
+
+**Senha mínima: 6 caracteres.** Decidido em 08/08/2026 — `minPasswordLength`
+em `src/lib/auth/index.ts`, não o padrão da biblioteca (8), para o número
+não mudar sozinho numa atualização. Vale em Criar conta e em Redefinir
+senha, e a mensagem de erro das duas telas lê este valor do próprio
+Better Auth (`ctx.password.config.minPasswordLength`), então as duas nunca
+divergem entre si.
 
 ### Convite
 `email` · `nome` · `papel` · `token` · `status` · `enviado_em` · `aceito_em`

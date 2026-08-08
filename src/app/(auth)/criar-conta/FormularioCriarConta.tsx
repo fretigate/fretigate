@@ -133,17 +133,16 @@ export function FormularioCriarConta() {
              token `text-apoio`, mas não existe um valor "ampliado" formal
              em `docs/estilo.md` ainda; registrado como lacuna, igual à
              margem inferior desta mesma tela;
-          3. o mesmo documento também alcançável pelos Ajustes — ainda não
-             tem onde acontecer (nem Termos nem Ajustes existem como tela —
-             próximas fatias); parte da mesma pendência de `/termos` levar a
-             404 hoje. */}
+          3. o mesmo documento também alcançável pelos Ajustes — a tela
+             `/termos` já cobre os dois modos (tarefa 8, fatia 2), mas Ajustes
+             em si ainda não existe para linkar de lá. */}
       <p className="text-apoio leading-[1.7] text-tinta-apoio">
         Ao criar conta, você aceita os{" "}
-        <Link href="/termos" className="font-semibold text-acao underline">
+        <Link href="/termos?de=cadastro" className="font-semibold text-acao underline">
           Termos de uso
         </Link>{" "}
         e a{" "}
-        <Link href="/termos" className="font-semibold text-acao underline">
+        <Link href="/termos?de=cadastro" className="font-semibold text-acao underline">
           Política de privacidade
         </Link>
         .

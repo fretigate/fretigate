@@ -26,7 +26,7 @@ export default async function Pagina() {
   try {
     sessao = await exigirSessao();
   } catch (erro) {
-    if (erro instanceof SemSessao) redirect("/criar-conta");
+    if (erro instanceof SemSessao) redirect("/entrar");
     throw erro;
   }
 

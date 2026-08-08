@@ -96,6 +96,14 @@ export const auth = betterAuth({
     enabled: true,
 
     /**
+     * 6, não o padrão da biblioteca (8) — decidido em 08/08/2026, registrado
+     * em `docs/especificacao.md`. Fixado aqui pelo mesmo motivo do prazo do
+     * link de recuperação, duas linhas abaixo: uma atualização da biblioteca
+     * não pode mudar uma regra de produto sem ninguém tocar em nada.
+     */
+    minPasswordLength: 6,
+
+    /**
      * O cadastro NÃO passa por aqui, e a rota genérica fica fechada.
      *
      * Criar conta no FretiGate é criar uma **empresa** e o usuário dono dela,
@@ -136,7 +144,22 @@ export const auth = betterAuth({
      */
     resetPasswordTokenExpiresIn: 2 * 60 * 60,
 
-    async sendResetPassword({ user, url }) {
+    /**
+     * O `url` que a biblioteca ofereceria aqui aponta para a rota dela
+     * própria (`/reset-password/:token`), que faz um redirecionamento antes
+     * de chegar à nossa tela — e nesse redirecionamento ela decide sozinha
+     * se apaga o código (`docs/especificacao.md` § Trava de tentativas: a
+     * limpeza de código vencido roda como efeito colateral dessa consulta).
+     * Se o primeiro clique for o que vence o código, a nossa tela de link
+     * expirado nunca teria a chance de descobrir a quem ele pertencia.
+     *
+     * Por isso o link do e-mail vai direto para a nossa tela, com o `token`
+     * puro — é ela quem decide o que fazer com ele
+     * (`src/lib/servicos/redefinicao-de-senha.ts`), e a rota da biblioteca
+     * fica sem uso, de propósito.
+     */
+    async sendResetPassword({ user, token }) {
+      const url = `${ENDERECO_BASE}/redefinir-senha?token=${token}`;
       const { assunto, texto } = recuperacaoDeSenha(url);
       // O endereço vai para o fornecedor, não para o log (§4).
       await enviarEmail({ para: user.email, assunto, texto });

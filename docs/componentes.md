@@ -237,6 +237,10 @@ Do topo do (+) até a base da tela são **`100,5px`** — medido no DOM, não ca
 
 Esse valor era `132`, `142` e `150` em telas diferentes — os três foram unificados no valor acima, em todas as telas. O **aviso do sistema** ancora em `max(112px, …)`, acima do topo do (+) e com espaço para o deslocamento de 18px da animação de entrada.
 
+**Exceção (CLAUDE.md §8, 07/08/2026):** tela sem barra de navegação — Entrar, Criar conta, Esqueci a senha, Redefinir senha, Recuperação enviada, Termos e privacidade (modo cadastro), Aceitar convite — não tem `(+)` para reservar folga contra, e usa margem inferior padrão em vez do valor acima. Lista fechada; tela nova sem barra entra por decisão explícita, não por analogia. (Esta nota não vem nas exportações do Design de 07/08/2026 — reaplicada aqui porque `CLAUDE.md` §8 e `docs/estilo.md` continuam exigindo a regra.)
+
+Termos no **modo Ajustes** fica fora desta lista — é dentro da sessão e, na regra final, ganha barra. Mas sem Ajustes construído não existe barra para reservar folga contra: até lá, os dois modos de `/termos` usam a mesma margem provisória do modo cadastro.
+
 
 ## 11 — Cadastro rápido
 
@@ -356,6 +360,26 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Assinatura vencida | principal **Renovar assinatura** · secundária **Baixar meus dados** · leitura e exportação seguem funcionando |
 | Primeiro acesso | **duas secundárias em pé de igualdade**: **Trazer os fretes que já fiz** + **Começar do zero** — nenhuma é destaque da outra, então nenhuma é a principal |
 | Guia de progresso (dashboard) | até três linhas tocáveis, cada uma sumindo ao ser cumprida; o bloco inteiro desaparece ao completar |
+
+---
+
+## Lacunas registradas — tarefa 8, fatia 2 (07/08/2026)
+
+**Duas abas de Termos e privacidade viram o chip de seleção.** Não existe
+componente de aba em nenhum documento do Design — a exportação pede "duas
+abas" sem especificar a peça. `ConteudoTermos.tsx` reaproveita o
+`ChipEscolha` (a mesma peça da pergunta "como você conheceu o FretiGate?" no
+cadastro): controle de "escolha uma entre duas", mesmo mecanismo, contexto
+novo. Decisão do fundador. Pendência de acessibilidade: o chip usa
+`role="radio"`, não `role="tab"` — a semântica de aba de verdade fica
+pendente de o Design desenhar a própria peça.
+
+**A seção "Campo de texto" não veio em nenhuma das exportações de
+07/08/2026.** O componente (rótulo, estados, mensagem de erro, e agora a
+variação "revelar" desta fatia) continua implementado em
+`src/components/ui/CampoTexto.tsx`, com a especificação no próprio
+comentário do arquivo — a versão anterior deste documento é a fonte dela.
+Fica registrado para a próxima exportação trazer a seção de volta.
 
 ---
 

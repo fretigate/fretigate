@@ -11,10 +11,10 @@ import { auth } from "@/lib/auth";
  * `requireHeaders: true` no Better Auth: sem `headers()`, a rota não sabe
  * qual sessão apagar.
  *
- * Destino após sair: `/entrar` ainda não existe (próxima fatia da tarefa 8)
- * — vai para `/criar-conta`, a única porta pública que já existe.
+ * Destino após sair: `/entrar` — docs/navegacao.md linha 51 (Entrar "Chega
+ * de: Abrir o app sem sessão · Sair da conta").
  */
 export async function sairDaConta() {
   await auth.api.signOut({ headers: await headers() });
-  redirect("/criar-conta");
+  redirect("/entrar");
 }

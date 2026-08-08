@@ -348,10 +348,24 @@ Vieram de defeitos reais encontrados nos protótipos. São obrigatórias.
 
   **Exceção, e é isto — nenhuma outra**: telas sem barra de navegação não
   reservam essa folga, porque não existe barra para não ficar embaixo dela.
-  São as telas de fora de sessão — **Entrar, Criar conta, Esqueci a senha e
+  São as telas de fora de sessão — **Entrar, Criar conta, Esqueci a senha,
+  Redefinir senha, Termos e privacidade (no modo vindo do cadastro) e
   Aceitar convite** — que usam margem inferior padrão. Lista fechada, para não
   virar exceção decidida caso a caso: tela nova sem barra entra aqui só com
   decisão explícita, não por analogia.
+
+  **Redefinir senha e Termos (modo cadastro) entraram em 07/08/2026, tarefa 8
+  fatia 2, por decisão explícita do fundador** — mesma razão das quatro
+  originais: são telas de fora de sessão, sem app shell nenhum para reservar
+  folga contra.
+
+  **Termos no modo Ajustes é caso à parte, não coberto por esta lista.** A
+  regra final é: aquele modo é dentro da sessão, então ganha barra — mas
+  Ajustes ainda não existe, e sem Ajustes não existe barra nenhuma para
+  reservar folga contra. Até Ajustes nascer, os dois modos de `/termos`
+  usam a mesma margem provisória do modo cadastro, por não ter escolha —
+  **não é o valor final do modo Ajustes**, é o que sobra enquanto a barra não
+  existe. Corrigir quando Ajustes for construído.
 - **Área segura** = a do dispositivo + 8px. Nenhum conteúdo sob a barra de
   status ou a ilha dinâmica.
 - **Três superfícies, três significados** — nunca compartilham tratamento:
@@ -655,6 +669,18 @@ Não invente resposta. Pergunte.
   Política de Privacidade passaram por revisão jurídica ainda. Isso **não
   pode ir ao ar** — nem anúncio, nem cliente pagante — antes de resolver as
   duas coisas. Decidido em 07/08/2026.
+
+  **Pendência somada, registrada em 07/08/2026 (tarefa 8, fatia 2):** hoje,
+  tocar em "Termos de uso" ou "Política de privacidade" no meio do cadastro
+  navega para `/termos` e volta para um `/criar-conta` **zerado** — tudo que
+  já tinha sido digitado se perde. Contradiz o que o próprio formulário
+  promete no caso de erro do servidor ("o que você já preencheu continua
+  aqui"). Guardar rascunho do formulário resolveria pela metade; a correção
+  que elimina o problema de vez é os Termos abrirem **por cima** do
+  formulário (folha ou modal), sem navegar para longe dele. Não construído
+  nesta fatia — fica registrado junto do bloqueio acima porque as duas coisas
+  (redação/forma do aceite e a tela de Termos em si) mudam juntas quando a
+  revisão jurídica acontecer.
 - **PRAZO — `origem_cadastro` (atribuição de origem por primeiro toque).**
   O cadastro (tarefa 8) grava só `origem_declarada` (a resposta da pergunta
   tocável); `origem_cadastro` fica nulo, porque capturar UTM/referrer é um
