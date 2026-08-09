@@ -48,6 +48,14 @@ você escreve.** O padrão é o meu.
   SELECT` (que não aceita `WITH CHECK`), e a saída certa era
   `USING (true) WITH CHECK (false)` — cumpre o §9 ao pé da letra **e** é mais
   rígida que a versão com exceção.
+- **Confusão de quem lê é evidência sobre o texto, não sobre o leitor.** Se
+  quem leu só o documento ficou em dúvida, a frase está imprecisa — mesmo
+  estando correta, e mesmo que a dúvida se resolva explicando. Explicação não
+  fica no documento; a próxima pessoa tropeça no mesmo lugar. Registrado em
+  09/08/2026: o §9 dizia que o papel `postgres` "não roda no produto", o que é
+  verdade no sentido pretendido (não atende pedido de usuário) e falso ao pé da
+  letra (as migrations sempre rodaram com ele contra produção). A revisão
+  levantou a dúvida, a resposta foi corrigir a frase, não defendê-la.
 - Se auditassem esse código para comprar a empresa, não teria nada para ter vergonha.
 
 ### Como executar
@@ -135,6 +143,21 @@ registro da empresa B, o produto acaba — o setor é competitivo e a notícia c
   empresa sem que ninguém precise desligar nada — é o vazamento mais barato de
   criar e o mais difícil de enxergar em revisão. As migrations de `/prisma` não
   entram nessa conta: são o SQL do próprio banco, não código do produto.
+- **Seed só toca tabela de referência global** — as que não têm `empresa_id`.
+  Uma seed abre a própria conexão, com a credencial das migrations, e por isso
+  passa por fora da camada de acesso a dados. Isso vale para dado oficial igual
+  para todas as empresas (município) e **nunca** para dado de cliente: uma seed
+  escrevendo em `cliente` ou `servico` gravaria sem contexto de empresa nenhum.
+
+  **A lista dessas tabelas já existe, e é uma só** — as exceções declaradas em
+  `tests/isolamento/schema.test.ts`, conferidas por igualdade exata. Não se
+  escreve uma segunda lista aqui: duas listas divergem, e a que envelhece é
+  sempre a que ninguém executa.
+
+  Escrito como **regra**, e não resolvido com um papel restrito só para a seed,
+  porque o mesmo alcance já existe nas migrations — elas podem tudo e sempre
+  poderão. Fechar só para a seed moveria o problema em vez de fechá-lo
+  (decisão de 09/08/2026).
 
 Na dúvida sobre como garantir isso num caso específico: **pare e pergunte**.
 
@@ -573,15 +596,32 @@ semente de teste.
 > para sempre, por causa de uma linha. Se o `INSERT` de empresa foi recusado,
 > **falta o `set_config`**, não sobra política.
 
-**Nenhuma conexão em execução ignora RLS.** São quatro papéis, e a separação
-é parte do desenho:
+**Nenhuma conexão que atende pedido de usuário ignora RLS.** Comando de
+operação — migration e seed — roda como `postgres`, e é assim **por desenho**,
+não por descuido.
+
+A frase antes dizia "nenhuma conexão **em execução**", o que era verdade no
+sentido pretendido e falso ao pé da letra: as migrations sempre rodaram como
+`postgres`, que ignora RLS por atributo, e sempre vão rodar. Corrigida em
+09/08/2026, quando a seed de municípios (tarefa 1 do item 2) tornou a
+imprecisão visível — a revisão perguntou se a seed contradizia esta regra, e a
+resposta certa foi escrever a regra que sempre valeu, não abrir exceção para
+ela. É o padrão do §2: procurar a solução precisa antes da exceção.
+
+**O que separa os dois casos é quem chama.** O `fretigate_reversor` existe
+porque `reverter_cadastro_incompleto` roda **durante o pedido do usuário**, a
+cada cadastro que falha na metade — caminho de execução. Migration e seed são
+chamadas **por quem opera**, ao publicar. A distinção não é de risco percebido,
+é de quem dispara.
+
+São quatro papéis, e a separação é parte do desenho:
 
 | Papel | Para quê | Enxerga |
 |---|---|---|
 | `fretigate_app` | todo o domínio | só a empresa do contexto. Sem `DELETE` — arquivar é `UPDATE` (§7) |
 | `fretigate_auth` | só o Better Auth | as tabelas que existem para autenticar e não têm `empresa_id` (ver abaixo). **Nada** de domínio |
 | `fretigate_reversor` | só reverter cadastro incompleto (tarefa 8) | `DELETE`/`SELECT` em `empresa`, `SELECT` em `usuario` — nomeados, nunca `BYPASSRLS`. Dono de `reverter_cadastro_incompleto`, chamada por `fretigate_app` via `SECURITY DEFINER` |
-| `postgres` | **só migrations** | tudo — por isso não roda no produto |
+| `postgres` | **só migrations e comando de operação** (a seed de municípios) | tudo — por isso **não atende pedido de usuário** |
 
 **Por que `fretigate_reversor` existe, e não a função rodando como
 `postgres`.** A primeira versão de `reverter_cadastro_incompleto` era
@@ -834,6 +874,29 @@ Não invente resposta. Pergunte.
   **primeiro pedido real** que tocar login ou sessão. Sem conferência
   manual antes de publicar, isso apareceria com cliente pagante já usando o
   produto, não durante o deploy.
+- **CONFERIR ANTES DE PUBLICAR — a seed de municípios em produção.** Achado na
+  tarefa 1 do item 2 (09/08/2026).
+
+  **O que rodar:** `npm run seed:municipios`, com as variáveis de banco
+  apontando para produção.
+
+  **Quando:** depois de `prisma migrate deploy` e **antes do primeiro uso** —
+  ou seja, antes do primeiro cliente entrar, não junto com ele. É a mesma
+  ordem que a esteira já usa.
+
+  **Se esquecer:** a publicação **termina com sucesso** e nada falha. A tabela
+  fica vazia, e o defeito aparece como **campo de município que não sugere
+  nada** — origem e destino de todo frete ficam como texto livre, sem resolver
+  para município nenhum. Quem descobre é o cliente pagante, não quem publicou.
+  E é dado que não se recupera depois: a especificação §9 registra que o
+  irrecuperável é justamente origem e destino não resolverem para município de
+  verdade.
+
+  **Por que não é automático:** os 5.570 municípios entram por comando de mão,
+  **nunca** por `postinstall` — a Vercel roda `npm install` a cada publicação,
+  e um `postinstall` tentaria falar com o banco durante o build
+  (`docs/especificacao.md` §6). O comando é idempotente: rodar de novo sem
+  mudança na fonte não escreve nada.
 - **Modelo de IA da importação** — testar a extração com o material real do
   usuário antes de escolher. Decidir por acerto, não por preço: a diferença de
   custo entre os candidatos é inferior a 2% da receita por cliente.

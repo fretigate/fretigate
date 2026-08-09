@@ -6,6 +6,227 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 09/08/2026 — tarefa 1: os 5.570 municípios, a porta única e a seed que atualiza
+
+Fecha a tarefa 1 do item 2. A tabela `municipio` existe, está carregada com os
+**5.570 municípios**, e `resolverMunicipio` é a porta única por onde texto vira
+município — é nela que a medição dos 10% do item 3 vai se apoiar.
+
+### A fonte dos dados: duas, oficiais, cruzadas
+
+O plano aprovado não dizia de onde viriam os dados com coordenada. Resolvido
+com **duas fontes do IBGE**, cada uma no que ela é autoridade:
+
+| Fonte | Decide | Por quê |
+|---|---|---|
+| Localidades do Brasil 2022 (arquivo geográfico) | **coordenada da sede** | a sede é a praça central, para onde o caminhão vai; o centro geométrico de um município grande cai no mato |
+| API de Localidades do IBGE | **nome e UF** | o arquivo geográfico é fotografia de 2022 e envelhece no nome |
+
+O cruzamento achou **uma** divergência: `5203500` era "Bom Jesus" no arquivo
+geográfico e é **"Bom Jesus de Goiás"** na API. A API venceu. Nome errado é
+município que o usuário digita e não encontra.
+
+**Fernando de Noronha (2605459) fica de fora**, declarado como exceção
+**nomeada** no gerador: o IBGE o classifica como distrito estadual, não
+município — é por isso que a conta oficial é 5.570 e a API devolve 5.571. É
+ilha, sem estrada. Qualquer *outro* código sem sede **interrompe a geração**:
+exceção que vale para um código conhecido é decisão; exceção que vale para "o
+que não bater" é buraco.
+
+Tudo em `prisma/seed/PROCEDENCIA.md`, com endereço, data, licença e método.
+
+### Três desvios do plano aprovado, autorizados pelo fundador
+
+1. **`importFileExtension = "ts"`** no gerador do Prisma. A seed roda no Node
+   puro, fora do empacotador, e sem isso o Node não carrega o cliente gerado.
+   A alternativa era instalar mais uma ferramenta; esta linha faz o mesmo com
+   **zero dependência nova**. Conferido: lint, tipos, build e a suíte passam.
+2. **`prisma/seed/gerar-municipios.mjs` é comitado.** O plano previa só o
+   arquivo de dados e a procedência. Procedência que afirma um cruzamento que
+   ninguém consegue refazer é promessa, não procedência.
+3. **A conferência da ordem virou parte da migration** (ver abaixo).
+
+### As duas correções pedidas pelo fundador, e o que elas mudaram
+
+**A seed ATUALIZA, não pula.** `createMany({ skipDuplicates: true })` sozinho
+nunca propaga correção do IBGE — e a divergência do "Bom Jesus" já provava que
+correção existe. A seed agora lê o que está no banco, compara, insere os novos,
+**atualiza só as linhas que mudaram de verdade** e relata cada uma. Custo
+medido: uma consulta a mais, ~1s.
+
+Três guardas, e as três estão testadas na máquina, não supostas:
+
+- **teto de 100 alterações.** Acima dele a seed **não grava nada**, lista o que
+  mudaria e exige `-- --forcar`. A conferência de formato recusa arquivo
+  *malformado*, mas não recusa arquivo *válido e errado* — e o sintoma desse é
+  sempre muitas linhas mudando de uma vez. Inserção não entra no teto: a
+  primeira carga são 5.570, e inserir nunca apaga nada.
+- **`arquivado_em` nunca é tocado.** Recarregar a fonte não ressuscita município
+  que alguém arquivou.
+- **município que sumiu da fonte é relatado, nunca apagado** (§7).
+
+**A ordem da chave estrangeira.** A ligação `empresa.municipio_id` nasce na
+migration, mas a tabela só recebe as 5.570 linhas quando a seed roda — ou seja,
+a ligação é criada contra uma tabela **vazia**. Conferido no banco de
+desenvolvimento: **0 empresas, 0 com `municipio_id`**. O projeto de teste não é
+alcançável desta máquina (credencial só existe como secret do GitHub), então a
+saída não foi "conferi, confia": **a migration confere sozinha**, com mensagem
+que diz o que fazer, onde quer que ela rode — desenvolvimento, esteira e
+produção quando existir.
+
+### Um defeito encontrado no próprio código desta tarefa
+
+`prisma.$transaction([...])` com muitas atualizações **estourou o tempo limite
+padrão do Prisma** (5 s) contra o Supabase: 150 atualizações levaram 5,1 s e a
+transação expirou no meio. Apareceu porque o teto foi testado de verdade, com
+150 linhas estragadas de propósito — não apareceria em revisão de código. A
+correção mantém a atomicidade (metade atualizada é pior que nenhuma) e passa a
+declarar o tempo limite em função da quantidade.
+
+### O que foi provado rodando, não lido
+
+- carga: 5.570 no banco, 27 UFs, nenhuma coordenada nula, zerada ou fora do Brasil;
+- rodar a seed de novo: **0 novos, 0 alterados**;
+- duas linhas estragadas: corrigidas e **relatadas uma a uma**;
+- 150 estragadas: **recusa, nada gravado, código de saída 1**; com `--forcar`, corrige;
+- duas linhas arrancadas do arquivo: **recusa**, com a contagem declarada contra a trazida;
+- `npm run lint`, `npx tsc --noEmit`, `npm run build` e `npm test` (71 testes) verdes.
+
+### Decisões menores que ficam registradas
+
+- **`Municipio` sem `empresa_id` entrou na lista de exceções** de
+  `tests/isolamento/schema.test.ts`, com o motivo. A lista é conferida por
+  igualdade exata.
+- **A política é `USING (true) WITH CHECK (false)`** — as duas cláusulas do §9,
+  sem exceção. O teste confere no **catálogo** (`pg_policies`), não no arquivo
+  da migration: é o catálogo que recusa.
+- **`latitude`/`longitude` são `Float`.** Não contradiz o §7, que proíbe
+  dinheiro em decimal flutuante — coordenada nunca é somada nem comparada por
+  igualdade contábil.
+- **`normalizarParaBusca` usa `\p{Mn}`**, a categoria do Unicode, e não um
+  intervalo de códigos escrito à mão: o outro jeito obrigaria a colar
+  caracteres invisíveis dentro do código.
+- **A seed não tem trava de banco**, ao contrário da suíte de testes — e é de
+  propósito: ela **precisa** rodar em produção. O que a torna segura em
+  qualquer banco é nunca apagar e nunca sobrescrever em massa sem autorização.
+  Tudo isso está em `docs/especificacao.md` §6, não só aqui.
+
+### O que o `/revisar` achou, e o que mudou por causa dele
+
+Duas divergências e seis lacunas. Todas aceitas, uma com correção diferente da
+proposta. As que merecem registro:
+
+- **Citei o `CLAUDE.md` §5 para uma regra que não está lá.** O comentário da
+  seed e o da esteira diziam "nunca roda em `postinstall` (`CLAUDE.md` §5)" —
+  e `postinstall` não aparece no §5 nem em canto nenhum do `CLAUDE.md`. A regra
+  mora em `docs/especificacao.md` §6. É a classe que o §13 nomeia: afirmação
+  que engana justamente por parecer verificada.
+- **O teto de 100 e o `--forcar` só existiam no diário.** O revisor apontou que
+  **o diário não põe regra em vigor** — ele registra onde o trabalho parou. O
+  comportamento inteiro da seed (atualiza em vez de pular, teto, `arquivado_em`
+  intocado, sumiço relatado e não apagado) foi para `docs/especificacao.md` §6.
+- **Dois números que eu tinha escolhido sozinho viraram decisão do fundador:**
+  o mínimo de letras da busca e a quantidade de sugestões.
+- **O revisor duvidou de uma frase correta do §9**, e a resposta foi corrigir a
+  frase. Ver abaixo.
+
+### As decisões que o fundador tomou em cima dos achados
+
+- **Duas letras para começar a buscar**, com o motivo registrado: na maioria
+  das vezes ninguém digita ali, porque os destinos já usados com aquele cliente
+  aparecem como chips. Quem digita é o caso do destino novo — e com três letras
+  existe um instante de "não aparece nada" que confunde justamente quem já saiu
+  do caminho rápido.
+- **Cinco sugestões, não oito.** Com o teclado aberto cabem umas cinco linhas
+  acima dele; oito rola ou empurra conteúdo, e **lista que precisa rolar
+  enquanto a pessoa digita é pior que digitar mais uma letra**. Construído com
+  cinco; **fica pedido ao Design formalizar** em `docs/componentes.md`.
+- **Nunca chutar município ambíguo, confirmado** — e com uma observação que
+  faltava: a ambiguidade **se resolve sozinha no fluxo normal**, porque a lista
+  de sugestões mostra a UF. Quem digita "Bom Jesus" escolhe entre "Bom
+  Jesus/GO" e "Bom Jesus/PI". O não resolvido só sobra quando ninguém escolhe.
+- **A medição do item 3 passa a separar dois motivos**, e isso mudou código:
+  `resolverMunicipio` não devolve mais "o município ou nada", devolve
+  **`resolvido`, `ambiguo` ou `nao_encontrado`**. "12% não resolvido" sozinho
+  não diz o que consertar, e os dois casos pedem correções opostas — ambíguo é
+  conserto de **tela** (a sugestão não chamou atenção); não encontrado é
+  conserto de **dado ou da normalização**. Registrado em
+  `docs/especificacao.md` §9.
+- **O §9 do `CLAUDE.md` dizia que `postgres` "não roda no produto"**, o que é
+  verdade no sentido pretendido e falso ao pé da letra — as migrations sempre
+  rodaram com ele contra produção, e agora a seed também. Passou a dizer **"não
+  atende pedido de usuário"**.
+
+  E o princípio ficou registrado no §2, porque vale para além deste caso:
+  **confusão de quem lê é evidência sobre o texto, não sobre o leitor.** Se
+  quem leu só o documento ficou em dúvida, a frase está imprecisa mesmo estando
+  correta — explicação não fica no documento, e a próxima pessoa tropeça no
+  mesmo lugar.
+
+### O segundo passe do `/revisar`, e a regra que ele corrigiu
+
+O fundador pediu um passe extra, e o critério dele **refinou o §2**: o primeiro
+passe tinha achado só lacunas do tipo "valor sem documento", mas
+`resolverMunicipio` **mudou de contrato** por decisão dele — forma nova de
+código, não correção da mesma classe. Vale um par de olhos que não viu essa
+forma. Achou.
+
+**Eu tinha escrito, em três lugares, uma afirmação falsa sobre uma proteção.** A
+migration, a especificação §6 e o comentário do schema diziam que a proibição de
+escrever em `municipio` ficava em "dois lugares" — a ausência do `GRANT` **e** a
+política —, e que "qualquer escrita que chegasse aqui seria recusada pela
+política". Conferido no banco: `postgres` tem `rolbypassrls = true`, é dono da
+tabela, e `FORCE` não muda isso. **A seed só grava porque passa por cima da
+política**, não porque ela permita. A frase era verdadeira para a aplicação e
+falsa justamente para o único papel que escreve ali.
+
+**A saída não foi um papel novo, e o fundador explicou por quê.** A recomendação
+era criar um `fretigate_semeador` sem esse poder, por analogia com o
+`fretigate_reversor`. **O precedente não se aplica:** o reversor roda **no
+caminho de execução**, durante o pedido do usuário; a seed é **comando de
+operação**, mesma classe da migration — e migration roda como `postgres` e
+sempre vai rodar. A regra não estava sendo contornada; **ela nunca falou desse
+caso**.
+
+Então a solução precisa foi escrever a regra certa, aplicando o padrão que já
+estava no §2:
+
+> **Nenhuma conexão que atende pedido de usuário ignora RLS.** Comando de
+> operação — migration e seed — roda como `postgres`, e é assim por desenho.
+
+O que separa os dois casos é **quem chama**, e isso ficou escrito junto: o
+reversor é disparado pelo usuário; migration e seed, por quem opera.
+
+**A lacuna do alcance da seed fechou por regra, não por papel.** Nada impedia a
+próxima seed de tocar tabela com dado de cliente. Um papel restrito fecharia só
+para a seed e **moveria o problema**, porque as migrations continuam podendo
+tudo. A regra entrou no §3: **seed só toca tabela de referência global**, e a
+lista dessas tabelas **não é reescrita** — é a das exceções de
+`tests/isolamento/schema.test.ts`, que já existe e é executada. Duas listas
+divergem, e a que envelhece é sempre a que ninguém roda.
+
+**As outras três**, todas aceitas: os dois números da busca saíram do diário
+para a especificação §6 (mesma correção que o teto de 100 recebeu no primeiro
+passe — o diário registra onde o trabalho parou, não põe regra em vigor); o
+comentário do contraste no teste passou a dizer que ali `postgres` é **controle
+do experimento**, não jeito certo de gravar; e ficou **decidido** que só entra
+na conta dos 10% o frete que **tem texto** de origem ou destino — frete sem
+destino nunca teve o que resolver, e contá-lo faria o indicador subir sozinho.
+
+### Pendências novas
+
+- **Produção precisa da seed rodada à mão** antes do primeiro uso, senão o
+  campo de município nasce vazio para o cliente pagante e origem/destino de
+  todo frete ficam como texto livre. Registrada no `CLAUDE.md` §14, com o que
+  rodar, quando e o que acontece se esquecer.
+- **Ao Design: formalizar as cinco sugestões** de município em
+  `docs/componentes.md`. É valor de tela, e o dono daquele documento é o Design
+  (§13). Não bloqueia — o número já está decidido.
+
+**Próxima: tarefa 2 — Tipo de operação, e toda empresa nascendo com "Frete".**
+
+---
+
 ## 09/08/2026 — item 2 começa: escopo do MVP corrigido, e o formulário de caminhão não existe
 
 Plano do item 2 aprovado e commitado em **`docs/planos/item-2-cadastros.md`** —

@@ -672,10 +672,23 @@ dos limites do Brasil") não existe se as coordenadas não entrarem: não se
 confere o que não se carrega.
 
 **Quem escreve nesta tabela é a seed, pela conexão das migrations — nunca a
-aplicação.** `fretigate_app` recebe **só `SELECT`**, e a proibição de escrever
-fica em **dois lugares**: a ausência do `GRANT` de `INSERT`/`UPDATE`, e a
-política `municipio_leitura`, que é `USING (true) WITH CHECK (false)` — lê tudo,
-grava nada.
+aplicação.** `fretigate_app` recebe **só `SELECT`**, e a proibição de a
+**aplicação** escrever fica em **dois lugares**: a ausência do `GRANT` de
+`INSERT`/`UPDATE`, e a política `municipio_leitura`, que é
+`USING (true) WITH CHECK (false)` — lê tudo, grava nada.
+
+**Até onde essa proteção vai, dito com precisão.** A política recusa a escrita
+de **todo papel sujeito a ela** — hoje `fretigate_app`, e qualquer papel que
+venha depois. Ela **não** recusa a da conexão das migrations, que é o papel
+`postgres` e ignora RLS por atributo; nem `ENABLE` nem `FORCE` mudam isso. É por
+essa conexão que as 5.570 linhas entram.
+
+Isso é desenho, não brecha, e a regra que o governa está no `CLAUDE.md` §9:
+**nenhuma conexão que atende pedido de usuário ignora RLS** — comando de
+operação (migration e seed) roda como `postgres`. O que separa os dois casos é
+**quem chama**: o `fretigate_reversor` existe porque
+`reverter_cadastro_incompleto` roda durante o pedido do usuário; a seed é
+chamada por quem opera, ao publicar.
 
 As duas cláusulas do `CLAUDE.md` §9 estão lá, sem exceção nenhuma. A forma óbvia
 (`FOR SELECT USING (true)`) teria pedido exceção, porque política `FOR SELECT`
@@ -701,6 +714,62 @@ mesmo commit.
 publicação: um `postinstall` tentaria conectar ao banco durante o build, e ou
 quebra a publicação ou grava no banco errado. É comando explícito
 (`npm run seed:municipios`), chamado à mão e por um passo próprio da esteira.
+
+**A seed ATUALIZA o que mudou, não pula o que já existe.** Decidido pelo
+fundador em 09/08/2026, e o motivo é que município é dado oficial: a fonte
+manda. Só inserir e pular duplicados deixaria uma correção do IBGE — nome ou
+coordenada — sem propagar nunca, e **ninguém ficaria sabendo**. Isso não é
+hipótese: o cruzamento das duas fontes já achou um nome desatualizado
+("Bom Jesus", hoje "Bom Jesus de Goiás").
+
+Ela lê o que está no banco, compara, insere os novos, atualiza **só as linhas
+que mudaram de verdade** e **relata cada uma**. Rodar de novo sem mudança na
+fonte não escreve nada.
+
+Três guardas, e nenhuma é opcional:
+
+- **Teto de 100 alterações.** Acima dele a seed **não grava nada**, lista o que
+  mudaria e exige `npm run seed:municipios -- --forcar`. A conferência de
+  formato acima recusa arquivo **malformado**, mas não recusa arquivo **válido
+  e errado** — edição antiga, download trocado —, e o sintoma desse é sempre o
+  mesmo: muitas linhas mudando de uma vez. Correção real do IBGE é punhado.
+  **Inserção não entra no teto**: a primeira carga são 5.570 de uma vez, e
+  inserir nunca apaga nada.
+- **`arquivado_em` nunca é tocado.** Recarregar a fonte não ressuscita município
+  que alguém arquivou.
+- **Município que sumiu da fonte é relatado, nunca apagado** (§7 do
+  `CLAUDE.md`). Arquivar é decisão do fundador, não efeito de recarregar um
+  arquivo.
+
+**A seed não tem trava de banco**, ao contrário da suíte de testes
+(`tests/guarda-de-banco.ts`), e isso é de propósito: ela **precisa** rodar em
+produção — sem ela, o campo de município nasce vazio para o cliente pagante. O
+que a torna segura em qualquer banco é nunca apagar e nunca sobrescrever em
+massa sem autorização explícita.
+
+### A busca de município
+
+Os dois números abaixo foram decididos pelo fundador em 09/08/2026, na tarefa 1
+do item 2. Estão aqui, e não só no código, porque valor que só existe em
+comentário é valor que ninguém encontra quando precisa mudá-lo.
+
+**Duas letras para começar a buscar.** Com uma letra só, "a" traz centenas de
+municípios e nenhum é o que a pessoa quer — é ida ao banco a cada tecla, dentro
+dos 30 segundos do §1, para devolver ruído.
+
+E **não são três**, que seria o reflexo: na maioria das vezes **ninguém digita
+aqui**, porque os destinos já usados com aquele cliente aparecem como chips.
+Quem chega a digitar é o caso do destino novo — e com três letras existe um
+instante de "não aparece nada" que confunde justamente quem já saiu do caminho
+rápido.
+
+**Cinco sugestões.** O número vem do teclado aberto: acima dele cabem umas cinco
+linhas. Oito rolaria ou empurraria conteúdo, e **lista que precisa rolar
+enquanto a pessoa digita é pior que digitar mais uma letra**.
+
+> **Pendente de formalização pelo Design** em `docs/componentes.md`. É valor de
+> tela, e o dono daquele documento é o Design (`CLAUDE.md` §13). O número já
+> está decidido e construído; falta ele entrar no inventário.
 
 ### DistanciaRota
 Cache. Calculada uma vez por par, nunca por frete.
@@ -997,6 +1066,23 @@ se pluga.
 - **O aviso mostra quais textos não resolveram**, não só o número. "12% sem
   município" não diz o que fazer; "12%, e Juazeiro do Norte e Picos aparecem
   mais" diz onde a resolução está falhando.
+- **A medição separa os dois motivos de não resolver**, e isso é obrigatório.
+  Decidido pelo fundador em 09/08/2026: "12% não resolvido" sozinho não diz o
+  que consertar, porque os dois casos pedem correções opostas.
+
+  | Motivo | O que aconteceu | O que consertar |
+  |---|---|---|
+  | **ambíguo** | o texto casa com vários municípios ("Bom Jesus") | **a tela.** A lista de sugestões mostra a UF, então no fluxo normal a pessoa escolhe entre "Bom Jesus/GO" e "Bom Jesus/PI" e a ambiguidade se resolve sozinha. Sobrar ambíguo quer dizer que **a sugestão não chamou atenção** |
+  | **não encontrado** | o texto não casa com nada | **o dado ou a normalização.** Erro de digitação, apelido local ("Juá"), ou a função de busca falhando |
+
+  `resolverMunicipio` já devolve o motivo (`resolvido`, `ambiguo`,
+  `nao_encontrado`) desde o item 2 — a medição do item 3 só precisa contar.
+- **Só entra na conta o frete que TEM texto de origem ou destino.** Decidido
+  pelo fundador em 09/08/2026. Frete salvo sem destino **nunca teve o que
+  resolver**, e contá-lo faria o indicador subir sozinho, sem que nada
+  estivesse falhando — o pior tipo de número, porque manda consertar o que não
+  está quebrado. Campo vazio não é resolução malsucedida: é ausência de
+  tentativa.
 
 Motivo, registrado junto: quando o número sobe, **o defeito está na resolução,
 não no usuário** — é ela que precisa ser corrigida. Melhor descobrir com dez

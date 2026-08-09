@@ -31,6 +31,11 @@ const SEM_EMPRESA_ID = {
     "trava de tentativas — a contagem acontece ANTES de existir sessão, " +
     "então não há empresa para filtrar. Quem tenta adivinhar senha não está " +
     "logado",
+  municipio:
+    "tabela oficial de referência (IBGE), igual para todas as empresas — não " +
+    "é dado do usuário. Troca o escopo de empresa por `USING (true) WITH " +
+    "CHECK (false)`: todo mundo lê, ninguém grava. Quem confere é " +
+    "`tests/municipios.test.ts`",
 } as const;
 
 /** Gerada e mantida pelo Prisma. Não é tabela de domínio. */

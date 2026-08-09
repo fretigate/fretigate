@@ -15,6 +15,16 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/lib/generated/prisma"
+
+  // Faz o cliente gerado importar os próprios arquivos com a extensão `.ts`
+  // escrita. Sem isto o Node puro não consegue carregá-lo — só o empacotador do
+  // Next.js e o do vitest, que adivinham a extensão sozinhos.
+  //
+  // Quem precisa disso é a seed de municípios (`prisma/seed/municipios.mts`),
+  // que roda por fora do site, como comando de terminal. A alternativa era
+  // instalar mais uma ferramenta só para executar um arquivo; esta linha faz o
+  // mesmo com zero dependência nova.
+  importFileExtension = "ts"
 }
 
 datasource db {
@@ -63,9 +73,9 @@ model Empresa {
   email    String?
   endereco String?
 
-  /// Referência ao município. Fica sem chave estrangeira por enquanto: a
-  /// tabela `Municipio` (base do IBGE, ~5.570 registros) chega no item 2.
+  /// Referência ao município, com chave estrangeira desde o item 2.
   municipio_id Int?
+  municipio    Municipio? @relation(fields: [municipio_id], references: [codigo_ibge], onDelete: Restrict)
 
   logo_url String?
 
@@ -179,6 +189,78 @@ model Usuario {
 
   @@index([empresa_id])
   @@map("usuario")
+}
+
+/// Os 5.570 municípios do Brasil. **Tabela global de referência**, igual para
+/// todas as empresas — não é dado do usuário, e ninguém do produto escreve nela.
+///
+/// DUAS EXCEÇÕES DECLARADAS, e as duas vêm da mesma natureza (§6 da
+/// especificação, e `CLAUDE.md` §3):
+///
+///   - **não tem `empresa_id`**, porque não pertence a empresa nenhuma. Está
+///     declarada com esse motivo em `tests/isolamento/schema.test.ts`, que
+///     confere a lista por igualdade exata;
+///   - **não tem `id` próprio**: a chave é o `codigo_ibge`, que é oficial,
+///     estável há décadas e já é o que `Empresa.municipio_id` guarda. Criar um
+///     `id` ao lado custaria mais que a exceção, e o custo não ficaria aqui:
+///     todo lugar que guarda "o município" — empresa, cliente, origem e destino
+///     do frete — teria que escolher qual dos dois guardar, e uns guardariam um
+///     e outros o outro.
+///
+/// RLS ligada e forçada como em toda tabela, com a política `municipio_leitura`
+/// — `USING (true) WITH CHECK (false)`, lê tudo e grava nada. As duas cláusulas
+/// do §9 estão lá, sem exceção: a forma óbvia (`FOR SELECT USING (true)`) teria
+/// pedido uma, porque política `FOR SELECT` não aceita `WITH CHECK`.
+///
+/// **A política recusa a escrita de todo papel sujeito a ela** — `fretigate_app`
+/// e qualquer outro que venha. Ela **não** recusa a da conexão das migrations
+/// (o papel `postgres`, que ignora RLS por atributo), e é por ela que a seed
+/// (`prisma/seed/municipios.mts`) grava as 5.570 linhas. Isso é desenho:
+/// `CLAUDE.md` §9 — nenhuma conexão que atende **pedido de usuário** ignora
+/// RLS; comando de operação roda como `postgres`, igual a toda migration.
+///
+/// `fretigate_app` recebe **só `SELECT`**.
+model Municipio {
+  /// A chave. Sem `@default`: quem numera é o IBGE, não nós.
+  codigo_ibge Int @id
+
+  nome String
+  /// Sigla de duas letras. As 27 unidades da federação.
+  uf   String @db.Char(2)
+
+  /// Minúsculo, sem acento e sem pontuação — escrito pela MESMA função que
+  /// normaliza o que o usuário digita na busca (`normalizarParaBusca`, em
+  /// `src/lib/utils/texto.ts`). É essa função única que garante que os dois
+  /// lados casem; duas normalizações parecidas divergem no primeiro caso torto.
+  ///
+  /// É coluna, e não `unaccent()` na hora da consulta, porque `unaccent()` não
+  /// usa índice — e a busca de município acontece **enquanto a pessoa digita**,
+  /// dentro dos 30 segundos do §1.
+  nome_normalizado String
+
+  /// Coordenadas da SEDE do município (a praça central, para onde o caminhão
+  /// vai), não do centro geométrico do território. Ver `prisma/seed/PROCEDENCIA.md`.
+  ///
+  /// `Float` (double precision), e isto não contradiz o §7: lá o que é proibido
+  /// é dinheiro em decimal flutuante. Coordenada não é dinheiro — nunca é
+  /// somada nem comparada por igualdade, só entra em cálculo de distância, que
+  /// é ponto flutuante de qualquer jeito.
+  latitude  Float
+  longitude Float
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  /// Município extinto some da busca sem sumir do histórico (§7). A seed nunca
+  /// toca nesta coluna: preencher é decisão, não efeito de recarregar a fonte.
+  arquivado_em  DateTime? @db.Timestamptz(6)
+
+  empresas Empresa[]
+
+  /// Índice de PREFIXO. `text_pattern_ops` é o que faz `nome_normalizado LIKE
+  /// 'forta%'` usar índice; sem ele o Postgres varre as 5.570 linhas a cada
+  /// tecla digitada.
+  @@index([nome_normalizado(ops: raw("text_pattern_ops"))])
+  @@map("municipio")
 }
 
 // ---------------------------------------------------------------------------

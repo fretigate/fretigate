@@ -76,6 +76,16 @@ jobs:
       # Idempotente: _prisma_migrations já registra o que passou.
       - run: npx prisma migrate deploy
 
+      # Os 5.570 municípios do IBGE. Passo PRÓPRIO, nunca `postinstall`
+      # (docs/especificacao.md §6): `npm install` roda a cada publicação na
+      # Vercel, e um `postinstall` tentaria falar com o banco durante o build.
+      #
+      # Vem DEPOIS do migrate (a tabela precisa existir) e ANTES dos testes
+      # (tests/municipios.test.ts confere a carga). Idempotente: só grava o que
+      # está faltando ou mudou, então repetir execução da esteira não duplica
+      # nem reescreve nada.
+      - run: npm run seed:municipios
+
       # tests/guarda-de-banco.ts (setupFiles) confere sozinho que está
       # rodando contra o projeto de teste certo antes de qualquer teste
       # conectar.
