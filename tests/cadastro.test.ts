@@ -3,10 +3,16 @@ import { Client } from "pg";
 import { auth } from "@/lib/auth";
 import { emTransacao, reverterCadastroIncompleto } from "@/lib/db";
 import { uuidv7 } from "uuidv7";
+import {
+  TIPOS_DE_OPERACAO_INICIAIS,
+  criarTiposDeOperacaoIniciais,
+} from "@/lib/servicos/tipos-de-operacao";
 
 /**
- * O cadastro (tarefa 8): criar Empresa + Usuário dono, e a reversão quando a
- * segunda metade falha depois da primeira já ter sido gravada.
+ * O cadastro (tarefa 8, com a tarefa 2 do item 2 somando os tipos de
+ * operação): criar Empresa + os quatro TipoOperacao + Usuário dono, e a
+ * reversão quando a segunda metade falha depois da primeira já ter sido
+ * gravada.
  *
  * Isto testa o MECANISMO — os mesmos exports que `src/lib/servicos/cadastro.ts`
  * usa (`emTransacao`, `auth.$context`, `reverterCadastroIncompleto`) — não a
@@ -27,8 +33,14 @@ const empresasParaLimpar: string[] = [];
 const usuariosParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 14;
+const CONFERENCIAS_ESPERADAS = 18;
 
+/**
+ * Mesmo mecanismo que `src/lib/servicos/cadastro.ts` usa: Empresa e os quatro
+ * TipoOperacao na MESMA transação — nunca em passos separados, senão uma
+ * falha no meio deixaria empresa sem tipo nenhum (`docs/especificacao.md`,
+ * `TipoOperacao`).
+ */
 async function criarEmpresa(nome: string) {
   const empresaId = uuidv7();
   await emTransacao(empresaId, async (tx) => {
@@ -41,6 +53,7 @@ async function criarEmpresa(nome: string) {
         termos_versao: "teste",
       },
     });
+    await criarTiposDeOperacaoIniciais(tx, empresaId);
   });
   empresasParaLimpar.push(empresaId);
   return empresaId;
@@ -103,6 +116,28 @@ describe("1. cadastro normal — Empresa e Usuário corretamente vinculados", ()
       plano: "gratuito",
       status_assinatura: "ativa",
     });
+    conferencias++;
+
+    // NÃO só "criou alguma coisa": os quatro, cada um com o nome, o slug, o
+    // ativo e a ordem certos — e só "Frete" ativo. É esta linha que fecha o
+    // furo descrito na tarefa: sem ela, o primeiro cliente que assinar abre o
+    // lançamento com o campo de tipo de operação vazio.
+    const { rows: tipos } = await raiz.query(
+      `SELECT nome, slug, ativo, ordem FROM "tipo_operacao"
+        WHERE empresa_id = $1 ORDER BY ordem`,
+      [empresaId],
+    );
+    expect(tipos).toEqual(
+      TIPOS_DE_OPERACAO_INICIAIS.map((t) => ({
+        nome: t.nome,
+        slug: t.slug,
+        ativo: t.ativo,
+        ordem: t.ordem,
+      })),
+    );
+    expect(tipos.filter((t) => t.ativo)).toEqual([
+      { nome: "Frete", slug: "frete", ativo: true, ordem: 1 },
+    ]);
     conferencias++;
 
     const usuario = await criarUsuarioDono(empresaId, emailNovo, "Fulano de Teste");
@@ -184,7 +219,22 @@ describe("3. o contraste — a reversão realmente apaga a Empresa órfã", () =
     expect(antes).toHaveLength(1);
     conferencias++;
 
-    // Passo 3: reverte.
+    // E os quatro TipoOperacao dela também estão lá — sem isto, o teste
+    // abaixo não prova nada sobre o CASCADE: se não houvesse linha nenhuma
+    // para apagar, a reversão "funcionaria" mesmo com a chave estrangeira
+    // errada.
+    const { rows: tiposAntes } = await raiz.query(
+      `SELECT id FROM "tipo_operacao" WHERE empresa_id = $1`,
+      [empresaOrfa],
+    );
+    expect(tiposAntes).toHaveLength(4);
+    conferencias++;
+
+    // Passo 3: reverte. SE a chave estrangeira de tipo_operacao ainda fosse
+    // RESTRICT (como o resto do domínio), ESTA CHAMADA REJEITARIA — os quatro
+    // TipoOperacao confirmados acima recusariam o DELETE da Empresa que
+    // apontam. É o CASCADE decidido na tarefa 2 que permite a reversão
+    // continuar funcionando mesmo com TipoOperacao no meio.
     await reverterCadastroIncompleto(empresaOrfa);
 
     const { rows: depois } = await raiz.query(
@@ -196,6 +246,15 @@ describe("3. o contraste — a reversão realmente apaga a Empresa órfã", () =
     // Não sobra em `empresasParaLimpar` para o `afterAll` reclamar — já foi.
     empresasParaLimpar.splice(empresasParaLimpar.indexOf(empresaOrfa), 1);
 
+    // Os quatro TipoOperacao foram junto, pelo CASCADE — não ficaram
+    // órfãos apontando para uma Empresa que não existe mais.
+    const { rows: tiposDepois } = await raiz.query(
+      `SELECT id FROM "tipo_operacao" WHERE empresa_id = $1`,
+      [empresaOrfa],
+    );
+    expect(tiposDepois).toHaveLength(0);
+    conferencias++;
+
     // E a empresa do dono original — que tem usuário de verdade — continua
     // intacta. Reversão não é faca sem cabo.
     const { rows: doDono } = await raiz.query(
@@ -203,6 +262,15 @@ describe("3. o contraste — a reversão realmente apaga a Empresa órfã", () =
       [empresaDoDono],
     );
     expect(doDono).toHaveLength(1);
+    conferencias++;
+
+    // E os TipoOperacao dela também — o CASCADE atingiu só a Empresa órfã,
+    // não qualquer Empresa com TipoOperacao no banco.
+    const { rows: tiposDoDono } = await raiz.query(
+      `SELECT id FROM "tipo_operacao" WHERE empresa_id = $1`,
+      [empresaDoDono],
+    );
+    expect(tiposDoDono).toHaveLength(4);
     conferencias++;
   });
 });

@@ -34,6 +34,16 @@ const semear = async (id: string, nome: string) => {
      VALUES ($1, $2, $3, 'dono', $4)`,
     [`u-${id}`, `Dono ${nome}`, `${id}@teste.invalido`, id],
   );
+  // Um TipoOperacao por empresa (tarefa 2 do item 2), só o suficiente para
+  // provar que a mesma política de isolamento vale para ele — não é a
+  // criação real (`criarTiposDeOperacaoIniciais`), que já é testada em
+  // `tests/cadastro.test.ts`; aqui o que importa é ter uma linha para
+  // tentar vazar.
+  await raiz.query(
+    `INSERT INTO "tipo_operacao" (id, empresa_id, nome, slug, ativo, ordem)
+     VALUES (gen_random_uuid(), $1, 'Frete', 'frete', true, 1)`,
+    [id],
+  );
 };
 
 beforeAll(async () => {
@@ -102,6 +112,15 @@ describe("2. a empresa A não alcança a empresa B", () => {
         },
       }),
     ).rejects.toThrow();
+  });
+
+  it("o TipoOperacao da empresa B é invisível (tarefa 2 do item 2)", async () => {
+    // Mesma política, mesma prova: `db(A)` não enxerga o "Frete" da empresa B,
+    // nem por listagem ampla.
+    const tipos = await db(A).tipoOperacao.findMany({
+      where: { empresa_id: { in: [A, B] } },
+    });
+    expect(tipos.map((t) => t.empresa_id)).toEqual([A]);
   });
 
   it("a empresa B continua intacta depois de tudo", async () => {

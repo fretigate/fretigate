@@ -8,6 +8,7 @@ import { emTransacao, reverterCadastroIncompleto } from "@/lib/db";
 import { OPCOES_ORIGEM, OUTRO_ORIGEM as OUTRO } from "./cadastro-opcoes";
 import { travaDeCadastro } from "./trava-de-cadastro";
 import { criarUsuarioDono } from "./criar-usuario-dono";
+import { criarTiposDeOperacaoIniciais } from "./tipos-de-operacao";
 
 /**
  * O cadastro: cria a Empresa e o Usuário dono na mesma operação — tarefa 8.
@@ -160,8 +161,12 @@ export async function criarConta(
   // construir a captura. PRAZO (CLAUDE.md §14): precisa existir antes de
   // ligar os anúncios — é o mesmo marco já usado para o reteste de e-mail.
 
-  // Passo 1 — a Empresa, na transação do CLAUDE.md §9: uuid gerado aqui,
-  // `set_config` (dentro de `emTransacao`), depois o insert com esse id.
+  // Passo 1 — a Empresa e os quatro tipos de operação, na mesma transação
+  // (CLAUDE.md §9): uuid gerado aqui, `set_config` (dentro de `emTransacao`),
+  // insert da Empresa com esse id, e só então os tipos — que apontam para ela.
+  // Os tipos NÃO vão num passo seguinte: se fossem, uma falha no meio deixaria
+  // empresa sem tipo nenhum, e o primeiro frete não teria o que escolher num
+  // campo obrigatório.
   try {
     await emTransacao(empresaId, async (tx) => {
       await tx.empresa.create({
@@ -174,6 +179,7 @@ export async function criarConta(
           termos_versao: VERSAO_TERMOS_PROVISORIA,
         },
       });
+      await criarTiposDeOperacaoIniciais(tx, empresaId);
     });
   } catch (erroEmpresa) {
     // Nunca o objeto de erro cru: o `create` do Prisma pode ecoar de volta os

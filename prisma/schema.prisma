@@ -102,7 +102,8 @@ model Empresa {
   /// §7 — nada é apagado. Preenchido = arquivado.
   arquivado_em  DateTime? @db.Timestamptz(6)
 
-  usuarios Usuario[]
+  usuarios       Usuario[]
+  tipos_operacao TipoOperacao[]
 
   @@map("empresa")
 }
@@ -189,6 +190,62 @@ model Usuario {
 
   @@index([empresa_id])
   @@map("usuario")
+}
+
+/// O que a `Servico` (item 3) aponta para. Existe para comportar guincho e
+/// reboque sem reescrever nada depois (`CLAUDE.md` §9, "`Servico`, não
+/// `Frete`") — o MVP entrega só a experiência de transportadora de carga
+/// (`CLAUDE.md` §12), mas o modelo já nasce pronto para os outros ramos.
+///
+/// **`ativo` fica aqui**, e não contradiz `Veiculo`/`Motorista` não terem: ali
+/// `ativo` seria a mesma coisa que arquivar. Aqui é outra coisa — **quais
+/// ramos do produto estão ligados** para aquela empresa. É configuração de
+/// escopo, não estado de registro do usuário, e por isso convive com
+/// `arquivado_em` sem colidir: uma linha pode estar ativa (o ramo está ligado)
+/// e mesmo assim vir a ser arquivada um dia (o registro deixou de existir).
+///
+/// **Toda empresa nasce com os quatro, na mesma transação que cria a
+/// `Empresa`** — nunca num passo seguinte, senão uma falha no meio deixaria
+/// empresa sem tipo nenhum, e o primeiro frete não teria o que escolher num
+/// campo obrigatório. Quem cria é `src/lib/servicos/tipos-de-operacao.ts`,
+/// chamado por `cadastro.ts` dentro do `emTransacao` que já cria a Empresa.
+model TipoOperacao {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  nome String
+  /// Identificador estável para código e URL — "frete", "reboque",
+  /// "guincho", "mudanca". Minúsculo e sem acento, como todo identificador
+  /// (§7); `nome` é o que a tela mostra, `slug` é o que o código compara.
+  slug String
+
+  /// Só "Frete" nasce `true`. Os outros existem no modelo, desligados, até o
+  /// MVP dar lugar ao ramo deles.
+  ativo Boolean
+
+  /// Posição de exibição — nas chips e no seletor, "Frete" sempre primeiro.
+  ordem Int
+
+  empresa_id String  @db.Uuid
+  /// `Cascade`, e não `Restrict` como o resto do domínio: `TipoOperacao` nasce
+  /// SEMPRE junto da `Empresa`, na mesma transação, então uma `Empresa` nunca
+  /// existe por uma fração de segundo sem os quatro. Isso importa para
+  /// `reverter_cadastro_incompleto` — ela apaga a `Empresa` órfã quando o
+  /// passo 2 do cadastro falha, e com `Restrict` esse `DELETE` seria recusado
+  /// pelos quatro `TipoOperacao` que já existem apontando para ela. `Cascade`
+  /// aqui é seguro porque a garantia de nunca apagar `Empresa` com `Usuario`
+  /// continua inteira dentro da função — o que muda é só o que acontece com
+  /// as linhas que dependem da `Empresa` que ela decidiu apagar.
+  empresa Empresa @relation(fields: [empresa_id], references: [id], onDelete: Cascade)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  arquivado_em  DateTime? @db.Timestamptz(6)
+
+  /// Único por empresa: a mesma empresa nunca tem "frete" duas vezes, mas
+  /// "frete" existe em todas as empresas.
+  @@unique([empresa_id, slug])
+  @@index([empresa_id])
+  @@map("tipo_operacao")
 }
 
 /// Os 5.570 municípios do Brasil. **Tabela global de referência**, igual para

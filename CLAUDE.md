@@ -433,6 +433,31 @@ calado. Ao mover pasta, conferir `tsconfig.json` (`paths`), `.gitignore`
   própria função. Nenhuma outra tabela ganha essa exceção sem passar pela
   mesma pergunta: "alguém chegou a ver isto?"
 
+  **A exceção se estende a `TipoOperacao`** (tarefa 2 do item 2, 09/08/2026),
+  pela mesma pergunta e a mesma resposta: os quatro `TipoOperacao` de uma
+  `Empresa` nascem **na mesma transação** que a `Empresa`, então uma `Empresa`
+  que nunca existiu de verdade também nunca teve tipo visto ou usado por
+  ninguém — não existe "Frete" que alguém tenha chegado a ver para uma empresa
+  que ninguém viu. A chave estrangeira é `ON DELETE CASCADE`, não `RESTRICT`
+  como o resto do domínio: apagar a `Empresa` órfã apaga os quatro junto, pelo
+  próprio Postgres, sem passo à parte na função. A garantia de nunca alcançar
+  uma empresa com usuário continua **inteira** dentro de
+  `reverter_cadastro_incompleto` — o `CASCADE` só decide o que acontece
+  **depois** que aquela guarda já decidiu que a empresa pode ser apagada.
+  Nenhuma outra tabela ganha esta exceção por analogia com `TipoOperacao`, pela
+  mesma razão que a original não se estende por analogia: cada uma responde
+  sozinha "alguém chegou a ver isto?".
+
+  **Condição, não observação:** esta exceção — a original e a de
+  `TipoOperacao` — só vale **enquanto `reverter_cadastro_incompleto` for o
+  único caminho que apaga uma `Empresa`**. Se um dia existir encerramento de
+  conta pelo usuário, o `CASCADE` de `TipoOperacao` passaria a apagar tipos que
+  **foram vistos e usados** — e a exceção deixaria de valer **sem que nada
+  avisasse**, porque o `CASCADE` continuaria funcionando exatamente igual, só
+  que agora apagando o errado. Quem construir esse caminho **reexamina esta
+  exceção antes de escrever o `DELETE`** — não a herda por já estar aprovada
+  para o outro caso.
+
 ---
 
 ## 8. Regras de interface

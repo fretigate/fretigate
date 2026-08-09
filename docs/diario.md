@@ -6,6 +6,122 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 09/08/2026 — tarefa 2: tipo de operação, e o furo do primeiro cliente fechado
+
+Fecha a tarefa 2 do item 2. Toda empresa nova passa a nascer com os quatro
+`TipoOperacao` (Frete ativo; Reboque, Guincho e Mudança inativos), criados na
+**mesma transação** que cria a `Empresa` — o furo que o fundador descreveu ao
+abrir a tarefa: sem isso, o primeiro cliente que assinar abriria o lançamento
+de frete com o campo de tipo de operação vazio.
+
+`src/lib/servicos/tipos-de-operacao.ts` guarda os quatro e a função que os
+cria, recebendo o `tx` da mesma transação — não abre uma segunda. `cadastro.ts`
+chama essa função logo depois de `tx.empresa.create`, dentro do `emTransacao`
+que já existia. A migration preenche as empresas que já existiam antes da
+tabela nascer, com `INSERT ... SELECT ... ON CONFLICT DO NOTHING`, como o plano
+previa.
+
+### O defeito achado ao escrever o teste, não em revisão
+
+A chave estrangeira de `tipo_operacao` para `empresa` nasceu `ON DELETE
+RESTRICT`, seguindo o padrão do resto do domínio. **Isso quebra a reversão de
+cadastro incompleto.** `reverter_cadastro_incompleto` apaga a `Empresa` órfã
+quando o passo 2 do cadastro (criar o `Usuario`) falha depois do passo 1 já ter
+sido gravado — e agora toda `Empresa`, órfã ou não, nasce com quatro
+`TipoOperacao` apontando para ela. Com `RESTRICT`, esse `DELETE` seria recusado
+pelas próprias linhas que a tarefa acabou de criar, e a reversão — que existe
+exatamente para o caso em que algo falha no meio — falharia ela mesma.
+
+Não apareceu em leitura de código: apareceu ao estender `tests/cadastro.test.ts`
+para que `criarEmpresa` (o helper que espelha o mecanismo real) também criasse
+os quatro tipos, e o teste de reversão passou a semear o cenário de verdade.
+Rodar a chamada real (`reverterCadastroIncompleto`) contra dados reais é o que
+teria travado com um erro de chave estrangeira — a mesma lição do §3: teste que
+mede o resultado, não só declara o mecanismo, é o que pega isto.
+
+**Corrigido para `ON DELETE CASCADE`.** É seguro porque a guarda `NOT EXISTS
+(... usuario ...)` dentro da função continua inteira — ela decide **se** a
+Empresa pode ser apagada; o `CASCADE` só muda o que acontece com quem depende
+dela depois que essa decisão já foi tomada.
+
+> Esta seção descrevia aqui uma concessão nova a `fretigate_reversor`
+> (`SELECT`/`DELETE` em `tipo_operacao`), com o motivo "o `CASCADE` é um
+> `DELETE` de verdade, sujeito a privilégio". **Era suposição, não medição, e o
+> `/revisar` pegou.** A história certa está na seção seguinte: medido, o
+> `CASCADE` não precisa de concessão nenhuma, e a linha foi removida da
+> migration antes do commit. Corrigido aqui em vez de apagado, porque apagar
+> faria parecer que o erro nunca existiu — e o diário registra onde o trabalho
+> parou, erro incluído.
+
+A correção foi provada, não só declarada: `tests/cadastro.test.ts` confirma
+**antes** da reversão que os quatro `TipoOperacao` da empresa órfã existem, e
+**depois** que sumiram junto — e que os da outra empresa (a que tem dono de
+verdade) continuam intactos, prova de que o `CASCADE` atingiu só quem devia.
+
+### O `/revisar`, e o `GRANT` que eu tinha dado sem precisar
+
+Rodado antes do commit, como manda o §2. Três divergências e duas lacunas —
+todas do mesmo fio: eu tinha concedido `SELECT, DELETE` em `tipo_operacao` ao
+papel `fretigate_reversor`, junto com a correção do `CASCADE`, achando que o
+`CASCADE` precisava disso para funcionar. O revisor duvidou, com uma frase
+exata: *"precisa ser medido, não deduzido"*.
+
+**Medi, e ele estava certo.** Escrevi um teste que revoga o privilégio de
+`fretigate_reversor` em `tipo_operacao`, semeia uma empresa órfã de verdade com
+os quatro tipos, e chama `reverterCadastroIncompleto` sem nenhum grant novo.
+**Passou.** A ação referencial do Postgres (`ON DELETE CASCADE`) roda por fora
+do privilégio e da política de RLS do papel que disparou o `DELETE` na tabela
+pai — não é "mais um `DELETE` comum" sujeito às mesmas regras, e por isso não
+precisa de concessão nenhuma. Removido o `GRANT`; `fretigate_reversor` continua
+com o alcance mínimo já documentado no `CLAUDE.md` §9 (`empresa` e `usuario`,
+nada mais) — **sem precisar mudar aquela tabela**, porque a correção certa foi
+não ter ampliado o papel, não atualizar a lista depois de ampliar.
+
+Isso também resolveu, de graça, a segunda divergência: o comentário da migration
+de 07/08 que diz "este papel não enxerga nenhuma outra tabela do produto"
+continua verdadeiro, porque o `GRANT` que o desmentiria nunca ficou.
+
+**A terceira divergência exigiu decisão de verdade, não só medição.** O
+`CASCADE` apaga fisicamente linhas de `tipo_operacao` — uma tabela de domínio,
+com `arquivado_em` — e o `CLAUDE.md` §7 fecha a exceção de "nada é apagado"
+dizendo que nenhuma outra tabela a ganha "sem passar pela mesma pergunta:
+alguém chegou a ver isto?". A exceção original cobria só `Empresa`. Respondida
+a pergunta para `TipoOperacao`: os quatro nascem **na mesma transação** que a
+`Empresa`, então uma empresa que nunca existiu de verdade também nunca teve
+tipo visto por ninguém — não existe "Frete" que alguém tenha visto para uma
+empresa que ninguém viu. A exceção do §7 foi **estendida**, com essa resposta
+escrita, não só o `CASCADE` deixado quieto no schema.
+
+**A lacuna do `id` do backfill foi documentada, não corrigida** — o Postgres
+deste projeto (17.6) não tem gerador de uuid v7 nativo nem por extensão
+(conferido: só `uuid-ossp` e `pgcrypto`, até v4/v5), e escrever um gerador de
+v7 em SQL para 4 linhas por empresa, uma vez, seria mais código que o problema
+pede. Sem custo real: nada lê `id` de `TipoOperacao` esperando ordem
+cronológica — quem faz isso é `ordem` (exibição) e `criado_em` (tempo), os dois
+certos.
+
+### O que ficou provado rodando
+
+- os quatro nascem certos — nome, slug, `ativo` e `ordem` — e só "Frete" ativo;
+- a reversão de cadastro incompleto continua funcionando com `TipoOperacao` no
+  meio, e some junto quando a empresa órfã é apagada — **sem nenhum privilégio
+  novo** para o papel que reverte, medido com o grant revogado de propósito;
+- empresa A não enxerga o `TipoOperacao` da empresa B, mesma política de
+  isolamento do resto do domínio;
+- `npm run lint`, `npx tsc --noEmit`, `npm run build` e `npm test` (74 testes,
+  6 arquivos) verdes, em execução limpa — duas rodadas no meio do caminho
+  falharam por conexão esgotada, causada pelos próprios scripts manuais desta
+  sessão de investigação, não pelo código; confirmado ao repetir limpo.
+
+**Sem terceiro passe.** Os cinco achados são a mesma classe já vista na tarefa
+1 — afirmação de mecanismo de segurança sem medir, e regra escrita imprecisa
+demais para o caso real. O critério do §2 é a classe, não a quantidade: corrige
+e commita.
+
+**Próxima: tarefa 3 — Cliente: dados, documento e o prazo herdado.**
+
+---
+
 ## 09/08/2026 — tarefa 1: os 5.570 municípios, a porta única e a seed que atualiza
 
 Fecha a tarefa 1 do item 2. A tabela `municipio` existe, está carregada com os
