@@ -159,6 +159,23 @@ Vale para a empresa. **Pessoa é outra regra**: sempre a primeira letra dos dois
 
 Círculo: `30px` no cartão da dashboard · `40px` em linha de lista · `48px` em Mais · `56px` em Conta e no convite · `46px` quadrado de raio 6 no A4. Fundo `#1B6B3A` com texto branco (contorno preto no A4, que é impresso), `letter-spacing:.02em`.
 
+## Uma leitura só de cada campo
+
+Regras de construção que valem para toda tela que exibe **e** usa o mesmo campo
+— nasceram da folha do campo que falta (**12**), mas não são só dela.
+
+**Uma leitura só do dado, dentro de cada tela.** O detalhe do frete lia o telefone por dois caminhos — o gate consultava o que a folha gravou, a linha e a nota consultavam o cadastro estático — e o app abria a conversa dizendo, na mesma tela, que não tinha número. A regra: o telefone é lido por **um acessor único** (`telDe(nome)`), em que o valor gravado pela folha vence o cadastro. Toda tela que exibe e usa o mesmo campo lê pelo mesmo lugar; duas leituras separadas sempre acabam discordando.
+
+Vale nas três telas que têm o padrão: `telDe()` no detalhe do frete, `campoDe()` no perfil do cliente e no do motorista. O contrato é o mesmo em todas — o valor gravado pela folha vence o cadastro, e **exibição, cor, estado tocável e ação leem pelo mesmo acessor**. Um `salvar` que só fecha a folha, com a exibição lendo o cadastro estático, deixa o aviso "Salvo no cadastro" mentindo.
+
+**Um campo, um destino de escrita.** A folha e o formulário de edição gravam no mesmo lugar (`state.campos`), e o formulário **lê pelo mesmo acessor** ao abrir. Sem isso o formulário abre vazio com o campo que a folha acabou de gravar — e "Salvar alterações" apaga silenciosamente o valor que o usuário digitou um toque antes. Quatro leitores do mesmo campo no perfil: a linha, a cor, o estado tocável e o formulário; todos pelo acessor.
+
+**O acessor precisa saber dizer "removido".** `undefined` significa *nunca editado* e cai no cadastro; `''` significa *o usuário apagou* e vence o cadastro. Guardar contra string vazia (`salvo !== ''`) faz o valor apagado ressuscitar do array na próxima leitura — o aviso "atualizado" mente na direção oposta, e a pílula "Cobrar no WhatsApp" segue ativa para um número que já não existe. Vale nas três telas.
+
+**Identidade do caminhão.** Um caminhão pode ser cadastrado só pela placa, então **nenhuma tela lê `apelido` direto para nomeá-lo**: existe um helper `identidade(c)` — apelido se houver, senão a placa em maiúsculas. Usado no aviso de cadastro, na linha da lista, no cabeçalho do perfil e no filtro de fretes. Sem ele, habilitar o salvar por placa cria um caminhão cujo título é string vazia: o aviso vira " entrou na frota." e a linha da lista aparece sem nome. É a mesma classe de defeito de "um campo, um acessor" — quando a condição de salvar muda, todo leitor daquele campo muda junto.
+
+**A palavra é sempre "adicionar".** Nos três perfis (cliente, motorista, caminhão) e na linha TELEFONE do detalhe do frete. Não existe "não preenchido", "não preenchida" nem "não preenchido no cadastro" — três redações para o mesmo estado fazem parecer três estados diferentes.
+
 ## Números de regra de produto
 
 **Prazo, limite e número de regra vêm da especificação, não do desenho.** O `componentes.md` manda no que a tela contém — texto, rótulo, ordem, variante — mas nunca inventa nem "arredonda" um valor de regra. Quando um número desses aparece em tela, ele é citação: se a especificação mudar, a tela muda atrás dela.
@@ -325,7 +342,9 @@ Duas telas violavam a ordem interna (ações **antes** de listas) e foram corrig
 
 No detalhe da cobrança a regra tem um requisito somado: **a ação principal fica visível sem rolar.** A dobra útil é o topo do (+), em `774`. Medido com `scrollTop: 0`: principal em `688–748` no estado vencido e nos mesmos `688–748` no estado **parcial**, que é o pior caso (a linha SITUAÇÃO ganha saldo recebido e restante). O cap de 3 linhas em FRETES INCLUÍDOS existe para isso, mas não bastava — havia duas listas acima das ações, não uma.
 
-Corretas sem mudança: detalhe do frete (campos → comprovante → ações, sem lista depois), perfil do motorista, perfil do caminhão (sem principal, só Editar no cabeçalho), formulários de cliente/caminhão/motorista/despesa (salvar no fim, arquivar em texto abaixo), listas (sem bloco de ação), estados vazios (ação dentro do conteúdo).
+Corretas sem mudança: detalhe do frete (campos → comprovante → ações, sem lista depois), perfil do motorista, perfil do caminhão (sem principal, só Editar no cabeçalho), formulários de **cliente**, **motorista** e **despesa** (salvar no fim, arquivar em texto abaixo), listas (sem bloco de ação), estados vazios (ação dentro do conteúdo).
+
+**Correção desta auditoria.** A versão anterior listava o formulário de **caminhão** entre os conferidos. Ele não existia quando a medição foi feita — a linha afirmava verificação de uma tela ausente, o que engana mais que uma lacuna, porque quem lê "conferido" para de conferir. O formulário existe agora e segue a regra (salvar no fim do conteúdo rolável, arquivar em texto abaixo), mas fica registrado **por que** o erro aconteceu: a auditoria foi escrita por analogia entre as três telas de cadastro, não por medição de cada uma. **Auditoria por analogia não é auditoria** — cada linha aqui vale só para a tela que foi de fato aberta e medida.
 
 ## Onde cada tela usa o quê
 
@@ -349,7 +368,9 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Perfil do cliente | principal **Gerar relatório** · **Editar** como pílula de cabeçalho · pílula em linha **Cobrar no WhatsApp** (só com valor em aberto) · pílulas **Ver todos os 34** e **Lançar frete para este cliente** · os três primeiros números do resumo são tocáveis |
 | Perfil do caminhão | sem principal · **Editar** no cabeçalho · km e R$/km só aparecem com km preenchido; sem km, convite curto |
 | Perfil do motorista | principal **Lançar frete com este motorista** · **Editar** no cabeçalho · telefone tocável abre a conversa |
-| Cadastro / edição (cliente, caminhão, motorista) | principal **Salvar cliente** / **Salvar alterações**, desabilitada até ter nome · texto destrutiva **Arquivar** no fim do formulário rolável |
+| Cadastro / edição de cliente | principal **Salvar cliente** / **Salvar alterações**, desabilitada até ter nome · texto destrutiva **Arquivar cliente** no fim do formulário rolável |
+| Cadastro / edição de motorista | principal **Cadastrar motorista** / **Salvar alterações**, desabilitada até ter nome · texto destrutiva **Arquivar motorista** no fim |
+| Cadastro / edição de caminhão | principal **Cadastrar caminhão** / **Salvar alterações**, desabilitada até ter **apelido ou placa** — os dois identificam o caminhão, e quem só sabe a placa cadastra pela placa · chips de escolha para **TIPO** · texto destrutiva **Arquivar caminhão** no fim. **Sem campo de ano**: não alimenta cálculo, relatório, cobrança nem ordem |
 | Despesas — lista | sem principal · pílula de cabeçalho **+ Nova** · chips de Período e Categoria |
 | Despesas — cadastro | principal **Salvar despesa** · teclado numérico próprio para o valor · chips de categoria e de vínculo |
 | Despesas — vazia | principal **Lançar a primeira despesa** · explica que o Lucro aparece quando houver despesa |
