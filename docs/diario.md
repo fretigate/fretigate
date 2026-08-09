@@ -6,6 +6,227 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 09/08/2026 — item 2 começa: escopo do MVP corrigido, e o formulário de caminhão não existe
+
+Plano do item 2 aprovado e commitado em **`docs/planos/item-2-cadastros.md`** —
+é o primeiro plano a seguir a regra nova do `CLAUDE.md` §2, que nasceu neste
+mesmo dia e pelo pior motivo: a **primeira versão do plano se perdeu inteira**
+ao fechar a aba, porque só existia na conversa. Mesma classe de problema que
+este diário existe para resolver.
+
+### O escopo do MVP, corrigido pelo fundador
+
+**São 10 itens a construir** (o item 1 já fechou): 2, 3, 4, 5, 6, 7, 8, 10, 11
+e 13. **Despesas (item 11) entra** — é o item mais barato da ordem de
+construção, e sem ele o card de Lucro nunca sai do estado de convite, deixando
+a dashboard com dois dos quatro cards vazios.
+
+**Item 9 é parcialmente MVP**, e isso ficou escrito para ninguém tratar o item
+inteiro como adiado: **Enviar ordem no WhatsApp** e **Cobrar no WhatsApp**
+entram, com texto padrão fixo; só a tela de editar os dois modelos sai. Os dois
+textos passam pelo fundador antes de virar código, e moram num arquivo só, já
+com as variáveis no formato final.
+
+**Ficam para depois do lançamento:** 12, 14, 15, 16, 17.
+
+**A importação (15) é adiada, não removida**, e isso tem consequência em tela:
+ela segue desenhada no atalho do cartão escuro da dashboard, na linha de Mais e
+no estado vazio de Meus fretes — onde é a **saída principal**. Os dois primeiros
+simplesmente não nascem; o terceiro **precisa de convite novo** (lançar o
+primeiro frete), senão vira estado vazio sem saída. Registrado em
+`docs/especificacao.md` §9.
+
+**A distinção entre os dois cards de convite**, para não reabrir: *Rodagem* no
+estado de convite é aceitável porque depende de um **campo opcional que o
+usuário preenche**; *Lucro* não era, porque dependia de uma **funcionalidade
+que não existiria**.
+
+O item 12 pode esperar porque **o dado não se perde**: origem e destino são
+guardados como referência de município, e o valor do frete também — então
+distância e R$/km são deriváveis retroativamente. A parte **irrecuperável** é
+origem e destino resolverem para município de verdade; se ficarem como texto
+livre, nada é derivável nem depois. Daí a medição dos **10%** (piso de 20
+fretes, e o aviso mostrando *quais* textos não resolveram), que ficou escrita
+no **item 3**, não no 2 — ela mede fretes, e fretes só existem no item 3.
+
+### O formulário de caminhão não foi desenhado — o Design se enganou
+
+O Design respondeu que quatro dos cinco pedidos já estavam feitos em rodadas
+anteriores, e o formulário de Caminhões era um deles. **Não é.** Conferido no
+protótipo, que é a origem dos dois documentos de tela:
+
+| Tela do protótipo | Estados | Campos digitáveis | Salvar |
+|---|---|---|---|
+| `TelaClientes.dc.html` | lista · perfil · **formulário** | 3 | Salvar cliente |
+| `TelaMotoristas.dc.html` | lista · perfil · **formulário** | 2 | Salvar motorista |
+| `TelaCaminhoes.dc.html` | lista · perfil | **0** | **nenhum** |
+
+O perfil do caminhão tem "Editar caminhão" e "Arquivar caminhão" no fim, e o
+**Editar não leva a lugar nenhum**. A prova que encerra a discussão está escrita
+dentro do próprio protótipo, na resposta ao toque
+(`TelaCaminhoes.dc.html:353`):
+
+> `editar: () => this.avisar('Editar caminhão — formulário ainda não desenhado.')`
+
+Não é interpretação de documento, não é analogia entre telas: é o próprio Design
+dizendo, no arquivo dele, que a tela não existe.
+
+**De onde veio o engano** — duas linhas do `docs/componentes.md`, e a segunda é
+a perigosa: o agrupamento "Cadastro / edição (cliente, **caminhão**,
+motorista)", que junta os três por analogia; e a "Auditoria da regra de
+posição", que lista "formulários de cliente/**caminhão**/motorista/despesa"
+entre os **conferidos no DOM** — auditoria que não podia ter medido o que não
+existe. `docs/navegacao.md` está certo nas duas linhas ("lista e perfil ✅",
+"Formulário de caminhão ⬜"), e o "ano" que ele descreve nesse formulário não
+existe em canto nenhum do protótipo.
+
+Isso virou regra no `CLAUDE.md` §13: **o `componentes.md` não põe tela no
+mundo** — quem decide se a tela existe é o protótipo, e o marcador ✅/⬜ do
+`navegacao.md` acompanha ele.
+
+**Consequência maior que uma tela faltando:** as **duas** portas de criar um
+caminhão estão sem desenho (o formulário e a folha de cadastro rápido do
+lançamento). Sem nenhuma das duas não existe caminho para cadastrar caminhão no
+produto — trava o `veiculo_habitual` do motorista e trava a escolha de caminhão
+no **item 3**. Por isso a tarefa de Caminhões desta rodada entrega **só a
+tabela**.
+
+### A quinta exportação do Design chegou no meio da tarefa — e mudou a regra
+
+`docs/componentes.md` mudou sozinho enquanto a tarefa 0 era escrita. Conferida
+antes de commitar, como as quatro anteriores.
+
+**O que ela entregou de bom:** o **formulário de caminhão**, especificado —
+"Cadastrar caminhão" / "Salvar alterações", desabilitado até ter **apelido ou
+placa**, chips para TIPO, "Arquivar caminhão" no fim, e **"Sem campo de ano"**
+escrito com todas as letras, batendo com a decisão tomada horas antes. Também
+separou cadastro de cliente e de motorista em linhas próprias, **corrigiu a
+própria auditoria** (registrando que "auditoria por analogia não é auditoria") e
+trouxe regras de construção úteis: um acessor único por campo, um jeito único de
+nomear o caminhão quando só há placa, e a distinção entre "nunca editado" e "o
+usuário apagou".
+
+**O que ela desfez: oito decisões já tomadas.** A lista fechada de telas sem
+barra (com "Link expirado" e "Primeiro acesso" de volta, recusados por escrito
+no dia anterior) · a margem provisória dos Termos no modo Ajustes (**terceira**
+perda do mesmo parágrafo) · a numeração 11 duplicada de novo · o rótulo do botão
+principal · a cor do "adicionar" (`#5C6660`, recusado explicitamente) · a
+exceção do Pix, que voltou a bloquear · a distinção de "ação composta" na regra
+de Nome · e o título "Falta a chave Pix da sua empresa".
+
+**E ela contradiz a si mesma** — duas seções descrevendo o mesmo padrão, com o
+rótulo do botão e a cor do "adicionar" em desacordo dentro do mesmo arquivo.
+
+As oito foram **reaplicadas à mão**, exatamente como decididas em 07 e 08/08; as
+duas contradições internas resolvidas pela decisão anterior, não por escolha de
+quem escreve. O conteúdo genuinamente novo ficou, com as regras de construção
+recolhidas numa seção própria ("Uma leitura só de cada campo") em vez da seção
+11 duplicada. A tabela-resumo de gatilhos que a exportação trouxe foi
+descartada: o que ela dizia contradizia as decisões que a seção 12 já carrega.
+
+**Por isso a regra do §13 mudou.** O repositório passa a ser o dono de
+`docs/componentes.md` e `docs/estilo.md`; o Design entrega **só as seções
+novas**, e o fundador encaixa. Motivo: cinco exportações, cinco reversões das
+mesmas decisões — e a quinta chegando contradizendo a si mesma é sinal de que a
+fonte do Design já tem duas versões do mesmo conteúdo. **Reaplicar à mão trata o
+sintoma; parar de sobrescrever trata a causa.**
+
+**A tarefa 6 mudou de escopo por causa disso:** de "só a tabela" para
+**Caminhões completo** — tabela, lista, perfil e formulário. O protótipo e o
+marcador do `navegacao.md` ainda não acompanham, mas isso não bloqueia: quem
+define o que a tela contém é o `componentes.md`, e **o protótipo é evidência
+corroborante, nunca autoridade** (registrado no §13). O formulário é montado com
+as peças da tarefa 5 — consistência por construção — e passa pelo
+`/auditar-tela`.
+
+### Pendências pedidas ao Design nesta rodada
+
+- ~~**Formulário de caminhão**~~ — **entregue** na quinta exportação, já sem o
+  campo `ano`.
+- ~~**Correção das duas linhas da auditoria**~~ — **corrigida** pela própria
+  exportação, com o motivo registrado.
+- **Folha de cadastro rápido de caminhão** — a outra porta de criar caminhão,
+  ainda `⬜`. Não bloqueia esta rodada: ela nasce dentro do lançamento de frete
+  (item 3).
+- **`Categoria da CNH` sai** da folha de cadastro rápido de motorista. Não
+  alimenta cálculo, relatório, cobrança ou ordem, e essa folha existe para pedir
+  o mínimo durante o lançamento, onde cada campo briga com os 30 segundos. Sem
+  esse pedido, a próxima entrega o traz de volta.
+- **O protótipo e o marcador `⬜` do `docs/navegacao.md`** precisam acompanhar o
+  formulário de caminhão. Acerto de documentação — não bloqueia.
+- **A partir de agora, só seções novas** — nunca o arquivo inteiro (§13).
+- **Convite novo para o estado vazio de Meus fretes.** Com a importação adiada,
+  a saída principal daquela tela sumiu, e o convite passa a ser **lançar o
+  primeiro frete**. É o único dos três lugares que não se resolve apagando uma
+  linha (ver `docs/especificacao.md` §9, "O que o corte da importação deixa em
+  tela").
+
+### Decisões de modelo que a tarefa 0 registrou
+
+- **`ativo` sai de `Veiculo` e de `Motorista`** — arquivar é o único mecanismo.
+  Dois mecanismos para "sumiu da lista" divergem em algum filtro, e hoje nenhuma
+  tela tem botão de desligar. O `ativo` de `TipoOperacao` **fica**: ali não é
+  estado de registro, é quais ramos do produto estão ligados.
+- **`Empresa.prazo_padrao_dias` entra agora, com 15**, antes da tela que o edita
+  (item 10). Exceção consciente ao "coluna sem tela que a preencha é peso
+  morto": ela já tem **quem a leia** no item 2 — o cliente com prazo vazio
+  precisa dizer de onde herda. O 15 já estava vigente no `componentes.md` e
+  nunca tinha sido escrito na especificação.
+- **A seed de municípios nunca roda em `postinstall`**, e grava pela conexão das
+  migrations. `fretigate_app` fica só com `SELECT` em `municipio`.
+- **`Municipio` é exceção declarada à regra do `id`** — a chave é o
+  `codigo_ibge`. Ficou escrita junto da exceção que ela já tinha (`empresa_id`),
+  porque as duas vêm da mesma natureza: não é dado do usuário, é tabela oficial
+  de referência. Criar um `id` ao lado custaria mais que a exceção, e o custo
+  não ficaria na tabela de município: **todo lugar que guarda "o município"** —
+  cliente, empresa, origem e destino do frete — teria que escolher qual dos dois
+  guardar, e uns guardariam um e outros o outro.
+- **O (+) da barra fica ativo e abre o cadastro de cliente, provisoriamente.**
+  Não inventa cor de desabilitado que documento nenhum define, e não muda a
+  geometria da barra duas vezes (a folga de 138px é medida do topo do (+)).
+  **No item 3 ele passa a abrir Lançar frete** — marcado como provisório no
+  código também, porque provisório sem prazo escrito vira permanente.
+
+### O que o `/revisar` achou nesta tarefa, e o que mudou por causa dele
+
+Seis achados, todos aceitos. Três merecem registro:
+
+- **Eu repeti, na seção `Veiculo`, o defeito que este commit existe para
+  nomear:** justifiquei tirar o `ativo` dizendo "como o formulário desenhado
+  oferece". O formulário não existe — o "Arquivar" está no **perfil**. Foi
+  também o revisor que achou a frase do protótipo citada acima, que eu não tinha
+  visto.
+- **Declarar desvio no documento errado não põe desvio em vigor.** A exceção ao
+  §9 estava escrita só na especificação, e quem manda é o `CLAUDE.md`. Ao voltar
+  para escrevê-la no lugar certo, apareceu a saída que **não precisa de
+  exceção**: `USING (true) WITH CHECK (false)` cumpre as duas cláusulas do §9 e
+  é mais rígida que a versão com exceção. Virou padrão no §2 — *quando uma regra
+  parece precisar de exceção, procure primeiro a solução mais precisa que não
+  precisa dela*.
+- **"~5.570" tinha virado 5.570 cravado, e condição de recusa da seed.**
+  Município novo é criado por lei estadual: no dia em que o IBGE mudasse a
+  conta, a seed pararia de carregar — o oposto do que ela protege. Passa a
+  conferir contra a quantidade que o próprio arquivo declara, registrada na
+  procedência junto da data do download.
+
+Os outros três: os quatro ícones que faltam passam a ser **exportados para
+`docs/icones/`** (nenhum documento autorizava tirá-los do protótipo direto), o
+(+) desabilitado virou a pergunta que gerou a decisão acima, e os textos de
+WhatsApp vão para `src/lib/servicos/mensagens.ts` — `src/lib/mensagens/` não
+existe na estrutura de pastas do §6.
+
+### Estado da árvore
+
+A alteração do `docs/especificacao.md` que já estava sem commit (regras de
+`documento` de Cliente e Motorista — formato e unicidade parcial por empresa)
+entra neste mesmo commit: é documentação do item 2, escrita antes desta sessão.
+
+`docs/componentes.md` entra **num commit próprio, antes deste** — a exportação
+do Design com as oito restaurações, pela regra que ela mesma acabou de fazer
+mudar.
+
+---
+
 ## 08/08/2026 — exportação do Design conferida antes de commitar (a quarta com problema)
 
 Enquanto a tarefa 10 fechava, `docs/componentes.md` e `docs/navegacao.md`

@@ -41,11 +41,29 @@ você escreve.** O padrão é o meu.
 - Toda decisão de arquitetura tem uma razão. "Geralmente se faz assim" não é razão.
 - Segurança desde o primeiro commit.
 - Performance é restrição de design, não etapa posterior.
+- **Quando uma regra parece precisar de exceção, procure primeiro a solução mais
+  precisa que não precisa dela.** Exceção enfraquece a regra; solução mais
+  precisa a fortalece. Registrado em 09/08/2026, na terceira vez que o padrão
+  apareceu: a política de `municipio` ia pedir exceção ao §9 por ser `FOR
+  SELECT` (que não aceita `WITH CHECK`), e a saída certa era
+  `USING (true) WITH CHECK (false)` — cumpre o §9 ao pé da letra **e** é mais
+  rígida que a versão com exceção.
 - Se auditassem esse código para comprar a empresa, não teria nada para ter vergonha.
 
 ### Como executar
 
 1. **Plano antes de código, sempre.** Descreva o que vai mexer e espere aprovação.
+
+   **Plano aprovado é commitado antes de a construção começar.** Arquivo
+   próprio em `docs/planos/`, com uma linha no diário apontando para ele — o
+   diário registra **onde o trabalho parou**, e um plano inteiro dentro dele
+   afogaria essa função.
+
+   Está escrito porque aconteceu: em 09/08/2026 um plano aprovado do item 2 se
+   perdeu inteiro ao fechar a aba, porque só existia na conversa. É a mesma
+   classe de problema que o diário e a especificação existem para resolver —
+   decisão que só vive na conversa não sobrevive à conversa. Refazer custou uma
+   sessão e a numeração das tarefas nem bateu com a aprovada.
 2. **Uma tarefa por vez.** Termine, teste, commite. Depois a próxima.
 3. **Commit a cada tarefa que funciona.** Mensagem descritiva, em português.
 4. **Não refatore o que não faz parte da tarefa.** Aponte e siga.
@@ -708,6 +726,7 @@ experiência de transportadora de carga**.
 | `docs/estilo.md` | Cores, tipografia, espaçamento, formas, alturas, seção Impresso |
 | `docs/componentes.md` | Inventário fechado de botões e avisos, e onde cada tela usa o quê |
 | `docs/icones/` | SVGs, um por ícone |
+| `docs/planos/` | Um arquivo por plano aprovado, commitado antes da construção (§2) |
 
 **Quando dois documentos descrevem a mesma tela, quem vence é o dono do
 escopo.** `docs/componentes.md` manda no que a tela **contém** — campos,
@@ -721,19 +740,57 @@ que este arquivo proíbe: linha de `docs/navegacao.md` marcada com ⚠️ é
 descrição vencida por definição, e "código no WhatsApp" continua proibido pelo
 §12 esteja escrito onde estiver.
 
+**A precisão que fecha a regra, e é onde ela quase falhou:** a
+`docs/especificacao.md` decide **quais campos existem** na entidade; o
+`docs/componentes.md` decide **como o campo é apresentado**. Campo desenhado
+que não existe na entidade é **proposta, não decisão** — pare e pergunte, nunca
+crie a coluna por analogia. Registrado em 09/08/2026, quando "Categoria da CNH"
+(motorista) e "Ano" (caminhão) apareceram só em documento de tela e teriam
+virado coluna sem ninguém decidir. **Campo que ninguém usa fica meio preenchido
+para sempre**, e o dia que alguém construir algo em cima descobre que metade
+dos registros está vazia.
+
+**O protótipo em `referencia/` é evidência corroborante, nunca autoridade.**
+Quem define o que a tela contém é o `docs/componentes.md`, pela precedência
+acima — o próprio `referencia/LEIA-ME.md` diz que nada ali roda e que é material
+de consulta. Mas evidência corroborante resolve discussão: em 09/08/2026 o
+Design afirmou que o formulário de caminhão já estava desenhado, e o protótipo
+respondia, ao toque em Editar, *"Editar caminhão — formulário ainda não
+desenhado"* (`TelaCaminhoes.dc.html`). Encerrou o assunto sem debate.
+
+**Afirmação de medição sobre coisa que não existe é o pior tipo de erro de
+documento: engana justamente por dizer que foi medida.** Foi o caso das duas
+linhas do `docs/componentes.md` que listavam o formulário de caminhão entre os
+"conferidos no DOM" — auditoria escrita por analogia entre as três telas de
+cadastro, não por medição de cada uma. **Auditoria por analogia não é
+auditoria:** cada linha vale só para a tela que foi de fato aberta e medida.
+
 A paleta azul da primeira versão da Tela 1 foi descartada. Se aparecer qualquer
 arquivo com `#2B62E8` como cor de ação, é resíduo — ignore.
 
-**Exportação do Design por cima de `docs/estilo.md` ou `docs/componentes.md`
-é commit à parte, antes de começar a tarefa.** Quando o fundador substitui um
-desses dois arquivos por uma exportação do Claude Design, ele avisa, e o
-commit dessa troca entra **sozinho**, com mensagem própria, antes de
-qualquer código da tarefa que dependia da lacuna que a exportação
-preencheu — nunca misturado no mesmo commit do código. Regra registrada em
-07/08/2026 depois de confusão pela terceira vez: a paleta azul residual
-acima, "código no WhatsApp" que voltou em `docs/navegacao.md` (§13), e uma
-sessão que leu a especificação de campo de texto do Design sem saber que
-estava sem commit.
+**O repositório é o dono de `docs/componentes.md` e de `docs/estilo.md`.** O
+Design **não exporta mais o arquivo inteiro**: ele entrega **só as seções
+novas**, e o fundador encaixa. Nada de sobrescrever.
+
+**Por que a regra mudou (09/08/2026).** A anterior mandava a exportação entrar
+em commit próprio, antes do código — e falhou pelo mesmo motivo cinco vezes:
+**cinco exportações, cinco reversões das mesmas decisões**, sempre reaplicadas à
+mão. Só a quinta desfez oito, entre elas a lista fechada de telas sem barra
+(recusada por escrito no dia anterior), a margem provisória dos Termos no modo
+Ajustes (terceira perda do mesmo parágrafo), a exceção do Pix e a cor do
+"adicionar".
+
+E a quinta chegou **contradizendo a si mesma** — duas seções descrevendo o mesmo
+padrão com o rótulo do botão e a cor do "adicionar" em desacordo, dentro do
+mesmo arquivo. Isso é sinal de que a fonte do Design já tem duas versões do
+mesmo conteúdo. Reaplicar à mão trata o sintoma; parar de sobrescrever trata a
+causa.
+
+**Se mesmo assim chegar um arquivo inteiro por fora**, o procedimento é o de
+sempre: **conferir contra as decisões registradas antes de commitar** — diário,
+especificação e este arquivo —, restaurar o que ela desfez, e registrar no
+diário o que veio de novo, o que foi restaurado e o que foi pedido ao Design.
+Nunca commitar exportação sem conferir: quatro das cinco tinham problema.
 
 ---
 

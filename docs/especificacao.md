@@ -274,6 +274,10 @@ cliente → edição na hora de faturar. Vazio no cliente significa herdado, e a
 interface mostra a origem. Rótulo: "Prazo de pagamento", com a explicação de
 que é usado para calcular o vencimento ao faturar.
 
+O padrão da empresa é **15 dias** (`Empresa.prazo_padrao_dias`, §6). Ele existe
+desde o item 2, mesmo com a tela que o edita só no item 10 — senão a interface
+diria "herdado" apontando para nada.
+
 Formulários agrupados em **Identificação** e **Condição comercial**.
 
 ### 4.8 Despesas
@@ -519,8 +523,25 @@ Ver §12 do CLAUDE.md.
 ## 6. Entidades
 
 Toda tabela tem `id`, `empresa_id`, `criado_em`, `atualizado_em` e
-`arquivado_em` (nulo = ativo). Só `Empresa` e `Municipio` não têm `empresa_id`.
-Dinheiro em **centavos**; distância em **metros**.
+`arquivado_em` (nulo = ativo). Dinheiro em **centavos**; distância em
+**metros**.
+
+**As exceções, e as duas de `Municipio` vêm da mesma natureza da tabela** —
+ficam juntas de propósito, para ninguém tratar uma delas como caso isolado:
+
+- **`Empresa` não tem `empresa_id`** — o escopo dela é o próprio `id`.
+- **`Municipio` não tem `empresa_id`** e **não tem `id` próprio**: ela não é
+  dado do usuário, é **tabela oficial de referência, igual para todas as
+  empresas**. A chave é o `codigo_ibge`, que é oficial e estável há décadas, e
+  já é o que `Empresa.municipio_id` guarda hoje. Criar um `id` ao lado dele
+  custaria mais que a exceção, e o custo **não ficaria na tabela de município**:
+  todo lugar que guarda "o município" — cliente, empresa, origem e destino do
+  frete — teria que escolher qual dos dois guardar, e uns guardariam um e
+  outros o outro.
+
+A lista de tabelas sem `empresa_id` é conferida por **igualdade exata** em
+`tests/isolamento/schema.test.ts`: `municipio` precisa estar declarado lá, com
+o motivo, ou a suíte reprova.
 
 ### Empresa
 `nome_fantasia` · `razao_social` · `cnpj` · `telefone` · `email` · `endereco` ·
@@ -572,6 +593,22 @@ contas gratuitas e driblar o limite de 1 caminhão.
 - Mensagem de erro: **"já existe uma conta com esse CNPJ"**. Nunca o erro do
   banco.
 
+**`prazo_padrao_dias` vale 15**, e é obrigatório (nunca nulo). É o topo dos três
+níveis de prazo do §4.7 — empresa → cliente → edição ao faturar —, e é dele que
+o `Cliente.prazo_pagamento_dias` vazio herda.
+
+O número 15 já estava vigente em `docs/componentes.md` ("Números de regra de
+produto"), que diz que valores de regra vêm daqui — só que aqui nunca tinham
+sido escritos. Registrado em 09/08/2026 para fechar essa lacuna.
+
+**A coluna entra no item 2, antes da tela que a edita (item 10)**, e é exceção
+consciente ao critério de "coluna sem tela que a preencha é peso morto": ela
+já tem **quem a leia** no item 2 — o formulário e o perfil do cliente precisam
+dizer "vazio usa o padrão da empresa (15 dias)", e sem a coluna essa frase
+apontaria para nada. Os outros campos de Empresa do item 10 (`patio_*`,
+`chave_pix`, `dados_bancarios`, `modelo_mensagem_*`, `afiliado_id`) continuam
+fora: esses ninguém lê ainda.
+
 **`termos_aceitos_em` e `termos_versao`** são obrigatórios — o aceite acontece
 no cadastro, então não existe Empresa sem aceite.
 
@@ -615,8 +652,55 @@ divergem entre si.
 `email` · `nome` · `papel` · `token` · `status` · `enviado_em` · `aceito_em`
 
 ### Municipio
-Tabela global, base do IBGE, ~5.570 registros.
-`codigo_ibge` · `nome` · `uf` · `nome_normalizado` (para busca sem acento)
+Tabela global, base do IBGE, 5.570 registros.
+`codigo_ibge` · `nome` · `uf` · `nome_normalizado` (para busca sem acento) ·
+`latitude` · `longitude`
+
+**`codigo_ibge` é a própria chave da tabela** — é identificador estável, oficial
+e já é o que `Empresa.municipio_id` guarda.
+
+**`nome_normalizado` é coluna, não cálculo na hora da consulta.** Três razões,
+em ordem de peso: a **mesma função** de normalização escreve a coluna e trata o
+que o usuário digitou, e é isso que garante que os dois casem; `unaccent()` na
+consulta não usa índice, e a busca de município do item 3 acontece **enquanto a
+pessoa digita**, dentro da meta de 30 segundos; e `unaccent` é extensão do
+Postgres — depender de extensão no caminho crítico amarra ao provedor.
+
+**Latitude e longitude entram desde já**, mesmo com o item 12 adiado, porque a
+conferência exigida da carga ("nenhuma coordenada nula ou zerada, todas dentro
+dos limites do Brasil") não existe se as coordenadas não entrarem: não se
+confere o que não se carrega.
+
+**Quem escreve nesta tabela é a seed, pela conexão das migrations — nunca a
+aplicação.** `fretigate_app` recebe **só `SELECT`**, e a proibição de escrever
+fica em **dois lugares**: a ausência do `GRANT` de `INSERT`/`UPDATE`, e a
+política `municipio_leitura`, que é `USING (true) WITH CHECK (false)` — lê tudo,
+grava nada.
+
+As duas cláusulas do `CLAUDE.md` §9 estão lá, sem exceção nenhuma. A forma óbvia
+(`FOR SELECT USING (true)`) teria pedido exceção, porque política `FOR SELECT`
+não aceita `WITH CHECK` — e a forma escolhida é mais rígida que ela, não mais
+frouxa. Quem confere é `tests/municipios.test.ts`, com contraste.
+
+**A seed é comitada, com procedência registrada** (`prisma/seed/`): de onde veio
+o arquivo, data do download, licença e **quantos registros aquele download
+trazia**. Ela **confere antes de gravar** e **recusa carregar** se algo falhar,
+em vez de gravar dado ruim: UF entre as 27, nome não vazio, coordenada não nula,
+não zerada e dentro dos limites do Brasil, e a contagem batendo com a que o
+próprio arquivo declara, dentro de uma faixa de sanidade que pega arquivo
+truncado.
+
+**A conferência de contagem não usa 5.570 fixo**, e isso é de propósito:
+município novo é criado por lei estadual, então o número muda de vez em quando.
+Um número cravado no código faria a seed **parar de carregar** no dia em que o
+IBGE mudasse a conta — o oposto do que ela existe para proteger. Quem manda é a
+quantidade declarada junto do arquivo; trocar o arquivo é trocar os dois no
+mesmo commit.
+
+**A seed nunca roda em `postinstall`.** A Vercel roda `npm install` a cada
+publicação: um `postinstall` tentaria conectar ao banco durante o build, e ou
+quebra a publicação ou grava no banco errado. É comando explícito
+(`npm run seed:municipios`), chamado à mão e por um passo próprio da esteira.
 
 ### DistanciaRota
 Cache. Calculada uma vez por par, nunca por frete.
@@ -627,18 +711,79 @@ Cache. Calculada uma vez por par, nunca por frete.
 `prazo_pagamento_dias` (nulo = herda da empresa) · `observacao`
 **Só `nome` é obrigatório.**
 
+`documento` é CPF ou CNPJ, pessoa física ou jurídica — o cliente da
+transportadora pode ser qualquer um dos dois. Regras de formato idênticas às
+de `Empresa.cnpj` acima, e pela mesma razão: **guardar só letra e número,
+maiúsculo, sem pontuação**, com CNPJ podendo trazer letra nas 12 primeiras
+posições (formato alfanumérico da Receita) e CPF sempre 11 dígitos
+numéricos. **Guardar nulo, nunca `''`.**
+
+`documento` é **único por empresa quando preenchido**, mas só entre os
+clientes **não arquivados** — a trava é `UNIQUE (empresa_id, documento) WHERE
+arquivado_em IS NULL`, não uma restrição comum. Duas diferenças da regra de
+`Empresa.cnpj`, e as duas têm motivo:
+
+- **Aqui o arquivamento libera o documento; na Empresa, não.** O CNPJ da
+  Empresa continua preso depois de arquivada porque a trava ali é
+  anti-abuso — existe para impedir conta gratuita em série, e liberar no
+  arquivamento reabriria o buraco. Aqui não há abuso a evitar: cliente
+  arquivado que a pessoa tenta recadastrar é o caso comum, e recusar um
+  registro que ela não enxerga mais na lista é o defeito, não a proteção.
+- **Aqui é por empresa; na Empresa, é global.** Duas empresas diferentes
+  podem ter o mesmo cliente cadastrado sem conflito — o RLS já as separa.
+
 ### Veiculo
-`placa` · `apelido` · `tipo` · `ativo`
+`placa` · `apelido` · `tipo`
 Só `apelido` **ou** `placa` é obrigatório.
 
+**Não tem `ativo`** (decisão de 09/08/2026, item 2). Sumir da lista é
+`arquivado_em` preenchido — o único mecanismo, como a regra de negócio 4 já
+descreve e como o **perfil do caminhão** oferece ("Arquivar caminhão", no fim).
+Manter os dois seria **dois mecanismos para a mesma frase**, e dois mecanismos
+para "sumiu da lista" divergem em algum filtro mais cedo ou mais tarde; hoje
+nenhuma tela tem botão de desligar, então a coluna ficaria sem quem preencha e
+sem quem leia. Se um dia aparecer a necessidade de desligar temporariamente
+(caminhão na oficina), é **campo próprio, com motivo e período** — nunca um
+`ativo` genérico.
+
+**`ano` não existe**, e não é esquecimento: `docs/navegacao.md` descreve o
+formulário de caminhão como "apelido + placa + tipo + ano", mas esse formulário
+**nunca foi desenhado** — o próprio protótipo responde, ao tocar em Editar,
+*"Editar caminhão — formulário ainda não desenhado"* — e o campo não aparece em
+canto nenhum dele. Ver o `CLAUDE.md` §13: campo que só existe em documento de
+tela é proposta, não decisão.
+
 ### Motorista
-`nome` · `telefone` · `documento` · `veiculo_habitual_id` · `ativo`
+`nome` · `telefone` · `documento` · `veiculo_habitual_id`
 **Só `nome` é obrigatório.**
+
+`documento` segue exatamente a mesma regra de formato e de unicidade do
+`documento` de Cliente acima, pelo mesmo motivo.
+
+**Não tem `ativo`**, pela mesma razão do `Veiculo` acima — arquivar é o único
+mecanismo.
+
+**Não tem `categoria_cnh`** (decisão de 09/08/2026). Ela aparece na folha de
+cadastro rápido do `docs/componentes.md`, mas não alimenta cálculo, relatório,
+cobrança nem ordem — e essa folha existe justamente para pedir o mínimo durante
+o lançamento, onde cada campo briga com a meta de 30 segundos.
 
 ### TipoOperacao
 `nome` · `slug` · `ativo` · `ordem`
 Toda empresa nasce com `Frete` ativo. `Reboque`, `Guincho` e `Mudança` existem
 inativos.
+
+**Aqui o `ativo` fica, e não é inconsistência com `Veiculo` e `Motorista`, que
+não têm.** Ali `ativo` seria estado de um registro do usuário — a mesma coisa
+que arquivar diz. Aqui ele é outra coisa: **quais ramos do produto estão
+ligados** para aquela empresa. É configuração de escopo, não arquivamento, e é
+o que permite o `tipo_operacao` existir no modelo desde já com o MVP entregando
+só a experiência de transportadora de carga (`CLAUDE.md` §12).
+
+**Toda empresa nasce com os quatro, na mesma transação que cria a Empresa.**
+Não é um passo seguinte: se fosse, uma falha no meio deixaria empresa sem tipo
+nenhum, e o primeiro frete não teria o que escolher num campo obrigatório
+(§4.1). Quem faz é `src/lib/servicos/cadastro.ts`.
 
 ### Servico
 A entidade central. Chama-se `Servico`, não `Frete`, para comportar outros ramos.
@@ -737,7 +882,7 @@ Frete criado como ordem permanece `em_andamento` até ser finalizado.
 
 ## 9. Ordem de construção
 
-1. Base: empresa, usuário, login, **isolamento por `empresa_id`**
+1. Base: empresa, usuário, login, **isolamento por `empresa_id`** ✔ concluído
 2. Cadastros: cliente, veículo, motorista, tipo de operação, municípios
 3. **Lançamento de frete** — cronometrar contra os 30 segundos
 4. Lista de fretes e detalhe do frete
@@ -745,17 +890,117 @@ Frete criado como ordem permanece `em_andamento` até ser finalizado.
 6. Título a receber e Cobranças, incluindo recebimento parcial e boleto
 7. Relatório do cliente, PDF e compartilhamento
 8. Dashboard
-9. Cobrança por WhatsApp e os dois modelos de mensagem
+9. Cobrança por WhatsApp e os dois modelos de mensagem — **parcialmente no MVP**
 10. Configurações, conta da empresa e usuários
 11. Despesas
-12. Distância por rota e R$/km
+12. Distância por rota e R$/km — *depois do lançamento*
 13. Assinatura, plano gratuito, limites e tela de limite
-14. Primeiro acesso
-15. Importação de fretes *(depende da decisão de modelo)*
-16. Novidades
-17. Afiliados
+14. Primeiro acesso — *depois do lançamento*
+15. Importação de fretes — *depois do lançamento* *(depende da decisão de modelo)*
+16. Novidades — *depois do lançamento*
+17. Afiliados — *depois do lançamento*
 
 Nada de 5 em diante começa antes de 1 a 4 funcionar de verdade.
+
+### O que é MVP, decidido em 09/08/2026
+
+**São 10 itens a construir** — o item 1 já fechou, então sobram **2, 3, 4, 5, 6,
+7, 8, 10, 11 e 13**.
+
+**Despesas (item 11) entra**, e o motivo fica escrito: é o item mais barato da
+ordem de construção — lista, formulário e filtros, sem integração e sem decisão
+em aberto —, e **sem ele o card de Lucro nunca sai do estado de convite**,
+deixando a dashboard com dois dos quatro cards vazios. O usuário real também
+listou o valor líquido entre as informações principais.
+
+**A distinção entre os dois cards em estado de convite**, para não virar dúvida
+depois: **Rodagem** no estado de convite é aceitável, porque depende de um
+**campo opcional que o usuário preenche** (o km); **Lucro** no estado de convite
+não era, porque dependia de uma **funcionalidade que não existiria**. Essa
+diferença é o que trouxe Despesas para o MVP e o que mantém o item 12 fora.
+
+**Item 9 é parcialmente MVP** — não trate o item inteiro como adiado. Entram no
+MVP as ações **Enviar ordem no WhatsApp** (é a tese do produto: o frete nascendo
+no momento da ordem) e **Cobrar no WhatsApp** (é a ação principal da tela de
+Cobranças), as duas com **texto padrão fixo, não editável**. Sai só a **tela de
+editar os dois modelos**. As duas ações são construídas dentro dos itens 5 e 6,
+onde as telas já as preveem — por isso a conta de 10 itens não muda.
+
+Duas exigências para quando os itens 5 e 6 chegarem:
+
+1. **Os dois textos padrão passam pelo fundador antes de virar código.** Eles
+   saem em nome da empresa do cliente e serão lidos por cliente e motorista de
+   verdade: curtos, diretos, no jeito de quem manda mensagem de trabalho pelo
+   WhatsApp, **nunca com cara de sistema**. O da ordem **não traz o valor do
+   frete** (§4.2).
+2. **Os textos moram num arquivo só** (`src/lib/servicos/mensagens.ts` — é onde
+   o `CLAUDE.md` §6 manda regra de negócio morar), já com
+   as variáveis no formato final — `{cliente}` `{valor}` `{vencimento}`
+   `{rota}` `{empresa}` `{motorista}` `{carga}` `{origem}` `{destino}`
+   `{data}`. Quando a tela de edição entrar, é **ligar o campo ao que já
+   existe**, não refazer.
+
+**Ficam para depois do lançamento:** 12, 14, 15, 16, 17, e a tela de edição de
+modelo do item 9.
+
+### Por que o item 12 pode esperar sem perder nada
+
+**Distância e R$/km são deriváveis retroativamente sobre todo o histórico.**
+Origem e destino são guardados como **referência de município** (§6), e o valor
+do frete também — então o dia em que o item 12 entrar, ele **nasce cheio, não
+vazio**. Ninguém precisa antecipá-lo, e ninguém precisa de campo novo no frete
+para preservar o dado.
+
+**A parte irrecuperável, e por isso é exigência dura dos itens 2 e 3:** origem e
+destino **precisam resolver para município de verdade**, não ficar como texto
+livre. Se ficarem só como texto, nada é derivável — nem depois. Guardar o texto
+original continua obrigatório (§6, `Servico`); o que não pode faltar é a
+resolução ao lado dele.
+
+### O que o corte da importação deixa em tela
+
+**A importação (item 15) está adiada, não removida** — volta depois do
+lançamento. Isso importa porque ela continua **desenhada em pelo menos três
+lugares**, e cada um deles viraria tela apontando para nada se ninguém
+registrasse o corte:
+
+| Onde | O que está desenhado | O que fazer enquanto não voltar |
+|---|---|---|
+| **Dashboard**, cartão escuro (§4.6) | atalho **Importar fretes**, ao lado de Gerar relatório | o atalho não nasce; o cartão fica com um só |
+| **Mais** (§4.7) | linha **Importar fretes**, em FERRAMENTAS | a linha não nasce — vale a regra de que Mais só tem linha com destino |
+| **Meus fretes**, estado vazio | oferece a importação como **saída principal** | **precisa de convite novo** — ver abaixo |
+
+**O estado vazio de Meus fretes é o único que não se resolve apagando uma
+linha.** Ele existe para dar o próximo passo a quem ainda não tem frete nenhum,
+e hoje esse passo é "trazer os fretes que já fiz". Sem a importação, a tela
+ficaria sem saída — que é exatamente o defeito que o `CLAUDE.md` §8 nomeia
+("estado vazio é convite para agir, nunca ilustração decorativa"). O convite
+passa a ser **lançar o primeiro frete**. Já pedido ao Design.
+
+Quando o item 15 voltar, as três superfícies voltam com ele: o atalho, a linha
+e a importação como segunda saída do estado vazio — sem redesenhar nada, porque
+o desenho continua existindo.
+
+### A medição que o item 3 precisa entregar
+
+**Quantos fretes ficam sem município resolvido.** A medição é do **item 3**, não
+do 2: ela mede **fretes**, e fretes só existem a partir do item 3. O item 2
+entrega a **porta única** por onde texto vira município
+(`resolverMunicipio`, `src/lib/servicos/municipios.ts`) — é nela que a medição
+se pluga.
+
+- **Limite: acima de 10%** dos fretes sem município resolvido. Uma em cada dez
+  rotas já distorce o R$/km quando o item 12 nascer, e é cedo o bastante para
+  corrigir antes de o histórico ficar grande.
+- **Piso de 20 fretes lançados.** Abaixo disso, um frete não resolvido vira
+  porcentagem alta sem significar nada.
+- **O aviso mostra quais textos não resolveram**, não só o número. "12% sem
+  município" não diz o que fazer; "12%, e Juazeiro do Norte e Picos aparecem
+  mais" diz onde a resolução está falhando.
+
+Motivo, registrado junto: quando o número sobe, **o defeito está na resolução,
+não no usuário** — é ela que precisa ser corrigida. Melhor descobrir com dez
+fretes do que com mil.
 
 ---
 
