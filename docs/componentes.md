@@ -242,8 +242,12 @@ Uma família só: traçado, sem preenchimento, cantos arredondados — desenhado
 | `barra-novo.svg` | Item central (+) da barra | 24–26px | 2.8px |
 | `barra-cobrancas.svg` | Item "Cobranças" da barra · linha "Relatório do cliente" em Mais | 20×19px | 1.8px |
 | `barra-mais.svg` | Item "Mais" da barra · linha "Configurações" em Mais | 20×19px | 1.8px |
+| `clientes.svg` | Linha "Clientes" em Mais | 20×20px | 1.8px |
+| `motoristas.svg` | Linha "Motoristas" em Mais | 20×20px | 1.8px |
+| `importar.svg` | Linha "Importar fretes" em Mais | 20×20px | 1.8px |
+| `conta.svg` | Linha "Conta da empresa" em Mais | 20×20px | 1.8px |
 
-Quatro ícones nasceram nas linhas de **Mais** e ainda não foram exportados para `icons/`: clientes (dois bustos), motoristas (um busto), importar (seta para baixo com base) e conta (casa). Todos em `20×20px`, `1.8px`, no mesmo desenho da família. **Não existe ícone de microfone** — o botão "Ditar" foi removido do Lançar frete sem substituto.
+Os quatro ícones que faltavam nas linhas de **Mais** — clientes (dois bustos), motoristas (um busto), importar (seta para baixo com base) e conta (casa) — foram exportados para `docs/icones/` na tarefa 4 (09/08/2026), no mesmo desenho da família. **Não existe ícone de microfone** — o botão "Ditar" foi removido do Lançar frete sem substituto.
 
 ## 10 — Barra de navegação
 

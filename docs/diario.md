@@ -6,6 +6,102 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 10/08/2026 — tarefa 4: a casca do app — barra de navegação e "Mais"
+
+Fecha a tarefa 4 do item 2. `src/app/(app)/layout.tsx` passa a checar a
+sessão uma vez, para todo o grupo `(app)` — as telas filhas (`page.tsx`,
+`mais/page.tsx`) não repetem o `try/catch` de antes, só chamam
+`exigirSessao()` direto: se ela falhar depois do layout já ter passado, é bug,
+não o caminho esperado de "sem sessão". `BarraDeNavegacao.tsx` é a pílula
+flutuante de cinco posições (`docs/componentes.md` §10), e a tela "Mais"
+nasce só com o nome da empresa e "Sair da conta" — que saiu da tela Início,
+onde vivia provisoriamente desde a tarefa 7 do item 1.
+
+### As duas decisões do fundador que abriram a tarefa
+
+**1. Fretes e Cobranças ficam ativos na barra, apontando para uma tela curta
+e provisória**, em vez de esperar os itens 4 e 6 (que constroem essas telas
+de verdade) ou aparecer desabilitados. Razão do fundador: a barra é estrutura
+fixa de cinco posições — ao contrário de uma lista, tirar um item muda a
+geometria (a folga de rolagem de toda tela é medida a partir do topo do
+(+)) —, e um item desabilitado exigiria um tratamento visual que
+`docs/estilo.md` não define. As telas dizem o que falta, não "em breve":
+"Seus fretes aparecem aqui a partir do lançamento de frete" (item 4) e "Suas
+cobranças aparecem aqui a partir do faturamento" (item 6).
+
+**2. O (+) abre o cadastro de cliente (`/clientes/novo`) e dá "página não
+encontrada" até a tarefa 5** — a próxima — **criar essa rota. Comportamento
+esperado e temporário, não defeito.** Fica registrado aqui porque o fundador
+pediu, para não ler o link quebrado como regressão ao testar. E mesmo depois
+da tarefa 5, o (+) continua provisório: `docs/planos/item-2-cadastros.md`
+(tarefa 4) manda ele passar a abrir Lançar frete só no item 3, e até lá
+`docs/navegacao.md` linha 88 ("o (+) abre Lançar frete de qualquer lugar")
+não é o que o botão faz. As duas janelas (até a tarefa 5, até o item 3) estão
+marcadas no comentário do código, com a razão de cada uma — provisório sem
+prazo escrito vira permanente.
+
+### O `/revisar`, e o que ele achou
+
+Nove divergências, seis lacunas. Todas de precisão de medida ou de
+referência, nenhuma de arquitetura — corrigidas nesta mesma tarefa, sem
+terceiro passe:
+
+- `--margem-lateral` era um token só, calculado do inset **esquerdo**, usado
+  para os dois lados da barra — em aparelho com entalhe assimétrico (girado,
+  por exemplo), o lado direito receberia o valor errado. Virou dois tokens,
+  `--margem-lateral-esquerda` e `--margem-lateral-direita`, cada um com o seu
+  `env()`, batendo com `docs/estilo.md` § "Barra de navegação — âncora
+  responsiva". Nada mais consumia o token antigo, então a troca foi segura.
+- O ícone de "Início" caía no padrão de `20px` de largura por não passar
+  `largura` — o documentado é `19×19px`. Corrigido.
+- Cada item da barra tinha ~45,5px de alvo de toque (o `<nav>` usava
+  `items-end`, então cada `<Link>` só ocupava a altura do próprio conteúdo,
+  não os 57px da pílula) — abaixo do mínimo de 48px do `CLAUDE.md` §8. Tirado
+  o `items-end`: os links agora esticam para os 57px inteiros, mantendo
+  ícone e rótulo encostados embaixo pelo `justify-end` interno.
+- O comentário do (+) só citava o prazo da tarefa 5, não o do item 3 — ver
+  decisão 2 acima.
+- Título de estado vazio (`text-titulo-vazio`) sem o rastreio `-.01em` que
+  `docs/estilo.md` define para esse papel — adicionado.
+- Tinta do texto de apoio das telas provisórias trocada de
+  `tinta-apoio-forte` (reservada a corpo **fora de sessão**, por comentário
+  explícito em `globals.css`) para `tinta-apoio`, o padrão de "Corpo de
+  apoio" em `docs/estilo.md`.
+- Dois comentários citavam "`docs/componentes.md` linha 388" para a linha de
+  Mais — ficou 392 depois que esta própria tarefa acrescentou linhas à
+  tabela de ícones. Corrigido para o número atual.
+- Uma frase nova em `componentes.md` dizia que os ícones foram exportados
+  para `icons/`; o caminho real é `docs/icones/`. Só a frase que esta tarefa
+  escreveu foi corrigida — o resto do documento já usava esse atalho antes,
+  e não é desta tarefa arrumar.
+- `.claude/launch.json`, criado pela ferramenta de preview ao abrir o
+  navegador para testar, não entra neste commit — é configuração de
+  ferramenta, não parte da tarefa.
+
+**Uma lacuna ficou para o fundador decidir, não corrigida sozinha:** as duas
+telas provisórias (Fretes, Cobranças) mostram título e texto de apoio sem
+nenhuma ação — o `CLAUDE.md` §8 diz "Estado vazio é convite para agir, nunca
+ilustração decorativa". Não existe ação real para oferecer aqui (Lançar
+frete e Faturar frete não existem ainda), e uma ação que não leva a lugar
+nenhum seria o mesmo defeito ao contrário — mas isso é leitura de quem
+escreveu o código, não decisão registrada. Fica como está até o fundador
+confirmar.
+
+### O que ficou provado rodando
+
+- os cinco destinos da barra renderizam e destacam o item ativo certo
+  (testado por navegação direta de URL — o clique simulado da ferramenta de
+  navegador travou de forma geral nesta sessão, inclusive em botões sem
+  relação com esta tarefa, então não é sinal de defeito no código);
+- `/clientes/novo` dá 404, como esperado;
+- "Sair da conta" funciona a partir de Mais;
+- `npm run lint`, `npx tsc --noEmit`, `npm run build` e `npm test` (91
+  testes, 7 arquivos, inalterados) verdes.
+
+**Próxima: tarefa 5 — Clientes: lista, perfil e formulário.**
+
+---
+
 ## 09/08/2026 — tarefa 3: Cliente, o documento validado e a ordenação adiada
 
 Fecha a tarefa 3 do item 2. A tabela `cliente` existe: nome, documento

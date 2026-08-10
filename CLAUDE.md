@@ -511,7 +511,16 @@ Vieram de defeitos reais encontrados nos protótipos. São obrigatórias.
   da plataforma com o usuário (novidades, ofertas).
 - **Estado carregando obrigatório** em todo botão que chama o servidor, com
   toque repetido ignorado. Sem isso, frete e cobrança duplicam.
-- **Estado vazio é convite para agir**, nunca ilustração decorativa.
+- **Estado vazio oferece a ação que destrava a tela.** Quando a ação ainda não
+  existe, o convite é dizer o que falta para ela existir — nunca um botão que
+  não leva a lugar nenhum, e nunca ilustração decorativa.
+
+  Reescrito em 10/08/2026: a versão anterior ("Estado vazio é convite para
+  agir, nunca ilustração decorativa") gerou dúvida pela quarta vez — agora nas
+  telas provisórias de Fretes e Cobranças (tarefa 4), que não têm ação real
+  para oferecer (Lançar frete e Faturar frete ainda não existem), e um botão
+  sem destino seria o mesmo defeito ao contrário. A regra larga não previa
+  esse caso; esta cobre os dois sem precisar de exceção.
 - **Número incompleto não é exibido.** Lucro sem despesa lançada e R$/km sem km
   preenchido mostram convite, não valor. Com dado parcial, exibir a cobertura.
 - Alvo de toque mínimo 48px. Ação principal ao alcance do polegar.
