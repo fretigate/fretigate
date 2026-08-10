@@ -44,6 +44,15 @@ const semear = async (id: string, nome: string) => {
      VALUES (gen_random_uuid(), $1, 'Frete', 'frete', true, 1)`,
     [id],
   );
+  // Um Cliente por empresa (tarefa 3 do item 2), pela mesma razão do
+  // TipoOperacao acima: só o suficiente para ter uma linha para tentar
+  // vazar. A regra de negócio (documento, unicidade, arquivamento) é
+  // testada em `tests/clientes.test.ts`.
+  await raiz.query(
+    `INSERT INTO "cliente" (id, empresa_id, nome)
+     VALUES (gen_random_uuid(), $1, $2)`,
+    [id, `Cliente ${nome}`],
+  );
 };
 
 beforeAll(async () => {
@@ -54,6 +63,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // `cliente` e `tipo_operacao` são `RESTRICT`/`CASCADE` de propósito
+  // (`docs/especificacao.md`, `CLAUDE.md` §7) — `cliente` bloquearia o
+  // `DELETE` de "empresa" se não saísse primeiro.
+  await raiz.query(`DELETE FROM "cliente" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "usuario" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "empresa" WHERE id IN ($1,$2)`, [A, B]);
   await raiz.end();
@@ -121,6 +134,13 @@ describe("2. a empresa A não alcança a empresa B", () => {
       where: { empresa_id: { in: [A, B] } },
     });
     expect(tipos.map((t) => t.empresa_id)).toEqual([A]);
+  });
+
+  it("o Cliente da empresa B é invisível (tarefa 3 do item 2)", async () => {
+    const clientes = await db(A).cliente.findMany({
+      where: { empresa_id: { in: [A, B] } },
+    });
+    expect(clientes.map((c) => c.empresa_id)).toEqual([A]);
   });
 
   it("a empresa B continua intacta depois de tudo", async () => {

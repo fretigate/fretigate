@@ -202,6 +202,15 @@ Peças novas em `src/components/ui`, **uma vez, reusadas por Motoristas depois**
 linha de lista, campo de busca, chip de ordenação, pílula de cabeçalho, estado
 vazio e folha inferior. Nenhum valor fora de `docs/estilo.md`.
 
+**O chip de ordenação não nasce nesta tarefa.** Decisão do fundador,
+09/08/2026, na revisão da tarefa 3: das três ordenações de
+`docs/especificacao.md` §4.7 (mais recente · maior valor em aberto · maior
+valor total), só "mais recente" tem fonte — as outras duas dependem de
+`Servico`/`TituloReceber` (item 3). Seletor com uma alternativa só é
+controle que não faz nada, e é pior que não ter nenhum. A lista desta tarefa
+nasce **sem** chip de ordenação, ordenada por mais recente sem escolha
+nenhuma; o chip nasce no item 3, junto com a segunda ordenação.
+
 **O resumo do perfil (já rodado · a receber · vencido · recebido) e o histórico
 de fretes ficam para o item 4**, porque dependem de `Servico` e
 `TituloReceber` — não é convite nem estado vazio, é bloco que ainda não tem

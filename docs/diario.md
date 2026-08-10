@@ -6,6 +6,103 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 09/08/2026 — tarefa 3: Cliente, o documento validado e a ordenação adiada
+
+Fecha a tarefa 3 do item 2. A tabela `cliente` existe: nome, documento
+(CPF/CNPJ), telefone, email, endereço, município, prazo de pagamento (nulo =
+herda de `Empresa.prazo_padrao_dias`, que também nasce aqui, valendo 15) e
+observação. `src/lib/servicos/clientes.ts` tem listar, buscar, criar, editar
+e arquivar, tudo por `db(empresaId)`.
+
+**Documento validado de verdade, não só formatado.** `src/lib/utils/documento.ts`
+usa `cpf-cnpj-validator` (2.1.2), que calcula o dígito verificador tanto do CPF
+quanto do CNPJ **alfanumérico** (Nota Técnica RFB 49/2024) — o mesmo formato
+que `empresa_cnpj_formato` já cobria só por regex, sem conferir o dígito.
+Documento com dígito errado **recusa o salvar** (decisão do fundador, ver
+abaixo); campo vazio continua funcionando, porque só `nome` é obrigatório.
+
+**Único por empresa, só entre os não arquivados.** A trava
+`UNIQUE (empresa_id, documento) WHERE arquivado_em IS NULL` é índice parcial —
+o Prisma não modela isso, então existe só na migration
+(`20260809060000_cliente_e_prazo_padrao`), com o mesmo comentário de aviso que
+já existe para RLS no topo do `schema.prisma`. Arquivar libera o documento
+para recadastro, ao contrário do CNPJ da Empresa (que é trava anti-abuso e
+continua presa).
+
+**Migration aplicada por fora do `prisma migrate dev`.** O comando recusou
+criar o scaffold: o banco de desenvolvimento tinha um checksum divergente para
+`20260809021500_municipio_tabela_de_referencia` (arquivo editado depois de
+aplicado, antes desta sessão — não é coisa desta tarefa) e `migrate dev` só
+resolve isso com `migrate reset`, que apagaria os 5.570 municípios e todo dado
+de desenvolvimento. Em vez de rodar `reset`, o SQL desta migration foi escrito
+à mão seguindo o padrão das anteriores, aplicado direto pela conexão das
+migrations, e registrado em `_prisma_migrations` com o checksum sha256 do
+arquivo — o mesmo que o Prisma teria calculado. `prisma migrate status`
+confirma "up to date" depois disso. **A esteira (CI) aplica normal**, porque o
+banco de teste nunca viu esta migration antes.
+
+**Pendência que sobra, não desta tarefa:** o checksum divergente de
+`20260809021500_municipio_tabela_de_referencia` continua lá — qualquer
+`prisma migrate dev --create-only` futuro na minha máquina vai recusar do
+mesmo jeito, e o instinto de "resolver" com `migrate reset` apagaria a seed de
+município. Fica registrado para não ser surpresa na próxima tarefa; conserto
+correto ainda não decidido.
+
+### O `/revisar`, e as duas decisões que voltaram para o fundador
+
+Uma divergência e três lacunas. A divergência: `listarClientes` só ordena por
+"mais recente", e o comentário do código emprestava a razão de adiamento do
+resumo do perfil (que espera `Servico`/`TituloReceber`, tarefa 5) para as
+**ordenações**, que o plano nunca isentou — `docs/planos/item-2-cadastros.md`
+pedia as três, e `docs/componentes.md` já usa "maior valor em aberto" como
+exemplo do chip. Levado ao fundador porque as outras duas ordenações
+literalmente não têm como ser calculadas sem `Servico`/`TituloReceber` (item
+3).
+
+**Decidido:** a tarefa 3 fecha só com "mais recente" — as outras duas ficam
+pendentes do item 3. E mais: **o chip de ordenação nem nasce na tarefa 5**,
+porque seletor com uma alternativa só não faz nada. Registrado em
+`docs/planos/item-2-cadastros.md`, tarefa 5, para quem construir a tela não
+reabrir a pergunta.
+
+**Documento com dígito verificador errado: bloqueia o salvar.** A ressalva de
+"atrapalhar o cadastro de 30 segundos" não se aplica — o documento é opcional,
+quem está com pressa não digita nada; o bloqueio só atinge quem digitou um
+número e digitou errado, e documento errado pararia no relatório que o
+cliente da transportadora recebe. A forma já está decidida por
+`docs/estilo.md`/`componentes.md` (campo de texto): o erro aparece **abaixo do
+campo**, nunca como mensagem geral no fim do formulário — isso é trabalho da
+tarefa 5, esta tarefa só lança o `Error` com a mensagem.
+
+As outras duas lacunas — schema de entrada para os campos que hoje só passam
+por `trim()`, e as três mensagens de erro fora de `docs/componentes.md` —
+aceitas como está: apontam para a tarefa 5, que é quem constrói a Server
+Action e a tela de verdade (mesmo padrão de `cadastro.ts`: o schema `zod` vive
+na Action, não no serviço).
+
+### O que ficou provado rodando
+
+- só `nome` é obrigatório; documento e prazo ficam nulos, nunca `''`;
+- CPF e CNPJ alfanumérico válidos são aceitos e normalizados (maiúsculo, sem
+  pontuação); dígito verificador errado recusa, nos dois formatos;
+- documento único por empresa entre os não arquivados; duas empresas podem
+  repetir o mesmo documento; arquivar libera para recadastro;
+- listar devolve só os não arquivados, mais recente primeiro; buscar e editar
+  funcionam; empresa A não busca nem lista cliente da empresa B;
+- a extensão de `tests/isolamento/vazamento.test.ts` prova que o Cliente da
+  empresa B é invisível pela mesma política de isolamento do resto do
+  domínio;
+- `npm run lint`, `npx tsc --noEmit`, `npm run build` e `npm test` (91 testes,
+  7 arquivos) verdes.
+
+**Sem terceiro passe.** As quatro lacunas/divergência viraram decisão do
+fundador ou apontamento para a tarefa 5, não código novo nesta tarefa — não há
+classe nova de achado para justificar rodar de novo.
+
+**Próxima: tarefa 4 — A casca do app: barra de navegação e tela "Mais".**
+
+---
+
 ## 09/08/2026 — tarefa 2: tipo de operação, e o furo do primeiro cliente fechado
 
 Fecha a tarefa 2 do item 2. Toda empresa nova passa a nascer com os quatro

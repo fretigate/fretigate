@@ -87,6 +87,19 @@ model Empresa {
 
   status_assinatura StatusAssinatura @default(ativa)
 
+  /// Topo dos três níveis de prazo de pagamento — empresa → cliente → edição
+  /// ao faturar (`docs/especificacao.md` §4.7). É dele que
+  /// `Cliente.prazo_pagamento_dias` vazio herda.
+  ///
+  /// Obrigatório (nunca nulo): "vazio" já tem significado no nível do
+  /// cliente ("herda daqui"), então este nível não pode repetir o mesmo
+  /// vazio sem apontar para lugar nenhum.
+  ///
+  /// A coluna entra aqui, no item 2, antes da tela que a edita (item 10):
+  /// o formulário e o perfil do cliente (também item 2) já precisam dizer
+  /// "vazio usa o padrão da empresa (15 dias)".
+  prazo_padrao_dias Int @default(15)
+
   /// §11 — a única pergunta declarada do produto, mais a origem por primeiro
   /// toque. Nenhum outro campo de pesquisa existe em lugar nenhum.
   origem_cadastro  String?
@@ -104,6 +117,7 @@ model Empresa {
 
   usuarios       Usuario[]
   tipos_operacao TipoOperacao[]
+  clientes       Cliente[]
 
   @@map("empresa")
 }
@@ -248,6 +262,63 @@ model TipoOperacao {
   @@map("tipo_operacao")
 }
 
+/// O cliente da transportadora — quem encomenda o frete. `docs/especificacao.md`
+/// §6.
+///
+/// **Só `nome` é obrigatório.** Um cadastro rápido no meio do lançamento de
+/// frete não pode travar em campo que ninguém tem à mão.
+model Cliente {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  nome String
+
+  /// CPF ou CNPJ — o cliente da transportadora pode ser pessoa física ou
+  /// jurídica. Mesma regra de formato de `Empresa.cnpj`: **guardado só com
+  /// letra e número, maiúsculo, sem pontuação**, CNPJ podendo trazer letra
+  /// nas 12 primeiras posições (formato alfanumérico da Receita) e CPF
+  /// sempre 11 dígitos numéricos. **Guardar nulo, nunca `''`** — vazio
+  /// colide com vazio, nulo não colide com nulo.
+  ///
+  /// Único por empresa quando preenchido, mas só entre os clientes **não
+  /// arquivados**. Prisma não modela índice único parcial (a mesma limitação
+  /// do comentário de RLS no topo deste arquivo) — a restrição
+  /// `UNIQUE (empresa_id, documento) WHERE arquivado_em IS NULL` existe só
+  /// na migration, não aqui. Duas diferenças da trava de `Empresa.cnpj`, e
+  /// as duas têm motivo:
+  ///
+  ///   - **aqui o arquivamento libera o documento**; na Empresa, a trava é
+  ///     anti-abuso e continua presa depois de arquivada. Aqui não há abuso
+  ///     a evitar: cliente arquivado que a pessoa recadastra é o caso comum.
+  ///   - **aqui é por empresa; na Empresa, é global** — o RLS já separa
+  ///     duas empresas com o mesmo cliente cadastrado.
+  documento String?
+
+  telefone String?
+  email    String?
+  endereco String?
+
+  municipio_id Int?
+  municipio    Municipio? @relation(fields: [municipio_id], references: [codigo_ibge], onDelete: Restrict)
+
+  /// Nulo = herda `Empresa.prazo_padrao_dias`. O nível do meio dos três da
+  /// especificação §4.7 — empresa → cliente → edição ao faturar.
+  prazo_pagamento_dias Int?
+
+  observacao String?
+
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  /// §7 — nada é apagado. Preenchido = arquivado, e é o que libera o
+  /// `documento` para outro cadastro (ver acima).
+  arquivado_em DateTime? @db.Timestamptz(6)
+
+  @@index([empresa_id])
+  @@map("cliente")
+}
+
 /// Os 5.570 municípios do Brasil. **Tabela global de referência**, igual para
 /// todas as empresas — não é dado do usuário, e ninguém do produto escreve nela.
 ///
@@ -312,6 +383,7 @@ model Municipio {
   arquivado_em  DateTime? @db.Timestamptz(6)
 
   empresas Empresa[]
+  clientes Cliente[]
 
   /// Índice de PREFIXO. `text_pattern_ops` é o que faz `nome_normalizado LIKE
   /// 'forta%'` usar índice; sem ele o Postgres varre as 5.570 linhas a cada
