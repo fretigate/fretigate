@@ -827,6 +827,24 @@ arquivado_em IS NULL`, não uma restrição comum. Duas diferenças da regra de
 `placa` · `apelido` · `tipo`
 Só `apelido` **ou** `placa` é obrigatório.
 
+**`tipo` é chip de escolha única, entre cinco: Toco · Truck · Bitruck ·
+Carreta · Bitrem** (decisão do fundador, tarefa 6, 10/08/2026). Campo
+opcional — quem tem caminhão fora da lista deixa vazio, e isso não é
+degradação: nada no produto hoje consome este dado (não alimenta cálculo,
+relatório, cobrança nem ordem), então forçar uma classificação errada custaria
+mais do que deixar vazio. Sem opção "Outro" com campo de texto: seria
+comportamento novo, exigiria desenho do Design, e o campo é preenchido umas
+dez vezes na vida inteira de uma transportadora — não compensa.
+
+O corte de cinco, e não outro número: três (Toco/Truck/Carreta) é pouco —
+Bitruck é comum no segmento e Bitrem aparece em carga a granel no Nordeste.
+Sete (incluindo VUC e 3/4) é demais — essas categorias são de entrega urbana,
+e o público do produto faz frete regional e interestadual.
+
+**Reexaminar esta lista no dia em que algo passar a consumir `tipo`** —
+agrupamento por tipo em relatório de análise, por exemplo. Até lá, os cinco
+valores acima são a lista inteira.
+
 **Não tem `ativo`** (decisão de 09/08/2026, item 2). Sumir da lista é
 `arquivado_em` preenchido — o único mecanismo, como a regra de negócio 4 já
 descreve e como o **perfil do caminhão** oferece ("Arquivar caminhão", no fim).

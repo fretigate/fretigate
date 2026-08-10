@@ -48,7 +48,7 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 | Cadastro rápido — caminhão ⬜ | Lançar frete › folha de busca › + Novo | Apelido (obrigatório) + placa + tipo → volta ao lançamento |
 | Cadastro rápido — motorista ⬜ | Lançar frete › folha de busca › + Novo | Nome (obrigatório) + telefone + CNH → volta ao lançamento |
 | Folha do campo que falta ⬜ | Qualquer ação que precise de campo não preenchido | Um campo só → salva e **continua a ação** · Agora não cancela |
-| Formulário de caminhão ⬜ | Caminhões › + Novo · perfil › Editar | Apelido + placa + tipo + ano → volta ao perfil · Arquivar em texto no fim |
+| Formulário de caminhão ✅ | Caminhões › + Novo · perfil › Editar | Apelido + placa + tipo (chip) → volta ao perfil · Arquivar em texto no fim. Sem campo de ano |
 | Modelo de ordem de serviço ✅ | Configurações › Mensagens | Chips {motorista} {cliente} {carga} {origem} {destino} {data} — sem {valor} |
 | Novidades — lista e detalhe ✅ | Mais › Ajustes · cartão FRETINEWS dispensado na dashboard | Linha → Detalhe da mensagem · no máximo uma ação por mensagem |
 | Entrar ✅ | Abrir o app sem sessão · Sair da conta | **E-mail e senha** → Primeiro acesso · Criar conta · Esqueci a senha. O app nunca envia mensagem sozinho, então não há código por WhatsApp |

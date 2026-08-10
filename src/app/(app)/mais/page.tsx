@@ -1,6 +1,7 @@
 import { exigirSessao } from "@/lib/auth/sessao";
 import { db } from "@/lib/db";
 import { listarClientes } from "@/lib/servicos/clientes";
+import { listarCaminhoes } from "@/lib/servicos/caminhoes";
 import { ItemMenu } from "@/components/ui/ItemMenu";
 import { sairDaConta } from "../acoes";
 import { BotaoSairDaConta } from "../BotaoSairDaConta";
@@ -8,11 +9,11 @@ import { BotaoSairDaConta } from "../BotaoSairDaConta";
 /**
  * Mais — `docs/navegacao.md` linha 20, `docs/componentes.md` linha 392.
  *
- * PROVISÓRIA: nasce com o nome da empresa, "Sair da conta" e agora a seção
- * CADASTROS com a linha "Clientes" (tarefa 5) — Caminhões e Motoristas ainda
- * não existem (tarefas 6/7), nem Relatório, Despesas, Importar, Novidades,
- * Configurações, Usuários, Conta. "A tela 'Mais' nasce só com as linhas que
- * têm destino; cada item seguinte acrescenta a sua"
+ * PROVISÓRIA: nasce com o nome da empresa, "Sair da conta" e a seção
+ * CADASTROS, agora com "Clientes" (tarefa 5) e "Caminhões" (tarefa 6) —
+ * Motoristas ainda não existe (tarefa 7), nem Relatório, Despesas, Importar,
+ * Novidades, Configurações, Usuários, Conta. "A tela 'Mais' nasce só com as
+ * linhas que têm destino; cada item seguinte acrescenta a sua"
  * (`docs/planos/item-2-cadastros.md`, tarefa 4).
  *
  * O nome da empresa também não é tocável ainda: o cartão de identidade
@@ -22,12 +23,13 @@ import { BotaoSairDaConta } from "../BotaoSairDaConta";
 export default async function Pagina() {
   const sessao = await exigirSessao();
 
-  const [empresa, clientes] = await Promise.all([
+  const [empresa, clientes, caminhoes] = await Promise.all([
     db(sessao.empresaId).empresa.findUnique({
       where: { id: sessao.empresaId },
       select: { nome_fantasia: true },
     }),
     listarClientes(sessao.empresaId),
+    listarCaminhoes(sessao.empresaId),
   ]);
 
   // O protótipo (referencia/TelaMais.dc.html) também mostra "· R$ X em
@@ -38,6 +40,10 @@ export default async function Pagina() {
     clientes.length === 0
       ? "Nenhum cadastrado ainda"
       : `${clientes.length} ${clientes.length === 1 ? "cadastrado" : "cadastrados"}`;
+  const subtituloCaminhoes =
+    caminhoes.length === 0
+      ? "Nenhum cadastrado ainda"
+      : `${caminhoes.length} ${caminhoes.length === 1 ? "cadastrado" : "cadastrados"}`;
 
   return (
     <main
@@ -58,6 +64,14 @@ export default async function Pagina() {
         <ItemMenu href="/clientes" nome="Clientes" apoio={subtituloClientes}>
           <circle cx="9.84" cy="8.76" r="2.88" />
           <path d="M4.8 17.76c0.54 -2.52 2.61 -3.96 5.04 -3.96s4.5 1.44 5.04 3.96M15.06 6.24a2.88 2.88 0 0 1 0 5.04M16.68 14.16c1.44 0.63 2.34 1.89 2.61 3.6" />
+        </ItemMenu>
+        {/* `barra-fretes.svg` — mesmo desenho do item "Fretes" da barra,
+            reaproveitado aqui por `docs/componentes.md` linha 241 ("linha
+            'Caminhões' em Mais"). */}
+        <ItemMenu href="/caminhoes" nome="Caminhões" apoio={subtituloCaminhoes}>
+          <path d="M4.309 7.254h9.164v7.691H4.309zM13.473 9.873h3.273l2.946 2.782v2.291h-6.218z" />
+          <circle cx="7.746" cy="16.746" r="1.636" />
+          <circle cx="16.255" cy="16.746" r="1.636" />
         </ItemMenu>
       </div>
 

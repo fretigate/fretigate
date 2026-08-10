@@ -118,6 +118,7 @@ model Empresa {
   usuarios       Usuario[]
   tipos_operacao TipoOperacao[]
   clientes       Cliente[]
+  veiculos       Veiculo[]
 
   @@map("empresa")
 }
@@ -317,6 +318,57 @@ model Cliente {
 
   @@index([empresa_id])
   @@map("cliente")
+}
+
+/// Cinco categorias de carroceria/porte, escolha única — `docs/especificacao.md`,
+/// entidade Veiculo. Decisão do fundador, tarefa 6 (10/08/2026): três era pouco
+/// (Bitruck é comum no segmento, Bitrem aparece em carga a granel no Nordeste) e
+/// sete era demais (VUC/3-4 são entrega urbana, fora do público do produto).
+/// Reexaminar no dia em que algo passar a consumir este campo — hoje não
+/// alimenta cálculo, relatório, cobrança nem ordem.
+enum TipoVeiculo {
+  toco
+  truck
+  bitruck
+  carreta
+  bitrem
+
+  @@map("tipo_veiculo")
+}
+
+/// O caminhão da transportadora. `docs/especificacao.md` §6.
+///
+/// **Só `apelido` ou `placa` é obrigatório** — quem só sabe a placa cadastra
+/// pela placa. A garantia é dupla: a validação de entrada em
+/// `src/lib/servicos/caminhoes.ts` recusa antes de chegar ao banco, e o `CHECK`
+/// da migration recusa de novo, para quem gravar por fora do serviço (`/tests`,
+/// `CLAUDE.md` §3) não abrir a mesma brecha.
+///
+/// **Não tem `ativo`** — mesmo motivo de `TipoOperacao` não valer aqui: ali
+/// `ativo` é escopo de produto (quais ramos a empresa usa), aqui seria só uma
+/// cópia de `arquivado_em` com outro nome. Dois mecanismos para "sumiu da
+/// lista" divergem cedo ou tarde.
+///
+/// **Não tem `ano`** — existiu só em documento de tela desenhado antes do
+/// formulário em si (`docs/especificacao.md`, entidade Veiculo): campo que só
+/// existe em documento de tela é proposta, não decisão (`CLAUDE.md` §13).
+model Veiculo {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  placa   String?
+  apelido String?
+  tipo    TipoVeiculo?
+
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  /// §7 — nada é apagado. Preenchido = arquivado.
+  arquivado_em DateTime? @db.Timestamptz(6)
+
+  @@index([empresa_id])
+  @@map("veiculo")
 }
 
 /// Os 5.570 municípios do Brasil. **Tabela global de referência**, igual para

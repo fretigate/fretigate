@@ -842,9 +842,27 @@ auditoria:** cada linha vale só para a tela que foi de fato aberta e medida.
 A paleta azul da primeira versão da Tela 1 foi descartada. Se aparecer qualquer
 arquivo com `#2B62E8` como cor de ação, é resíduo — ignore.
 
-**O repositório é o dono de `docs/componentes.md` e de `docs/estilo.md`.** O
-Design **não exporta mais o arquivo inteiro**: ele entrega **só as seções
-novas**, e o fundador encaixa. Nada de sobrescrever.
+**O repositório é o dono de `docs/componentes.md`, `docs/estilo.md` e
+`docs/navegacao.md`.** O Design **não exporta mais o arquivo inteiro**: ele
+entrega **só as seções novas**, e o fundador encaixa. Nada de sobrescrever.
+
+**`docs/navegacao.md` entrou nesta regra em 10/08/2026, tarefa 6.** Ele também
+nasce de material do Design ("Gerado da prancheta...", no topo do arquivo) — o
+nome do arquivo não é o critério certo para decidir quem é dono; o critério é
+**o que muda**:
+
+- **Estado** — marcar tela como feita (⬜ → ✅), sincronizar com decisão já
+  registrada em outro lugar (especificação, diário), corrigir contradição
+  entre documentos. Isso é do **repositório**, em qualquer um dos três
+  arquivos.
+- **Desenho** — o que uma tela contém, como se chega e para onde leva, medida
+  ou tratamento visual novo. Isso continua sendo do **Design**, e chega por
+  diff de seção, nunca editado direto.
+
+**Editar o lado do repositório não substitui avisar o Design.** A fonte dele
+segue sem a mudança até alguém contar — é o mesmo problema da regra original,
+só que na direção contrária. Toda correção de estado feita aqui entra também
+na lista de "o que foi pedido ao Design" do diário daquela tarefa.
 
 **Por que a regra mudou (09/08/2026).** A anterior mandava a exportação entrar
 em commit próprio, antes do código — e falhou pelo mesmo motivo cinco vezes:

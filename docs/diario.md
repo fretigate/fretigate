@@ -6,6 +6,112 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 10/08/2026 — tarefa 6: Caminhões — tabela, lista, perfil e formulário
+
+Fecha a tarefa 6 do item 2, e com ela as duas telas que o plano registrava como
+pendentes desde 09/08/2026 (`docs/planos/item-2-cadastros.md`, tarefa 6): a
+tabela `Veiculo` e o formulário de caminhão, que o protótipo nunca chegou a
+desenhar.
+
+**Modelo `Veiculo`** — `placa`, `apelido`, `tipo` (`arquivado_em`, sem `ativo`
+e sem `ano`, pelos motivos já registrados em `docs/especificacao.md`). RLS,
+política de isolamento e `GRANT` no mesmo commit da tabela, como toda tabela
+de domínio. `CHECK veiculo_apelido_ou_placa` é a segunda garantia — a primeira
+é `normalizarEntrada` em `src/lib/servicos/caminhoes.ts` — para quem grava por
+fora do serviço.
+
+### A decisão que voltou para o fundador: as opções do chip TIPO
+
+Nenhum documento fixava a lista do chip "TIPO" — só o protótipo antigo usava
+texto livre ("Truck", "Toco", "Carreta · 3 eixos"), que é evidência, não
+decisão (`CLAUDE.md` §13). Perguntado antes de tocar em código.
+
+**Decidido: cinco chips — Toco · Truck · Bitruck · Carreta · Bitrem. Campo
+opcional.** Três era pouco (Bitruck é comum no segmento, Bitrem aparece em
+carga a granel no Nordeste); sete era demais (VUC/3-4 são entrega urbana, fora
+do público do produto). Sem "Outro" com campo livre: nada no MVP consome
+`tipo` hoje, e o campo é preenchido umas dez vezes na vida de uma
+transportadora — não compensa o comportamento novo. Registrado em
+`docs/especificacao.md`, `docs/componentes.md` (linha 377, que só dizia "chips
+de escolha para TIPO" sem definir quais) e no comentário do model `Veiculo` em
+`schema.prisma`, com o motivo do corte nos três lugares.
+
+### O bug que o build pegou, não o `tsc`
+
+`FormularioCaminhao.tsx` ("use client") importava `TIPOS_VEICULO` direto de
+`src/lib/servicos/caminhoes.ts` — e esse módulo importa `db`, que importa `pg`.
+`next build` tentou levar `pg` (que usa `tls`, `util/types` do Node) para o
+bundle do navegador e quebrou. `tsc --noEmit` não vê esse tipo de erro: é
+Next/Turbopack decidindo o que vai para cada lado, não checagem de tipo.
+Corrigido movendo `TIPOS_VEICULO` (e `nomeCaminhao`) para
+`src/lib/utils/caminhao.ts` — arquivo sem `db`, seguro nos dois lados —, e
+deixando em `caminhoes.ts` só o que fala com o banco. Fica registrado porque é
+o tipo de erro que só aparece no build de produção, não no `dev` nem no `tsc`.
+
+### O `/auditar-tela`: quatro divergências, uma lacuna
+
+Todas da mesma classe — corrigidas na mesma tarefa, sem novo passe:
+
+- **A placa saindo em Archivo em vez de Azeret Mono**, em quatro lugares:
+  cabeçalho do perfil (quando não há apelido), linha "Placa" do perfil, e a
+  linha da lista. `docs/estilo.md` linhas 52–54 e 93: Azeret Mono é exclusiva
+  da placa, "nunca em nome". Corrigido com um componente novo,
+  `src/components/ui/PlacaBadge.tsx`, com duas variantes: `escura` (branco
+  sobre `#141A17`, o que a folha descreve) no perfil, `clara` (só a fonte, sem
+  o par branco/escuro — o fundo já é claro) na lista. Precisão do fundador ao
+  aprovar o conserto: as duas variantes existem porque a folha só descreve o
+  tratamento de perfil; aplicá-lo também na lista teria trocado uma
+  divergência por outra.
+- **A linha de apoio do perfil (tipo do caminhão) em tinta terciária.**
+  `docs/estilo.md` linha 107 classifica "placa, tipo, linhas" como conteúdo
+  **secundário** (`#3C443E`) no perfil do caminhão, não terciário. Corrigido.
+
+**Lacuna: o círculo de iniciais aplicado a caminhão sem decisão.** A regra de
+`docs/componentes.md` ("Iniciais da empresa") foi escrita para o círculo da
+própria empresa e estendida a Cliente por decisão registrada no diário
+(10/08/2026, tarefa 5) — a primeira versão desta tarefa estendia a mesma regra
+a Caminhão de novo, em silêncio. O fundador não aceitou por analogia:
+"Scania branco" → "SB" e "Truck vermelho" → "TV" não distinguem nada, e a
+placa em Azeret Mono já é o identificador que a pessoa reconhece. **A linha da
+lista fica sem círculo por enquanto**, com apelido e a placa (badge claro) —
+`ListaCaminhoes.tsx` não usa mais `LinhaDeLista` (que exige o círculo), tem a
+própria marcação.
+
+### O que precisa chegar ao Design
+
+Editar o lado do repositório não avisa o Design sozinho — a fonte dele segue
+sem a mudança até alguém contar (`CLAUDE.md` §13, regra estendida a
+`docs/navegacao.md` nesta mesma tarefa). Três itens, nenhum bloqueia:
+
+- **A lista dos cinco tipos do chip TIPO** (Toco · Truck · Bitruck · Carreta ·
+  Bitrem), decisão do fundador registrada em `docs/especificacao.md` e
+  `docs/componentes.md` — o Design só tinha "chips de escolha para TIPO", sem
+  definir quais.
+- **O formulário de caminhão como feito, e sem campo de ano** —
+  `docs/navegacao.md` marcava ⬜ com "tipo + ano"; o repositório corrigiu para
+  ✅ "tipo (chip)... Sem campo de ano" por ser estado/sincronização, mas quem
+  precisa saber que a tela nasceu assim é o Design, não só este arquivo.
+- **A lacuna do círculo de iniciais na linha de caminhão** — decidir entre sem
+  círculo (o que está no ar agora) ou um ícone de caminhão igual para todos —
+  "que diz o que é sem fingir identidade". Duas opções, a enviar; o fundador
+  confirma quando o Design responder.
+
+### O que ficou provado rodando
+
+- `npm run lint`, `npx tsc --noEmit`, `npm run build` e `npm test` (106
+  testes, 8 arquivos — `tests/caminhoes.test.ts` novo com 11 conferências,
+  `tests/isolamento/vazamento.test.ts` estendido para `veiculo`) verdes, antes
+  e depois das correções do `/auditar-tela`;
+- fluxo completo no navegador: Mais → Caminhões (vazio, só "Cadastrar
+  caminhão") → + Novo → cadastro só com apelido/placa → chip de TIPO → salvar
+  (vai para o perfil, não para a lista — `docs/navegacao.md` linha 51, "volta
+  ao perfil", diferente de Cliente) → Editar → Arquivar → sumiu da lista. Os
+  dois casos (com e sem apelido) testados nos dois estados (lista e perfil).
+
+**Próxima: tarefa 7 — Motoristas: dados e telas.**
+
+---
+
 ## 10/08/2026 — tarefa 5: Clientes — lista, perfil e formulário
 
 Fecha a tarefa 5 do item 2. Quatro telas novas (`/clientes`, `/clientes/novo`,
