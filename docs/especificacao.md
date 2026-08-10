@@ -262,6 +262,13 @@ histórico de fretes. Ações: **Gerar relatório** (principal), **Editar**
 (cabeçalho), **Cobrar no WhatsApp** (só com valor em aberto), e **Lançar frete
 para este cliente** no fim do histórico.
 
+**Campo vazio tocado no perfil do cliente, antes do item 3:** o inventário
+(`docs/componentes.md` 12) manda abrir a "folha do campo que falta" — ela só
+nasce no item 3 (Lançamento de frete), junto com a meta dos 30 segundos que a
+justifica. Até lá, tocar em "adicionar" leva para o formulário de edição
+inteiro. **Provisório, decidido na tarefa 5 (10/08/2026):** troca pela folha
+de verdade quando o item 3 a construir — não antes.
+
 **Perfil do caminhão:** apelido, placa, tipo; **km no período e R$/km**,
 exibidos só quando houver km preenchido; histórico. Ação: lançar frete com este
 caminhão.
@@ -779,6 +786,21 @@ Cache. Calculada uma vez por par, nunca por frete.
 `nome` · `documento` · `telefone` · `email` · `endereco` · `municipio_id` ·
 `prazo_pagamento_dias` (nulo = herda da empresa) · `observacao`
 **Só `nome` é obrigatório.**
+
+**`observacao` existe na coluna, não em tela nenhuma** (tarefa 5, 10/08/2026).
+Mesmo precedente de `categoria_cnh` (Motorista, abaixo) e do ano do caminhão
+(Veiculo, abaixo): nenhum desenho — nem o protótipo de referência — inclui o
+campo no formulário de cliente. Fica no banco como peso morto até um desenho
+pedir por ele; nenhuma tela cria a leitura por analogia com a entidade.
+
+**`municipio_id` fica sempre nulo** (tarefa 5, 10/08/2026). O texto de
+`endereco` é guardado, mas nada resolve o município a partir dele: a função de
+resolução (`src/lib/servicos/municipios.ts`) casa por nome **exato**, o
+mecanismo certo para `Servico.origem_texto`/`destino_texto` (onde a pessoa
+digita só o nome da cidade), não para um endereço completo. E nada no MVP lê o
+município do cliente — a distância do frete vem de origem/destino do frete
+(§9, `DistanciaRota`), não do endereço do cliente. Quando houver uso real, é
+um campo próprio de cidade no formulário, não extração de endereço livre.
 
 `documento` é CPF ou CNPJ, pessoa física ou jurídica — o cliente da
 transportadora pode ser qualquer um dos dois. Regras de formato idênticas às

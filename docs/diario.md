@@ -6,6 +6,153 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 10/08/2026 — tarefa 5: Clientes — lista, perfil e formulário
+
+Fecha a tarefa 5 do item 2. Quatro telas novas (`/clientes`, `/clientes/novo`,
+`/clientes/[id]`, `/clientes/[id]/editar`) e as quatro peças de interface que
+nascem para serem reaproveitadas por Motoristas e Caminhões: `LinhaDeLista`,
+`CampoBusca`, `PilulaCabecalho` (variante 06 do inventário, primeira vez em
+uso) e `EstadoVazio`. A quinta peça do plano original, folha inferior, **não
+nasce aqui** — decisão registrada na entrada anterior deste diário, antes de
+começar a construir: as duas folhas que Clientes teria (Ordenar por, Período)
+foram adiadas para os itens 3 e 4 por decisões separadas, e sobrou zero uso
+real para ela.
+
+O (+) da barra deixa de dar "página não encontrada" — `BarraDeNavegacao.tsx`
+atualizado. "Mais" ganha a seção CADASTROS com a linha "Clientes", contando
+quantos cadastrados (nunca "· R$ X em aberto": esse número depende de
+`TituloReceber`, item 4, e §8 proíbe número incompleto).
+
+**Perfil nasce só com identificação, dados cadastrais e Editar** — resumo
+financeiro e histórico de fretes ficam para o item 4 (dependem de
+`Servico`/`TituloReceber`), e por isso também não há "Gerar relatório" nem
+"Cobrar no WhatsApp" ainda.
+
+### As quatro decisões que voltaram para o fundador
+
+**A — o município do cliente fica sempre vazio.** O plano original resolvia
+`municipio_id` a partir do `endereco` digitado, reusando `resolverMunicipio`.
+Não serve: essa função casa por nome **exato**, o mecanismo certo para
+`origem_texto`/`destino_texto` do frete (só o nome da cidade), não para um
+endereço completo — e testado na prática, "Rod. CE-440, km 12 — Sobral/CE"
+nunca resolve. Revertido: `endereco` grava como texto, `municipio_id` fica
+nulo. Motivo extra do fundador para não perseguir isso agora: nada no MVP lê
+o município do cliente — a distância do frete vem de origem/destino do
+frete, não do endereço do cliente. Registrado em `docs/especificacao.md`,
+entidade Cliente: quando houver uso real, é campo próprio de cidade, não
+extração de endereço livre.
+
+**B — o campo "Observação" saiu do formulário.** Entrou só porque a coluna
+existe no banco; nenhum desenho da tela — nem o protótipo de referência —
+tem esse campo. Mesmo precedente do ano do caminhão e da categoria da CNH
+(`docs/especificacao.md` §6, Veiculo/Motorista): coluna fica no banco como
+peso morto até um desenho pedir por ela.
+
+**C — campo vazio no perfil leva para o formulário de edição inteiro, não
+para uma folha própria.** A "folha do campo que falta" que o inventário
+prevê (`docs/componentes.md` 12) só nasce no item 3. Decisão provisória,
+registrada em `docs/especificacao.md` §4.7 (não em comentário de código —
+comentário some no próximo arquivo reescrito; decisão precisa sobreviver a
+isso).
+
+**D — as iniciais do cliente usam a regra de empresa, não a de pessoa.**
+Cliente pode ser pessoa física, e o inventário reserva a regra de "pessoa" a
+`Usuario`. Decisão do fundador, com motivo próprio, não cópia do protótipo
+(que também usa a regra de empresa, mas protótipo é evidência, nunca
+motivo): cliente de transportadora é quase sempre pessoa jurídica, e a regra
+de empresa funciona bem também para pessoa física. Registrado em
+`src/lib/utils/iniciais.ts` para não parecer descuido depois.
+
+### O `/auditar-tela` e o `/revisar`, e o que os dois acharam
+
+Oito divergências, nenhuma lacuna que não tenha virado uma das quatro
+decisões acima. Todas corrigidas nesta mesma tarefa, sem segundo passe — é a
+mesma classe em todos os casos (bug ou desalinhamento com o documento, nada
+de arquitetura nova):
+
+- **Bug real de dois toques, achado pelo `/revisar`, não pela suíte.**
+  `Botao.tsx` espalhava `{...nativos}` **depois** do `disabled={props.disabled
+  || carregando}` explícito, e `nativos` nunca descartava `disabled` — com as
+  duas props passadas juntas (só `FormularioCliente.tsx` faz isso hoje;
+  conferido que nenhuma das outras seis chamadas de `Botao`/`PilulaEmLinha`
+  no projeto combina as duas), o `disabled` antigo vencia o `carregando`
+  calculado, e o botão aceitava um segundo toque durante o envio. Corrigido
+  nos dois componentes (`Botao.tsx`, `PilulaEmLinha.tsx`) — o segundo já
+  nasceu com o mesmo furo nesta tarefa, copiado do primeiro.
+- "Arquivar cliente" chamava o servidor sem travar o segundo toque. Corrigido
+  com o mesmo padrão de `BotaoSairDaConta.tsx` (`useFormStatus`, sem
+  spinner): `BotaoArquivarCliente.tsx`, componente novo.
+- Campo "Prazo de pagamento" remontado à mão em vez de reusar `CampoTexto`.
+  Corrigido.
+- Círculo de iniciais do cliente com fundo claro/texto verde (cópia do
+  protótipo) em vez de fundo `#1B6B3A`/texto branco, que é o que
+  `docs/componentes.md` manda para toda linha de lista — o documento vence o
+  protótipo. Corrigido.
+- Subtítulo da linha "Clientes" em Mais com tamanho de letra fora de
+  qualquer tabela (mistura de dois papéis documentados). Trocado pelo token
+  "Total contextual". Corrigido.
+- "+ Novo" do cabeçalho e "Cadastrar cliente" do estado vazio faziam a
+  mesma coisa, visíveis ao mesmo tempo, quando a lista está totalmente
+  vazia. Corrigido escondendo o "+ Novo" nesse estado — mesma condição do
+  protótipo de referência.
+- Ordem dos campos do formulário (Nome, Documento, Telefone…) contra
+  `docs/navegacao.md`, que já registrava por escrito: "Telefone... entra no
+  cadastro, segundo campo, antes até do documento". Corrigido.
+- Três títulos de tela sem o `wdth 96%` que `docs/estilo.md` exige para
+  esse papel (já em uso em cinco telas fora de sessão) — achado no
+  `/auditar-tela`, corrigido junto por ser a mesma classe de divergência.
+
+### O que ficou provado rodando
+
+- `npm run lint`, `npx tsc --noEmit`, `npm run build` e `npm test` (91
+  testes, 7 arquivos, inalterados — tarefa 5 não mexeu em isolamento) verdes,
+  antes e depois das correções do `/revisar`;
+- fluxo completo no navegador: Mais → Clientes (vazio, só "Cadastrar
+  cliente") → + Novo → salvar (volta para a lista, "+ Novo" reaparece) →
+  abrir perfil → Editar → documento inválido barra o salvar com erro sob o
+  campo → corrigido, prazo próprio salvo → volta para o perfil com "Acordo
+  próprio deste cliente." → Arquivar → volta para a lista vazia → Mais
+  mostra "Nenhum cadastrado ainda";
+- o clique simulado da ferramenta de navegador voltou a travar nesta sessão
+  (mesmo sintoma da tarefa 4, não relacionado ao código) — testado com
+  `form.requestSubmit()` via JavaScript em vez de clique, mesmo caminho que
+  o navegador percorre num toque de verdade.
+
+**Próxima: tarefa 6 — Caminhões: completo (tabela, lista, perfil e
+formulário).**
+
+---
+
+## 10/08/2026 — decisão de escopo da tarefa 5: a folha inferior sai da rodada
+
+`docs/planos/item-2-cadastros.md` lista "folha inferior" entre as peças de
+interface que nasceriam na tarefa 5, junto com linha de lista, campo de busca,
+pílula de cabeçalho e estado vazio. Revendo as três telas de Clientes linha por
+linha antes de começar a construir, nenhuma delas usa folha inferior hoje — e
+a razão não é descuido desta tarefa, é consequência de **duas decisões
+anteriores, tomadas em outro contexto**, que esvaziaram os dois usos que ela
+teria:
+
+- a lista teria uma folha "Ordenar por", mas o chip que a abriria foi adiado
+  para o item 3 (revisão da tarefa 3, 09/08/2026: seletor com uma opção só —
+  só "mais recente" tem fonte hoje — é controle que não faz nada);
+- o perfil teria uma folha "Período", mas o resumo financeiro que ela filtra
+  foi adiado para o item 4 (depende de `Servico`/`TituloReceber`, que não
+  existem ainda).
+
+Sem os dois, sobra zero uso real — e o `CLAUDE.md` §6 é direto: "sem
+abstração especulativa, sem camada sem dois casos de uso reais". Construir o
+componente agora seria exatamente essa camada. **Decisão do fundador,
+10/08/2026: a folha inferior não nasce na tarefa 5.** Nasce no item 3, com a
+folha de busca e o cadastro rápido — os primeiros usos reais dela.
+
+**As outras quatro peças continuam.** Linha de lista, campo de busca, pílula
+de cabeçalho e estado vazio têm uso real dentro da própria tarefa 5 (lista e
+perfil de Clientes) e são reaproveitadas depois por Motoristas e Caminhões —
+o corte de uma peça não é dúvida sobre as outras três.
+
+---
+
 ## 10/08/2026 — tarefa 4: a casca do app — barra de navegação e "Mais"
 
 Fecha a tarefa 4 do item 2. `src/app/(app)/layout.tsx` passa a checar a
@@ -78,14 +225,13 @@ terceiro passe:
   navegador para testar, não entra neste commit — é configuração de
   ferramenta, não parte da tarefa.
 
-**Uma lacuna ficou para o fundador decidir, não corrigida sozinha:** as duas
-telas provisórias (Fretes, Cobranças) mostram título e texto de apoio sem
-nenhuma ação — o `CLAUDE.md` §8 diz "Estado vazio é convite para agir, nunca
-ilustração decorativa". Não existe ação real para oferecer aqui (Lançar
-frete e Faturar frete não existem ainda), e uma ação que não leva a lugar
-nenhum seria o mesmo defeito ao contrário — mas isso é leitura de quem
-escreveu o código, não decisão registrada. Fica como está até o fundador
-confirmar.
+**Lacuna resolvida em 10/08/2026, pelo fundador.** As duas telas provisórias
+ficam como estão: sem ação, só título e texto de apoio dizendo o que falta
+para a ação existir. O `CLAUDE.md` §8 foi reescrito neste mesmo commit
+(`3b7561f`) para cobrir o caso — "Estado vazio oferece a ação que destrava a
+tela. Quando a ação ainda não existe, o convite é dizer o que falta para ela
+existir — nunca um botão que não leva a lugar nenhum, e nunca ilustração
+decorativa." Não é mais uma pendência.
 
 ### O que ficou provado rodando
 

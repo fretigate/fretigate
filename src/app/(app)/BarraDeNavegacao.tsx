@@ -57,15 +57,14 @@ export function BarraDeNavegacao() {
         <circle cx="16.255" cy="16.746" r="1.636" />
       </ItemBarra>
 
-      {/* (+) — leva ao cadastro de cliente, PROVISÓRIO por dois prazos:
-          1) a rota nasce só na tarefa 5 — até lá, "página não encontrada" ao
-             tocar é esperado, não defeito;
-          2) mesmo depois da tarefa 5, isto continua provisório até o item 3
-             (Lançamento de frete): docs/planos/item-2-cadastros.md, tarefa 4,
-             manda "no item 3 ele passa a abrir Lançar frete". Até lá,
-             docs/navegacao.md linha 88 ("o (+) abre Lançar frete de qualquer
-             lugar") não é o que este botão faz — provisório sem prazo
-             escrito vira permanente. */}
+      {/* (+) — leva ao cadastro de cliente. A rota nasce na tarefa 5
+          (10/08/2026): antes disso "página não encontrada" ao tocar era
+          esperado, não defeito — não é mais o caso.
+          PROVISÓRIO até o item 3 (Lançamento de frete):
+          docs/planos/item-2-cadastros.md, tarefa 4, manda "no item 3 ele
+          passa a abrir Lançar frete". Até lá, docs/navegacao.md linha 88
+          ("o (+) abre Lançar frete de qualquer lugar") não é o que este
+          botão faz — provisório sem prazo escrito vira permanente. */}
       <Link
         href="/clientes/novo"
         className="flex flex-1 flex-col items-center justify-end gap-5 pb-11"

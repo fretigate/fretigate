@@ -110,6 +110,15 @@ export function Botao(props: Props) {
   // carregando) não são atributo nativo de `<button>`/`<a>` — tirados de uma
   // cópia antes de espalhar o resto, em vez de re-desestruturar só para
   // descartar (o que deixaria binding não usado para trás).
+  //
+  // `disabled` também sai daqui, e é o caso que dói: ele **é** atributo
+  // nativo, então sem o `delete` o `{...nativos}` espalha o `disabled`
+  // original **depois** do `disabled={props.disabled || carregando}`
+  // explícito abaixo — e em JSX a última ocorrência da mesma prop vence. Com
+  // `disabled` e `carregando` passados juntos (`FormularioCliente.tsx`, a
+  // primeira tela a fazer isso), o `carregando` perdia a queda de braço: o
+  // botão voltava a aceitar toque durante o envio, exatamente o duplo toque
+  // que o comentário abaixo diz que não pode acontecer.
   const nativos: Record<string, unknown> = { ...props };
   delete nativos.variante;
   delete nativos.destrutiva;
@@ -117,6 +126,7 @@ export function Botao(props: Props) {
   delete nativos.children;
   delete nativos.href;
   delete nativos.carregando;
+  delete nativos.disabled;
 
   if (props.href !== undefined) {
     return (

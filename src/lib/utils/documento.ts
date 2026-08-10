@@ -50,3 +50,15 @@ export function documentoValido(bruto: string): boolean {
   if (tipo === "cnpj") return cnpj.isValid(normalizado);
   return false;
 }
+
+/**
+ * Máscara de exibição (perfil do cliente) — o banco guarda sem pontuação
+ * (ver comentário no topo). Documento fora do formato CPF/CNPJ (o que não
+ * deveria acontecer, dado `documentoValido` na entrada) volta como veio.
+ */
+export function formatarDocumento(normalizado: string): string {
+  const tipo = tipoDocumento(normalizado);
+  if (tipo === "cpf") return cpf.format(normalizado);
+  if (tipo === "cnpj") return cnpj.format(normalizado);
+  return normalizado;
+}
