@@ -6,6 +6,38 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 11/08/2026 — plano do item 3: Lançamento de frete
+
+Plano aprovado pelo fundador e commitado antes da construção começar
+(`CLAUDE.md` §2): `docs/planos/item-3-lancamento-frete.md`. Corta o item em
+4 tarefas — `Servico` e as quatro conferências de FK · tela de lançamento
+com as três peças novas (folha inferior, folha de busca, cadastro rápido),
+incluindo a sugestão de valor e o cronômetro dos 30 segundos como portão
+da própria tarefa · aviso do sistema com "Já recebi" · medição dos 10% de
+município não resolvido. Folha do campo que falta fica de fora desta
+fatia — seus gatilhos pertencem aos itens 5, 6 e 7.
+
+**Duas correções do fundador na aprovação:**
+- **Categoria da CNH sai do cadastro rápido de motorista** — não existe na
+  entidade `Motorista`, cortada em 09/08 junto com "Ano" do caminhão.
+  `docs/componentes.md` ainda lista; pendente de envio ao Design.
+- **Origem nunca vem preenchida do endereço da empresa** — o cadastro
+  (criar conta) não pergunta endereço, então `Empresa.endereco` é sempre
+  nulo para empresa nova. Corrigido no plano: origem pré-preenche com a
+  origem do último frete lançado, mesmo mecanismo de cliente/caminhão/
+  motorista. O pátio cadastrado (item 10) substitui isso quando existir.
+
+**Pendente de envio ao Design** (seção própria no plano): a correção da
+Categoria da CNH acima, mais a divergência entre `docs/navegacao.md`
+(seis linhas abrem folha de busca) e `docs/especificacao.md` §4.1 (origem/
+destino/carga têm mecanismo próprio, sem folha) — o plano seguiu a
+especificação, mas os dois documentos precisam concordar.
+
+**Próxima: tarefa 1 do item 3 — `Servico`: tabela, estados, as quatro
+conferências de FK, resolução de município.**
+
+---
+
 ## 11/08/2026 — tarefa 7: Motoristas — dados e telas
 
 Fecha a tarefa 7 do item 2, e com ela **o item 2 inteiro** (cliente, veículo,
