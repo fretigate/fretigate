@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { buscarCaminhao } from "@/lib/servicos/caminhoes";
 import { PilulaCabecalho } from "@/components/ui/PilulaCabecalho";
 import { PlacaBadge } from "@/components/ui/PlacaBadge";
+import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
 import { TIPOS_VEICULO } from "@/lib/utils/caminhao";
 import { exigirSessao } from "@/lib/auth/sessao";
 
@@ -79,50 +80,11 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           Identificação
         </span>
         <div className="flex flex-col gap-4">
-          <LinhaDado id={id} rotulo="Apelido" valor={caminhao.apelido} />
-          <LinhaDado id={id} rotulo="Placa" valor={caminhao.placa} mono />
-          <LinhaDado id={id} rotulo="Tipo" valor={tipoRotulo} />
+          <LinhaDePerfil href={`/caminhoes/${id}/editar`} rotulo="Apelido" valor={caminhao.apelido} />
+          <LinhaDePerfil href={`/caminhoes/${id}/editar`} rotulo="Placa" valor={caminhao.placa} mono />
+          <LinhaDePerfil href={`/caminhoes/${id}/editar`} rotulo="Tipo" valor={tipoRotulo} />
         </div>
       </div>
     </main>
-  );
-}
-
-/**
- * Mesmo componente de `clientes/[id]/page.tsx`, com um adicional: `mono`
- * troca o valor por `PlacaBadge` — a placa nunca é texto comum
- * (`docs/estilo.md` linhas 52–54, 93).
- */
-function LinhaDado({
-  id,
-  rotulo,
-  valor,
-  mono,
-}: {
-  id: string;
-  rotulo: string;
-  valor: string | null;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex items-start gap-12 rounded-campo bg-separacao px-18 py-14">
-      <span className="w-96 flex-none pt-2 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
-        {rotulo}
-      </span>
-      {valor && mono ? (
-        <PlacaBadge placa={valor} variante="escura" />
-      ) : valor ? (
-        <span className="min-w-0 flex-1 text-campo leading-[1.35] font-semibold text-tinta [overflow-wrap:anywhere]">
-          {valor}
-        </span>
-      ) : (
-        <Link
-          href={`/caminhoes/${id}/editar`}
-          className="min-w-0 flex-1 text-campo font-semibold leading-[1.35] text-acao"
-        >
-          adicionar
-        </Link>
-      )}
-    </div>
   );
 }

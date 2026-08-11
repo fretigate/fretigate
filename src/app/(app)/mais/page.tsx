@@ -2,6 +2,7 @@ import { exigirSessao } from "@/lib/auth/sessao";
 import { db } from "@/lib/db";
 import { listarClientes } from "@/lib/servicos/clientes";
 import { listarCaminhoes } from "@/lib/servicos/caminhoes";
+import { listarMotoristas } from "@/lib/servicos/motoristas";
 import { ItemMenu } from "@/components/ui/ItemMenu";
 import { sairDaConta } from "../acoes";
 import { BotaoSairDaConta } from "../BotaoSairDaConta";
@@ -10,11 +11,11 @@ import { BotaoSairDaConta } from "../BotaoSairDaConta";
  * Mais — `docs/navegacao.md` linha 20, `docs/componentes.md` linha 392.
  *
  * PROVISÓRIA: nasce com o nome da empresa, "Sair da conta" e a seção
- * CADASTROS, agora com "Clientes" (tarefa 5) e "Caminhões" (tarefa 6) —
- * Motoristas ainda não existe (tarefa 7), nem Relatório, Despesas, Importar,
- * Novidades, Configurações, Usuários, Conta. "A tela 'Mais' nasce só com as
- * linhas que têm destino; cada item seguinte acrescenta a sua"
- * (`docs/planos/item-2-cadastros.md`, tarefa 4).
+ * CADASTROS, agora com "Clientes" (tarefa 5), "Caminhões" (tarefa 6) e
+ * "Motoristas" (tarefa 7) — falta Relatório, Despesas, Importar, Novidades,
+ * Configurações, Usuários, Conta. "A tela 'Mais' nasce só com as linhas que
+ * têm destino; cada item seguinte acrescenta a sua" (`docs/planos/
+ * item-2-cadastros.md`, tarefa 4).
  *
  * O nome da empresa também não é tocável ainda: o cartão de identidade
  * (`docs/componentes.md` linha 392) leva à tela de Conta, que é item 10 e
@@ -23,13 +24,14 @@ import { BotaoSairDaConta } from "../BotaoSairDaConta";
 export default async function Pagina() {
   const sessao = await exigirSessao();
 
-  const [empresa, clientes, caminhoes] = await Promise.all([
+  const [empresa, clientes, caminhoes, motoristas] = await Promise.all([
     db(sessao.empresaId).empresa.findUnique({
       where: { id: sessao.empresaId },
       select: { nome_fantasia: true },
     }),
     listarClientes(sessao.empresaId),
     listarCaminhoes(sessao.empresaId),
+    listarMotoristas(sessao.empresaId),
   ]);
 
   // O protótipo (referencia/TelaMais.dc.html) também mostra "· R$ X em
@@ -44,6 +46,10 @@ export default async function Pagina() {
     caminhoes.length === 0
       ? "Nenhum cadastrado ainda"
       : `${caminhoes.length} ${caminhoes.length === 1 ? "cadastrado" : "cadastrados"}`;
+  const subtituloMotoristas =
+    motoristas.length === 0
+      ? "Nenhum cadastrado ainda"
+      : `${motoristas.length} ${motoristas.length === 1 ? "cadastrado" : "cadastrados"}`;
 
   return (
     <main
@@ -72,6 +78,11 @@ export default async function Pagina() {
           <path d="M4.309 7.254h9.164v7.691H4.309zM13.473 9.873h3.273l2.946 2.782v2.291h-6.218z" />
           <circle cx="7.746" cy="16.746" r="1.636" />
           <circle cx="16.255" cy="16.746" r="1.636" />
+        </ItemMenu>
+        {/* `docs/icones/motoristas.svg` — `docs/componentes.md` linha 246. */}
+        <ItemMenu href="/motoristas" nome="Motoristas" apoio={subtituloMotoristas}>
+          <circle cx="12" cy="8.4" r="3.06" />
+          <path d="M6.42 18.3c0.45 -2.88 2.7 -4.5 5.58 -4.5s5.13 1.62 5.58 4.5" />
         </ItemMenu>
       </div>
 

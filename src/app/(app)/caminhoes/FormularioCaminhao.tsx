@@ -106,7 +106,7 @@ export function FormularioCaminhao({ caminhao, apelidoInicial }: Props) {
         disabled={apelido.trim().length === 0 && placa.trim().length === 0}
         className="mt-16"
       >
-        {ehEdicao ? "Salvar alterações" : "Cadastrar caminhão"}
+        {ehEdicao ? "Salvar alterações" : "Salvar caminhão"}
       </Botao>
 
       {ehEdicao ? <BotaoArquivarCaminhao id={caminhao.id} /> : null}

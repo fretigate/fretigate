@@ -119,6 +119,7 @@ model Empresa {
   tipos_operacao TipoOperacao[]
   clientes       Cliente[]
   veiculos       Veiculo[]
+  motoristas     Motorista[]
 
   @@map("empresa")
 }
@@ -362,6 +363,11 @@ model Veiculo {
   empresa_id String  @db.Uuid
   empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
 
+  /// Motoristas que têm este caminhão como habitual — lado inverso de
+  /// `Motorista.veiculo_habitual`. Nunca lido direto (a leitura é sempre por
+  /// `Motorista`), mas o Prisma exige o campo dos dois lados da relação.
+  motoristas Motorista[]
+
   criado_em     DateTime  @default(now()) @db.Timestamptz(6)
   atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
   /// §7 — nada é apagado. Preenchido = arquivado.
@@ -369,6 +375,47 @@ model Veiculo {
 
   @@index([empresa_id])
   @@map("veiculo")
+}
+
+/// O motorista da transportadora. `docs/especificacao.md` §6.
+///
+/// **Só `nome` é obrigatório.** `documento` segue exatamente a mesma regra de
+/// `Cliente.documento` (formato, normalização, unicidade parcial por empresa
+/// entre os não arquivados) — ver o comentário lá, não repetido aqui.
+///
+/// **Não tem `ativo`** — mesmo motivo de `Veiculo`: arquivar já é o único
+/// mecanismo de "sumiu da lista".
+model Motorista {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  nome String
+
+  /// Mesma regra e mesma restrição de `Cliente.documento` — CPF ou CNPJ,
+  /// normalizado sem pontuação, único por empresa só entre os não
+  /// arquivados. `CLAUDE.md` §2: mesma regra, sem repetir a exceção do
+  /// zero — o `CHECK`/índice da migration espelha
+  /// `20260809060000_cliente_e_prazo_padrao` linha a linha.
+  documento String?
+
+  telefone String?
+
+  /// Opcional. `CLAUDE.md` §3: RLS não cobre a checagem de chave estrangeira
+  /// — `src/lib/servicos/motoristas.ts` confere que o caminhão pertence à
+  /// mesma empresa antes de gravar aqui, e a conferência tem teste próprio.
+  veiculo_habitual_id String?  @db.Uuid
+  veiculo_habitual    Veiculo? @relation(fields: [veiculo_habitual_id], references: [id], onDelete: Restrict)
+
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  /// §7 — nada é apagado. Preenchido = arquivado, e é o que libera o
+  /// `documento` para outro cadastro (ver acima).
+  arquivado_em DateTime? @db.Timestamptz(6)
+
+  @@index([empresa_id])
+  @@map("motorista")
 }
 
 /// Os 5.570 municípios do Brasil. **Tabela global de referência**, igual para

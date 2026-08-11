@@ -6,6 +6,126 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 11/08/2026 — tarefa 7: Motoristas — dados e telas
+
+Fecha a tarefa 7 do item 2, e com ela **o item 2 inteiro** (cliente, veículo,
+motorista, tipo de operação, municípios — `docs/especificacao.md` §9).
+
+`Motorista` (`nome`, `telefone`, `documento`, `veiculo_habitual_id`), com as
+mesmas regras de documento do Cliente, e as três telas (lista, perfil,
+formulário) montadas com as peças da tarefa 5. RLS, política de isolamento e
+`GRANT` (sem `DELETE`) no mesmo commit da tabela.
+
+### O achado que virou regra permanente, antes de escrever código
+
+Validar `veiculo_habitual_id` expôs que o Postgres não aplica RLS ao checar
+chave estrangeira: gravar ali o identificador de um caminhão de outra empresa
+passaria pelo banco sem erro. Isso não é peculiaridade deste campo — é um
+furo em **toda** referência entre tabelas de domínio (frete → cliente/
+caminhão/motorista, título → frete, no que vier depois). Virou regra no
+`CLAUDE.md` §3, commitada e aprovada **antes** da construção
+(`docs/planos/item-2-cadastros.md`, tarefa 7): toda referência desse tipo
+precisa de conferência no serviço e de teste próprio. `src/lib/servicos/
+motoristas.ts` confere que o caminhão pertence à mesma empresa via
+`buscarCaminhao` (que filtra por empresa mas **não** por arquivado — de
+propósito, ver abaixo), e `tests/motoristas.test.ts` prova a recusa entre
+empresas.
+
+### Iniciais: regra de empresa, decisão do fundador
+
+Motorista usa a mesma regra de `Cliente` (círculo de iniciais da lista), não
+a regra de pessoa reservada a `Usuario` — as duas coincidem para nome de
+pessoa digitado normalmente, e divergem só quando o nome vem todo em
+maiúsculas (a regra de empresa lê a primeira palavra como sigla: "EVA SOUZA"
+→ "EVA", não "ES"). Consequência aceita, não motivo para implementar a regra
+de pessoa agora, que continua sem nenhum código.
+
+Por servir Cliente e Motorista, `iniciaisEmpresa` virou `iniciais` —
+`src/lib/utils/iniciais.ts`, `src/app/(app)/clientes/ListaClientes.tsx` e
+`docs/componentes.md` § "Iniciais da empresa" atualizados juntos.
+
+### Caminhão habitual arquivado: continua vinculado, marcado nos três lugares
+
+Se o caminhão habitual de um motorista é arquivado depois do vínculo, ele
+**continua** aparecendo — no perfil, no chip do formulário de edição e agora
+também na linha da lista —, sempre com "(arquivado)" ao lado do nome. Decisão
+do fundador: sumir o vínculo em silêncio faria a pessoa achar que o caminhão
+ainda existe.
+
+### O que o `/auditar-tela` e o `/revisar` encontraram, corrigido na mesma tarefa
+
+Todas da mesma classe — comentário impreciso ou componente copiado, sem
+mudança de comportamento além do decidido:
+
+- **`LinhaDado` copiado pela terceira vez** (Cliente → Caminhão → Motorista),
+  contra `CLAUDE.md` §8 ("componente existe uma vez"). Unificado em
+  `src/components/ui/LinhaDePerfil.tsx`; os três perfis foram reescritos para
+  importar dali. Corrigido nesta tarefa, e não deixado para a próxima, porque
+  foi esta tarefa que criou a terceira cópia — deixar para depois criaria a
+  quarta.
+- **Comentário de `iniciais.ts`/`componentes.md` afirmando que as duas regras
+  "dão o mesmo resultado"** — falso para nome digitado em maiúsculas
+  (contraexemplo acima). Reescrito com o fato exato, não a aproximação.
+- **Comentário de `motoristas.ts` dizendo que `buscarCaminhao` devolve nulo
+  para caminhão arquivado** — falso; ele filtra só por empresa, de propósito
+  (é o que permite o caminhão arquivado continuar vinculável). O comentário
+  mentia sobre o próprio motivo da regra.
+- **"Cadastrar caminhão" nomeando duas ações diferentes** (navegar ao
+  formulário, no estado vazio, **e** gravar, no botão principal do
+  formulário) — mesmo defeito que "Cadastrar motorista" teria repetido.
+  `CLAUDE.md` §8: "uma ação, um nome". Padronizado nos três cadastros:
+  **"Cadastrar X"** sempre navega até o formulário (estado vazio, pílula
+  "+ Novo"), **"Salvar X"** sempre grava (botão principal do formulário, modo
+  criação — "Salvar alterações" já cobria a edição). Cliente já estava certo;
+  Caminhão e Motorista foram corrigidos junto, com `docs/componentes.md`
+  linhas 376–377 atualizadas. Caminhão está errado desde a tarefa 6 — mesma
+  classe do `LinhaDado`, corrigido aqui em vez de esperar uma tarefa própria.
+
+### Divergência do protótipo
+
+`TelaMotoristas.dc.html` tem um campo de CNH e um segundo campo de nome que
+não existem na especificação. Não incorporados — mesmo padrão das tarefas 5
+e 6 (`CLAUDE.md` §13: protótipo é evidência, a especificação decide os
+campos).
+
+### O que precisa chegar ao Design
+
+- **Texto do estado vazio de Motoristas** — não estava desenhado; construído
+  seguindo o padrão de Clientes/Caminhões.
+- **O convite "Cadastre um caminhão para vincular aqui."**, no formulário sem
+  caminhão cadastrado — não tocável, de propósito: navegar para
+  `/caminhoes/novo` perderia o que já foi digitado no formulário de
+  motorista, mesmo motivo da lacuna registrada para os Termos no cadastro
+  (§14 do `CLAUDE.md`).
+- **Os nomes "Salvar caminhão" e "Salvar motorista"** no botão principal do
+  formulário (antes "Cadastrar X" nos dois) — a fonte do Design ainda diz o
+  nome antigo.
+- **Telefone tocável e "Lançar frete com este motorista"**, que
+  `docs/navegacao.md` linha 42 já descreve para o perfil do motorista, ficam
+  de fora desta rodada — dependem de `Servico` (item 3). Mesma lacuna já
+  aceita para "Gerar relatório"/"Cobrar no WhatsApp" no perfil do cliente,
+  tarefa 5.
+
+### O que ficou provado rodando
+
+- `npm run lint`, `npx tsc --noEmit`, `npm run build` e `npm test` (125
+  testes, 9 arquivos — `tests/motoristas.test.ts` novo com 15 conferências,
+  `tests/isolamento/vazamento.test.ts` estendido para `motorista`) verdes,
+  antes e depois das correções do `/auditar-tela`/`/revisar`;
+- fluxo completo no navegador: Mais → Motoristas (vazio, só "Cadastrar
+  motorista") → + Novo → documento inválido recusado com erro abaixo do
+  campo → corrigido → caminhão habitual escolhido por chip → salvar (vai
+  para a lista) → perfil → Editar → caminhão habitual arquivado em outra aba
+  → volta a aparecer marcado "(arquivado)" no perfil, no formulário e na
+  lista → Arquivar motorista → sumiu da lista. Os três perfis (Cliente,
+  Caminhão, Motorista) reconferidos depois da unificação do `LinhaDePerfil`.
+
+**Próxima: item 3 — Lançamento de frete.** Precisa de plano novo em
+`docs/planos/` (`CLAUDE.md` §2) — este arquivo (`item-2-cadastros.md`) fecha
+com esta tarefa.
+
+---
+
 ## 10/08/2026 — tarefa 6: Caminhões — tabela, lista, perfil e formulário
 
 Fecha a tarefa 6 do item 2, e com ela as duas telas que o plano registrava como

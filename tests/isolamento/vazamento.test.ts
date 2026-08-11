@@ -60,6 +60,14 @@ const semear = async (id: string, nome: string) => {
      VALUES (gen_random_uuid(), $1, $2)`,
     [id, `Caminhão ${nome}`],
   );
+  // Um Motorista por empresa (tarefa 7 do item 2), mesma razão acima. A
+  // regra de negócio (documento, unicidade, arquivamento, caminhão habitual
+  // restrito à própria empresa) é testada em `tests/motoristas.test.ts`.
+  await raiz.query(
+    `INSERT INTO "motorista" (id, empresa_id, nome)
+     VALUES (gen_random_uuid(), $1, $2)`,
+    [id, `Motorista ${nome}`],
+  );
 };
 
 beforeAll(async () => {
@@ -70,9 +78,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // `cliente`, `veiculo` e `tipo_operacao` são `RESTRICT`/`CASCADE` de
-  // propósito (`docs/especificacao.md`, `CLAUDE.md` §7) — `cliente`/`veiculo`
-  // bloqueariam o `DELETE` de "empresa" se não saíssem primeiro.
+  // `cliente`, `veiculo`, `motorista` e `tipo_operacao` são `RESTRICT`/
+  // `CASCADE` de propósito (`docs/especificacao.md`, `CLAUDE.md` §7) —
+  // `cliente`/`veiculo`/`motorista` bloqueariam o `DELETE` de "empresa" se
+  // não saíssem primeiro. `motorista` referencia `veiculo`
+  // (`veiculo_habitual_id`), então sai antes dele.
+  await raiz.query(`DELETE FROM "motorista" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "cliente" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "veiculo" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "usuario" WHERE empresa_id IN ($1,$2)`, [A, B]);
@@ -156,6 +167,13 @@ describe("2. a empresa A não alcança a empresa B", () => {
       where: { empresa_id: { in: [A, B] } },
     });
     expect(veiculos.map((v) => v.empresa_id)).toEqual([A]);
+  });
+
+  it("o Motorista da empresa B é invisível (tarefa 7 do item 2)", async () => {
+    const motoristas = await db(A).motorista.findMany({
+      where: { empresa_id: { in: [A, B] } },
+    });
+    expect(motoristas.map((m) => m.empresa_id)).toEqual([A]);
   });
 
   it("a empresa B continua intacta depois de tudo", async () => {

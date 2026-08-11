@@ -6,7 +6,7 @@ import { EstadoVazio } from "@/components/ui/EstadoVazio";
 import { LinhaDeLista } from "@/components/ui/LinhaDeLista";
 import { PilulaEmLinha } from "@/components/ui/PilulaEmLinha";
 import { Botao } from "@/components/ui/Botao";
-import { iniciaisEmpresa } from "@/lib/utils/iniciais";
+import { iniciais } from "@/lib/utils/iniciais";
 import { normalizarParaBusca } from "@/lib/utils/texto";
 
 /**
@@ -63,7 +63,7 @@ export function ListaClientes({ clientes }: { clientes: Cliente[] }) {
         <LinhaDeLista
           key={cliente.id}
           href={`/clientes/${cliente.id}`}
-          iniciais={iniciaisEmpresa(cliente.nome)}
+          iniciais={iniciais(cliente.nome)}
           nome={cliente.nome}
           apoio={cliente.cidade ?? undefined}
         />

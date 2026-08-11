@@ -4,6 +4,7 @@ import { exigirSessao } from "@/lib/auth/sessao";
 import { db } from "@/lib/db";
 import { buscarCliente } from "@/lib/servicos/clientes";
 import { PilulaCabecalho } from "@/components/ui/PilulaCabecalho";
+import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
 import { formatarDocumento } from "@/lib/utils/documento";
 
 /**
@@ -81,10 +82,14 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           Identificação
         </span>
         <div className="flex flex-col gap-4">
-          <LinhaDado id={id} rotulo="Telefone" valor={cliente.telefone} />
-          <LinhaDado id={id} rotulo="Documento" valor={cliente.documento ? formatarDocumento(cliente.documento) : null} />
-          <LinhaDado id={id} rotulo="Endereço" valor={cliente.endereco} />
-          <LinhaDado id={id} rotulo="E-mail" valor={cliente.email} />
+          <LinhaDePerfil href={`/clientes/${id}/editar`} rotulo="Telefone" valor={cliente.telefone} />
+          <LinhaDePerfil
+            href={`/clientes/${id}/editar`}
+            rotulo="Documento"
+            valor={cliente.documento ? formatarDocumento(cliente.documento) : null}
+          />
+          <LinhaDePerfil href={`/clientes/${id}/editar`} rotulo="Endereço" valor={cliente.endereco} />
+          <LinhaDePerfil href={`/clientes/${id}/editar`} rotulo="E-mail" valor={cliente.email} />
         </div>
 
         <span className="px-4 pt-26 pb-6 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
@@ -103,32 +108,5 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
         </div>
       </div>
     </main>
-  );
-}
-
-/**
- * Uma linha de dado do perfil. Campo vazio mostra "adicionar" em verde,
- * tocável — nunca "não preenchido" (`docs/componentes.md` § "A palavra é
- * sempre 'adicionar'"). O toque leva para o formulário de edição.
- */
-function LinhaDado({ id, rotulo, valor }: { id: string; rotulo: string; valor: string | null }) {
-  return (
-    <div className="flex items-start gap-12 rounded-campo bg-separacao px-18 py-14">
-      <span className="w-96 flex-none pt-2 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
-        {rotulo}
-      </span>
-      {valor ? (
-        <span className="min-w-0 flex-1 text-campo leading-[1.35] font-semibold text-tinta [overflow-wrap:anywhere]">
-          {valor}
-        </span>
-      ) : (
-        <Link
-          href={`/clientes/${id}/editar`}
-          className="min-w-0 flex-1 text-campo font-semibold leading-[1.35] text-acao"
-        >
-          adicionar
-        </Link>
-      )}
-    </div>
   );
 }

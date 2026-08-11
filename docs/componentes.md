@@ -143,10 +143,10 @@ A terceira superfície do produto. **Superfície clara = dado do usuário · sup
 
 ## Iniciais da empresa
 
-Quando não há logo cadastrada, o círculo mostra as iniciais da empresa. **Regra única**, usada na dashboard, em Mais, em Conta da empresa, no convite e no cabeçalho do relatório A4:
+Quando não há logo cadastrada, o círculo mostra as iniciais da empresa. **Regra única**, usada na dashboard, em Mais, em Conta da empresa, no convite e no cabeçalho do relatório A4 — e também na linha de lista de Cliente e Motorista (decisão do fundador, tarefas 5 e 7: as duas regras coincidem para nome de pessoa digitado normalmente, e divergem só quando o nome vem todo em maiúsculas — caso em que esta regra lê a primeira palavra como sigla, mostrando até três letras em vez de duas. Consequência aceita, não motivo para criar agora a regra de pessoa, que ainda não existe em código). Por servir mais que a empresa, o código chama a função só de `iniciais`, não `iniciaisEmpresa`:
 
 ```js
-const iniciaisEmpresa = nome => {
+const iniciais = nome => {
   const p = String(nome || '').trim().split(/\s+/);
   const sigla = p[0] && p[0] === p[0].toUpperCase() && p[0].length <= 3;
   return (sigla ? p[0] : p.slice(0, 2).map(w => w[0]).join('')).toUpperCase();
@@ -155,7 +155,7 @@ const iniciaisEmpresa = nome => {
 
 Se a primeira palavra já é uma sigla em caixa alta de até 3 letras, ela **é** a inicial — senão, a primeira letra das duas primeiras palavras. Assim "AP Transportes" → **AP** (não "AT"), "AP Transportes Rodoviários Ltda" → **AP**, "Transportes São Jorge" → **TS**, "JBS" → **JBS**.
 
-Vale para a empresa. **Pessoa é outra regra**: sempre a primeira letra dos dois primeiros nomes — "Antônio Pereira" → AP, "Sandra do escritório" → SD. As duas coexistem na tela de Usuários (badge da empresa no topo, badge de cada pessoa nas linhas) e não podem ser trocadas uma pela outra.
+Esta é a regra da **empresa**. **Pessoa é outra regra**: sempre a primeira letra dos dois primeiros nomes — "Antônio Pereira" → AP, "Sandra do escritório" → SD. As duas coexistem na tela de Usuários (badge da empresa no topo, badge de cada pessoa nas linhas) e não podem ser trocadas uma pela outra.
 
 Círculo: `30px` no cartão da dashboard · `40px` em linha de lista · `48px` em Mais · `56px` em Conta e no convite · `46px` quadrado de raio 6 no A4. Fundo `#1B6B3A` com texto branco (contorno preto no A4, que é impresso), `letter-spacing:.02em`.
 
@@ -373,8 +373,8 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Perfil do caminhão | sem principal · **Editar** no cabeçalho · km e R$/km só aparecem com km preenchido; sem km, convite curto |
 | Perfil do motorista | principal **Lançar frete com este motorista** · **Editar** no cabeçalho · telefone tocável abre a conversa |
 | Cadastro / edição de cliente | principal **Salvar cliente** / **Salvar alterações**, desabilitada até ter nome · texto destrutiva **Arquivar cliente** no fim do formulário rolável |
-| Cadastro / edição de motorista | principal **Cadastrar motorista** / **Salvar alterações**, desabilitada até ter nome · texto destrutiva **Arquivar motorista** no fim |
-| Cadastro / edição de caminhão | principal **Cadastrar caminhão** / **Salvar alterações**, desabilitada até ter **apelido ou placa** — os dois identificam o caminhão, e quem só sabe a placa cadastra pela placa · chips de escolha para **TIPO** — **Toco · Truck · Bitruck · Carreta · Bitrem**, campo opcional, decisão do fundador em 10/08/2026 (`docs/especificacao.md`, entidade Veiculo) · texto destrutiva **Arquivar caminhão** no fim. **Sem campo de ano**: não alimenta cálculo, relatório, cobrança nem ordem |
+| Cadastro / edição de motorista | principal **Salvar motorista** / **Salvar alterações**, desabilitada até ter nome · texto destrutiva **Arquivar motorista** no fim |
+| Cadastro / edição de caminhão | principal **Salvar caminhão** / **Salvar alterações**, desabilitada até ter **apelido ou placa** — os dois identificam o caminhão, e quem só sabe a placa cadastra pela placa · chips de escolha para **TIPO** — **Toco · Truck · Bitruck · Carreta · Bitrem**, campo opcional, decisão do fundador em 10/08/2026 (`docs/especificacao.md`, entidade Veiculo) · texto destrutiva **Arquivar caminhão** no fim. **Sem campo de ano**: não alimenta cálculo, relatório, cobrança nem ordem |
 | Despesas — lista | sem principal · pílula de cabeçalho **+ Nova** · chips de Período e Categoria |
 | Despesas — cadastro | principal **Salvar despesa** · teclado numérico próprio para o valor · chips de categoria e de vínculo |
 | Despesas — vazia | principal **Lançar a primeira despesa** · explica que o Lucro aparece quando houver despesa |
