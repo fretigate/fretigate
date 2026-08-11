@@ -280,6 +280,88 @@ mesmas regras de documento do Cliente, e as telas de lista, perfil e formulário
 reusando as peças da tarefa 5. "Lançar frete com este motorista" fica para o
 item 3.
 
+### Banco de dados
+
+`documento` segue **exatamente** a regra de `Cliente`: mesmo `CHECK` de
+formato, mesmo índice único parcial por empresa entre os não arquivados,
+arquivamento libera o documento. RLS, política de isolamento e `GRANT` (sem
+`DELETE`) no mesmo commit da tabela, como toda tabela de domínio. Sem `ativo` —
+mesmo motivo de `Veiculo`.
+
+`veiculo_habitual_id` referencia `veiculo(id)`, opcional, `ON DELETE
+RESTRICT` — mesmo padrão das outras referências do domínio.
+
+**O achado que virou regra permanente do `CLAUDE.md` §3:** o Postgres não
+aplica RLS ao verificar chave estrangeira, então gravar aí o identificador de
+um caminhão de **outra** empresa passaria pelo banco sem erro. O serviço de
+Motorista confere que o caminhão pertence à mesma empresa antes de gravar, com
+teste próprio — e a regra fica escrita para toda referência futura entre
+tabelas de domínio (frete → cliente/caminhão/motorista, título → frete), não
+só para este campo.
+
+### Regra de iniciais (decisão do fundador, 10/08/2026)
+
+O círculo da lista usa a **regra de empresa**, não a de pessoa reservada a
+`Usuario` — as duas dão o mesmo resultado para nome de pessoa, e criar a regra
+de pessoa agora seria código novo para o mesmo resultado. `iniciaisEmpresa`
+ganha um nome neutro (`iniciais`), já que passa a servir Cliente **e**
+Motorista — o nome antigo ficaria errado aplicado a motorista. Atualiza o
+import em `ListaClientes.tsx` e a menção em `docs/componentes.md`.
+
+### Telas
+
+Reusa as peças da tarefa 5: `LinhaDeLista`, `CampoBusca`, `PilulaCabecalho`,
+`EstadoVazio`.
+
+- **Lista**: nome e, quando houver, o caminhão habitual como texto de apoio —
+  é o dado que mais ajuda a diferenciar um motorista do outro hoje.
+- **Perfil**: identificação (telefone, documento, caminhão habitual) e Editar
+  no cabeçalho. Sem resumo, histórico nem "Lançar frete com este motorista" —
+  dependem de `Servico` (item 3), mesmo precedente do perfil de Cliente e
+  Caminhão.
+- **Formulário**: Nome, Telefone, Documento, e "Caminhão habitual" como chips
+  (reusa `ChipEscolha`, um por caminhão ativo da empresa, campo opcional com
+  des-seleção por toque — mesma técnica do chip de Tipo do Caminhão). Sem
+  caminhão cadastrado, um texto convida a cadastrar um em vez de chips vazios.
+
+  Se o caminhão habitual atual foi arquivado depois de vinculado, ele continua
+  aparecendo como opção na edição — para não sumir um vínculo que ninguém
+  decidiu desfazer —, mas **marcado visualmente como arquivado**, para não
+  parecer uma opção válida igual às outras.
+
+  **Limite do formato, registrado para quem construir depois não descobrir
+  sozinho:** um chip por caminhão funciona para a faixa de 5 a 10 veículos que
+  é o segmento do produto (`CLAUDE.md` §1). Acima disso o formato vira lista
+  de seleção, não chip — este componente não escala para frota grande.
+- **Telefone tocável**: fica para depois, mesma lacuna do Cliente. Registra
+  que agora são dois perfis com essa pendência.
+- **Chip de ordenação**: não entra — só existe "mais recente" até o item 3
+  trazer a segunda ordenação.
+- **Estado vazio**: sem desenho do Design ainda; construído seguindo o padrão
+  de Clientes/Caminhões, com a lacuna registrada.
+
+### Divergência do protótipo
+
+`TelaMotoristas.dc.html` tem um campo de CNH e um segundo campo de nome que
+não existem na especificação. Registrada como não incorporada — mesmo padrão
+das tarefas 5 e 6 (`CLAUDE.md` §13: protótipo é evidência, a especificação
+decide os campos).
+
+### Testes
+
+`tests/motoristas.test.ts`, no formato de `clientes.test.ts` (nome
+obrigatório, documento formato/unicidade/arquivamento, listar/buscar/editar/
+isolamento), mais um teste novo: caminhão habitual de outra empresa é
+recusado.
+
+`tests/isolamento/vazamento.test.ts`: `motorista` entra no `semear()`, e a
+limpeza do fim apaga `motorista` **antes** de `veiculo` — senão o `DELETE` do
+caminhão esbarraria na referência.
+
+### Ao final
+
+`/auditar-tela` em cada tela nova, `/revisar` antes de pedir o commit.
+
 ---
 
 ## O que NÃO entra nesta rodada

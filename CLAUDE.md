@@ -159,6 +159,19 @@ registro da empresa B, o produto acaba — o setor é competitivo e a notícia c
   poderão. Fechar só para a seed moveria o problema em vez de fechá-lo
   (decisão de 09/08/2026).
 
+- **O Postgres não aplica RLS ao verificar chave estrangeira.** Toda
+  referência de uma tabela de domínio para outra — frete apontando para
+  cliente, caminhão e motorista; título apontando para frete; motorista
+  apontando para o caminhão habitual — tem o mesmo furo: um `INSERT`/`UPDATE`
+  gravando o identificador de uma linha de **outra** empresa nesse campo passa
+  pelo banco sem erro, porque a checagem de integridade referencial não
+  participa da política de isolamento. **Toda referência desse tipo precisa
+  de conferência no serviço, de que o alvo pertence à mesma empresa, antes de
+  gravar — e de um teste próprio.** As camadas de isolamento do §3 (RLS,
+  contraste, concorrência) não cobrem integridade referencial; é uma garantia
+  separada. Achado na tarefa 7 do item 2 (11/08/2026), com `Motorista.
+  veiculo_habitual_id`.
+
 Na dúvida sobre como garantir isso num caso específico: **pare e pergunte**.
 
 ### Como o isolamento é provado
