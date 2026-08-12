@@ -1,7 +1,7 @@
 import { db, emTransacao } from "@/lib/db";
-import { buscarCliente } from "@/lib/servicos/clientes";
-import { buscarCaminhao } from "@/lib/servicos/caminhoes";
-import { buscarMotorista } from "@/lib/servicos/motoristas";
+import { buscarCliente, listarClientes } from "@/lib/servicos/clientes";
+import { buscarCaminhao, listarCaminhoes } from "@/lib/servicos/caminhoes";
+import { buscarMotorista, listarMotoristas } from "@/lib/servicos/motoristas";
 import { buscarTipoOperacao } from "@/lib/servicos/tipos-de-operacao";
 import { resolverMunicipio } from "@/lib/servicos/municipios";
 
@@ -224,4 +224,151 @@ export function arquivarServico(empresaId: string, id: string) {
     data: { arquivado_em: new Date() },
     select: CAMPOS,
   });
+}
+
+/**
+ * Leituras para a tela de lançamento (Tarefa 2) — `docs/especificacao.md`
+ * §4.1. Ficam aqui, não em `clientes.ts`/`caminhoes.ts`/`motoristas.ts`,
+ * porque a fonte é `Servico`, não a entidade em si.
+ */
+
+/**
+ * Cliente/caminhão/motorista pré-preenchidos com o **último `Servico`
+ * lançado pela empresa** — não por usuário (decisão do fundador,
+ * `docs/planos/item-3-lancamento-frete.md`, Tarefa 2).
+ */
+export function buscarUltimoServico(empresaId: string) {
+  return db(empresaId).servico.findFirst({
+    where: { arquivado_em: null },
+    orderBy: { criado_em: "desc" },
+    select: {
+      cliente_id: true,
+      veiculo_id: true,
+      motorista_id: true,
+      origem_texto: true,
+    },
+  });
+}
+
+/**
+ * A folha de busca lista "ordenada por uso mais recente" (`docs/
+ * especificacao.md` §4.1), não por data de cadastro. Quem nunca entrou num
+ * frete fica no fim, na ordem de `listarClientes` (mais recém-cadastrado
+ * primeiro) — `Array.prototype.sort` é estável, então o empate preserva essa
+ * ordem sem precisar de critério de desempate escrito à mão.
+ */
+export async function listarClientesPorUsoRecente(empresaId: string) {
+  const [clientes, usos] = await Promise.all([
+    listarClientes(empresaId),
+    db(empresaId).servico.groupBy({
+      by: ["cliente_id"],
+      where: { arquivado_em: null },
+      _max: { data_servico: true },
+    }),
+  ]);
+  const ultimoUso = new Map(
+    usos.map((u) => [u.cliente_id, u._max.data_servico?.getTime() ?? 0]),
+  );
+  return clientes
+    .slice()
+    .sort((a, b) => (ultimoUso.get(b.id) ?? 0) - (ultimoUso.get(a.id) ?? 0));
+}
+
+/** Mesma regra de `listarClientesPorUsoRecente`, para caminhão. */
+export async function listarCaminhoesPorUsoRecente(empresaId: string) {
+  const [caminhoes, usos] = await Promise.all([
+    listarCaminhoes(empresaId),
+    db(empresaId).servico.groupBy({
+      by: ["veiculo_id"],
+      where: { arquivado_em: null, veiculo_id: { not: null } },
+      _max: { data_servico: true },
+    }),
+  ]);
+  const ultimoUso = new Map(
+    usos.map((u) => [u.veiculo_id, u._max.data_servico?.getTime() ?? 0]),
+  );
+  return caminhoes
+    .slice()
+    .sort((a, b) => (ultimoUso.get(b.id) ?? 0) - (ultimoUso.get(a.id) ?? 0));
+}
+
+/** Mesma regra de `listarClientesPorUsoRecente`, para motorista. */
+export async function listarMotoristasPorUsoRecente(empresaId: string) {
+  const [motoristas, usos] = await Promise.all([
+    listarMotoristas(empresaId),
+    db(empresaId).servico.groupBy({
+      by: ["motorista_id"],
+      where: { arquivado_em: null, motorista_id: { not: null } },
+      _max: { data_servico: true },
+    }),
+  ]);
+  const ultimoUso = new Map(
+    usos.map((u) => [u.motorista_id, u._max.data_servico?.getTime() ?? 0]),
+  );
+  return motoristas
+    .slice()
+    .sort((a, b) => (ultimoUso.get(b.id) ?? 0) - (ultimoUso.get(a.id) ?? 0));
+}
+
+/**
+ * Quantas linhas os chips de destino/carga mostram. Decisão do fundador,
+ * revisão da Tarefa 2: cinco, igual `SUGESTOES` em
+ * `src/lib/servicos/municipios.ts` — mesmo teto, mesmo motivo (cabe acima do
+ * teclado aberto sem rolar).
+ */
+const CHIPS_DE_HISTORICO = 5;
+
+/**
+ * Chips de destino — "os destinos já usados **com aquele cliente**" (§4.1).
+ * `distinct` junto de `orderBy` mantém a primeira linha (a mais recente) de
+ * cada texto repetido, então o resultado já sai deduplicado por recência.
+ */
+export async function listarDestinosDoCliente(
+  empresaId: string,
+  clienteId: string,
+): Promise<string[]> {
+  const linhas = await db(empresaId).servico.findMany({
+    where: { cliente_id: clienteId, arquivado_em: null, destino_texto: { not: null } },
+    select: { destino_texto: true },
+    distinct: ["destino_texto"],
+    orderBy: { criado_em: "desc" },
+    take: CHIPS_DE_HISTORICO,
+  });
+  return linhas.flatMap((l) => (l.destino_texto ? [l.destino_texto] : []));
+}
+
+/**
+ * Chips de carga — "as cargas que o **próprio usuário** já digitou" (§4.1),
+ * ou seja, o histórico da empresa inteira, não de um cliente. Mesma técnica
+ * de `distinct` + `orderBy` de `listarDestinosDoCliente`.
+ */
+export async function listarCargasRecentes(empresaId: string): Promise<string[]> {
+  const linhas = await db(empresaId).servico.findMany({
+    where: { arquivado_em: null, carga_texto: { not: null } },
+    select: { carga_texto: true },
+    distinct: ["carga_texto"],
+    orderBy: { criado_em: "desc" },
+    take: CHIPS_DE_HISTORICO,
+  });
+  return linhas.flatMap((l) => (l.carga_texto ? [l.carga_texto] : []));
+}
+
+/**
+ * A sugestão de valor — "Última vez neste trecho: R$ X" (§4.1). Casa por
+ * cliente **e** o texto exato do destino; nunca preenche sozinho, só informa
+ * o que existe para o toque do usuário confirmar.
+ */
+export async function buscarUltimoValorDoTrecho(
+  empresaId: string,
+  clienteId: string,
+  destinoTexto: string,
+): Promise<number | null> {
+  const texto = destinoTexto.trim();
+  if (!clienteId || !texto) return null;
+  const servico = await db(empresaId).servico.findFirst({
+    where: { cliente_id: clienteId, destino_texto: texto, arquivado_em: null },
+    orderBy: { criado_em: "desc" },
+    select: { valor: true },
+  });
+  return servico?.valor ?? null;
 }

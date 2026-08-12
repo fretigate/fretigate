@@ -6,6 +6,129 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 11/08/2026 — tarefa 2 do item 3: a tela de Lançar frete
+
+Fecha a tarefa 2 do item 3 (`docs/planos/item-3-lancamento-frete.md`): a tela
+que materializa a tese do produto. Seis peças novas — `FolhaInferior`,
+`TecladoNumerico`, `FolhaDeCalendario`, `FolhaDeBusca`, `CadastroRapido` (para
+cliente, caminhão e motorista) — mais a tela em si (`src/app/(app)/fretes/
+novo/`), com cabeçalho fixo (data + valor), meio rolável (as seis linhas + km)
+e rodapé fixo (a exceção documentada em `docs/componentes.md`, "Posição": o
+teclado numérico é sobreposição, e o salvar nunca fica coberto). O (+) da
+barra passou a abrir esta tela, como o item 2 já previa.
+
+**Data não estava na lista de seis linhas do plano** (cliente, caminhão,
+motorista, origem, destino, carga) mas é obrigatória para salvar
+(`docs/especificacao.md` §4.1) — construída no cabeçalho escuro, junto do
+valor, seguindo o protótipo de referência (evidência corroborante, `CLAUDE.md`
+§13) por não haver seção própria em `docs/componentes.md`.
+
+**Tipo de operação não aparece na tela**: só existe um ativo no MVP
+("Frete"), então o servidor resolve sozinho (`buscarTipoOperacaoAtivo`) — sem
+campo para escolher o que não há o que escolher.
+
+### `/revisar` — 12 divergências e 5 lacunas, tudo corrigido ou registrado
+
+Primeiro passe achou 12 divergências. O fundador decidiu corrigir 9 delas mais
+duas lacunas, e resolveu os três achados mais abertos na hora:
+
+- **Km era gravado sem converter para metros** — `CLAUDE.md` §7 e o
+  comentário do model `Servico` exigem metros; a conversão (×1000) agora
+  acontece em `src/app/(app)/fretes/acoes.ts`, no mesmo lugar que já
+  normaliza o resto da entrada.
+- **Cadastro rápido sem schema no servidor** — as três ações
+  (`criarClienteRapidoAction`/`criarCaminhaoRapidoAction`/
+  `criarMotoristaRapidoAction`) agora validam com `zod`, mesma regra de
+  `prazo_pagamento_dias` que `clientes/acoes.ts` já usa, e `tipo` restrito ao
+  inventário de `TIPOS_VEICULO`.
+- **`autoFocus` na busca abria o teclado sozinho** — contra o texto exato da
+  especificação. Removido.
+- **Círculo de iniciais no caminhão** — regra é só de cliente/motorista
+  (`ListaCaminhoes.tsx` já registra a decisão contrária). `LinhaDeLista`
+  ganhou `iniciais` opcional; quem decide quem ganha o círculo agora é quem
+  monta a lista (`TelaLancarFrete.tsx`), não o componente da folha.
+- **Sombra no teclado numérico** — removida; sombra é exclusiva do aviso do
+  sistema.
+- **Fonte fora do sistema e alvo de toque pequeno no "Trocar"** — trocado
+  para `text-etiqueta` (10.5px, o menor token que existe) e `min-h-48`.
+- **Pré-preenchia com cliente/caminhão/motorista arquivado** — a tela mostrava
+  "Escolher cliente" mas mandava o id arquivado do mesmo jeito. Corrigido em
+  `page.tsx`: só entra em `padrao` quem está na lista ativa.
+- **Fuso horário — o achado mais grave.** "Hoje/Ontem/Amanhã" e o calendário
+  usavam `Date` local (`getDate`, `new Date(ano,mes,dia)`), que lê o fuso de
+  quem roda o código, não o de Fortaleza que `CLAUDE.md` §7 exige. O teste
+  manual passou por coincidência — a máquina de teste também estava em
+  UTC-3 — e em produção (Vercel, UTC) "hoje" viraria "ontem" depois das 21h.
+  Criado `src/lib/utils/data-fortaleza.ts`: todo dia vira uma string
+  `"AAAA-MM-DD"` extraída com `Intl.DateTimeFormat` de fuso nomeado, e toda
+  aritmética de calendário usa `Date.UTC`/`getUTC*`, nunca os métodos locais.
+  `tests/data-fortaleza.test.ts` roda a suíte inteira com `TZ=UTC` (fuso
+  diferente do de quem escreveu isto e do de Fortaleza) e prova o caso exato
+  da virada — 02h30 UTC ainda é 23h30 do dia anterior em Fortaleza — para não
+  passar por coincidência de novo.
+- **Erro de campo em silêncio** — `criarServicoAction` já roteava o erro para
+  `veiculoId`/`motoristaId`/`valorCentavos`/`dataServico`, mas a tela só
+  mostrava `clienteId` e o erro geral. Os quatro agora aparecem.
+- **Chips de destino e carga: 5, não 8** — mesmo teto de `SUGESTOES` em
+  `src/lib/servicos/municipios.ts`, mesmo motivo (cabe acima do teclado).
+
+**Dois achados resolvidos na hora pelo fundador, sem precisar de Design:**
+
+- **Raio da folha inferior: 22px, não 28px.** `docs/componentes.md` §11/§12
+  escrevem `28px 28px 0 0`; `docs/estilo.md` § Formas diz `22px`. Mesmo
+  conflito já resolvido antes para o respiro da barra e a elevação do (+), e
+  a mesma resolução vale: quem manda em raio é o `estilo.md`. `componentes.md`
+  precisa ser corrigido pelo Design — pendência abaixo.
+- **Pílula "Última vez neste trecho" — pílula em linha (04), não pílula
+  sobre escuro (05).** A 05 é exclusiva do cartão preto da dashboard e do
+  aviso do sistema; a 04 já serve para elemento tocável em conteúdo, que é
+  o que a sugestão é. `PilulaSobreEscuro.tsx`, criado nesta tarefa, foi
+  removido por ficar sem nenhum uso real depois da correção.
+
+**Uma investigada e descartada:** a cor `#3C443E` ("chip de sugestão") no §
+Cores de `estilo.md` é formalizada (linha de tabela, não citação solta), mas
+só define a **tinta do texto**, não altura/fundo/raio — não há componente
+"chip de sugestão" completo em lugar nenhum do inventário. Mantido o padrão
+dos chips existentes (pílula em linha); registrado como lacuna abaixo, não
+corrigido, por não haver o que implementar sem inventar medida.
+
+Segundo passe do `/revisar` **não rodou** — todas as nove correções são da
+mesma classe já vista no primeiro passe (`CLAUDE.md` §2).
+
+### Lacunas registradas, não corrigidas
+
+- Estilo exato da pílula de sugestão de valor sobre o cartão escuro — sem
+  variante fechada em `componentes.md`; o que existe hoje (pílula em linha
+  padrão) é decisão provisória do fundador, não pendência de Design.
+- Encolhimento do número-herói do valor por quantidade de dígitos — citado em
+  `estilo.md` § Conflitos, remete a uma seção que não existe mais em
+  `componentes.md`. Não implementado.
+- "Chips de escolha" citados para a Folha de busca em "Onde cada tela usa o
+  quê" — a folha construída não tem nenhum, e o documento não diz o que eles
+  selecionariam.
+
+### Pendências para o Design
+
+- Unificar `docs/componentes.md` §11/§12 (`28px 28px 0 0`) com
+  `docs/estilo.md` § Formas (`22px`) para "folha inferior (topo)" — o código
+  segue o `estilo.md`.
+- `docs/componentes.md` §11, linha 282: remover "Categoria da CNH" do
+  cadastro rápido de motorista (achado no plano, 11/08/2026 — o campo não
+  existe na entidade `Motorista`).
+- `docs/navegacao.md` linha 18 diverge de `docs/especificacao.md` §4.1 sobre
+  origem/destino/carga usarem folha de busca ou não (achado no plano).
+
+**Cronômetro dos 30 segundos — pendente, é o portão de saída da tarefa.**
+Fluxo completo testado no navegador (lançar do zero com cadastro rápido nos
+três campos, chips de destino/carga, sugestão de valor, calendário,
+município não resolvido, salvar e recarregar com pré-preenchimento), mas a
+medição de verdade precisa do celular do fundador — não fecha sem ela.
+
+**Próxima:** cronometrar no celular; se bater a meta, tarefa 2 fecha e a
+tarefa 3 (aviso do sistema + "Já recebi") começa.
+
+---
+
 ## 11/08/2026 — tarefa 1 do item 3: Servico, e a esteira passou a provar as migrations do zero
 
 Fecha a tarefa 1 do item 3, conforme `docs/planos/item-3-lancamento-frete.md`

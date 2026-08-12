@@ -53,3 +53,18 @@ export function buscarTipoOperacao(empresaId: string, id: string) {
     select: { id: true, nome: true, ativo: true, arquivado_em: true },
   });
 }
+
+/**
+ * O único tipo ativo do MVP ("Frete") — a tela de lançamento não pergunta o
+ * tipo de operação, porque só existe um pra escolher (`CLAUDE.md` §12: "o
+ * MVP entrega só a experiência de transportadora de carga"). Toda empresa
+ * nasce com exatamente um `TipoOperacao` ativo (`TIPOS_DE_OPERACAO_INICIAIS`
+ * acima), então nulo aqui é falha de dado, não caso normal a tratar na tela.
+ */
+export function buscarTipoOperacaoAtivo(empresaId: string) {
+  return db(empresaId).tipoOperacao.findFirst({
+    where: { ativo: true, arquivado_em: null },
+    select: { id: true, nome: true },
+    orderBy: { ordem: "asc" },
+  });
+}
