@@ -16,8 +16,29 @@ ainda** — só registrado para não se perder. A tarefa 2 **continua aberta**:
 o commit já feito não fecha a tarefa até o cronômetro medir os 30 segundos
 de verdade, e este achado é o que está travando essa medição agora.
 
-**Próxima:** investigar e corrigir este achado, medir o cronômetro no
-celular, e só então fechar a tarefa 2.
+### Como testar no celular — vale toda vez que for cronometrar
+
+Precisa dos dois de novo a cada sessão nova de teste (nenhum dos dois é
+permanente sozinho):
+
+1. **Subir o servidor de desenvolvimento ouvindo a rede, não só a própria
+   máquina**: `npm run dev -- -H 0.0.0.0` (já é o comando configurado em
+   `.claude/launch.json`, roda sozinho ao abrir o preview).
+2. **Achar o endereço desta máquina na rede local** (muda se trocar de
+   rede): no PowerShell, `Get-NetIPAddress -AddressFamily IPv4 | Where-
+   Object { $_.InterfaceAlias -notmatch 'Loopback' -and $_.IPAddress
+   -notlike '169.254.*' }`.
+3. No celular, **mesma rede Wi-Fi** desta máquina, abrir
+   `http://<endereço-do-passo-2>:3000`.
+
+`next.config.ts` (`allowedDevOrigins`) já cobre qualquer endereço de rede
+privada (`192.168.*.*`, `10.*.*.*`) — não precisa mexer nele de novo ao
+trocar de rede, só o passo 2 muda. Se a página não abrir, pode ser o
+Firewall do Windows bloqueando a porta 3000 na rede local — liberar
+manualmente se acontecer.
+
+**Próxima:** investigar e corrigir o achado do teclado, medir o cronômetro
+no celular, e só então fechar a tarefa 2.
 
 ---
 
