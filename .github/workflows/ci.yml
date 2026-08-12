@@ -60,9 +60,9 @@ jobs:
       # A mesma trava que protege `npm test` (tests/guarda-de-banco.ts), rodada
       # como script avulso — ela já valida `process.env` na própria importação.
       # Sem isto, só `npm test` era protegido: um secret do GitHub apontado
-      # para o projeto errado faria `prisma migrate deploy`, abaixo, aplicar
-      # DDL num banco que não é nem de desenvolvimento nem de teste, sem
-      # ninguém avisar — mais destrutivo que a suíte, e sem a mesma defesa.
+      # para um projeto desconhecido faria os passos abaixo (generate, o
+      # reset e o seed) rodar contra um banco que não é nem de
+      # desenvolvimento nem de teste, sem ninguém avisar.
       - run: node --env-file=.env tests/guarda-de-banco.ts
 
       - run: npx prisma generate
@@ -72,9 +72,33 @@ jobs:
       # a esteira para aqui.
       - run: npm run lint
 
-      # Projeto de teste novo — aplica o que ainda não foi aplicado.
-      # Idempotente: _prisma_migrations já registra o que passou.
-      - run: npx prisma migrate deploy
+      # Derruba o schema do projeto de teste e reaplica as migrations, TODAS,
+      # em sequência, do zero — não só o que ainda faltava.
+      #
+      # POR QUE, E NÃO `migrate deploy` (decisão do fundador, 11/08/2026)
+      # `migrate deploy` só aplica migration nova sobre o que já existia —
+      # nunca prova que a sequência inteira funciona partindo do nada, que é
+      # exatamente como a produção vai nascer no dia em que existir. Ninguém
+      # nunca tinha subido este banco do zero até a tarefa 1 do item 3
+      # (11/08/2026), e foi só fazendo isso que apareceram dois problemas
+      # reais: uma migration com checksum divergente do que está commitado
+      # (histórico, sem efeito de schema), e uma migration que achava que
+      # fechava função nova para a API pública e nunca fechou nada — os dois
+      # ficaram invisíveis rodando só `migrate deploy` incremental.
+      #
+      # O projeto de teste é o lugar certo pra isso: não tem dado real de
+      # cliente, é semeado e apagado pelos próprios testes a cada execução
+      # (CLAUDE.md §5). O custo é a esteira ficar mais lenta — reconstrói o
+      # banco inteiro a cada execução, em vez de só aplicar o que faltava.
+      #
+      # Trava PRÓPRIA antes deste passo, mais rígida que a de cima
+      # (tests/guarda-do-reset.ts): `migrate deploy` incremental num secret
+      # apontado para desenvolvimento por engano era inofensivo (reaplicava
+      # migration já aplicada). `migrate reset --force` não é — derruba o
+      # schema inteiro. A trava geral aprova desenvolvimento OU teste; esta
+      # aprova só teste.
+      - run: node --env-file=.env tests/guarda-do-reset.ts
+      - run: npx prisma migrate reset --force
 
       # Os 5.570 municípios do IBGE. Passo PRÓPRIO, nunca `postinstall`
       # (docs/especificacao.md §6): `npm install` roda a cada publicação na

@@ -554,9 +554,13 @@ o motivo, ou a suíte reprova.
 `nome_fantasia` · `razao_social` · `cnpj` · `telefone` · `email` · `endereco` ·
 `municipio_id` · `logo_url` · `chave_pix` · `dados_bancarios` ·
 `patio_endereco` · `patio_municipio_id` · `prazo_padrao_dias` ·
-`modelo_mensagem_cobranca` · `modelo_mensagem_ordem` · `plano` ·
-`periodicidade` · `status_assinatura` · `afiliado_id` · `origem_cadastro` ·
-`origem_declarada` · `termos_aceitos_em` · `termos_versao`
+`proximo_numero_servico` · `modelo_mensagem_cobranca` · `modelo_mensagem_ordem` ·
+`plano` · `periodicidade` · `status_assinatura` · `afiliado_id` ·
+`origem_cadastro` · `origem_declarada` · `termos_aceitos_em` · `termos_versao`
+
+**`proximo_numero_servico`** — contador interno, nunca exibido. Começa em 1;
+é dele que sai o `numero` sequencial de cada `Servico` da empresa (tarefa 1 do
+item 3, `docs/planos/item-3-lancamento-frete.md`).
 
 **`plano`** — `gratuito` | `pago`.
 

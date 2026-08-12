@@ -100,6 +100,12 @@ model Empresa {
   /// "vazio usa o padrão da empresa (15 dias)".
   prazo_padrao_dias Int @default(15)
 
+  /// Contador atômico do próximo `Servico.numero` desta empresa — começa em
+  /// 1, incrementado dentro da mesma transação que cria o serviço
+  /// (`src/lib/servicos/servicos.ts`), nunca `MAX(numero)+1` (corrida sob
+  /// concorrência). `docs/planos/item-3-lancamento-frete.md`, Tarefa 1.
+  proximo_numero_servico Int @default(1)
+
   /// §11 — a única pergunta declarada do produto, mais a origem por primeiro
   /// toque. Nenhum outro campo de pesquisa existe em lugar nenhum.
   origem_cadastro  String?
@@ -120,6 +126,7 @@ model Empresa {
   clientes       Cliente[]
   veiculos       Veiculo[]
   motoristas     Motorista[]
+  servicos       Servico[]
 
   @@map("empresa")
 }
@@ -203,6 +210,7 @@ model Usuario {
 
   sessions Session[]
   accounts Account[]
+  servicos Servico[]
 
   @@index([empresa_id])
   @@map("usuario")
@@ -256,6 +264,8 @@ model TipoOperacao {
   criado_em     DateTime  @default(now()) @db.Timestamptz(6)
   atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
   arquivado_em  DateTime? @db.Timestamptz(6)
+
+  servicos Servico[]
 
   /// Único por empresa: a mesma empresa nunca tem "frete" duas vezes, mas
   /// "frete" existe em todas as empresas.
@@ -317,6 +327,8 @@ model Cliente {
   /// `documento` para outro cadastro (ver acima).
   arquivado_em DateTime? @db.Timestamptz(6)
 
+  servicos Servico[]
+
   @@index([empresa_id])
   @@map("cliente")
 }
@@ -367,6 +379,7 @@ model Veiculo {
   /// `Motorista.veiculo_habitual`. Nunca lido direto (a leitura é sempre por
   /// `Motorista`), mas o Prisma exige o campo dos dois lados da relação.
   motoristas Motorista[]
+  servicos   Servico[]
 
   criado_em     DateTime  @default(now()) @db.Timestamptz(6)
   atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
@@ -413,6 +426,8 @@ model Motorista {
   /// §7 — nada é apagado. Preenchido = arquivado, e é o que libera o
   /// `documento` para outro cadastro (ver acima).
   arquivado_em DateTime? @db.Timestamptz(6)
+
+  servicos Servico[]
 
   @@index([empresa_id])
   @@map("motorista")
@@ -484,11 +499,126 @@ model Municipio {
   empresas Empresa[]
   clientes Cliente[]
 
+  /// As duas pontas de `Servico` — origem e destino nunca compartilham a
+  /// mesma relação nomeada, senão o Prisma não sabe qual FK cada lado é.
+  servicos_origem  Servico[] @relation("ServicoOrigem")
+  servicos_destino Servico[] @relation("ServicoDestino")
+
   /// Índice de PREFIXO. `text_pattern_ops` é o que faz `nome_normalizado LIKE
   /// 'forta%'` usar índice; sem ele o Postgres varre as 5.570 linhas a cada
   /// tecla digitada.
   @@index([nome_normalizado(ops: raw("text_pattern_ops"))])
   @@map("municipio")
+}
+
+enum StatusOperacionalServico {
+  em_andamento
+  finalizado
+  cancelado
+
+  @@map("status_operacional_servico")
+}
+
+enum OrigemLancamentoServico {
+  manual
+  importacao
+
+  @@map("origem_lancamento_servico")
+}
+
+/// O frete — a entidade central do produto (`docs/especificacao.md` §6).
+/// Chama-se `Servico`, não `Frete`, para comportar guincho e reboque depois
+/// sem reescrever nada (`CLAUDE.md` §9); a interface do MVP mostra "Frete",
+/// porque é o único tipo ativo hoje.
+///
+/// **Obrigatórios: `cliente_id`, `valor`, `data_servico`, `tipo_operacao_id`.**
+/// Nada mais trava o lançamento — a meta é lançar em até 30 segundos (§3).
+///
+/// **`origem_texto`/`destino_texto` guardam sempre o que foi digitado.**
+/// `origem_municipio_id`/`destino_municipio_id` são resolvidos quando
+/// possível, por `resolverMunicipio` (`src/lib/servicos/municipios.ts`) —
+/// e NUNCA bloqueiam o salvar quando o texto é ambíguo ou não encontrado.
+///
+/// **`km` é guardado em METROS, sem exceção ao `CLAUDE.md` §7** — mesmo
+/// sendo o número que a pessoa digita à mão. O item 12 traz `distancia_m`
+/// (a distância calculada por `DistanciaRota`) convivendo no mesmo
+/// registro; duas unidades para a mesma grandeza é o erro clássico que essa
+/// escolha evita. A tela (Tarefa 2) converte na exibição e na edição —
+/// quem digita "850" vê "850", o banco guarda 850000. Decisão do fundador,
+/// 11/08/2026.
+///
+/// **Quatro referências conferidas contra a empresa antes de gravar**
+/// (`cliente_id`, `veiculo_id`, `motorista_id`, `tipo_operacao_id`) — o
+/// Postgres não aplica RLS na checagem de chave estrangeira (`CLAUDE.md`
+/// §3). A conferência vive em `src/lib/servicos/servicos.ts`, com teste
+/// próprio para cada uma.
+///
+/// `numero` é sequencial por empresa, via o contador atômico
+/// `Empresa.proximo_numero_servico` — nunca `MAX(numero)+1`.
+///
+/// `ordem_enviada_em` e `comprovante_url` ficam nulos nesta fatia — nascem no
+/// item 5. `carga_categoria` fica sempre nulo — sem lista de categorias
+/// definida ainda (`docs/planos/item-3-lancamento-frete.md`).
+model Servico {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  numero Int
+
+  tipo_operacao_id String       @db.Uuid
+  tipo_operacao    TipoOperacao @relation(fields: [tipo_operacao_id], references: [id], onDelete: Restrict)
+
+  cliente_id String  @db.Uuid
+  cliente    Cliente @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
+
+  veiculo_id String?  @db.Uuid
+  veiculo    Veiculo? @relation(fields: [veiculo_id], references: [id], onDelete: Restrict)
+
+  motorista_id String?    @db.Uuid
+  motorista    Motorista? @relation(fields: [motorista_id], references: [id], onDelete: Restrict)
+
+  /// Pode ser futura — a ordem nasce antes da execução (CLAUDE.md §1).
+  data_servico DateTime @db.Timestamptz(6)
+
+  origem_texto        String?
+  origem_municipio_id Int?
+  origem_municipio    Municipio? @relation("ServicoOrigem", fields: [origem_municipio_id], references: [codigo_ibge], onDelete: Restrict)
+
+  destino_texto        String?
+  destino_municipio_id Int?
+  destino_municipio    Municipio? @relation("ServicoDestino", fields: [destino_municipio_id], references: [codigo_ibge], onDelete: Restrict)
+
+  carga_texto     String?
+  carga_categoria String?
+
+  /// Centavos, inteiro (CLAUDE.md §7). Obrigatório.
+  valor Int
+
+  /// Metros, inteiro (CLAUDE.md §7) — mesmo sendo o número que a pessoa
+  /// digita à mão. Ver o comentário do model sobre o motivo de não ser
+  /// quilômetros.
+  km Int?
+
+  status_operacional StatusOperacionalServico @default(em_andamento)
+  origem_lancamento  OrigemLancamentoServico  @default(manual)
+
+  ordem_enviada_em DateTime? @db.Timestamptz(6)
+  comprovante_url  String?
+
+  /// Do usuário da sessão, nunca de input do formulário.
+  criado_por_usuario_id String
+  criado_por_usuario    Usuario @relation(fields: [criado_por_usuario_id], references: [id], onDelete: Restrict)
+
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  /// §7 — nada é apagado. Preenchido = arquivado.
+  arquivado_em DateTime? @db.Timestamptz(6)
+
+  @@unique([empresa_id, numero])
+  @@index([empresa_id])
+  @@map("servico")
 }
 
 // ---------------------------------------------------------------------------

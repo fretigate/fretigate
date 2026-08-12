@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { db } from "@/lib/db";
 
@@ -38,20 +39,27 @@ const semear = async (id: string, nome: string) => {
   // provar que a mesma política de isolamento vale para ele — não é a
   // criação real (`criarTiposDeOperacaoIniciais`), que já é testada em
   // `tests/cadastro.test.ts`; aqui o que importa é ter uma linha para
-  // tentar vazar.
+  // tentar vazar. Id gerado aqui, não `gen_random_uuid()` no SQL, porque o
+  // `Servico` semeado abaixo referencia esta linha por `VALUES` — nunca por
+  // `INSERT ... SELECT ... JOIN`, que grava zero linhas em silêncio se o
+  // `JOIN` vier vazio (§3, item 1: teste que passaria de qualquer jeito não
+  // prova nada).
+  const tipoOperacaoId = randomUUID();
   await raiz.query(
     `INSERT INTO "tipo_operacao" (id, empresa_id, nome, slug, ativo, ordem)
-     VALUES (gen_random_uuid(), $1, 'Frete', 'frete', true, 1)`,
-    [id],
+     VALUES ($1, $2, 'Frete', 'frete', true, 1)`,
+    [tipoOperacaoId, id],
   );
   // Um Cliente por empresa (tarefa 3 do item 2), pela mesma razão do
   // TipoOperacao acima: só o suficiente para ter uma linha para tentar
   // vazar. A regra de negócio (documento, unicidade, arquivamento) é
-  // testada em `tests/clientes.test.ts`.
+  // testada em `tests/clientes.test.ts`. Id gerado aqui, mesmo motivo do
+  // `tipoOperacaoId`.
+  const clienteId = randomUUID();
   await raiz.query(
     `INSERT INTO "cliente" (id, empresa_id, nome)
-     VALUES (gen_random_uuid(), $1, $2)`,
-    [id, `Cliente ${nome}`],
+     VALUES ($1, $2, $3)`,
+    [clienteId, id, `Cliente ${nome}`],
   );
   // Um Veiculo por empresa (tarefa 6 do item 2), mesma razão acima. A regra
   // de negócio (apelido ou placa, tipo) é testada em `tests/caminhoes.test.ts`.
@@ -68,6 +76,18 @@ const semear = async (id: string, nome: string) => {
      VALUES (gen_random_uuid(), $1, $2)`,
     [id, `Motorista ${nome}`],
   );
+  // Um Servico por empresa (tarefa 1 do item 3), mesma razão acima. A regra
+  // de negócio (as quatro conferências de FK, o contador de número, a
+  // resolução de município) é testada em `tests/servicos.test.ts`. `VALUES`
+  // com os ids já gerados acima, nunca `SELECT ... JOIN` — ver o motivo no
+  // comentário do `tipoOperacaoId`.
+  await raiz.query(
+    `INSERT INTO "servico"
+       (id, empresa_id, numero, tipo_operacao_id, cliente_id, data_servico,
+        valor, criado_por_usuario_id)
+     VALUES (gen_random_uuid(), $1, 1, $2, $3, now(), 10000, $4)`,
+    [id, tipoOperacaoId, clienteId, `u-${id}`],
+  );
 };
 
 beforeAll(async () => {
@@ -78,11 +98,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // `cliente`, `veiculo`, `motorista` e `tipo_operacao` são `RESTRICT`/
-  // `CASCADE` de propósito (`docs/especificacao.md`, `CLAUDE.md` §7) —
-  // `cliente`/`veiculo`/`motorista` bloqueariam o `DELETE` de "empresa" se
-  // não saíssem primeiro. `motorista` referencia `veiculo`
+  // `cliente`, `veiculo`, `motorista`, `tipo_operacao` e `servico` são
+  // `RESTRICT`/`CASCADE` de propósito (`docs/especificacao.md`,
+  // `CLAUDE.md` §7). `servico` referencia os quatro (tarefa 1 do item 3),
+  // então sai primeiro; `motorista` referencia `veiculo`
   // (`veiculo_habitual_id`), então sai antes dele.
+  await raiz.query(`DELETE FROM "servico" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "motorista" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "cliente" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "veiculo" WHERE empresa_id IN ($1,$2)`, [A, B]);
@@ -174,6 +195,13 @@ describe("2. a empresa A não alcança a empresa B", () => {
       where: { empresa_id: { in: [A, B] } },
     });
     expect(motoristas.map((m) => m.empresa_id)).toEqual([A]);
+  });
+
+  it("o Servico da empresa B é invisível (tarefa 1 do item 3)", async () => {
+    const servicos = await db(A).servico.findMany({
+      where: { empresa_id: { in: [A, B] } },
+    });
+    expect(servicos.map((s) => s.empresa_id)).toEqual([A]);
   });
 
   it("a empresa B continua intacta depois de tudo", async () => {

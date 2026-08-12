@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { PROJETOS_DE_TESTE, identificadorDoProjeto, validar } from "./guarda-de-banco";
+import {
+  PROJETOS_DE_TESTE,
+  PROJETO_DE_TESTE_CI,
+  identificadorDoProjeto,
+  validar,
+  validarSoTeste,
+} from "./guarda-de-banco";
 
 /**
  * A prova da tarefa 9b (`CLAUDE.md` §3, item 4).
@@ -21,7 +27,7 @@ function envPermitido(): Record<string, string> {
 }
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 6;
+const CONFERENCIAS_ESPERADAS = 9;
 
 describe("guarda-de-banco: a suíte só roda contra o projeto de teste certo", () => {
   it("identificadorDoProjeto reconhece o formato do Supabase (contraste)", () => {
@@ -68,6 +74,35 @@ describe("guarda-de-banco: a suíte só roda contra o projeto de teste certo", (
   it("NODE_ENV de produção recusa, mesmo com URLs permitidas", () => {
     expect(() =>
       validar({ ...envPermitido(), NODE_ENV: "production" }),
+    ).toThrow();
+    conferencias++;
+  });
+
+  it("validarSoTeste aprova o projeto de teste", () => {
+    const url = urlDoProjeto(PROJETO_DE_TESTE_CI);
+    expect(() =>
+      validarSoTeste({ DATABASE_URL: url, AUTH_DATABASE_URL: url, DIRECT_URL: url }),
+    ).not.toThrow();
+    conferencias++;
+  });
+
+  it("validarSoTeste recusa o projeto de desenvolvimento — diferente de validar", () => {
+    // O contraste que prova o motivo desta função existir: `validar` sozinho
+    // aprovaria isto (é um dos dois projetos permitidos). `validarSoTeste`
+    // não pode, porque quem chama é o passo que derruba o schema inteiro.
+    const desenvolvimento = PROJETOS_DE_TESTE.find((p) => p !== PROJETO_DE_TESTE_CI)!;
+    const url = urlDoProjeto(desenvolvimento);
+    const env = { DATABASE_URL: url, AUTH_DATABASE_URL: url, DIRECT_URL: url };
+
+    expect(() => validar(env)).not.toThrow();
+    expect(() => validarSoTeste(env)).toThrow();
+    conferencias++;
+  });
+
+  it("validarSoTeste recusa o que validar já recusaria", () => {
+    const url = urlDoProjeto("aaaaaaaaaaaaaaaaaaaa");
+    expect(() =>
+      validarSoTeste({ DATABASE_URL: url, AUTH_DATABASE_URL: url, DIRECT_URL: url }),
     ).toThrow();
     conferencias++;
   });

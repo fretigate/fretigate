@@ -1,3 +1,4 @@
+import { db } from "@/lib/db";
 import type { PrismaClient } from "@/lib/generated/prisma/client";
 
 /**
@@ -38,5 +39,17 @@ export async function criarTiposDeOperacaoIniciais(
       ...tipo,
       empresa_id: empresaId,
     })),
+  });
+}
+
+/**
+ * Usado por `src/lib/servicos/servicos.ts` para conferir `tipo_operacao_id`
+ * contra a empresa antes de gravar um `Servico` — o Postgres não aplica RLS
+ * na checagem de chave estrangeira (`CLAUDE.md` §3).
+ */
+export function buscarTipoOperacao(empresaId: string, id: string) {
+  return db(empresaId).tipoOperacao.findUnique({
+    where: { id },
+    select: { id: true, nome: true, ativo: true, arquivado_em: true },
   });
 }

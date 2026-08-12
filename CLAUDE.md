@@ -172,6 +172,29 @@ registro da empresa B, o produto acaba — o setor é competitivo e a notícia c
   separada. Achado na tarefa 7 do item 2 (11/08/2026), com `Motorista.
   veiculo_habitual_id`.
 
+- **Toda migration que cria função fecha aquela função na hora, com `REVOKE
+  EXECUTE` direto na função — nunca por `ALTER DEFAULT PRIVILEGES`.** Não
+  existe proteção genérica para função futura: no Postgres, função nova nasce
+  executável por todo mundo (`PUBLIC`), sempre, e `ALTER DEFAULT PRIVILEGES
+  ... ON FUNCTIONS ... FROM PUBLIC` **não tira isso** — medido, não deduzido,
+  na tarefa 1 do item 3 (11/08/2026): seis variações do comando testadas
+  (com e sem concessão prévia a outro papel, com e sem `FOR ROLE`, direto no
+  schema `public` e num schema criado do zero), e em nenhuma delas uma
+  função criada depois deixou de responder a `anon`/`authenticated` — inclusive
+  no banco de desenvolvimento real, não só num banco recriado do zero. A
+  única proteção que funciona, medida do mesmo jeito, é `REVOKE EXECUTE ON
+  FUNCTION <nome>() FROM PUBLIC`, direto na função, na mesma migration que a
+  cria — é o que já protegia `reverter_cadastro_incompleto` desde a tarefa 8,
+  e o motivo pelo qual ela nunca esteve exposta. A migration
+  `20260808052831_fecha_execucao_de_funcao_para_public`, que tentava fechar
+  por `ALTER DEFAULT PRIVILEGES`, nunca funcionou — foi removida (não só
+  corrigido o comentário) pela migration
+  `20260811120000_remove_default_privileges_de_funcao_que_nao_funciona`,
+  porque migration aplicada não se edita e um comando que parece proteger e
+  não protege é pior do que não ter nenhum. Quem mede se uma função nova foi
+  esquecida é `tests/isolamento/privilegios.test.ts` — sobre as funções que
+  **existem**, não sobre uma hipotética, pelo motivo escrito no arquivo.
+
 Na dúvida sobre como garantir isso num caso específico: **pare e pergunte**.
 
 ### Como o isolamento é provado
@@ -235,19 +258,24 @@ API REST pública, usada com a chave que **por desenho** fica no navegador.
 chave secreta, que nunca vai ao navegador. Vazar essa chave já seria incidente
 por conta própria, e revogá-la aqui não mudaria isso.
 
-**Isso vale mesmo depois de fechar `EXECUTE` de função para `PUBLIC` (tarefa
-9c).** `PUBLIC` não é um papel entre outros — é concedido implicitamente para
-todo mundo, e por isso a tabela/função nasce aberta por padrão. `service_role`
-não depende dessa concessão implícita: o próprio Supabase já dá a ele uma
-concessão **própria e nomeada**, separada de `PUBLIC` (confirmado direto no
-catálogo do banco: `{postgres=X/postgres,service_role=X/postgres}`, sem entrada
-de `PUBLIC`, depois do `REVOKE ... FROM PUBLIC`). Por isso revogar de `PUBLIC`
-nunca tira nada de `service_role`.
+**`PUBLIC` não é um papel entre outros — é concedido implicitamente para todo
+mundo**, e por isso função nova nasce executável por `PUBLIC` por padrão
+(tabela não; ver §3). A tarefa 9c tentou fechar isso por `ALTER DEFAULT
+PRIVILEGES`, achando que valeria para toda função futura; a tarefa 1 do item 3
+(11/08/2026) mediu que esse comando **nunca fechou nada**, e removeu a
+migration que tentava (§3). A proteção real é outra, e não depende de
+`PUBLIC` ter sido fechado por padrão: `service_role` tem uma concessão
+**própria e nomeada**, dada pelo próprio Supabase, separada de `PUBLIC`
+(confirmado no catálogo do banco), e cada função do produto fecha `PUBLIC`
+na hora, com `REVOKE EXECUTE` direto nela mesma (§3). Nenhuma das duas
+depende do privilégio padrão do schema.
 
-Quem confere é `tests/isolamento/privilegios.test.ts`, e ele confere o que esta
-regra manda conferir: nenhuma concessão a `anon`, `authenticated` ou `PUBLIC`,
-em nenhuma tabela ou função, hoje e nas que vierem (a parte de função e
-`PUBLIC` entrou na tarefa 9c).
+Quem confere é `tests/isolamento/privilegios.test.ts`. Para tabela, ele
+confere `anon`/`authenticated` também na tabela **futura** — o padrão do
+Postgres para tabela nasce fechado, então isso é uma regressão real de medir.
+Para função não existe equivalente: função futura nasce sempre aberta, medido
+(§3), então o teste confere `anon`, `authenticated` e `PUBLIC` em **toda
+função que existe** — é aí que uma função esquecida aparece.
 
 ### Upload de imagem (comprovante e logo)
 

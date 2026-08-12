@@ -27,10 +27,11 @@ const PAPEIS_DA_API_PUBLICA = ["anon", "authenticated"];
 
 /**
  * O mesmo, para função — mais `PUBLIC`. Tabela nunca precisou de `PUBLIC`
- * aqui porque a migration que fecha tabela já revogava dele desde o início.
- * Função não: o Postgres concede `EXECUTE` a `PUBLIC` por padrão, e é
- * exatamente isso que a migration `20260808052831_fecha_execucao_de_funcao_para_public`
- * fecha (tarefa 9c).
+ * aqui porque o Postgres não concede nada a `PUBLIC` em tabela nova. Função
+ * é diferente: o Postgres concede `EXECUTE` a `PUBLIC` por padrão em toda
+ * função nova, e isso só fecha com `REVOKE EXECUTE` direto, na própria
+ * função, na mesma migration que a cria — nunca por `ALTER DEFAULT
+ * PRIVILEGES` (`CLAUDE.md` §3, medido na tarefa 1 do item 3).
  */
 const GRANTEES_FUNCAO = [...PAPEIS_DA_API_PUBLICA, "PUBLIC"];
 
@@ -47,7 +48,60 @@ const CONFERENCIAS_ESPERADAS = 8;
 const cliente = new Client({ connectionString: process.env.DIRECT_URL });
 await cliente.connect();
 
-/** Concessões diretas, tabela por tabela. */
+/**
+ * Tabela futura: prova de VERDADE, não de registro.
+ *
+ * A versão anterior lia `pg_default_acl` — o registro de que um comando
+ * `ALTER DEFAULT PRIVILEGES` foi dado. Isso mede a INTENÇÃO, não o efeito.
+ * Por isso aqui se cria uma tabela de verdade — do mesmo jeito que qualquer
+ * migration cria — logo no início do arquivo, antes de qualquer outra
+ * consulta, para a consulta de "concessão direta" abaixo saber excluí-la (é
+ * fixture de teste, não tabela do produto). Mede se `anon`/`authenticated`
+ * alcançam.
+ *
+ * NÃO EXISTE EQUIVALENTE PARA FUNÇÃO, E A AUSÊNCIA É DE PROPÓSITO — não
+ * esquecimento. A tarefa 1 do item 3 (11/08/2026) tentou o mesmo probe para
+ * função e mediu, em seis variações de `ALTER DEFAULT PRIVILEGES`, que o
+ * Postgres concede `EXECUTE` a `PUBLIC` em TODA função nova, sem exceção,
+ * até no banco de desenvolvimento real — não é regressão, é o comportamento
+ * padrão dele. Um teste "função nova nasce fechada" reprovaria SEMPRE,
+ * disciplina nenhuma mudaria isso, e teste que reprova sempre ensina a
+ * ignorar vermelho tanto quanto um que nunca reprova (`CLAUDE.md` §3, item
+ * 4). A garantia real para função é outra: `REVOKE EXECUTE` direto, na
+ * própria função, na migration que a cria — e quem mede se isso foi
+ * lembrado é a verificação abaixo, sobre as funções que EXISTEM, não uma
+ * hipotética. `CLAUDE.md` §3 tem o mecanismo medido.
+ */
+const PROBE_TABELA = "privilegios_probe_tabela";
+
+await cliente.query(`DROP TABLE IF EXISTS "${PROBE_TABELA}"`);
+await cliente.query(`CREATE TABLE "${PROBE_TABELA}" (id int)`);
+
+/**
+ * O contraste do §3, item 1, aplicado a `has_table_privilege`: sem ele, nada
+ * prova que a consulta abaixo conseguiria acusar um vazamento se ele
+ * existisse — só que ela devolveu `false` desta vez. Concede de propósito,
+ * mede que a concessão aparece, revoga, e só então mede o estado real.
+ */
+await cliente.query(`GRANT SELECT ON "${PROBE_TABELA}" TO "anon"`);
+const contrasteTabelaFutura = await cliente.query<{ acesso: boolean }>(
+  `SELECT has_table_privilege('anon', $1, 'SELECT') AS acesso`,
+  [PROBE_TABELA],
+);
+await cliente.query(`REVOKE SELECT ON "${PROBE_TABELA}" FROM "anon"`);
+
+const acessoTabelaFutura = await cliente.query<{ papel: string; acesso: boolean }>(
+  `SELECT papel, has_table_privilege(papel, $1, 'SELECT') AS acesso
+     FROM unnest($2::text[]) AS papel`,
+  [PROBE_TABELA, PAPEIS_DA_API_PUBLICA],
+);
+
+/**
+ * Concessões diretas, tabela por tabela — só das tabelas do PRODUTO.
+ * `PROBE_TABELA` é criada de propósito com acesso aberto, para medir o
+ * padrão de tabela futura acima — incluí-la aqui a acusaria pelo motivo
+ * errado.
+ */
 const concessoes = await cliente.query<{
   grantee: string;
   table_name: string;
@@ -57,8 +111,9 @@ const concessoes = await cliente.query<{
      FROM information_schema.role_table_grants
     WHERE table_schema = 'public'
       AND grantee = ANY($1)
+      AND table_name != $2
     ORDER BY table_name, grantee`,
-  [PAPEIS_DA_API_PUBLICA],
+  [PAPEIS_DA_API_PUBLICA, PROBE_TABELA],
 );
 
 /**
@@ -77,23 +132,6 @@ const contraste = await cliente.query<{ grantee: string }>(
       AND table_name = 'session'`,
 );
 
-/**
- * Privilégios padrão: o que TABELA QUE AINDA NÃO EXISTE vai receber ao nascer.
- *
- * Filtrado por `postgres` de propósito — é ele quem roda as migrations, então é
- * o padrão dele que decide como a próxima tabela nasce.
- *
- * `'r'` é tabela comum no catálogo do Postgres.
- */
-const padraoFuturo = await cliente.query<{ acl: string }>(
-  `SELECT COALESCE(d.defaclacl::text, '') AS acl
-     FROM pg_default_acl d
-     JOIN pg_namespace n ON n.oid = d.defaclnamespace
-    WHERE n.nspname = 'public'
-      AND d.defaclobjtype = 'r'
-      AND pg_get_userbyid(d.defaclrole) = 'postgres'`,
-);
-
 /** Quantas tabelas existem, para nenhuma verificação passar sobre lista vazia. */
 const tabelas = await cliente.query<{ total: string }>(
   `SELECT count(*)::text AS total
@@ -104,7 +142,13 @@ const tabelas = await cliente.query<{ total: string }>(
 
 /** O mesmo bloco de consultas acima, espelhado para função (tarefa 9c). */
 
-/** Concessões diretas de EXECUTE, função por função. */
+/**
+ * Concessões diretas de EXECUTE, função por função — de TODA função que
+ * existe. Esta é a garantia real para função (ver o comentário de
+ * `PROBE_TABELA` acima): se uma migration futura criar função e esquecer o
+ * `REVOKE EXECUTE` direto, a função aparece aqui, com `PUBLIC` ou os papéis
+ * da API pública na lista — e a verificação reprova.
+ */
 const concessoesFuncoes = await cliente.query<{
   grantee: string;
   routine_name: string;
@@ -132,19 +176,6 @@ const contrasteFuncao = await cliente.query<{ grantee: string }>(
       AND routine_name = 'reverter_cadastro_incompleto'`,
 );
 
-/**
- * Privilégio padrão de função: o que FUNÇÃO QUE AINDA NÃO EXISTE vai receber
- * ao nascer. `'f'` é função no catálogo do Postgres (`'r'` acima é tabela).
- */
-const padraoFuturoFuncao = await cliente.query<{ acl: string }>(
-  `SELECT COALESCE(d.defaclacl::text, '') AS acl
-     FROM pg_default_acl d
-     JOIN pg_namespace n ON n.oid = d.defaclnamespace
-    WHERE n.nspname = 'public'
-      AND d.defaclobjtype = 'f'
-      AND pg_get_userbyid(d.defaclrole) = 'postgres'`,
-);
-
 /** Quantas funções existem, para nenhuma verificação passar sobre lista vazia. */
 const funcoes = await cliente.query<{ total: string }>(
   `SELECT count(*)::text AS total
@@ -154,6 +185,7 @@ const funcoes = await cliente.query<{ total: string }>(
 );
 
 afterAll(async () => {
+  await cliente.query(`DROP TABLE IF EXISTS "${PROBE_TABELA}"`);
   await cliente?.end();
 });
 
@@ -181,24 +213,27 @@ describe("a API pública do Supabase não alcança nada nosso", () => {
     conferencias++;
   });
 
-  it("tabela futura não nasce aberta para a API pública", () => {
-    // GUARDA CONTRA LAÇO VAZIO. Sem ela, zero linhas em `pg_default_acl` faria
-    // o laço abaixo não rodar, o contador incrementar e a verificação passar
-    // sem ter comparado nada — o defeito que este arquivo inteiro existe para
-    // impedir (§3, item 4).
-    //
-    // Zero linhas aqui não é "está tudo bem": é o padrão de privilégio do
-    // `postgres` tendo sumido, e sem ele a próxima tabela volta a herdar o
-    // padrão aberto do Supabase.
-    expect(padraoFuturo.rowCount).toBeGreaterThan(0);
+  it("a medição de acesso enxerga concessão quando ela existe (contraste)", () => {
+    // Sem isto, nada prova que a verificação seguinte (`has_table_privilege`
+    // sobre `PROBE_TABELA`) conseguiria acusar um vazamento se ele
+    // existisse — só que ela devolveu `false` desta vez.
+    expect(contrasteTabelaFutura.rows[0]?.acesso).toBe(true);
+    conferencias++;
+  });
 
-    // O privilégio padrão de `postgres` não pode mencionar os papéis da API
-    // pública. Se mencionar, a PRÓXIMA tabela nasce alcançável pela chave que
-    // fica no navegador — e nada no schema, no Prisma ou na revisão avisaria.
-    for (const { acl } of padraoFuturo.rows) {
-      for (const papel of PAPEIS_DA_API_PUBLICA) {
-        expect(acl).not.toContain(`${papel}=`);
-      }
+  it("tabela futura não nasce aberta para a API pública", () => {
+    // GUARDA CONTRA LAÇO VAZIO — a mesma proteção do §3, item 4, aplicada
+    // aqui à lista de papéis, não à lista de tabelas: se `PAPEIS_DA_API_PUBLICA`
+    // um dia ficasse vazia, o laço abaixo não rodaria e a verificação
+    // passaria sem ter medido nada.
+    expect(acessoTabelaFutura.rowCount).toBe(PAPEIS_DA_API_PUBLICA.length);
+
+    // Uma tabela de verdade foi criada agora mesmo (`PROBE_TABELA`), do
+    // jeito que qualquer migration cria uma. Se `anon`/`authenticated`
+    // alcançarem ELA, alcançariam a próxima tabela do produto também — e
+    // nada no schema, no Prisma ou na revisão avisaria.
+    for (const { papel, acesso } of acessoTabelaFutura.rows) {
+      expect(acesso, `${papel} não pode alcançar tabela nova`).toBe(false);
     }
     conferencias++;
   });
@@ -221,30 +256,16 @@ describe("a API pública do Supabase não alcança nenhuma função", () => {
   });
 
   it("`anon`, `authenticated` e `PUBLIC` não têm EXECUTE em nenhuma função", () => {
+    // Esta é a garantia real de função — não existe "função futura não nasce
+    // aberta" separada (ver o comentário de `PROBE_TABELA`, acima no
+    // arquivo): função nova SEMPRE nasce aberta no Postgres, e a única
+    // proteção é o `REVOKE EXECUTE` direto na migration que a cria. Esta
+    // verificação, sobre toda função que existe, é o que pega quem
+    // esquecer.
     const encontradas = concessoesFuncoes.rows.map(
       (r) => `${r.grantee} → ${r.routine_name} (${r.privilege_type})`,
     );
     expect(encontradas).toEqual([]);
-    conferencias++;
-  });
-
-  it("função futura não nasce aberta para a API pública", () => {
-    // Mesma guarda contra laço vazio da verificação equivalente de tabela.
-    expect(padraoFuturoFuncao.rowCount).toBeGreaterThan(0);
-
-    // O privilégio padrão de `postgres` para função não pode mencionar os
-    // papéis nomeados da API pública, nem conceder a `PUBLIC` — que é como
-    // este buraco foi encontrado na tarefa 8: revogar só de `anon` e
-    // `authenticated`, por nome, não fecha nada, porque os dois herdam de
-    // `PUBLIC` de qualquer forma. Na representação de ACL do Postgres,
-    // `PUBLIC` aparece como um item sem nome de papel antes do `=`
-    // (ex.: `=X/postgres`) — daí o regex, em vez de `.toContain("PUBLIC=")`.
-    for (const { acl } of padraoFuturoFuncao.rows) {
-      for (const papel of PAPEIS_DA_API_PUBLICA) {
-        expect(acl).not.toContain(`${papel}=`);
-      }
-      expect(acl).not.toMatch(/(^|[{,])=/);
-    }
     conferencias++;
   });
 });

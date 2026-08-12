@@ -1,0 +1,32 @@
+-- Remove o REVOKE ineficaz de 20260808052831_fecha_execucao_de_funcao_para_public.
+--
+-- O QUE FOI MEDIDO (tarefa 1 do item 3, 11/08/2026), NAO DEDUZIDO
+-- ALTER DEFAULT PRIVILEGES ... ON FUNCTIONS ... FROM PUBLIC nao impede
+-- funcao nova de nascer executavel por PUBLIC (e por extensao anon e
+-- authenticated, que herdam de PUBLIC). Testado em seis variacoes do
+-- comando -- com e sem concessao previa a outro papel, com e sem FOR ROLE,
+-- num schema criado do zero e no proprio "public" de desenvolvimento, que
+-- nunca foi resetado -- e em nenhuma delas uma funcao criada depois deixou
+-- de responder a anon/authenticated. O Postgres concede EXECUTE a PUBLIC em
+-- toda funcao nova, sempre; isso nao passa pelo mecanismo de privilegio
+-- padrao do mesmo jeito que tabela (tabela nao tem esse problema: o padrao
+-- do Postgres para tabela ja e fechado).
+--
+-- A migration 20260808052831 nunca protegeu funcao nenhuma, mas o registro
+-- que ela deixou em pg_default_acl PARECIA uma protecao -- foi exatamente
+-- esse registro que enganou a investigacao antes de alguem medir o acesso
+-- de verdade. Migration aplicada nao se edita (o commit e permanente); esta
+-- migration desfaz o efeito, em vez de so corrigir o comentario da antiga,
+-- porque um comando que parece proteger e nao protege e pior do que nao ter
+-- nenhum -- e foi isso que aconteceu aqui.
+--
+-- A PROTECAO REAL NUNCA DEPENDEU DISTO, E CONTINUA INTACTA DEPOIS DESTA
+-- MIGRATION: reverter_cadastro_incompleto esta fechada desde a tarefa 8 por
+-- um REVOKE EXECUTE direto, na propria funcao, na migration que a criou --
+-- nao por privilegio padrao. CLAUDE.md secao 3 registra a regra dai em
+-- diante: toda migration que cria funcao fecha aquela funcao na hora, com
+-- REVOKE EXECUTE direto nela. tests/isolamento/privilegios.test.ts mede o
+-- acesso de verdade, funcao por funcao que EXISTE -- nao mais o registro do
+-- privilegio padrao, que e o que enganou desta vez.
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public"
+  GRANT EXECUTE ON FUNCTIONS TO PUBLIC;

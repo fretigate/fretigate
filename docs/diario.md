@@ -6,6 +6,105 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 11/08/2026 — tarefa 1 do item 3: Servico, e a esteira passou a provar as migrations do zero
+
+Fecha a tarefa 1 do item 3, conforme `docs/planos/item-3-lancamento-frete.md`
+— só backend: schema, RLS, serviço, testes. Sem tela ainda (tarefa 2).
+
+`Servico` (`docs/especificacao.md` §6): `numero` sequencial por empresa via
+contador atômico (`Empresa.proximo_numero_servico`, incrementado dentro do
+`emTransacao` que grava o serviço — nunca `MAX(numero)+1`), as quatro
+conferências de FK (`cliente_id`, `veiculo_id`, `motorista_id`,
+`tipo_operacao_id`, mais `criado_por_usuario_id` como quinta, achada pelo
+`/revisar`), e resolução de município via `resolverMunicipio`, nunca
+bloqueando o salvar. `src/lib/servicos/servicos.ts`, `tests/servicos.test.ts`
+(20 conferências), `vazamento.test.ts` estendido.
+
+**Quatro decisões do fundador, tomadas na revisão desta tarefa:**
+- **`km` é guardado em metros**, sem exceção ao `CLAUDE.md` §7, mesmo sendo o
+  número digitado à mão — para não conviver em unidades diferentes com a
+  futura `distancia_m` (item 12). A tela converte na exibição/edição.
+- **Tipo de operação inativo é recusado** ao lançar frete — `ativo` é escopo
+  de produto, aceitar seria criar frete de um ramo que a empresa não opera.
+- **Cliente/caminhão/motorista arquivado é recusado para um frete NOVO** —
+  diferente do precedente de `veiculo_habitual_id` (vínculo já existente).
+- **Valor zero ou negativo continua recusado** — decisão reversível: frete de
+  cortesia é hipótese, valor zero por engano é o caso provável.
+
+### Achado 1 — checksum de migration divergente do commitado
+
+`prisma migrate dev` recusou rodar: o checksum de
+`20260809021500_municipio_tabela_de_referencia` gravado no banco de
+desenvolvimento não bate com o arquivo commitado — foi editado depois de
+aplicado, antes do commit. Sem efeito de schema (conferido coluna a coluna,
+índice, RLS, GRANT — tudo idêntico). Migration nova aplicada por
+`prisma migrate deploy` (que não faz essa checagem), não por `migrate dev`.
+
+### Achado 2 — a esteira nunca tinha subido o banco do zero, e isso escondia dois problemas
+
+A pedido do fundador, rodei `prisma migrate reset --force` contra o projeto
+de teste (autorização explícita, dado sem cliente real) para provar que as
+16 (agora 17) migrations aplicam em sequência a partir de nada. Achado 1
+acima é um deles. O segundo, mais sério:
+
+**`ALTER DEFAULT PRIVILEGES ... ON FUNCTIONS ... FROM PUBLIC` nunca fechou
+função nenhuma** — nem no banco recriado, nem no de desenvolvimento, que
+nunca foi resetado. Medido com uma função criada de verdade e
+`has_function_privilege`, em seis variações do comando. O Postgres concede
+`EXECUTE` a `PUBLIC` em toda função nova, sempre; isso não passa pelo
+mecanismo de privilégio padrão do jeito que tabela passa. A única proteção
+real, também medida, é `REVOKE EXECUTE` direto na função, na mesma migration
+que a cria — é o que já protegia `reverter_cadastro_incompleto` desde a
+tarefa 8, e por isso ela nunca esteve exposta.
+
+Registrado como regra no `CLAUDE.md` §3. A migration
+`20260808052831_fecha_execucao_de_funcao_para_public`, que nunca funcionou,
+foi **removida** (não só comentário corrigido) pela migration nova
+`20260811120000_remove_default_privileges_de_funcao_que_nao_funciona` —
+migration aplicada não se edita, e comando que parece proteger e não protege
+é pior que não ter nenhum.
+
+`tests/isolamento/privilegios.test.ts` reescrito para medir acesso de
+verdade (cria tabela/função de teste, mede com `has_table_privilege`/
+`has_function_privilege`) em vez de conferir se um comando foi registrado no
+catálogo — o defeito que deixou isto passar despercebido até agora. Não
+existe mais checagem de "função futura": é impossível de satisfazer (função
+nova sempre nasce aberta), e um teste que reprova sempre ensina a ignorar
+vermelho tanto quanto um que nunca reprova. A garantia de função passou a
+ser sobre as que **existem**.
+
+### `ci.yml`: `migrate deploy` → `migrate reset --force`
+
+A esteira agora derruba o schema do projeto de teste e reaplica todas as
+migrations a cada execução, não só o que faltava — é a prova permanente do
+achado 2, em vez de uma conferência manual que ninguém repetiria. Custo:
+esteira mais lenta (reconstrói o banco inteiro, incluindo os 5.570
+municípios, a cada envio).
+
+Trava nova, própria para este passo (`tests/guarda-do-reset.ts`,
+`validarSoTeste` em `guarda-de-banco.ts`): a trava geral aprova desenvolvimento
+OU teste, correta para `npm test` (só aplica migration/semeia). `migrate
+reset --force` derruba o schema inteiro — um secret apontado para
+desenvolvimento por engano passaria a apagá-lo. A trava nova aprova só o
+projeto de teste.
+
+### `/revisar`, segundo passe (classe nova — achado de privilégio nunca visto)
+
+Achou, e todos corrigidos no mesmo commit: comentário de `km` ainda dizia
+quilômetros num lugar e metros em outro; `CLAUDE.md` §4 citava o fechamento
+de função por `ALTER DEFAULT PRIVILEGES` (tarefa 9c) como vigente; teste de
+"tabela futura" sem contraste (nada provava que ele conseguiria acusar um
+vazamento); semeadura de `Servico` em `vazamento.test.ts` usava
+`INSERT...SELECT` de `JOIN`, que grava zero linhas em silêncio se vier
+vazio — trocado por ids gerados na aplicação, como `A`/`B` já faziam.
+`Empresa.proximo_numero_servico` não constava em `docs/especificacao.md` —
+acrescentado.
+
+**Próxima: tarefa 2 do item 3 — a tela de lançamento**, com o cronômetro dos
+30 segundos como portão de saída (não fecha sem medir no celular).
+
+---
+
 ## 11/08/2026 — plano do item 3: Lançamento de frete
 
 Plano aprovado pelo fundador e commitado antes da construção começar

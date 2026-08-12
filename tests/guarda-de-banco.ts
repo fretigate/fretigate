@@ -31,6 +31,16 @@
  */
 export const PROJETOS_DE_TESTE = ["ysldmzvszjxdgcbtaurh", "qutzsvrkaqvpluqxbhmp"];
 
+/**
+ * O projeto de teste, sozinho — não "um dos dois permitidos" como
+ * `PROJETOS_DE_TESTE` acima. Usado só pela esteira, antes de `prisma migrate
+ * reset --force` (`.github/workflows/ci.yml`, `CLAUDE.md` §5): esse comando
+ * derruba o schema inteiro, não só aplica migration. "Desenvolvimento também
+ * vale" era uma aprovação razoável enquanto o pior caso era aplicar migration
+ * duas vezes; deixou de ser no dia em que o comando passou a apagar.
+ */
+export const PROJETO_DE_TESTE_CI = "qutzsvrkaqvpluqxbhmp";
+
 const VARIAVEIS = ["DATABASE_URL", "AUTH_DATABASE_URL", "DIRECT_URL"] as const;
 
 /**
@@ -119,6 +129,25 @@ export function validar(env: Record<string, string | undefined>): void {
       // Imprime só o identificador, que é público. NUNCA a URL, que traz a senha.
       recusar(`A variável ${nome} aponta para o projeto \`${ref}\`.`);
     }
+  }
+}
+
+/**
+ * Mais rígida que `validar`: recusa também o projeto de desenvolvimento. Só
+ * `tests/guarda-do-reset.ts` chama isto, e só antes de `prisma migrate reset
+ * --force` na esteira — nunca em `npm test`, que precisa continuar
+ * aprovando as duas máquinas (`CLAUDE.md` §5).
+ */
+export function validarSoTeste(env: Record<string, string | undefined>): void {
+  validar(env);
+  const ref = identificadorDoProjeto(env.DIRECT_URL!);
+  if (ref !== PROJETO_DE_TESTE_CI) {
+    recusar(
+      `DIRECT_URL aponta para o projeto \`${ref}\`, não para o projeto de ` +
+        `teste (\`${PROJETO_DE_TESTE_CI}\`).\n` +
+        "`prisma migrate reset --force` derruba o schema inteiro — não pode " +
+        "rodar contra desenvolvimento, nem por engano de secret.",
+    );
   }
 }
 
