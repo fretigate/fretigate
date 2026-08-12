@@ -6,6 +6,102 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 12/08/2026 — achado: teclado numérico esconde o valor em Lançar frete (celular)
+
+Testando no celular o cronômetro dos 30 segundos (o portão de saída da
+tarefa 2 do item 3, commit `2d7ae9c` — ver a entrada abaixo), o fundador
+achou que o valor digitado fica escondido enquanto se usa o teclado
+numérico sobreposto de Lançar frete. **Não investigado nem corrigido
+ainda** — só registrado para não se perder. A tarefa 2 **continua aberta**:
+o commit já feito não fecha a tarefa até o cronômetro medir os 30 segundos
+de verdade, e este achado é o que está travando essa medição agora.
+
+**Próxima:** investigar e corrigir este achado, medir o cronômetro no
+celular, e só então fechar a tarefa 2.
+
+---
+
+## 12/08/2026 — melhoria: revelar senha em Entrar e Criar conta
+
+Plano aprovado e commitado antes da construção: `docs/planos/
+melhoria-revelar-senha.md`.
+
+Pedido do fundador, testando o app no celular: os campos de senha de
+**Entrar** e **Criar conta** precisavam do botão "Mostrar"/"Ocultar" que
+**Redefinir senha** já tinha desde a tarefa 8. A peça já existia
+(`CampoTexto.tsx`, prop `revelavel`) — só faltava ligá-la nos outros dois
+lugares.
+
+**Duas conferências que o fundador pediu antes de aprovar, e que viraram
+correção real:**
+
+- **Alvo de toque do botão embutido: 44px, não 48px.** Mesma classe do
+  achado 10 da tarefa 2 (o "Trocar" da data em Lançar frete), mas aqui a
+  causa é diferente: o botão usa a variante "texto" (03) do inventário, que
+  é `44px` em **todo** o app (Fechar, Cancelar, Arquivar — mais de uma
+  dúzia de lugares), documentada assim de propósito. Corrigido só neste
+  controle específico (`h-48!` em `CampoTexto.tsx`), sem tocar em
+  `Botao.tsx` nem nos outros usos da variante — aqui o botão-texto é o
+  controle inteiro de um campo, não uma ação secundária de rodapé, e por
+  isso não tem a folga que os outros usos têm.
+- **A senha revelada não voltava a ficar oculta depois de um erro.** Achado
+  real, não hipótese: `revelado` é `useState` interno do `CampoTexto`, sem
+  nada que o reseta quando o formulário ao redor re-renderiza — uma senha
+  mostrada continuava mostrada depois de uma tentativa falha, nas
+  **três** telas com `revelavel`, incluindo Redefinir senha (que já tinha
+  esse defeito antes deste pedido). Corrigido nas três com um contador de
+  tentativas por formulário, passado como `key` do `CampoTexto` da senha —
+  trocar a `key` remonta só o campo (reseta `revelado`, preserva o valor
+  digitado, que é controlado pelo formulário, não pelo `CampoTexto`). O
+  contador só avança no caminho de erro nos três formulários — em
+  `FormularioCriarConta.tsx` a primeira versão avançava em qualquer envio
+  (inclusive sucesso), corrigido no `/revisar` para ficar igual aos outros
+  dois.
+
+"Não apagar a senha em caso de erro no login" já era o comportamento de
+`FormularioEntrar.tsx` — nenhum branch de erro chamava `setSenha("")`.
+Confirmado por leitura, sem mudança de código.
+
+### `/revisar` — a edição em `componentes.md`, com o raciocínio certo
+
+O primeiro passe apontou `docs/componentes.md` linhas 395/396 editadas
+direto pelo repositório como uma divergência do §13 ("Desenho... continua
+sendo do Design"). A correção não foi desfazer a edição — foi corrigir o
+raciocínio: o §13 não diz "`componentes.md` é do Design", diz "o
+repositório mantém o **estado**; o Design decide **desenho novo**". Ligar
+`revelavel` — uma variante que já existe no inventário — em mais duas
+telas é estado (a mesma variante, outro lugar), não desenho novo. A edição
+fica. Vai para a lista do Design mesmo assim (abaixo), porque a fonte dele
+precisa saber, mesmo quando o repositório está certo em editar.
+
+### Pergunta de fundo para o Design, não pendência solta
+
+Duas exceções ao alvo mínimo de 48px em duas tarefas seguidas — "Trocar"
+(tarefa 2 do item 3) e "Mostrar"/"Ocultar" (aqui) — enquanto o resto da
+variante "texto" (Fechar, Cancelar, Arquivar) segue em 44px. Duas exceções
+seguidas é sinal de que a **regra** precisa de decisão, não de mais
+exceção. Três saídas possíveis, nenhuma escolhida aqui:
+1. a variante "texto" sobe para 48px em todo o app;
+2. a regra do alvo mínimo passa a distinguir controle isolado (like este e
+   o "Trocar") de ação secundária de rodapé (Fechar, Cancelar) — hoje só
+   distingue link em frase corrida;
+3. as exceções já aplicadas viram parte formal do inventário, com raio e
+   contexto documentados, e o resto continua 44px.
+
+### O que precisa chegar ao Design
+
+- Confirmar "com revelar" nas linhas de Entrar e Criar conta em
+  `docs/componentes.md` (estado sincronizado pelo repositório, não desenho
+  novo — ver acima).
+- A pergunta de fundo acima (44 × 48px na variante "texto"), com as duas
+  exceções já aplicadas como evidência.
+
+Verificado no navegador nas três telas: botão aparece, alterna
+Mostrar/Ocultar, mede 48px de altura, e volta a "Mostrar" sozinho depois de
+um envio com erro — em Entrar, com o campo continuando preenchido.
+
+---
+
 ## 11/08/2026 — tarefa 2 do item 3: a tela de Lançar frete
 
 Fecha a tarefa 2 do item 3 (`docs/planos/item-3-lancamento-frete.md`): a tela

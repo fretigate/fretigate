@@ -21,6 +21,15 @@ export function FormularioEntrar() {
   const [senha, setSenha] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [erroGeral, setErroGeral] = useState<string | undefined>();
+  /**
+   * `CampoTexto` guarda "mostrar senha" no próprio state interno, sem
+   * resetar sozinho quando o formulário ao redor re-renderiza — uma senha
+   * revelada continuaria revelada depois de um erro. Trocar a `key` força o
+   * React a remontar só o campo (o valor digitado não se perde, porque vem
+   * do `value` controlado por este formulário, não do `CampoTexto`).
+   * Achado do fundador, 12/08/2026.
+   */
+  const [tentativas, setTentativas] = useState(0);
 
   function alterar(definir: (valor: string) => void) {
     return (evento: ChangeEvent<HTMLInputElement>) => definir(evento.target.value);
@@ -49,6 +58,7 @@ export function FormularioEntrar() {
     }
 
     setCarregando(false);
+    setTentativas((t) => t + 1);
     if (error.status === 429) {
       setErroGeral(mensagemDeTrava(retryAfter));
     } else if (error.code === "INVALID_EMAIL") {
@@ -71,10 +81,12 @@ export function FormularioEntrar() {
         onChange={alterar(setEmail)}
       />
       <CampoTexto
+        key={tentativas}
         rotulo="Senha"
         name="senha"
         type="password"
         autoComplete="current-password"
+        revelavel
         value={senha}
         onChange={alterar(setSenha)}
       />

@@ -81,11 +81,19 @@ export function CampoTexto({
           {...resto}
         />
         {revelavel ? (
+          // `h-48!` é exceção localizada a este botão, não a variante
+          // "texto" inteira (que fica 44px em todo o resto do app, de
+          // propósito — Fechar, Cancelar, Arquivar). Achado do fundador,
+          // 12/08/2026: aqui é o único lugar em que a variante 03 é o
+          // controle inteiro de um campo (não uma ação secundária de
+          // rodapé), então o alvo mínimo de 48px do CLAUDE.md §8 se aplica
+          // sem a folga que os outros usos têm. O campo ao redor é `h-56`,
+          // então 48px cabe centralizado sem estourar a borda.
           <Botao
             variante="texto"
             type="button"
             onClick={() => setRevelado((valor) => !valor)}
-            className="absolute right-16 top-1/2 -translate-y-1/2"
+            className="absolute right-16 top-1/2 h-48! -translate-y-1/2"
           >
             {revelado ? "Ocultar" : "Mostrar"}
           </Botao>

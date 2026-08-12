@@ -31,6 +31,15 @@ export function TelaRedefinirSenha({ codigo, valido, email }: Props) {
   const [carregando, setCarregando] = useState(false);
   const [erroGeral, setErroGeral] = useState<string | undefined>();
   const [expirou, setExpirou] = useState(!valido);
+  /**
+   * `CampoTexto` guarda "mostrar senha" no próprio state interno, sem
+   * resetar sozinho quando o formulário ao redor re-renderiza — uma senha
+   * revelada continuaria revelada depois de um erro. Trocar a `key` força o
+   * React a remontar só o campo (o valor digitado não se perde, porque vem
+   * do `value` controlado por este formulário). Achado do fundador,
+   * 12/08/2026.
+   */
+  const [tentativas, setTentativas] = useState(0);
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -68,6 +77,7 @@ export function TelaRedefinirSenha({ codigo, valido, email }: Props) {
     }
 
     setCarregando(false);
+    setTentativas((t) => t + 1);
     if (error.status === 429) {
       setErroGeral(mensagemDeTrava(retryAfter));
     } else if (error.code === "INVALID_TOKEN") {
@@ -121,6 +131,7 @@ export function TelaRedefinirSenha({ codigo, valido, email }: Props) {
   return (
     <form onSubmit={enviar} className="mt-24 flex flex-col gap-16">
       <CampoTexto
+        key={tentativas}
         rotulo="Senha nova"
         name="senha"
         type="password"

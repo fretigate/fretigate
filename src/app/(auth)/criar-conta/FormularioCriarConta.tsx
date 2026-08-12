@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, type ChangeEvent } from "react";
+import { useActionState, useEffect, useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { Botao } from "@/components/ui/Botao";
 import { CampoTexto } from "@/components/ui/CampoTexto";
@@ -26,6 +26,31 @@ export function FormularioCriarConta() {
   const [seuTelefone, setSeuTelefone] = useState("");
   const [origem, setOrigem] = useState("");
   const [origemOutro, setOrigemOutro] = useState("");
+
+  /**
+   * `CampoTexto` guarda "mostrar senha" no próprio state interno, sem
+   * resetar sozinho quando o Server Action devolve erro — uma senha
+   * revelada continuaria revelada depois de uma tentativa falha. Trocar a
+   * `key` força o React a remontar só o campo (o valor digitado não se
+   * perde, porque vem do `value` controlado por este formulário). Não dá
+   * para derivar a `key` do conteúdo de `estado`: dois erros idênticos em
+   * sequência não mudam o texto, e a senha ficaria revelada na segunda
+   * tentativa igual à primeira — por isso é um contador ligado à
+   * conclusão de cada envio com erro (`pending` voltando a `false` com
+   * `estado` preenchido), não ao conteúdo do erro. Em envio bem-sucedido
+   * não incrementa: a página redireciona (`redirect()` em `cadastro.ts`) e
+   * o componente desmonta, então não há "depois" para resetar — mesma
+   * regra de `FormularioEntrar.tsx`/`TelaRedefinirSenha.tsx`, que só
+   * avançam o contador no caminho de erro. Achado do fundador, 12/08/2026.
+   */
+  const [tentativas, setTentativas] = useState(0);
+  const pendingAnterior = useRef(pending);
+  useEffect(() => {
+    if (pendingAnterior.current && !pending && (estado.erroGeral || estado.erros)) {
+      setTentativas((t) => t + 1);
+    }
+    pendingAnterior.current = pending;
+  }, [pending, estado]);
 
   function alterar(definir: (valor: string) => void) {
     return (evento: ChangeEvent<HTMLInputElement>) => definir(evento.target.value);
@@ -53,10 +78,12 @@ export function FormularioCriarConta() {
         erro={estado.erros?.email}
       />
       <CampoTexto
+        key={tentativas}
         rotulo="Senha"
         name="senha"
         type="password"
         autoComplete="new-password"
+        revelavel
         value={senha}
         onChange={alterar(setSenha)}
         erro={estado.erros?.senha}
