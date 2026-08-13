@@ -6,6 +6,115 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 12/08/2026 — correção: login pelo celular era recusado (origem não confiável)
+
+Plano aprovado e commitado antes da construção: `docs/planos/
+login-origem-confiavel.md`.
+
+O fundador reportou mensagem genérica ao errar a senha em `/entrar`, pelo
+celular — e corrigiu a própria investigação inicial: o problema não era a
+mensagem, era o **login sendo barrado**. Causa confirmada por leitura do
+código-fonte instalado (`node_modules/better-auth`): o `better-auth` valida
+a origem de todo `POST`, inclusive `/sign-in/email`, contra uma lista de
+origens confiáveis — mecanismo **separado** do `allowedDevOrigins` do
+Next.js (aquele só protege `/_next/*`). Por padrão a única origem confiável
+é o `baseURL` (`NEXT_PUBLIC_APP_URL`, `http://localhost:3000`); um login
+pelo celular batia em `403 INVALID_ORIGIN` antes mesmo de conferir a senha.
+
+**A lição maior que o defeito, achada pelo `/revisar` — e errada na
+primeira tentativa de escrever ela.** A primeira versão do conserto
+(`src/lib/auth/index.ts`) copiou a técnica de `next.config.ts` — um
+padrão de texto com `*` (`"192.168.*.*"`) — achando que fosse a mesma
+proteção já resolvida ali. Não é: o padrão confiava em **qualquer origem
+começando com "192.168." e terminando nos segmentos certos**, inclusive
+um domínio de verdade (`192.168.atacante.com` bate, se alguém já tiver
+`atacante.com` e criar esse subdomínio).
+
+O primeiro registro deste achado, aqui mesmo, disse que o mecanismo do
+Next.js (`matchWildcardDomain`, que compara por segmento de host) era
+"seguro contra domínio disfarçado" ao contrário do glob de texto livre do
+`better-auth`. **Essa distinção também estava errada**, e o próprio
+`/revisar` achou o mesmo furo em `next.config.ts` na sequência: um
+domínio de 4 partes (`192.168.evil.com`) tem exatamente os 4 segmentos
+que o padrão espera, e "comparar por segmento" não exige que o segmento
+seja numérico — "evil" satisfaz um `*` tão bem quanto "168". Lição errada
+registrada é pior que lição nenhuma; por isso a correção fica aqui, não
+só uma nota nova por cima.
+
+**A lição certa, mais simples e mais geral que as duas versões
+anteriores:** curinga em texto nunca é o mesmo que verificar formato. Se
+o que importa é "isto é um endereço de rede local", a única forma segura
+é conferir que é um endereço — não que o texto se parece com um. Os dois
+lugares corrigidos (`src/lib/auth/index.ts`, com uma função que valida o
+host por regex de IP; `next.config.ts`, computando os endereços de
+verdade desta máquina via `os.networkInterfaces()` a cada início do
+servidor) param de comparar texto e passam a verificar o formato. Mesma
+família do §9/`postgres` (`CLAUDE.md` §2): parecia conferido, duas vezes
+na mesma sessão, e não era — a segunda vez sendo o próprio registro desta
+lição.
+
+**Nova regra no `CLAUDE.md` §2**, do mesmo achado: uma correção "de
+propósito próprio" — não pedida, feita "já que estou aqui" — passou a ter
+o mesmo defeito que qualquer decisão de produto tem quando ninguém
+confere: checar `error.status === 401` além do código exato (para
+resistir a resposta sem JSON válido) rotularia uma falha de sessão do
+servidor com senha **certa** como "senha incorreta" — pior que a mensagem
+genérica que a correção queria melhorar. Revertido; fica só o código
+exato, como já era antes.
+
+**Também corrigido, achado pelo `/revisar`:** `src/components/auth/
+PedidoDeRecuperacao.tsx` (Esqueci a senha) tinha a mesma falta de
+`try`/`catch` das outras duas telas — ficou de fora do escopo original por
+não ter sido olhada.
+
+**Pendência menor registrada, não corrigida:** a mensagem nova "Sem
+conexão com o servidor. Confere sua internet e tenta de novo." não está em
+nenhum documento — mesma situação de toda mensagem de erro já existente
+nestas telas, nenhuma delas especificada individualmente em
+`docs/componentes.md`.
+
+Verificado direto contra o servidor: login pelo endereço da rede local
+(`http://192.168.1.10:3000`) com senha certa entra, com senha errada
+mostra a mensagem certa; login por `localhost:3000` continua funcionando;
+uma origem estranha de verdade (`https://evil.com`) continua recusada —
+a faixa privada não abriu mais do que devia.
+
+### Segundo passe do `/revisar` — dois ajustes mecânicos, e um achado grave à parte
+
+`docs/planos/login-origem-confiavel.md` tinha sido escrito já com a
+correção do curinga dentro dele — errado: plano é o que foi aprovado
+**antes** da construção, congelado; o que mudou durante (o curinga, o
+401 revertido, a extensão a `PedidoDeRecuperacao.tsx`) é divergência, e
+divergência mora aqui no diário, não reescrita para dentro do plano.
+Corrigido: o arquivo agora reflete exatamente o que foi aprovado.
+
+"Confira sua internet" virou "Confere sua internet" — a frase misturava
+tratamento (`confira`, imperativo de "você"; `tenta`, imperativo de "tu")
+dentro da mesma mensagem, contra o tom já estabelecido em toda mensagem de
+erro do produto ("Tenta de novo em instantes", sempre "tu").
+
+**Achado grave, fora do escopo original desta correção — decisão do
+fundador: corrigir na mesma sessão, não deixar pendência.** O
+`allowedDevOrigins` de `next.config.ts` (a correção anterior, para os
+recursos `/_next/*`) tinha a **mesma classe de furo** que o
+`trustedOrigins` teve — ver a lição reescrita acima. Corrigido: em vez de
+qualquer padrão de texto, `next.config.ts` agora computa os endereços
+IPv4 de verdade desta máquina (`os.networkInterfaces()`) a cada início do
+servidor. Deixar só um dos dois corrigido faria a próxima sessão ver
+`next.config.ts` "corrigido" e concluir, errado, que aquilo protege.
+
+### Terceiro passe do `/revisar` — pendência menor registrada
+
+`trustedOrigins` (`src/lib/auth/index.ts`) fixa a porta `3000` e só cobre
+`192.168.x.x`/`10.x.x.x`. Hoje bate certo com o projeto (porta de
+desenvolvimento sempre 3000, `.claude/launch.json`; as duas faixas cobrem
+a maioria das redes domésticas/escritório) — decisão do fundador,
+12/08/2026: deixar assim, sem corrigir agora, mas registrado — se um dia
+rodar em outra porta ou numa rede `172.16–31.x.x`, o login volta a ser
+recusado com a mensagem genérica, e é este parágrafo que explica o porquê.
+
+---
+
 ## 12/08/2026 — achado: teclado numérico esconde o valor em Lançar frete (celular)
 
 Testando no celular o cronômetro dos 30 segundos (o portão de saída da

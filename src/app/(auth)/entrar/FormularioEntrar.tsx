@@ -43,14 +43,26 @@ export function FormularioEntrar() {
     setErroGeral(undefined);
 
     let retryAfter: string | null = null;
-    const { error } = await authClient.signIn.email(
-      { email, password: senha },
-      {
-        onResponse(contexto) {
-          retryAfter = contexto.response.headers.get("X-Retry-After");
+    let error: Awaited<ReturnType<typeof authClient.signIn.email>>["error"];
+    try {
+      ({ error } = await authClient.signIn.email(
+        { email, password: senha },
+        {
+          onResponse(contexto) {
+            retryAfter = contexto.response.headers.get("X-Retry-After");
+          },
         },
-      },
-    );
+      ));
+    } catch {
+      // `authClient` não tem `catchAllError` (`src/lib/auth/cliente.ts`) —
+      // uma falha de rede de verdade (sem sinal, DNS) lança em vez de
+      // devolver `{error}`. Sem este `catch`, isso travava o botão girando
+      // pra sempre, sem mensagem nenhuma.
+      setCarregando(false);
+      setTentativas((t) => t + 1);
+      setErroGeral("Sem conexão com o servidor. Confere sua internet e tenta de novo.");
+      return;
+    }
 
     if (!error) {
       router.push("/");
@@ -63,6 +75,18 @@ export function FormularioEntrar() {
       setErroGeral(mensagemDeTrava(retryAfter));
     } else if (error.code === "INVALID_EMAIL") {
       setErroGeral("E-mail inválido.");
+    } else if (error.code === "INVALID_ORIGIN") {
+      // Achado do fundador, 12/08/2026: a origem da requisição não bate
+      // com `trustedOrigins`/`baseURL` (`src/lib/auth/index.ts`) — típico
+      // de testar por um endereço de rede diferente do configurado, ou de
+      // `NEXT_PUBLIC_APP_URL` errado/faltando em produção (`CLAUDE.md`
+      // §14). O texto continua genérico de propósito — não é detalhe para
+      // quem só quer entrar —, mas fica registrado para não ficar
+      // invisível nesta consulta ao servidor.
+      console.error(
+        "[auth] login recusado: origem não confiável (INVALID_ORIGIN) — conferir NEXT_PUBLIC_APP_URL/trustedOrigins",
+      );
+      setErroGeral("Não deu para entrar agora. Tenta de novo em instantes.");
     } else if (error.code === "INVALID_EMAIL_OR_PASSWORD") {
       setErroGeral("E-mail ou senha incorretos.");
     } else {

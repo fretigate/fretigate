@@ -40,6 +40,60 @@ export const auth = betterAuth({
   secret: SEGREDO,
   baseURL: ENDERECO_BASE,
 
+  /**
+   * Sem isto, o `better-auth` recusa (`INVALID_ORIGIN`, 403) todo login
+   * vindo de fora do `baseURL` — inclusive um POST direto de e-mail/senha,
+   * mesmo sem cookie de sessão ainda (`validateOrigin`, dentro da
+   * biblioteca). É uma checagem separada do `allowedDevOrigins` do
+   * `next.config.ts` (aquele só protege recursos `/_next/*`; este protege
+   * as rotas do `better-auth`). Achado do fundador, 12/08/2026: login pelo
+   * celular era recusado antes mesmo de conferir a senha, porque a origem
+   * (`http://192.168.x.x:3000`) não batia com `baseURL`
+   * (`http://localhost:3000`).
+   *
+   * **Função, não um padrão de texto com `*`.** A primeira versão disto
+   * usava `["http://192.168.*.*:3000", ...]`, copiando a técnica que
+   * funciona em `allowedDevOrigins` (`next.config.ts`) — e não devia:
+   * são dois mecanismos de curinga diferentes com a mesma aparência. O do
+   * Next.js (`matchWildcardDomain`) compara por segmento de host, então
+   * `*` nunca atravessa um ponto. O do `better-auth`
+   * (`node_modules/better-auth/dist/auth/trusted-origins.mjs` →
+   * `wildcardMatch`) é glob de texto livre — `*` atravessa ponto —, então
+   * `"192.168.*.*"` confiava em qualquer origem começando com "192.168."
+   * e terminando em ":3000", **inclusive um domínio de verdade**
+   * registrado por alguém (`http://192.168.atacante.com:3000` batia).
+   * Achado do `/revisar`, 12/08/2026 — corrigido antes de qualquer
+   * publicação, mas registrado para não repetir: parecia conferido
+   * (funcionava, o padrão parecia certo) e não era — mesma família de
+   * "confusão de quem lê é evidência sobre o texto" do `CLAUDE.md` §2, só
+   * que aqui quem leu era eu, o código-fonte da biblioteca.
+   *
+   * A função confere o host de verdade — precisa ser exatamente quatro
+   * grupos numéricos nas faixas privadas, nunca um texto parecido.
+   *
+   * **Só em desenvolvimento.** Ao contrário do `allowedDevOrigins` (que já
+   * é mecanismo exclusivo de dev do próprio Next.js), `trustedOrigins` é
+   * configuração geral do `better-auth` — sem este `if`, valeria também em
+   * produção.
+   */
+  trustedOrigins:
+    process.env.NODE_ENV === "development"
+      ? (request?: Request) => {
+          const origem = request?.headers.get("origin");
+          if (!origem) return [];
+          let url: URL;
+          try {
+            url = new URL(origem);
+          } catch {
+            return [];
+          }
+          const REDE_LOCAL = /^(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})$/;
+          const confiavel =
+            url.protocol === "http:" && url.port === "3000" && REDE_LOCAL.test(url.hostname);
+          return confiavel ? [origem] : [];
+        }
+      : undefined,
+
   database: prismaAdapter(bancoSemFiltroDeEmpresa, {
     provider: "postgresql",
     // Sequencial, não em transação: a conexão da autenticação vai pelo pool de

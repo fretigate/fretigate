@@ -49,27 +49,43 @@ export function TelaRedefinirSenha({ codigo, valido, email }: Props) {
     setErroGeral(undefined);
 
     let retryAfter: string | null = null;
-    const { error } = await authClient.resetPassword(
-      { newPassword: senha, token: codigo },
-      {
-        onResponse(contexto) {
-          retryAfter = contexto.response.headers.get("X-Retry-After");
+    let error: Awaited<ReturnType<typeof authClient.resetPassword>>["error"];
+    try {
+      ({ error } = await authClient.resetPassword(
+        { newPassword: senha, token: codigo },
+        {
+          onResponse(contexto) {
+            retryAfter = contexto.response.headers.get("X-Retry-After");
+          },
         },
-      },
-    );
+      ));
+    } catch {
+      // `authClient` não tem `catchAllError` (`src/lib/auth/cliente.ts`) —
+      // uma falha de rede de verdade lança em vez de devolver `{error}`.
+      setCarregando(false);
+      setTentativas((t) => t + 1);
+      setErroGeral("Sem conexão com o servidor. Confere sua internet e tenta de novo.");
+      return;
+    }
 
     if (!error) {
       // Fecha o ciclo: já entra com a senha nova. Se o login automático
       // falhar por qualquer motivo, a senha já foi trocada — só falta
       // digitar, então cai em Entrar em vez de travar em algum lugar.
       if (email) {
-        const { error: erroLogin } = await authClient.signIn.email({
-          email,
-          password: senha,
-        });
-        if (!erroLogin) {
-          router.push("/");
-          return;
+        try {
+          const { error: erroLogin } = await authClient.signIn.email({
+            email,
+            password: senha,
+          });
+          if (!erroLogin) {
+            router.push("/");
+            return;
+          }
+        } catch {
+          // Mesma regra do `catch` acima: senha já trocada, só falta
+          // entrar — se a rede falhar até aqui, cai em Entrar como
+          // qualquer outro erro deste passo.
         }
       }
       router.push("/entrar");
@@ -88,6 +104,13 @@ export function TelaRedefinirSenha({ codigo, valido, email }: Props) {
       setErroGeral("A senha precisa de pelo menos 6 caracteres.");
     } else if (error.code === "PASSWORD_TOO_LONG") {
       setErroGeral("A senha pode ter no máximo 128 caracteres.");
+    } else if (error.code === "INVALID_ORIGIN") {
+      // Achado do fundador, 12/08/2026 — ver o mesmo caso em
+      // `FormularioEntrar.tsx`. Texto continua genérico de propósito.
+      console.error(
+        "[auth] redefinição recusada: origem não confiável (INVALID_ORIGIN) — conferir NEXT_PUBLIC_APP_URL/trustedOrigins",
+      );
+      setErroGeral("Não deu para redefinir agora. Tenta de novo em instantes.");
     } else {
       setErroGeral("Não deu para redefinir agora. Tenta de novo em instantes.");
     }

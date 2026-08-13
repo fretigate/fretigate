@@ -45,14 +45,26 @@ export function PedidoDeRecuperacao({ emailConhecido }: Props) {
     setErroGeral(undefined);
 
     let retryAfter: string | null = null;
-    const { error } = await authClient.requestPasswordReset(
-      { email },
-      {
-        onResponse(contexto) {
-          retryAfter = contexto.response.headers.get("X-Retry-After");
+    let error: Awaited<ReturnType<typeof authClient.requestPasswordReset>>["error"];
+    try {
+      ({ error } = await authClient.requestPasswordReset(
+        { email },
+        {
+          onResponse(contexto) {
+            retryAfter = contexto.response.headers.get("X-Retry-After");
+          },
         },
-      },
-    );
+      ));
+    } catch {
+      // `authClient` não tem `catchAllError` (`src/lib/auth/cliente.ts`) —
+      // uma falha de rede de verdade lança em vez de devolver `{error}`.
+      // Sem este `catch`, isso travava o botão girando pra sempre, sem
+      // mensagem nenhuma. Mesma correção de `FormularioEntrar.tsx` e
+      // `TelaRedefinirSenha.tsx`, 12/08/2026.
+      setCarregando(false);
+      setErroGeral("Sem conexão com o servidor. Confere sua internet e tenta de novo.");
+      return;
+    }
 
     setCarregando(false);
 
@@ -63,6 +75,13 @@ export function PedidoDeRecuperacao({ emailConhecido }: Props) {
         // Erro de campo vai abaixo do PRÓPRIO campo, no lugar do texto de
         // apoio — nunca solto embaixo do botão.
         setErroEmail("E-mail inválido.");
+      } else if (error.code === "INVALID_ORIGIN") {
+        // Achado do fundador, 12/08/2026 — ver o mesmo caso em
+        // `FormularioEntrar.tsx`. Texto continua genérico de propósito.
+        console.error(
+          "[auth] pedido de recuperação recusado: origem não confiável (INVALID_ORIGIN) — conferir NEXT_PUBLIC_APP_URL/trustedOrigins",
+        );
+        setErroGeral("Não deu para mandar o link agora. Tenta de novo em instantes.");
       } else {
         setErroGeral("Não deu para mandar o link agora. Tenta de novo em instantes.");
       }

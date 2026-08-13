@@ -56,6 +56,16 @@ você escreve.** O padrão é o meu.
   verdade no sentido pretendido (não atende pedido de usuário) e falso ao pé da
   letra (as migrations sempre rodaram com ele contra produção). A revisão
   levantou a dúvida, a resposta foi corrigir a frase, não defendê-la.
+- **Correção que não foi pedida precisa do mesmo cuidado que a que foi.**
+  Um "já que estou aqui, deixo mais resistente" é uma decisão de produto
+  como qualquer outra, e erra como qualquer outra — só que sem ninguém ter
+  pedido para conferir. Registrado em 12/08/2026: corrigindo o login pelo
+  celular, um "reforço de robustez" (aceitar `error.status === 401` além
+  do código exato, para resistir a resposta sem JSON válido) criou um erro
+  novo — a mesma rota devolve 401 também para uma falha de sessão do
+  servidor com senha **certa**, que passaria a ser rotulada "senha
+  incorreta", pior que a mensagem genérica que a correção queria
+  melhorar. O `/revisar` achou; revertido para o código exato.
 - Se auditassem esse código para comprar a empresa, não teria nada para ter vergonha.
 
 ### Como executar
@@ -967,6 +977,16 @@ Não invente resposta. Pergunte.
   **primeiro pedido real** que tocar login ou sessão. Sem conferência
   manual antes de publicar, isso apareceria com cliente pagante já usando o
   produto, não durante o deploy.
+
+  **O sintoma exato, se `NEXT_PUBLIC_APP_URL` estiver errado ou faltando**
+  (achado do fundador, 12/08/2026, testando login pelo celular): **login
+  que não entra, com mensagem genérica ("Não deu para entrar agora"),
+  mesmo com e-mail e senha corretos.** A causa é o `better-auth` recusando
+  a origem da requisição (`INVALID_ORIGIN`, 403) antes mesmo de conferir a
+  credencial — `trustedOrigins` (`src/lib/auth/index.ts`) usa
+  `NEXT_PUBLIC_APP_URL` como a única origem confiável em produção. Sem
+  este parágrafo, o sintoma lê como senha errada, e é fácil perder horas
+  no lugar errado — foi o que aconteceu na primeira vez.
 - **CONFERIR ANTES DE PUBLICAR — a seed de municípios em produção.** Achado na
   tarefa 1 do item 2 (09/08/2026).
 
