@@ -140,14 +140,70 @@ permanente sozinho):
 3. No celular, **mesma rede Wi-Fi** desta máquina, abrir
    `http://<endereço-do-passo-2>:3000`.
 
-`next.config.ts` (`allowedDevOrigins`) já cobre qualquer endereço de rede
-privada (`192.168.*.*`, `10.*.*.*`) — não precisa mexer nele de novo ao
-trocar de rede, só o passo 2 muda. Se a página não abrir, pode ser o
-Firewall do Windows bloqueando a porta 3000 na rede local — liberar
+`next.config.ts` (`allowedDevOrigins`) e `src/lib/auth/index.ts`
+(`trustedOrigins`) calculam o endereço desta máquina sozinhos a cada
+início do servidor — não precisa mexer em nenhum dos dois ao trocar de
+rede, só o passo 2 muda (ver a entrada de 12/08/2026, "Login pelo celular
+era recusado", mais abaixo, para o porquê). Se a página não abrir, pode
+ser o Firewall do Windows bloqueando a porta 3000 na rede local — liberar
 manualmente se acontecer.
 
-**Próxima:** investigar e corrigir o achado do teclado, medir o cronômetro
-no celular, e só então fechar a tarefa 2.
+### 13/08/2026 — evidência real do aparelho: captura de tela
+
+O fundador mandou uma captura de tela do iPhone de verdade, testando o
+cronômetro (`/fretes/novo`, "Hoje · qui, 13 de agosto", teclado numérico
+do valor aberto). **Ainda não diagnosticado — só a evidência registrada,
+para não se perder antes do `/clear`:**
+
+- **O teclado numérico cobre pelo menos parte do cartão escuro do valor.**
+  Na captura, só um fragmento dos dígitos do valor aparece, cortado bem
+  na borda de cima do painel do teclado ("Valor do frete" / "Pronto") —
+  o cartão escuro (`LANÇAR FRETE` · data · valor · sugestão) parece
+  fatiado pelo teclado, não só o meio rolável das seis linhas por baixo
+  dele. Isso é diferente do que o layout foi desenhado para fazer
+  (`src/app/(app)/fretes/novo/TelaLancarFrete.tsx`): o teclado é
+  `position: absolute` com `bottom-full` dentro de um `<div
+  className="relative flex-none">` que é **irmão** do cartão escuro
+  (ambos filhos do `<div className="... flex h-dvh flex-col ...">`
+  raiz), então na teoria ele só deveria cobrir o que está **atrás dele
+  mesmo** (o rodapé, e o que estiver logo acima por causa do
+  `bottom-full`) — nunca o cartão escuro, que é outro irmão, mais acima
+  na coluna. Testado no navegador do computador (emulando celular) sem
+  reproduzir esse recorte — só apareceu no aparelho de verdade.
+
+  **Hipóteses ainda não conferidas, nenhuma confirmada:**
+  - `h-dvh` no Safari do iPhone pode recalcular de um jeito que o teste
+    em navegador emulado não reproduz (a unidade `dvh` reage à barra de
+    endereço do Safari escondendo/aparecendo, e o teclado sobreposto
+    sendo `position: absolute` dentro da própria coluna pode interagir
+    com isso de um jeito que só aparece com o toolbar de verdade do
+    Safari, não no emulador).
+  - Pode haver algum campo de texto nativo (`<input>`) com foco antes de
+    abrir o teclado numérico, fazendo o teclado **de verdade** do iOS
+    também abrir por baixo/ao mesmo tempo, encolhendo a área visível
+    além do que o layout previu.
+  - Não descartado: pode ser só um efeito da captura de tela em si (o
+    momento exato do toque), não um recorte real e persistente — precisa
+    confirmar se acontece toda vez ou só naquele instante.
+
+- **"Além do erro no botão"** — o fundador circulou o botão "Salvar
+  frete" na captura e mencionou um erro ali, **sem detalhar qual**. Fica
+  como pergunta em aberto para a próxima sessão: o que exatamente
+  acontece ao tocar nele nesse estado (não responde? erro visível? outra
+  coisa?).
+
+**Caminho mais confiável para fechar isto**: conectar o iPhone a um Mac e
+usar o Safari Web Inspector (menu Develop) para inspecionar a tela ao
+vivo — as ferramentas de navegador deste agente já se mostraram pouco
+confiáveis para testar toque/viewport real neste projeto (ver a
+investigação dos chips de "Como você conheceu o FretiGate", mais abaixo,
+12/08/2026), então testar só pelo emulador de novo tem chance de não
+reproduzir o defeito de novo.
+
+**Próxima:** perguntar ao fundador o que é "o erro no botão", e investigar
+o recorte do teclado sobre o valor — de preferência com acesso a
+inspeção de verdade do aparelho. Só depois medir o cronômetro e fechar a
+tarefa 2.
 
 ---
 
