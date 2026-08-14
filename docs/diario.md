@@ -6,6 +6,11 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 14/08/2026 — a marca do FretiGate no topo das telas de fora de sessão
+
+Plano aprovado e commitado antes da construção:
+`docs/planos/marca-nas-telas-de-fora-de-sessao.md`.
+
 ## 14/08/2026 — tarefa 4 do item 3 fecha: medição dos 10%, duas ferramentas
 
 Última tarefa do item 3 (`docs/planos/item-3-lancamento-frete.md`). Duas
