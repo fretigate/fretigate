@@ -1,5 +1,5 @@
 /**
- * Gera `prisma/seed/municipios.json` a partir das DUAS fontes oficiais do IBGE.
+ * Gera `scripts/seed/municipios.json` a partir das DUAS fontes oficiais do IBGE.
  *
  * POR QUE ESTE ARQUIVO É COMITADO
  * `municipios.json` é dado que entra no banco de todo cliente, e `PROCEDENCIA.md`
@@ -10,7 +10,7 @@
  *
  * NÃO roda em `npm install`, nem na esteira, nem no build. É comando de mão:
  *
- *     node prisma/seed/gerar-municipios.mjs
+ *     node scripts/seed/gerar-municipios.mjs
  *
  * Não fala com banco nenhum. Só baixa, cruza, confere e escreve um arquivo.
  * Quem grava no banco é `municipios.mts`, que é outra coisa.
@@ -284,7 +284,7 @@ const hoje = new Date().toISOString().slice(0, 10);
 const conteudo = {
   procedencia: {
     gerado_em: hoje,
-    gerado_por: "prisma/seed/gerar-municipios.mjs",
+    gerado_por: "scripts/seed/gerar-municipios.mjs",
     // A seed confere a quantidade contra ESTE número, nunca contra 5.570
     // cravado no código: município novo é criado por lei estadual, e um número
     // fixo faria a seed parar de carregar no dia em que a conta mudasse.
@@ -326,5 +326,5 @@ if (nomesCorrigidos.length > 0) {
   console.log(`  ${nomesCorrigidos.length} nome(s) corrigido(s) pela API:`);
   for (const n of nomesCorrigidos) console.log(`    ${n}`);
 }
-console.log(`  escrito em prisma/seed/municipios.json\n`);
-console.log(`  ATUALIZE prisma/seed/PROCEDENCIA.md no mesmo commit.\n`);
+console.log(`  escrito em scripts/seed/municipios.json\n`);
+console.log(`  ATUALIZE scripts/seed/PROCEDENCIA.md no mesmo commit.\n`);

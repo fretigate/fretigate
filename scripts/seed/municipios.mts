@@ -119,7 +119,7 @@ if (municipios.length !== declarados) {
   parar(
     `O arquivo declara ${declarados} municípios e traz ${municipios.length}.\n  ` +
       "Arquivo truncado ou editado à mão. Regere com " +
-      "`node prisma/seed/gerar-municipios.mjs`.",
+      "`node scripts/seed/gerar-municipios.mjs`.",
   );
 }
 

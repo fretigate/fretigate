@@ -6,6 +6,54 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 14/08/2026 — tarefa 4 do item 3 fecha: medição dos 10%, duas ferramentas
+
+Última tarefa do item 3 (`docs/planos/item-3-lancamento-frete.md`). Duas
+ferramentas: `npm run medir:municipios -- --empresa=<id>` (uso real, por
+empresa) e `tests/regressao-resolucao-municipios.test.ts` (dentro de
+`npm test`, contra uma lista fixa de 41 textos — nunca dado de cliente).
+Ambas chamam `medirResolucaoDeMunicipios` (`src/lib/servicos/medicao-
+municipios.ts`), que reaproveita `resolverMunicipio` sem reimplementar nada.
+
+**Dois passes de `/revisar`, e os dois acharam classe nova — por isso dois,
+não laço** (`CLAUDE.md` §2). O primeiro achou quatro coisas reais: a unidade
+de contagem era "campo" no código e "frete" na especificação (mantido
+campo — origem vem pré-preenchida, destino é digitado, são problemas
+diferentes, e contar por frete esconderia qual dos dois falhou); o passo da
+esteira, como planejado ("rodar contra a empresa de teste"), não sobrevive
+ao próprio desenho da suíte, que semeia e apaga cada empresa a cada arquivo
+— virou teste fixo, dentro de `npm test`; `scripts/` como pasta nova não
+tinha exceção no `CLAUDE.md` §6; e `--empresa=<id>` como argumento de
+terminal não tinha nota nenhuma sobre a regra do §3.
+
+O segundo passe (depois de aplicar o primeiro) achou seis coisas novas —
+prova de que valia rodar de novo: a nota que eu tinha acrescentado ao §3
+enfraquecia a regra em vez de fortalecer (tirada; a explicação inteira ficou
+só no §6, sobre o que `/scripts` é); o plano estava sendo reformulado no
+mesmo commit que o implementava (fica em commit separado, plano primeiro);
+uma data errada (uma decisão de 09/08 sobre "frete" ganhou o texto de
+"campo" sem trocar a data); `municipios.json` citando o caminho antigo do
+gerador; um comentário esquecido em `src/lib/servicos/municipios.ts`; e a
+árvore do §6 quebrando a frase no lugar errado. Mais um achado, o mais
+importante dos dois passes: a lista fixa de regressão reaproveitava o
+limite de 10% pensado para uso real, e numa lista de 41 itens isso quase não
+detecta nada — uma falha nova sobe de 3 para 4 (9,8%), ainda abaixo do
+limite. Trocado por "desvio do número de falhas esperado", que é o critério
+que faz sentido para uma lista com contagem conhecida.
+
+**A seed de municípios mudou de `/prisma/seed` para `/scripts/seed`**, no
+mesmo commit que criou `/scripts` — mesma classe de ferramenta operacional
+que o comando de medição, e ficar em `/prisma` era falta de nome próprio,
+não decisão. Toda referência viva foi atualizada (`package.json`,
+`prisma/schema.prisma`, `tests/municipios.test.ts`,
+`docs/especificacao.md`, os próprios arquivos da seed); `docs/diario.md` e
+`docs/planos/item-2-cadastros.md` **não** — são registro do que era
+verdade naquele momento, e editar isso apagaria a diferença entre o
+decidido e o que mudou depois.
+
+Item 3 fecha aqui inteiro. Próximo: item 4 — **Lista de fretes e detalhe do
+frete** (`docs/especificacao.md` §9).
+
 ## 14/08/2026 — tarefa 2 do item 3 fecha: cronômetro medido, 26 segundos
 
 A tarefa 2 (tela de lançamento) tinha o código commitado desde 11/08/2026,

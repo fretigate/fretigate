@@ -2,12 +2,13 @@
 
 De onde veio o arquivo, como foi montado, o que ficou de fora e por quê.
 
-**Gerado em 09/08/2026** por `prisma/seed/gerar-municipios.mjs`, que está
-comitado ao lado: o método aqui descrito é executável, não uma afirmação sobre
-o passado. Um comando o refaz do zero:
+**Gerado em 09/08/2026** por `scripts/seed/gerar-municipios.mjs` (movido de
+`prisma/seed/` em 14/08/2026, junto da medição de município do item 3 —
+`CLAUDE.md` §6), que está comitado ao lado: o método aqui descrito é
+executável, não uma afirmação sobre o passado. Um comando o refaz do zero:
 
 ```
-node prisma/seed/gerar-municipios.mjs
+node scripts/seed/gerar-municipios.mjs
 ```
 
 **Resultado desta geração: 5.570 municípios, 27 UFs.**
@@ -76,7 +77,7 @@ A geração **para e não escreve arquivo nenhum** se qualquer uma destas falhar
 5. **27 UFs.** Menos que isso é arquivo incompleto.
 
 A mesma conferência é refeita pela seed antes de gravar
-(`prisma/seed/municipios.mts`). É repetição de propósito: uma trava vale mais
+(`scripts/seed/municipios.mts`). É repetição de propósito: uma trava vale mais
 nos dois lados do arquivo do que confiando que o outro lado conferiu.
 
 ---

@@ -416,6 +416,9 @@ documentação e material de consulta.
     /ui                 componentes base — fonte única de verdade
     /<dominio>          componentes específicos
 /prisma
+/scripts                ferramenta de operação, rodada por um humano — nunca
+                        parte do produto publicado (ver abaixo)
+  /seed                 municípios do IBGE
 /tests
   /isolamento           a prova do §3 — fala com o banco de verdade
 /docs                   especificação, navegação, estilo, componentes, ícones
@@ -426,6 +429,18 @@ documentação e material de consulta.
 **`/tests` fica fora de `/src` de propósito:** não é código que vai ao ar. E os
 testes de isolamento falam com o **banco de verdade**, com os papéis de verdade
 — contra um dobrê, provariam que o dobrê funciona.
+
+**`/scripts` fica fora de `/src` pelo mesmo motivo, mais um.** Não é código
+que atende pedido de usuário — é comando de terminal, rodado por um humano
+que já escolheu o banco e a empresa na hora de chamar (`--empresa=<id>` no
+comando de medição, `DIRECT_URL` na seed). `CLAUDE.md` §3 ("`empresa_id` vem
+sempre da sessão autenticada") vale para o que responde requisição; uma
+ferramenta operacional é o próprio operador escolhendo, não uma sessão. Cada
+um só passa por `db()` quando lê dado de cliente (a medição de município lê
+`Servico`); a seed nunca passa, porque grava `municipio`, que não tem
+`empresa_id`. Acrescentado em 14/08/2026, junto da medição de município do
+item 3 — antes disso só a seed existia, direto em `/prisma`, e o precedente
+não tinha nome próprio.
 
 - Regra de negócio mora em `/src/lib/servicos`, nunca dentro de componente de
   tela.
@@ -1010,6 +1025,21 @@ Não invente resposta. Pergunte.
   e um `postinstall` tentaria falar com o banco durante o build
   (`docs/especificacao.md` §6). O comando é idempotente: rodar de novo sem
   mudança na fonte não escreve nada.
+- **ATENÇÃO AO RODAR — `medir:municipios` precisa de instalação completa.**
+  Achado na tarefa 4 do item 3 (14/08/2026). Diferente da seed acima, **não é
+  passo de publicação**: nada quebra se este comando nunca rodar, é
+  ferramenta de investigação sob demanda (`npm run medir:municipios --
+  --empresa=<id>`), rodada da máquina de quem opera, com as variáveis de
+  banco apontando para o ambiente que se quer medir.
+
+  **O sintoma, se rodado depois de uma instalação só de produção** (`npm
+  install --omit=dev` ou equivalente): falha, e a mensagem não diz o motivo
+  real. O comando usa `tsx` (`package.json`, `devDependencies`) para resolver
+  o atalho `@/` fora do Next.js — medido, não suposto, antes de decidir
+  instalar essa dependência (`scripts/medir-municipios.mts`). Sem `tsx`
+  instalado, o erro é sobre módulo não encontrado, não "faltam as
+  dependências de desenvolvimento" — fácil de ler como o comando quebrado,
+  quando falta só a instalação completa.
 - **Modelo de IA da importação** — testar a extração com o material real do
   usuário antes de escolher. Decidir por acerto, não por preço: a diferença de
   custo entre os candidatos é inferior a 2% da receita por cliente.

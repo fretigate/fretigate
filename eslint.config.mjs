@@ -25,8 +25,13 @@ const eslintConfig = defineConfig([
   // Trava de SQL cru (CLAUDE.md §3, tarefa 9): "SQL cru só em src/lib/db e em
   // /tests. Em nenhum outro lugar." /tests fica fora de src/**, então nem
   // precisa de exceção nomeada aqui — só src/lib/db precisa.
+  //
+  // scripts/** entrou em 14/08/2026, junto da pasta (CLAUDE.md §6): é o outro
+  // lugar de fora de src/lib/db que fala com o banco (a seed de municípios,
+  // o comando de medição), e a trava vale para ele igual a qualquer outro
+  // arquivo do produto.
   {
-    files: ["src/**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx,mts,mjs}"],
     rules: {
       "no-restricted-imports": [
         "error",

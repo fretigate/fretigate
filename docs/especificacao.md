@@ -706,7 +706,7 @@ As duas cláusulas do `CLAUDE.md` §9 estão lá, sem exceção nenhuma. A forma
 não aceita `WITH CHECK` — e a forma escolhida é mais rígida que ela, não mais
 frouxa. Quem confere é `tests/municipios.test.ts`, com contraste.
 
-**A seed é comitada, com procedência registrada** (`prisma/seed/`): de onde veio
+**A seed é comitada, com procedência registrada** (`scripts/seed/`): de onde veio
 o arquivo, data do download, licença e **quantos registros aquele download
 trazia**. Ela **confere antes de gravar** e **recusa carregar** se algo falhar,
 em vez de gravar dado ruim: UF entre as 27, nome não vazio, coordenada não nula,
@@ -1103,17 +1103,28 @@ o desenho continua existindo.
 
 ### A medição que o item 3 precisa entregar
 
-**Quantos fretes ficam sem município resolvido.** A medição é do **item 3**, não
-do 2: ela mede **fretes**, e fretes só existem a partir do item 3. O item 2
-entrega a **porta única** por onde texto vira município
-(`resolverMunicipio`, `src/lib/servicos/municipios.ts`) — é nela que a medição
-se pluga.
+**Quantos textos de origem/destino ficam sem município resolvido.** A medição
+é do **item 3**, não do 2: ela mede fretes lançados, e fretes só existem a
+partir do item 3. O item 2 entrega a **porta única** por onde texto vira
+município (`resolverMunicipio`, `src/lib/servicos/municipios.ts`) — é nela que
+a medição se pluga.
 
-- **Limite: acima de 10%** dos fretes sem município resolvido. Uma em cada dez
-  rotas já distorce o R$/km quando o item 12 nascer, e é cedo o bastante para
-  corrigir antes de o histórico ficar grande.
-- **Piso de 20 fretes lançados.** Abaixo disso, um frete não resolvido vira
-  porcentagem alta sem significar nada.
+- **A unidade é o campo, não o frete.** Um frete tem origem e destino, e são
+  problemas diferentes: a origem vem **pré-preenchida** com a do último frete
+  lançado (§4.1), o destino é **digitado**. Contar "o frete" como uma falha só
+  esconde qual dos dois é o problema — um frete com origem resolvida e destino
+  ambíguo tem um acerto e uma falha, não uma falha genérica. Corrigido em
+  14/08/2026: a primeira versão deste documento contava por frete; a
+  implementação (`src/lib/servicos/medicao-municipios.ts`) sempre contou por
+  campo, e o texto foi corrigido para bater com a decisão certa, não a
+  implementação revertida.
+- **Limite: acima de 10%** dos campos com texto sem município resolvido. Uma em
+  cada dez rotas já distorce o R$/km quando o item 12 nascer, e é cedo o
+  bastante para corrigir antes de o histórico ficar grande.
+- **Piso de 20 campos com texto elegíveis.** Abaixo disso, um texto não
+  resolvido vira porcentagem alta sem significar nada. Como a maioria dos
+  fretes preenche origem e destino, isso costuma corresponder a pouco mais de
+  10 fretes lançados — mas quem manda é a contagem de campos, não de fretes.
 - **O aviso mostra quais textos não resolveram**, não só o número. "12% sem
   município" não diz o que fazer; "12%, e Juazeiro do Norte e Picos aparecem
   mais" diz onde a resolução está falhando.
@@ -1128,16 +1139,48 @@ se pluga.
 
   `resolverMunicipio` já devolve o motivo (`resolvido`, `ambiguo`,
   `nao_encontrado`) desde o item 2 — a medição do item 3 só precisa contar.
-- **Só entra na conta o frete que TEM texto de origem ou destino.** Decidido
-  pelo fundador em 09/08/2026. Frete salvo sem destino **nunca teve o que
-  resolver**, e contá-lo faria o indicador subir sozinho, sem que nada
-  estivesse falhando — o pior tipo de número, porque manda consertar o que não
-  está quebrado. Campo vazio não é resolução malsucedida: é ausência de
-  tentativa.
+- **Só entra na conta quem TEM texto.** Decidido pelo fundador em 09/08/2026,
+  sobre frete — a unidade virou campo em 14/08/2026 (acima), mas a decisão em
+  si não mudou: campo vazio **nunca teve o que resolver**, e contá-lo faria o
+  indicador subir sozinho, sem que nada estivesse falhando — o pior tipo de
+  número, porque manda consertar o que não está quebrado. Campo vazio não é
+  resolução malsucedida: é ausência de tentativa.
 
 Motivo, registrado junto: quando o número sobe, **o defeito está na resolução,
 não no usuário** — é ela que precisa ser corrigida. Melhor descobrir com dez
 fretes do que com mil.
+
+**Duas ferramentas, dois números, e eles não são a mesma coisa.**
+
+- **Uso real** — `npm run medir:municipios -- --empresa=<id>`
+  (`scripts/medir-municipios.mts`). Roda contra os fretes de uma empresa de
+  verdade. É o único número que fala de uso real, e só existe quando existir
+  cliente.
+- **Regressão da resolução** — `tests/regressao-resolucao-municipios.test.ts`,
+  dentro de `npm test`, a cada execução da esteira. Roda contra uma **lista
+  fixa** de 41 textos, escrita uma vez em 14/08/2026 para representar como
+  gente de verdade digita (nome sem acento, formato "Cidade/UF", abreviação,
+  erro de digitação comum, nome ambíguo em vários estados) — nunca dado de
+  cliente, porque o projeto de teste não recebe isso (`CLAUDE.md` §5). A
+  lista não muda para o teste ficar mais fácil ou mais difícil: mudar a lista
+  é mudar a régua. O que ela mede é se `resolverMunicipio` piorou desde
+  ontem, não como as empresas estão digitando hoje.
+
+**Os 10% do limite acima são sobre uso real — a lista fixa usa outro
+critério, e é de propósito.** Corrigido em 14/08/2026: a primeira versão
+reaproveitava o mesmo limite de 10% para a lista fixa, e numa lista de 41
+itens isso não detecta quase nada — uma falha nova sobe de 3 para 4 (9,8%),
+ainda abaixo do limite; só a partir de duas falhas novas o aviso dispara. Uma
+lista fixa não precisa de limiar percentual: o número de falhas esperadas é
+**conhecido** (3, hoje), e qualquer desvio — para mais ou para menos — é
+regressão ou correção na resolução, não ruído de amostra. O critério da lista
+fixa é **desvio do esperado**, não percentual; `console.warn`, nunca falha o
+build (decisão do fundador, 14/08/2026: esteira vermelha por indicador de
+qualidade de dado ensina a ignorar vermelho).
+
+Quem ler o aviso da esteira daqui a três meses e achar que é dado de cliente,
+ou achar que segue os mesmos 10% do uso real, vai tirar a conclusão errada —
+por isso a distinção fica escrita aqui, não só no comentário do teste.
 
 ---
 

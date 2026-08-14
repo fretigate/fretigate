@@ -8,11 +8,12 @@ import { normalizarParaBusca } from "@/lib/utils/texto";
  * POR QUE AS DUAS FUNÇÕES MORAM AQUI, E SÓ AQUI
  * `resolverMunicipio` é **a única porta** por onde um texto livre (origem e
  * destino de um frete, endereço de um cliente) vira uma referência de município
- * de verdade. Ter um lugar só não é organização: é o que torna possível **medir**
- * quantos fretes ficam sem município resolvido — o limite de 10% que a
- * especificação §9 cobra no item 3. Espalhada por três telas, essa medição não
- * existiria, e a decisão de trocar a estimativa geodésica por uma API de rotas
- * (`CLAUDE.md` §14) ficaria sem número para se apoiar.
+ * de verdade. Ter um lugar só não é organização: é o que torna possível
+ * **medir** quantos campos de origem/destino ficam sem município resolvido —
+ * o limite de 10% que a especificação §9 cobra no item 3. Espalhada por três
+ * telas, essa medição não existiria, e a decisão de trocar a estimativa
+ * geodésica por uma API de rotas (`CLAUDE.md` §14) ficaria sem número para se
+ * apoiar.
  *
  * A tabela é global: não tem `empresa_id`, e a política de RLS é
  * `USING (true) WITH CHECK (false)` — todo mundo lê, ninguém grava. Mesmo assim
@@ -120,7 +121,7 @@ function separarUf(normalizado: string): { nome: string; uf: string | null } {
  * O resultado da resolução, com o **motivo** quando não resolve.
  *
  * NÃO É `Municipio | null`, e a diferença é a medição do item 3. "12% dos
- * fretes sem município resolvido" não diz o que consertar; os dois motivos
+ * campos sem município resolvido" não diz o que consertar; os dois motivos
  * pedem correções diferentes e opostas:
  *
  *   - **`ambiguo`** — o texto casa com vários municípios. A lista de sugestões

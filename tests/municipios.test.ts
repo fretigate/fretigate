@@ -41,7 +41,7 @@ type Arquivo = {
 };
 
 const arquivo: Arquivo = JSON.parse(
-  readFileSync(new URL("../prisma/seed/municipios.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../scripts/seed/municipios.json", import.meta.url), "utf8"),
 );
 
 /** A conexão das migrations. É ela quem semeia, e é ela o contraste. */

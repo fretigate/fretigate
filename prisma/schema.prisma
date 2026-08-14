@@ -20,7 +20,7 @@ generator client {
   // escrita. Sem isto o Node puro não consegue carregá-lo — só o empacotador do
   // Next.js e o do vitest, que adivinham a extensão sozinhos.
   //
-  // Quem precisa disso é a seed de municípios (`prisma/seed/municipios.mts`),
+  // Quem precisa disso é a seed de municípios (`scripts/seed/municipios.mts`),
   // que roda por fora do site, como comando de terminal. A alternativa era
   // instalar mais uma ferramenta só para executar um arquivo; esta linha faz o
   // mesmo com zero dependência nova.
@@ -459,7 +459,7 @@ model Motorista {
 /// **A política recusa a escrita de todo papel sujeito a ela** — `fretigate_app`
 /// e qualquer outro que venha. Ela **não** recusa a da conexão das migrations
 /// (o papel `postgres`, que ignora RLS por atributo), e é por ela que a seed
-/// (`prisma/seed/municipios.mts`) grava as 5.570 linhas. Isso é desenho:
+/// (`scripts/seed/municipios.mts`) grava as 5.570 linhas. Isso é desenho:
 /// `CLAUDE.md` §9 — nenhuma conexão que atende **pedido de usuário** ignora
 /// RLS; comando de operação roda como `postgres`, igual a toda migration.
 ///
@@ -483,7 +483,7 @@ model Municipio {
   nome_normalizado String
 
   /// Coordenadas da SEDE do município (a praça central, para onde o caminhão
-  /// vai), não do centro geométrico do território. Ver `prisma/seed/PROCEDENCIA.md`.
+  /// vai), não do centro geométrico do território. Ver `scripts/seed/PROCEDENCIA.md`.
   ///
   /// `Float` (double precision), e isto não contradiz o §7: lá o que é proibido
   /// é dinheiro em decimal flutuante. Coordenada não é dinheiro — nunca é
