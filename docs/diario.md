@@ -6,6 +6,99 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 14/08/2026 — tarefa 2 do item 3 fecha: cronômetro medido, 26 segundos
+
+A tarefa 2 (tela de lançamento) tinha o código commitado desde 11/08/2026,
+mas o portão de saída — cronometrar os 30 segundos no celular de verdade —
+nunca tinha sido medido com número nenhum. As três entradas seguintes (12,
+13 e 14/08, abaixo) são achados e correções de UX encontrados **tentando**
+medir, não a medição em si; a mais recente terminava com uma pendência sem
+resposta, sobre se rolar de volta para editar o valor (depois da correção do
+cartão fixo, mesmo dia) incomodava.
+
+Medido agora pelo fundador, no celular, com cliente/caminhão/motorista já
+cadastrados: **26 segundos em média**, dentro da meta do §1. Onde o tempo
+foi: digitar o valor, e digitar origem/destino. A pendência da rolagem está
+resolvida, não só registrada — "o cartão do valor rolou junto normal, como
+é pra ser", sem atrito.
+
+Tarefa 2 fecha aqui. Próxima: tarefa 3 do item 3 — aviso do sistema com
+"Já recebi" (`docs/planos/item-3-lancamento-frete.md`, Tarefa 3).
+
+## 14/08/2026 — tarefa 3 do item 3: aviso do sistema e "Já recebi"
+
+Plano de execução aprovado na conversa (não commitado à parte — a Tarefa 3
+já estava descrita em `docs/planos/item-3-lancamento-frete.md`, aprovado em
+11/08/2026; esta sessão só operacionalizou o schema/arquivos que faltavam).
+
+**"Novo frete" — decisão do fundador, revertida na mesma sessão por regra
+escrita.** O pedido original trocava o segundo botão do aviso de "Ver o
+frete" (adiado para o item 4) por "Novo frete", pensando em economizar o
+toque de quem lança fretes em sequência. `docs/navegacao.md` linha 88 já
+tem a regra oposta, escrita antes desta tarefa: "O (+) abre Lançar frete de
+qualquer lugar. **Não existe botão flutuante separado de novo frete**." O
+fundador reverteu ao ver a regra: o (+) já fica permanente e visível na
+mesma tela onde o aviso aparece, então não é toque perdido, é o toque
+previsto. Fica só **"Já recebi"**, como o plano original previa.
+
+**Achados do `/revisar`, corrigidos antes do commit:**
+
+- `criarTituloJaRecebiAction` recebia `servicoId` sem schema — `CLAUDE.md`
+  §4 ("toda entrada validada no servidor, com schema"), mesma classe já
+  corrigida na Tarefa 2 para o cadastro rápido. Ganhou `z.object({
+  servicoId: z.string().uuid() })`.
+- `criarTituloReceber` era um primitivo genérico exportado ("o item 6
+  também vai usar") sem segundo chamador real — `CLAUDE.md` §6, "nada de
+  arquivo para depois". Dobrado para dentro de `criarTituloJaRecebi`; o
+  item 6 ganha a própria função quando existir.
+- **A corrida na recusa de segundo título — o achado mais sério.** A
+  checagem original (`buscarTituloPorServico` antes do `create`) tem
+  janela de corrida sob concorrência real: dois pedidos simultâneos passam
+  os dois pela checagem antes de qualquer `INSERT` terminar. Contra
+  exatamente o cenário que motivou o pedido do fundador (o aviso reaberto
+  por navegação/recarga, permitindo um segundo toque em "Já recebi").
+
+  A correção não podia ser "um título por frete" — `CLAUDE.md` §9 e
+  `docs/especificacao.md` preveem mais de um título por frete (adiantamento
+  + saldo, item 6). A distinção que importa é *o que* o título representa,
+  não *quantos* existem: **`integral`** (`Boolean`, nova coluna) diz se um
+  título cobre o valor inteiro do frete, em oposição a uma fração dele.
+  Nomeado pelo significado, não pelo mecanismo — a primeira tentativa
+  (`via_ja_recebi`) nomeava o botão, e o fundador pediu a correção: o campo
+  precisa continuar certo no dia em que outro caminho, não só "Já recebi",
+  criar um título integral. Significado registrado em
+  `docs/especificacao.md`, entidade TituloReceber.
+
+  Garantia em banco, não em código: índice único parcial
+  `titulo_receber_um_integral_por_servico` em `(servico_id) WHERE integral
+  = true AND arquivado_em IS NULL` (migration
+  `20260814150000_titulo_integral_unico_por_frete`) — mesma técnica de
+  `Cliente.documento`. `criarTituloJaRecebi` mantém a checagem rápida
+  (`buscarTituloPorServico`, resposta melhor no caso comum) e traduz o erro
+  de unicidade do Postgres (`P2002`, mesmo padrão de
+  `ehDocumentoDuplicado` em `clientes.ts`) para a mesma mensagem —
+  garantindo mesmo quando os dois pedidos passam pela checagem rápida ao
+  mesmo tempo. `tests/titulos.test.ts` mede isso com concorrência real
+  (`Promise.allSettled`, duas chamadas simultâneas, conferido pelo banco:
+  exatamente um título) — não duas chamadas em sequência, que não provariam
+  nada (mesmo princípio do teste de `numero` em `tests/servicos.test.ts`).
+
+**Pendências registradas, não corrigidas:**
+
+- `relatorio_id` em `titulo_receber` nasce sem chave estrangeira — a
+  tabela `Relatorio` só existe no item 7. Quem construir o item 7 adiciona
+  a FK por migration própria.
+- Redação das mensagens do aviso ("Este frete já tem título lançado.") não
+  está em nenhum documento — mesma situação de toda mensagem de erro já
+  registrada em tarefas anteriores. Pedido ao Design.
+- **Animação de entrada do aviso do sistema — decisão do fundador, deixar
+  sem.** `docs/componentes.md`/`docs/estilo.md` mencionam um deslocamento
+  de 18px na entrada, mas nenhum documento define duração, curva ou
+  direção. `AvisoDoSistema` entra sem nenhuma animação (aparece seco).
+  Fundador: aviso seco não é defeito, e animação não formalizada seria
+  valor inventado (`CLAUDE.md` §8). Fica como pedido ao Design formalizar
+  a animação como token — aí sim entra no componente.
+
 ## 14/08/2026 — correção: cartão fixo em "Lançar frete" durante a rolagem
 
 Plano aprovado e commitado em 13/08/2026:

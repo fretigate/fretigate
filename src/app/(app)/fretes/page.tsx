@@ -1,3 +1,5 @@
+import { AvisoFreteSalvo } from "./AvisoFreteSalvo";
+
 /**
  * Fretes — PROVISÓRIA. Fica ativa na barra desde a tarefa 4 por decisão do
  * fundador (09/08/2026): a barra é estrutura fixa de cinco posições, e um
@@ -6,9 +8,17 @@
  * detalhe do frete, `docs/especificacao.md` §9) substituir esta tela.
  *
  * Sem checagem de sessão própria: o layout deste grupo já garante isso, e
- * esta tela não lê nenhum dado de empresa.
+ * esta tela não lê nenhum dado de empresa — só o `?criado=` da URL, que é o
+ * id do frete que a própria empresa acabou de salvar
+ * (`docs/planos/item-3-lancamento-frete.md`, Tarefa 3).
  */
-export default function Pagina() {
+export default async function Pagina({
+  searchParams,
+}: {
+  searchParams: Promise<{ criado?: string }>;
+}) {
+  const { criado } = await searchParams;
+
   return (
     <main
       className="mx-auto flex min-h-full max-w-[480px] flex-col items-center justify-center gap-8 px-20 text-center"
@@ -23,6 +33,8 @@ export default function Pagina() {
       <p className="text-apoio font-medium text-tinta-apoio">
         Seus fretes aparecem aqui a partir do lançamento de frete.
       </p>
+
+      {criado ? <AvisoFreteSalvo servicoId={criado} /> : null}
     </main>
   );
 }

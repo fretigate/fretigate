@@ -919,7 +919,14 @@ Na interface do MVP aparece como "Frete".
 **Entidade própria, não campo no serviço.**
 `servico_id` · `cliente_id` · `valor` · `valor_recebido` · `vencimento` ·
 `forma_pagamento_prevista` (`boleto` | `outro`) · `status` (`aberto` | `pago` |
-`cancelado`) · `data_pagamento` · `forma_pagamento` · `relatorio_id`
+`cancelado`) · `data_pagamento` · `forma_pagamento` · `relatorio_id` · `integral`
+
+`integral` diz se **este título cobre o valor inteiro do frete**, em oposição
+a uma fração dele — adiantamento ou saldo. Um frete tem no máximo um título
+integral; pode ter qualquer número de títulos não integrais. O campo descreve
+o título, não como ele nasceu: "Já recebi" sempre cria um título integral,
+mas qualquer outro caminho que também cubra o frete inteiro (sem passar por
+adiantamento) é igualmente integral.
 
 ### CobrancaEnviada
 Histórico. Sem isso, dois usuários cobram o mesmo cliente na mesma semana.

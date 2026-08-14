@@ -12,6 +12,7 @@ import {
   criarServico,
   listarDestinosDoCliente,
 } from "@/lib/servicos/servicos";
+import { criarTituloJaRecebi } from "@/lib/servicos/titulos";
 import { buscarMunicipios, type Municipio } from "@/lib/servicos/municipios";
 import { nomeCaminhao, TIPOS_VEICULO } from "@/lib/utils/caminhao";
 import { instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
@@ -131,8 +132,9 @@ export async function criarServicoAction(
   const tipoAtivo = await buscarTipoOperacaoAtivo(sessao.empresaId);
   if (!tipoAtivo) return { erroGeral: "Nenhum tipo de operação ativo. Fale com o suporte." };
 
+  let servico: Awaited<ReturnType<typeof criarServico>>;
   try {
-    await criarServico(sessao.empresaId, sessao.usuarioId, {
+    servico = await criarServico(sessao.empresaId, sessao.usuarioId, {
       ...lido.dados,
       tipo_operacao_id: tipoAtivo.id,
     });
@@ -140,12 +142,18 @@ export async function criarServicoAction(
     return erroDoServico(erro);
   }
 
-  redirect("/fretes");
+  // `?criado=` diz à tela Fretes para mostrar o aviso "Frete salvo"
+  // (`docs/planos/item-3-lancamento-frete.md`, Tarefa 3) — não é dado
+  // sensível, é o id do próprio frete que a empresa acabou de criar.
+  redirect(`/fretes?criado=${servico.id}`);
 }
 
 export type ResultadoRapido =
   | { ok: true; item: { id: string; nome: string; apoio?: string } }
   | { ok: false; erro: string };
+
+/** Mesmo formato de `ResultadoRapido`, sem item — para ações sem retorno de dado. */
+export type ResultadoSimples = { ok: true } | { ok: false; erro: string };
 
 /**
  * Schemas do cadastro rápido — achado do `/revisar` na Tarefa 2: as três
@@ -263,4 +271,26 @@ export async function listarDestinosDoClienteAction(clienteId: string): Promise<
 export async function buscarMunicipiosAction(termo: string): Promise<Municipio[]> {
   const sessao = await exigirSessao();
   return buscarMunicipios(sessao.empresaId, termo);
+}
+
+const schemaJaRecebi = z.object({ servicoId: z.string().uuid() });
+
+/**
+ * "Já recebi", no aviso "Frete salvo" (`docs/planos/item-3-lancamento-frete.md`,
+ * Tarefa 3) — grava um `TituloReceber` já pago, derivado do próprio
+ * `Servico`. A recusa contra um segundo título para o mesmo frete vive em
+ * `criarTituloJaRecebi` (`src/lib/servicos/titulos.ts`), não aqui — é ali
+ * que fica a garantia, mesmo se o aviso reabrir por navegação/recarga.
+ */
+export async function criarTituloJaRecebiAction(servicoId: string): Promise<ResultadoSimples> {
+  const sessao = await exigirSessao();
+  const validado = schemaJaRecebi.safeParse({ servicoId });
+  if (!validado.success) return { ok: false, erro: "Não deu para salvar agora." };
+
+  try {
+    await criarTituloJaRecebi(sessao.empresaId, validado.data.servicoId);
+    return { ok: true };
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };
+  }
 }

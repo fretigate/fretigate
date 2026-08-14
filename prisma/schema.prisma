@@ -121,12 +121,13 @@ model Empresa {
   /// §7 — nada é apagado. Preenchido = arquivado.
   arquivado_em  DateTime? @db.Timestamptz(6)
 
-  usuarios       Usuario[]
-  tipos_operacao TipoOperacao[]
-  clientes       Cliente[]
-  veiculos       Veiculo[]
-  motoristas     Motorista[]
-  servicos       Servico[]
+  usuarios        Usuario[]
+  tipos_operacao  TipoOperacao[]
+  clientes        Cliente[]
+  veiculos        Veiculo[]
+  motoristas      Motorista[]
+  servicos        Servico[]
+  titulos_receber TituloReceber[]
 
   @@map("empresa")
 }
@@ -327,7 +328,8 @@ model Cliente {
   /// `documento` para outro cadastro (ver acima).
   arquivado_em DateTime? @db.Timestamptz(6)
 
-  servicos Servico[]
+  servicos        Servico[]
+  titulos_receber TituloReceber[]
 
   @@index([empresa_id])
   @@map("cliente")
@@ -616,9 +618,101 @@ model Servico {
   /// §7 — nada é apagado. Preenchido = arquivado.
   arquivado_em DateTime? @db.Timestamptz(6)
 
+  titulos_receber TituloReceber[]
+
   @@unique([empresa_id, numero])
   @@index([empresa_id])
   @@map("servico")
+}
+
+enum StatusTituloReceber {
+  aberto
+  pago
+  cancelado
+
+  @@map("status_titulo_receber")
+}
+
+enum FormaPagamentoPrevista {
+  boleto
+  outro
+
+  @@map("forma_pagamento_prevista_titulo")
+}
+
+/// Título a receber — entidade própria, nunca campo em `Servico`
+/// (`docs/especificacao.md` §6/§7: situação financeira é DERIVADA). "A
+/// faturar" é a ausência de qualquer título para um `servico_id`; não existe
+/// aqui nenhum espelho desse estado.
+///
+/// **`servico_id` é a única referência conferida contra a empresa antes de
+/// gravar** (`CLAUDE.md` §3 — o Postgres não aplica RLS na checagem de FK).
+/// `cliente_id` não tem conferência própria: nunca é escolhido, vem sempre
+/// de `servico.cliente_id`, já garantido pela conferência de `Servico`
+/// quando ele foi criado. Ver `src/lib/servicos/titulos.ts`.
+///
+/// **Schema mínimo desta fatia** (`docs/planos/item-3-lancamento-frete.md`,
+/// Tarefa 3): só "Já recebi" grava aqui, direto de um `Servico`. `vencimento`,
+/// `forma_pagamento_prevista` e `forma_pagamento` ficam sempre nulos —
+/// ninguém pergunta isso na tela ainda; nascem preenchidos quando o item 6
+/// (título automático via relatório) e a tela de cobrança existirem.
+///
+/// **`relatorio_id` é um identificador solto, SEM chave estrangeira** — a
+/// tabela `Relatorio` só nasce no item 7. Pendência registrada em
+/// `docs/diario.md` (tarefa 3 do item 3): quem construir o item 7 adiciona a
+/// FK por migration própria.
+model TituloReceber {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  servico_id String  @db.Uuid
+  servico    Servico @relation(fields: [servico_id], references: [id], onDelete: Restrict)
+
+  cliente_id String  @db.Uuid
+  cliente    Cliente @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
+
+  /// Centavos, inteiro (CLAUDE.md §7). Obrigatório.
+  valor Int
+  /// Centavos, inteiro. Nulo enquanto nada foi recebido.
+  valor_recebido Int?
+
+  /// **O significado, não o uso de hoje** (`docs/especificacao.md`, entidade
+  /// TituloReceber): diz se ESTE título cobre o valor inteiro do frete, em
+  /// oposição a uma fração dele — adiantamento ou saldo. "Já recebi" sempre
+  /// cria um título integral, mas o campo descreve o título, não o botão
+  /// que o criou; outro caminho que também cubra o frete inteiro é
+  /// igualmente integral.
+  ///
+  /// Um frete tem no máximo um título integral — índice único parcial na
+  /// migration, não modelável aqui (mesma limitação de `Cliente.documento`).
+  /// Pode ter qualquer número de títulos não integrais (adiantamento,
+  /// saldo). O banco garante mesmo sob concorrência real: dois `INSERT`
+  /// simultâneos para o mesmo `servico_id`, o segundo estoura erro de
+  /// unicidade — não corrida de aplicação.
+  integral Boolean @default(false)
+
+  vencimento               DateTime?               @db.Timestamptz(6)
+  forma_pagamento_prevista FormaPagamentoPrevista?
+
+  status StatusTituloReceber @default(aberto)
+
+  data_pagamento DateTime? @db.Timestamptz(6)
+  /// Texto livre — como o pagamento chegou (pix, dinheiro, etc.). Sem
+  /// inventário fechado ainda; nasce nulo em "Já recebi".
+  forma_pagamento String?
+
+  /// Sem relação — ver o comentário do model.
+  relatorio_id String? @db.Uuid
+
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  /// §7 — nada é apagado. Preenchido = arquivado.
+  arquivado_em DateTime? @db.Timestamptz(6)
+
+  @@index([empresa_id])
+  @@map("titulo_receber")
 }
 
 // ---------------------------------------------------------------------------

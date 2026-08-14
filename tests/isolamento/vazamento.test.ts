@@ -78,15 +78,25 @@ const semear = async (id: string, nome: string) => {
   );
   // Um Servico por empresa (tarefa 1 do item 3), mesma razão acima. A regra
   // de negócio (as quatro conferências de FK, o contador de número, a
-  // resolução de município) é testada em `tests/servicos.test.ts`. `VALUES`
-  // com os ids já gerados acima, nunca `SELECT ... JOIN` — ver o motivo no
-  // comentário do `tipoOperacaoId`.
+  // resolução de município) é testada em `tests/servicos.test.ts`. Id gerado
+  // aqui, não `gen_random_uuid()` no SQL, porque o TituloReceber semeado
+  // abaixo referencia esta linha por `VALUES` — nunca por
+  // `SELECT ... JOIN`, ver o motivo no comentário do `tipoOperacaoId`.
+  const servicoId = randomUUID();
   await raiz.query(
     `INSERT INTO "servico"
        (id, empresa_id, numero, tipo_operacao_id, cliente_id, data_servico,
         valor, criado_por_usuario_id)
-     VALUES (gen_random_uuid(), $1, 1, $2, $3, now(), 10000, $4)`,
-    [id, tipoOperacaoId, clienteId, `u-${id}`],
+     VALUES ($1, $2, 1, $3, $4, now(), 10000, $5)`,
+    [servicoId, id, tipoOperacaoId, clienteId, `u-${id}`],
+  );
+  // Um TituloReceber por empresa (tarefa 3 do item 3), mesma razão acima. A
+  // regra de negócio ("Já recebi", as duas conferências de FK, um título por
+  // frete) é testada em `tests/titulos.test.ts`.
+  await raiz.query(
+    `INSERT INTO "titulo_receber" (id, empresa_id, servico_id, cliente_id, valor)
+     VALUES (gen_random_uuid(), $1, $2, $3, 10000)`,
+    [id, servicoId, clienteId],
   );
 };
 
@@ -98,11 +108,13 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // `cliente`, `veiculo`, `motorista`, `tipo_operacao` e `servico` são
-  // `RESTRICT`/`CASCADE` de propósito (`docs/especificacao.md`,
-  // `CLAUDE.md` §7). `servico` referencia os quatro (tarefa 1 do item 3),
-  // então sai primeiro; `motorista` referencia `veiculo`
-  // (`veiculo_habitual_id`), então sai antes dele.
+  // `cliente`, `veiculo`, `motorista`, `tipo_operacao`, `servico` e
+  // `titulo_receber` são `RESTRICT`/`CASCADE` de propósito
+  // (`docs/especificacao.md`, `CLAUDE.md` §7). `titulo_receber` referencia
+  // `servico` e `cliente` (tarefa 3 do item 3), então sai primeiro; `servico`
+  // referencia os quatro da tarefa 1, então sai antes deles; `motorista`
+  // referencia `veiculo` (`veiculo_habitual_id`), então sai antes dele.
+  await raiz.query(`DELETE FROM "titulo_receber" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "servico" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "motorista" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "cliente" WHERE empresa_id IN ($1,$2)`, [A, B]);
@@ -202,6 +214,13 @@ describe("2. a empresa A não alcança a empresa B", () => {
       where: { empresa_id: { in: [A, B] } },
     });
     expect(servicos.map((s) => s.empresa_id)).toEqual([A]);
+  });
+
+  it("o TituloReceber da empresa B é invisível (tarefa 3 do item 3)", async () => {
+    const titulos = await db(A).tituloReceber.findMany({
+      where: { empresa_id: { in: [A, B] } },
+    });
+    expect(titulos.map((t) => t.empresa_id)).toEqual([A]);
   });
 
   it("a empresa B continua intacta depois de tudo", async () => {
