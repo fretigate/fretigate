@@ -73,6 +73,13 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # ---------------------------------------------------------------------------
+# Claude Code — gerado pela ferramenta de preview em cada maquina, nunca
+# pelo projeto. .claude/agents e .claude/commands continuam versionados de
+# proposito (definem o /revisar, o /onde-paramos etc. para todo mundo).
+# ---------------------------------------------------------------------------
+.claude/launch.json
+
+# ---------------------------------------------------------------------------
 # Sistema operacional e editor
 # ---------------------------------------------------------------------------
 .DS_Store
