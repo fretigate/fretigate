@@ -6,6 +6,60 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 13/08/2026 — correção: teclado escondendo o valor e botão "Salvar frete" apertado no canto
+
+Plano aprovado e commitado antes da construção:
+`docs/planos/correcao-teclado-e-botao-lancar-frete.md`.
+
+Continuação do achado de 12/08/2026 (abaixo): o teclado numérico sobreposto
+de Lançar frete cobre a tela quase inteira no celular, escondendo o valor
+grande do cabeçalho — quem digita não vê o que está digitando. Numa segunda
+captura, o fundador também circulou o botão "Salvar frete", com o problema
+"a frase 'Salvar frete' e o valor estão no canto do botão, não está com
+design legal" — rótulo e valor colados nas bordas, sem respiro.
+
+**O que mudou:**
+
+1. O valor sendo digitado passa a aparecer dentro do próprio teclado
+   (`TecladoNumerico.tsx`), no lugar do rótulo fixo "Valor do frete".
+2. Enquanto o teclado está aberto, o valor grande do cabeçalho escuro
+   (`TelaLancarFrete.tsx`) para de renderizar — o valor existe visível em um
+   lugar só de cada vez, por código, não por coincidência de tamanho de
+   tela (a captura original mostrava uma fatia do valor do cabeçalho ainda
+   cortada, visível por cima do teclado).
+3. `Botao.tsx` ganhou a prop `distribuido`, que aplica o padding lateral já
+   documentado (`24`/`22`, `docs/componentes.md` "01"/"02") a um botão de
+   largura total cujo conteúdo fica nas duas pontas em vez de centralizado
+   — caso que a regra escrita não previa. "Salvar frete" passou a usar essa
+   prop em vez de padding solto na instância.
+
+**Achado do `/revisar`, corrigido antes do commit:** o valor dentro do
+teclado tinha entrado no tamanho de "linha recolhida" (`16.5px/700`,
+Secundário) — só porque, no momento em que o teclado está aberto, aquele
+valor é o único visível na tela e assumiu o papel do valor principal
+(`docs/estilo.md` § Tipografia: "valor em dinheiro... não perdem peso em
+nenhuma tela"). Testado no navegador com o valor-teto (`R$ 999.999,99`,
+`TETO_CENTAVOS`): `text-heroi-detalhe` (46px) quebra em duas linhas nessa
+largura; `text-nome-destaque` (26px/800, `docs/estilo.md`) cabe inteiro ao
+lado do "Pronto" sem quebrar — é o tamanho já documentado usado.
+
+**Pedido ao Design — três itens, ainda sem resposta:**
+
+1. A regra de padding lateral de `docs/componentes.md` ("01 — Principal" /
+   "02 — Secundária") não cobre botão de largura total com conteúdo
+   distribuído nas duas pontas (hoje só prevê texto único centralizado).
+2. O cabeçalho do teclado numérico de Lançar frete passou a mostrar o valor
+   sendo digitado em vez do rótulo fixo "Valor do frete" — não está descrito
+   em `docs/componentes.md` nem em `docs/navegacao.md`.
+3. O tamanho desse valor (`text-nome-destaque`, 26px/800) foi escolhido por
+   ser o maior já documentado que coubesse na linha sem quebrar — não por
+   ter sido desenhado para este caso.
+
+`.claude/launch.json` (arquivo de configuração da ferramenta de preview,
+gerado por máquina — presente desde 12/08/2026) entrou no `.gitignore`
+nesta tarefa: estava sem rastrear havia dias, sujando o `git status` para
+sempre.
+
 ## 12/08/2026 — correção: login pelo celular era recusado (origem não confiável)
 
 Plano aprovado e commitado antes da construção: `docs/planos/
