@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Marca } from "@/components/auth/Marca";
 import { ConteudoTermos } from "./ConteudoTermos";
 
 export const metadata: Metadata = {
@@ -21,6 +22,10 @@ export default async function Page(props: PageProps<"/termos">) {
 
   return (
     <main className="mx-auto flex min-h-full max-w-[480px] flex-col px-20 pt-[var(--area-segura-topo)] pb-[max(24px,calc(env(safe-area-inset-bottom)+16px))]">
+      {/* Só no modo cadastro. A marca é para quem ainda está decidindo
+          confiar no produto; vindo de Ajustes a pessoa já está dentro da
+          sessão, já viu a marca e a tela é só leitura. */}
+      {deCadastro ? <Marca /> : null}
       <h1
         className="text-titulo-tela font-bold leading-[1.1] tracking-[-.01em] text-tinta-apoio-forte"
         style={{ fontVariationSettings: "'wdth' 96" }}

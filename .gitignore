@@ -116,7 +116,8 @@ desktop.ini
 # Arquivo de trabalho do Photoshop. Continua na pasta referencia/marca/ no
 # disco, fora do controle de versao: o Git nao compara PSD, entao cada
 # alteracao salva gravaria o arquivo inteiro de novo no historico, para sempre.
-# O que o app usa sao os .png exportados, que ficam versionados.
+# Os .png exportados ficam versionados: sao a origem da marca. O que o app
+# carrega e a copia em /public/marca/ (ver referencia/LEIA-ME.md).
 *.psd
 
 # Miniatura gerada pela ferramenta do prototipo.

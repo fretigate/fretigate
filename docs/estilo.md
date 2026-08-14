@@ -45,6 +45,20 @@ entre telas estão na seção **Conflitos resolvidos**, com a decisão aplicada.
 
 Nenhuma cor além destas e das três da família FretiNews aparece no produto.
 
+**A precisão, acrescentada em 14/08/2026:** esta é a lista fechada das cores
+que a **interface escolhe** — cor escrita em CSS, em token ou em classe. Ela
+nunca falou de cor **dentro de imagem**, e não passa a falar: a marca do
+FretiGate (`public/marca/fretigate.png`) traz o verde escuro `#0C311B`, que
+não está nesta tabela e não entra nela. A distinção não é conveniência para
+acomodar a marca — é o que a regra sempre quis dizer. `CLAUDE.md` §8 manda
+tirar daqui "cor, altura, raio, tamanho e peso de fonte", que são **decisões
+de interface**; um arquivo de imagem não é decidido aqui, é recebido pronto
+do Design. **Se a marca um dia virar SVG escrito no código, o `#0C311B` passa
+a ser cor da interface e precisa entrar nesta tabela antes.** Escrito porque
+o `/revisar` apontou que o documento estava dizendo duas coisas ao mesmo
+tempo — e a saída certa era tornar a frase precisa, não abrir exceção para
+ela (`CLAUDE.md` §2).
+
 ---
 
 ## Tipografia
@@ -227,6 +241,38 @@ token, com o mesmo nome nas próximas telas sem barra.
 ampliado" sem dar o número. `FormularioCriarConta.tsx` usa `leading-[1.7]`
 no parágrafo de aceite dos Termos — maior que o `1.4` de `--text-apoio`, sem
 ser um valor formal ainda. Mesmo destino: token quando o Design decidir.
+
+**Mesma lacuna, terceiro valor: a largura da marca no topo das telas de fora
+de sessão.** Cinco telas passaram a abrir com a marca do FretiGate
+centralizada — Entrar, Criar conta, Esqueci a senha, Redefinir senha e Termos
+no modo cadastro (`src/components/auth/Marca.tsx`, 14/08/2026). **Não é a
+lista de telas sem barra da seção acima, que tem seis:** Aceitar convite não
+está aqui, e não porque tenha sido decidido que não tem marca — ninguém
+definiu o caso, e aquela tela ainda não existe em código. Também vai para a
+lista do Design abaixo.
+
+A marca usa **140px de largura**, valor que **não é formal desta folha**: veio
+do documento que o Design mandou (`referencia/Design/Marca nas telas de
+autenticacao.html`), e o próprio documento se marca como *"Provisório —
+aproximação: os três valores abaixo ainda não foram confirmados"*.
+
+Os outros dois valores do conjunto têm lastro e **não** são lacuna: os
+**24px** entre a marca e o título estão na escala de espaçamento acima e
+dentro de "entre seções verticais: 22–26px"; o topo continua nos **66px** da
+área segura, sem mudança (confirmado pelo fundador em 14/08/2026 — a marca
+entra dentro da área segura que toda tela já reserva, e o conteúdo desce a
+partir dela).
+
+Nenhuma cor nova entrou por causa disso: a marca é **imagem**
+(`public/marca/fretigate.png`), não cor escrita em CSS — ver a precisão
+acrescentada ao fechamento da seção Cores.
+
+**Falta o Design definir:** largura definitiva, distância até o título,
+confirmação do respiro do topo, se o título passa a `28px/800` e se entra um
+subtítulo (as duas últimas coisas o mockup desenha e **não** foram
+construídas), se sai uma versão vetorial da marca — hoje só existe PNG — e se
+Aceitar convite leva a marca do FretiGate junto da marca da empresa que
+convidou.
 
 **Lacuna resolvida — corpo de texto em tela de fora de sessão.** Registrada
 em 07/08/2026 pelo `/auditar-tela` da tarefa 8, fatia 2 (o "Texto de campo"

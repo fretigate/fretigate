@@ -11,6 +11,73 @@ retomar sem reconstruir contexto.
 Plano aprovado e commitado antes da construção:
 `docs/planos/marca-nas-telas-de-fora-de-sessao.md`.
 
+Cinco telas passaram a abrir com a marca centralizada — Entrar, Criar conta,
+Esqueci a senha, Redefinir senha e Termos no modo cadastro —, mais os estados
+**Recuperação enviada** e **link expirado**, que herdam por dividirem rota.
+Componente único, `src/components/auth/Marca.tsx`. A marca entra dentro dos
+66px de área segura que toda tela já reserva, e o conteúdo desce ≈53px a
+partir dela. `public/` nasceu neste commit (não existia), com
+`public/marca/fretigate.png` — **cópia** de `referencia/marca/LOGOMARCA
+colorida sem fundo.png`, não import de lá, para o `referencia/LEIA-ME.md`
+continuar verdadeiro quando diz que nada daquela pasta é importado por
+`src/`. O preço é que trocar a marca é trocar as duas, e isso está escrito lá.
+
+**Construção provisória, e é a parte que mais importa registrar.** Decisão de
+tela é do Design (`CLAUDE.md` §13), e os três valores vieram do documento
+dele, que se marca a si mesmo como aproximação não confirmada. Só um deles
+não tem lastro na folha de estilo — a largura de 140px —, e ele entrou como
+**lacuna aberta** em `docs/estilo.md`, no mesmo formato do precedente da
+margem inferior padrão. Os 24px até o título estão na escala; os 66px do topo
+são a área segura que já existia, confirmada pelo fundador.
+
+**O que foi pedido ao Design** (`CLAUDE.md` §13 — correção de estado feita
+aqui entra também nesta lista): largura definitiva da marca · distância dela
+até o título · confirmação do respiro do topo · se o título passa a
+`28px/800` · se entra o subtítulo — as duas últimas o mockup dele desenha e
+**não** foram construídas, porque não foram pedidas e o título contradiria a
+folha de estilo · se sai uma versão vetorial da marca, hoje só PNG · e se
+Aceitar convite leva a marca do FretiGate junto da marca da empresa que
+convidou.
+
+**Medido, não deduzido**, com o navegador em 375×812: largura 140px, topo da
+marca em 66px, marca→título 24px, desvio de centralização 0,1px, papel
+`rgb(250,248,244)`. Deslocamento acumulado de layout **zero** — as dimensões
+intrínsecas (1920×394) reservam o espaço antes de a imagem chegar, e o Next
+serve uma versão de 384px, não os 1920 originais. `/termos` sem
+`?de=cadastro` não tem marca, e o título volta aos 66px.
+
+**Teclado, a conferência que o fundador pediu.** Proxy: viewport encolhida
+para 375×400, que é o que um teclado aberto faz com a área visível. Em Criar
+conta, com o último campo em foco, o campo fica inteiro visível e o botão
+"Criar conta" fica alcançável rolando — e nada encolheu para caber
+(`CLAUDE.md` §8): botão ainda 60px, campos ainda 56px, altura total da página
+idêntica à de 812px de viewport. **É proxy, não celular de verdade** — a
+conferência final no aparelho é do fundador.
+
+**Achados do `/revisar`, corrigidos antes do commit** (sete, todos aceitos):
+a seção nova que eu tinha escrito em `docs/componentes.md` era **desenho**, e
+desenho é do Design — o plano previa só as linhas da tabela, e eu tinha feito
+mais do que ele dizia; a seção foi apagada e ficaram as sete linhas marcadas
+como provisórias. O diário estava sem esta lista de pedidos ao Design. Eu
+tinha escrito "as cinco telas sem barra", e a lista fechada de telas sem
+barra tem **seis** (inclui Aceitar convite) — número certo com rótulo errado,
+em dois documentos. `docs/estilo.md` passou a se contradizer: a linha "nenhuma
+cor além destas aparece no produto" contra o `#0C311B` da marca — resolvido
+tornando a frase **precisa** (ela sempre falou de cor escolhida e escrita em
+CSS, nunca de cor dentro de imagem), não abrindo exceção, e com a condição
+escrita de que, se a marca virar SVG no código, aquele verde precisa entrar
+na tabela antes. O `.gitignore` tinha a mesma frase que eu corrigi no
+`LEIA-ME` e não corrigi lá ("o que o app usa sao os .png exportados") — é o
+`CLAUDE.md` §6, que nomeia o `.gitignore` como lugar de conferir. O documento
+do Design só existia na pasta de downloads do fundador, sendo a única fonte
+dos 140px — commitado em `referencia/Design/`, com a razão de ele ficar
+versionado apesar de ser bundle escrita no `LEIA-ME`. E eu tinha afirmado que
+Aceitar convite não leva a marca "porque são coisas diferentes", quando
+ninguém decidiu isso — virou pergunta ao Design.
+
+Próximo: item 4 — **Lista de fretes e detalhe do frete**
+(`docs/especificacao.md` §9), que já era o próximo antes desta tarefa entrar.
+
 ## 14/08/2026 — tarefa 4 do item 3 fecha: medição dos 10%, duas ferramentas
 
 Última tarefa do item 3 (`docs/planos/item-3-lancamento-frete.md`). Duas

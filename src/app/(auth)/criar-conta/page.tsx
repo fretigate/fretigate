@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Marca } from "@/components/auth/Marca";
 import { FormularioCriarConta } from "./FormularioCriarConta";
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <main className="mx-auto flex min-h-full max-w-[480px] flex-col px-20 pt-[var(--area-segura-topo)] pb-[max(24px,calc(env(safe-area-inset-bottom)+16px))]">
+      <Marca />
       {/* docs/estilo.md linha 80 — Título de tela: 20/1.1, 700, wdth 96%,
           ls -.01em, tinta #3C443E. Nenhum outro título existe no código
           ainda para copiar o padrão de `wdth` — primeira vez aplicando. */}

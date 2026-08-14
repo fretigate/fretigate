@@ -10,8 +10,9 @@ O código do FretiGate vive inteiro em `src/`. A configuração vive na raiz.
 
 | Pasta | O que é |
 |---|---|
-| `marca/` | Os arquivos da marca. Os `.png` são os que o app usa; os `.psd` são o arquivo de trabalho e ficam fora do controle de versão. `_old/` é a marca antiga, também fora. |
+| `marca/` | Os arquivos da marca — a **origem**, não o que o app carrega. Os `.psd` são o arquivo de trabalho e ficam fora do controle de versão. `_old/` é a marca antiga, também fora. |
 | `Design/Manual de Marca/` | As pranchas do manual, em imagem. |
+| `Design/Marca nas telas de autenticacao.html` | O documento que definiu a marca no topo das telas de fora de sessão (14/08/2026). É a **origem dos 140px**, e traz o próprio aviso do Design de que os valores são aproximação não confirmada. É um bundle de 380 KB, do tipo que o `.gitignore` normalmente ignora — fica versionado porque, ao contrário dos bundles do protótipo, **não existe fonte mais leve dele**: a política ali é "versiona o fonte, ignora o gerado", e aqui o bundle é o fonte. Sai quando o Design confirmar os valores. |
 | `Design/Protótipo clicável de fretes/` | O protótipo que originou o produto. Cada tela é um `.dc.html`. |
 
 ## Por que continua no repositório
@@ -31,3 +32,14 @@ rápido e mais confiável do que lembrar. O protótipo é a origem de
   verdade (`CLAUDE.md` §8).
 - **Não trate isto como especificação.** A especificação está em `docs/`. Onde
   os dois divergirem, `docs/` manda e o protótipo é resíduo.
+
+## A marca é a única coisa daqui que tem cópia no produto
+
+`public/marca/fretigate.png` é cópia de `marca/LOGOMARCA colorida sem
+fundo.png`, feita em 14/08/2026 para a marca no topo das telas de fora de
+sessão. **Cópia, e não import daqui**, justamente para a primeira frase deste
+arquivo continuar verdadeira: nada desta pasta é importado por `src/`, e
+`referencia/` não é dependência de build.
+
+O preço disso é que as duas podem divergir: **trocar a marca é trocar as
+duas**, esta e a de `public/`. Editar só esta não muda tela nenhuma.

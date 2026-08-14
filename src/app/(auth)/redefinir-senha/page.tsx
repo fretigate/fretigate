@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { z } from "zod";
+import { Marca } from "@/components/auth/Marca";
 import { buscarEmailPorCodigo } from "@/lib/servicos/redefinicao-de-senha";
 import { travaDeConsultaDoCodigo } from "@/lib/servicos/trava-de-redefinicao";
 import { formatarHorarioFortaleza } from "@/lib/utils/mensagem-trava";
@@ -15,6 +16,7 @@ const schemaCodigo = z.string().min(1);
 function Pagina({ children }: { children: ReactNode }) {
   return (
     <main className="mx-auto flex min-h-full max-w-[480px] flex-col px-20 pt-[var(--area-segura-topo)] pb-[max(24px,calc(env(safe-area-inset-bottom)+16px))]">
+      <Marca />
       <h1
         className="text-titulo-tela font-bold leading-[1.1] tracking-[-.01em] text-tinta-apoio-forte"
         style={{ fontVariationSettings: "'wdth' 96" }}
