@@ -21,6 +21,8 @@ type PropsBotao = ButtonHTMLAttributes<HTMLButtonElement> & {
   carregando?: boolean;
   /** Só para a variante "texto" — vermelho em vez de neutro. */
   destrutiva?: boolean;
+  /** Ver `PADDING_DISTRIBUIDO` abaixo. */
+  distribuido?: boolean;
   children: ReactNode;
 };
 
@@ -29,6 +31,7 @@ type PropsLink = AnchorHTMLAttributes<HTMLAnchorElement> & {
   href: string;
   carregando?: undefined;
   destrutiva?: boolean;
+  distribuido?: boolean;
   children: ReactNode;
 };
 
@@ -44,15 +47,30 @@ const CLASSE_BASE =
 const CLASSE_POR_VARIANTE: Record<Variante, string> = {
   // 01 — Principal: altura 60, texto 17/700, verde sólido. Padding lateral
   // (24, docs/componentes.md) só vale para largura automática — aqui é sempre
-  // w-full, então não entra.
+  // w-full, então não entra por padrão (ver `PADDING_DISTRIBUIDO`).
   principal:
     "h-60 w-full text-botao-principal font-bold leading-[1] bg-acao text-white active:bg-acao-pressionada disabled:bg-principal-desabilitado disabled:text-tinta-desabilitada",
   // 02 — Secundária: altura 52, texto 15/700, fundo claro neutro. Mesma razão
-  // acima para não ter padding lateral em largura total.
+  // acima para não ter padding lateral em largura total por padrão.
   secundaria:
     "h-52 w-full text-botao-secundario font-bold leading-[1] bg-separacao text-tinta active:bg-principal-desabilitado disabled:bg-secundario-desabilitado disabled:text-tinta-desabilitada",
   // 03 — Texto: altura 44 (alvo mínimo de toque), sem fundo. Nunca carrega.
   texto: "h-44 text-[14px] font-semibold leading-[1] disabled:text-tinta-desabilitada",
+};
+
+/**
+ * `docs/componentes.md` "01"/"02": o padding lateral 24/22 só vale, por
+ * escrito, para largura automática — pensado para texto único centralizado.
+ * Um botão de largura total cujo conteúdo é distribuído nas duas pontas
+ * (rótulo de um lado, valor do outro, sem centralizar) esbarra na borda sem
+ * esse respiro; a prop `distribuido` reaplica o mesmo valor já documentado
+ * a esse caso, dentro do componente — pedido ao Design estender a regra
+ * escrita (`docs/diario.md`, 13/08/2026, "teclado escondendo o valor e
+ * botão 'Salvar frete' apertado no canto").
+ */
+const PADDING_DISTRIBUIDO: Partial<Record<Variante, string>> = {
+  principal: "px-24",
+  secundaria: "px-22",
 };
 
 const CLASSE_TEXTO_DESTRUTIVA = "text-vencido active:text-destrutiva-pressionada";
@@ -88,7 +106,7 @@ function Spinner({ variante }: { variante: "principal" | "secundaria" }) {
 }
 
 export function Botao(props: Props) {
-  const { variante, destrutiva = false, className, children } = props;
+  const { variante, destrutiva = false, distribuido = false, className, children } = props;
 
   const classeTexto =
     variante === "texto"
@@ -101,13 +119,14 @@ export function Botao(props: Props) {
     CLASSE_BASE,
     CLASSE_POR_VARIANTE[variante],
     classeTexto,
+    distribuido ? PADDING_DISTRIBUIDO[variante] : "",
     className,
   ]
     .filter(Boolean)
     .join(" ");
 
-  // Os campos do componente (variante, destrutiva, className, children, href,
-  // carregando) não são atributo nativo de `<button>`/`<a>` — tirados de uma
+  // Os campos do componente (variante, destrutiva, distribuido, className,
+  // children, href, carregando) não são atributo nativo de `<button>`/`<a>` — tirados de uma
   // cópia antes de espalhar o resto, em vez de re-desestruturar só para
   // descartar (o que deixaria binding não usado para trás).
   //
@@ -122,6 +141,7 @@ export function Botao(props: Props) {
   const nativos: Record<string, unknown> = { ...props };
   delete nativos.variante;
   delete nativos.destrutiva;
+  delete nativos.distribuido;
   delete nativos.className;
   delete nativos.children;
   delete nativos.href;

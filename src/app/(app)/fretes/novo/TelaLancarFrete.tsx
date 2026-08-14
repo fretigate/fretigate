@@ -305,20 +305,28 @@ export function TelaLancarFrete({
             </span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setTecladoAberto(true);
-              setFolhaAberta(null);
-              setCalendarioAberto(false);
-            }}
-            className="mt-18 flex items-baseline gap-10 text-left"
-          >
-            <span className="text-[24px] font-bold leading-[1] text-white/45">R$</span>
-            <span className="min-w-0 flex-1 text-heroi font-extrabold leading-[1] tracking-[-0.035em] text-white [font-variant-numeric:tabular-nums]">
-              {formatarCentavos(valorCentavos)}
-            </span>
-          </button>
+          {/* Escondido enquanto o teclado está aberto — ele já mostra o
+              mesmo valor no próprio cabeçalho (`TecladoNumerico.tsx`), e o
+              teclado cobre esta linha na maioria das telas de celular de
+              qualquer forma. O valor existe visível em um lugar só de cada
+              vez, por código, não por coincidência de tamanho de tela
+              (achado do fundador, `docs/diario.md`, 12–13/08/2026). */}
+          {!tecladoAberto ? (
+            <button
+              type="button"
+              onClick={() => {
+                setTecladoAberto(true);
+                setFolhaAberta(null);
+                setCalendarioAberto(false);
+              }}
+              className="mt-18 flex items-baseline gap-10 text-left"
+            >
+              <span className="text-[24px] font-bold leading-[1] text-white/45">R$</span>
+              <span className="min-w-0 flex-1 text-heroi font-extrabold leading-[1] tracking-[-0.035em] text-white [font-variant-numeric:tabular-nums]">
+                {formatarCentavos(valorCentavos)}
+              </span>
+            </button>
+          ) : null}
 
           {temSugestao ? (
             <PilulaEmLinha className="mt-14 self-start" onClick={() => setValorCentavos(sugestaoValor)}>
@@ -427,7 +435,13 @@ export function TelaLancarFrete({
             />
           ) : null}
           <div className="px-20 pt-16" style={{ paddingBottom: "var(--ancora-rodape-acoes)" }}>
-            <Botao variante="principal" type="submit" carregando={salvando} disabled={!clienteId}>
+            <Botao
+              variante="principal"
+              type="submit"
+              carregando={salvando}
+              disabled={!clienteId}
+              distribuido
+            >
               <span className="flex-1 text-left">Salvar frete</span>
               <span className="text-[19px] font-extrabold leading-[1] text-white/75 [font-variant-numeric:tabular-nums]">
                 R$ {formatarCentavos(valorCentavos)}

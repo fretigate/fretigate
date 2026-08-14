@@ -1,5 +1,7 @@
 "use client";
 
+import { formatarCentavos } from "@/lib/utils/dinheiro";
+
 /**
  * Teclado numérico sobreposto — só para o campo Valor do Lançamento de frete
  * (`docs/componentes.md`, "Auditoria da regra de posição": exceção
@@ -10,6 +12,11 @@
  * Trabalha sempre em centavos inteiros (`CLAUDE.md` §7) — a vírgula da tecla
  * é só o desenho do protótipo de referência (`referencia/`), sem efeito: o
  * separador decimal já é implícito na conversão de centavos para reais.
+ *
+ * O cabeçalho mostra o valor sendo digitado, não um rótulo fixo: em telas de
+ * celular este teclado cobre a tela quase inteira, incluindo o valor grande
+ * do cabeçalho escuro que abriu ele — sem isto, quem digita não vê o que
+ * está digitando (achado do fundador, `docs/diario.md`, 12–13/08/2026).
  */
 
 const TECLAS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "0", "⌫"] as const;
@@ -40,8 +47,8 @@ export function TecladoNumerico({ valorCentavos, onAlterar, onPronto, className 
     // aviso do sistema". Nenhum outro elemento tem sombra.
     <div className={["bg-separacao px-8 pt-10 pb-12", className].filter(Boolean).join(" ")}>
       <div className="flex items-center justify-between px-10 pb-10">
-        <span className="text-[13px] font-semibold leading-[1.3] text-tinta-apoio-forte">
-          Valor do frete
+        <span className="text-nome-destaque font-extrabold tracking-[-0.015em] text-tinta [font-variant-numeric:tabular-nums]">
+          R$ {formatarCentavos(valorCentavos)}
         </span>
         <button
           type="button"
