@@ -22,12 +22,13 @@ import {
 /**
  * Lançar frete — `docs/planos/item-3-lancamento-frete.md`, Tarefa 2.
  *
- * Layout de três blocos (cabeçalho escuro fixo · meio rolável · rodapé fixo)
- * é a EXCEÇÃO documentada em `docs/componentes.md`, "Posição": "o teclado
- * numérico é sobreposição, e o salvar nunca fica coberto — ele sobe junto,
- * acima do teclado." Toda outra tela do produto rola inteira, com o salvar
- * no fim do fluxo — só esta (e Despesas, depois) tem rodapé que não rola,
- * porque só estas têm teclado numérico sobreposto.
+ * O cartão do cabeçalho rola junto com o resto do conteúdo, como em
+ * qualquer formulário do produto. Só o rodapé (teclado numérico +
+ * "Salvar frete") é a EXCEÇÃO documentada em `docs/componentes.md`,
+ * "Posição": "o teclado numérico é sobreposição, e o salvar nunca fica
+ * coberto — ele sobe junto, acima do teclado." Por isso, e só por isso,
+ * este formulário (e Despesas, depois) tem rodapé que não rola — nenhum
+ * outro bloco da tela ganha essa exceção.
  */
 
 type ItemEntidade = { id: string; nome: string; apoio?: string };
@@ -282,60 +283,6 @@ export function TelaLancarFrete({
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-papel">
-      {/* Cabeçalho escuro — data e valor, `docs/estilo.md`: "Lançar frete | valor 60px no cartão escuro". */}
-      <div className="flex-none px-16 pt-66">
-        <div className="flex flex-col rounded-cartao-escuro bg-tinta px-22 pt-18 pb-20">
-          <span className="text-eyebrow font-bold uppercase tracking-[.16em] text-white/45">
-            Lançar frete
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              setCalendarioAberto(true);
-              setTecladoAberto(false);
-              setFolhaAberta(null);
-            }}
-            className="-mx-8 mt-2 flex min-h-48 items-center gap-8 px-8 text-left"
-          >
-            <span className="text-[15px] font-semibold leading-[1] text-white">
-              {rotuloData(dataEscolhida, hoje)}
-            </span>
-            <span className="text-etiqueta font-bold uppercase leading-[1] tracking-[.1em] text-amarelo">
-              Trocar
-            </span>
-          </button>
-
-          {/* Escondido enquanto o teclado está aberto — ele já mostra o
-              mesmo valor no próprio cabeçalho (`TecladoNumerico.tsx`), e o
-              teclado cobre esta linha na maioria das telas de celular de
-              qualquer forma. O valor existe visível em um lugar só de cada
-              vez, por código, não por coincidência de tamanho de tela
-              (achado do fundador, `docs/diario.md`, 12–13/08/2026). */}
-          {!tecladoAberto ? (
-            <button
-              type="button"
-              onClick={() => {
-                setTecladoAberto(true);
-                setFolhaAberta(null);
-                setCalendarioAberto(false);
-              }}
-              className="mt-18 flex items-baseline gap-10 text-left"
-            >
-              <span className="text-[24px] font-bold leading-[1] text-white/45">R$</span>
-              <span className="min-w-0 flex-1 text-heroi font-extrabold leading-[1] tracking-[-0.035em] text-white [font-variant-numeric:tabular-nums]">
-                {formatarCentavos(valorCentavos)}
-              </span>
-            </button>
-          ) : null}
-
-          {temSugestao ? (
-            <PilulaEmLinha className="mt-14 self-start" onClick={() => setValorCentavos(sugestaoValor)}>
-              Última vez neste trecho: R$ {formatarCentavos(sugestaoValor)}
-            </PilulaEmLinha>
-          ) : null}
-        </div>
-      </div>
-
       {/* Um `<form>` só, para o `FormData` sair inteiro — mas com o meio
           rolável e o rodapé fixo como filhos irmãos (a exceção do topo do
           arquivo), não um bloco só que rola inteiro. */}
@@ -346,8 +293,64 @@ export function TelaLancarFrete({
         <input type="hidden" name="dataServico" value={dataEscolhida} />
         <input type="hidden" name="valorCentavos" value={valorCentavos} />
 
-        {/* As seis linhas + km — `docs/especificacao.md` §4.1. */}
-        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-16 py-20">
+        {/* Cabeçalho escuro + as seis linhas + km — `docs/especificacao.md`
+            §4.1. Tudo rola junto; só o rodapé (abaixo) fica fora do fluxo. */}
+        <div
+          className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-16 pb-20"
+          style={{ paddingTop: "var(--area-segura-topo)" }}
+        >
+          {/* Cabeçalho escuro — data e valor, `docs/estilo.md`: "Lançar frete | valor 60px no cartão escuro". */}
+          <div className="mb-14 flex flex-col rounded-cartao-escuro bg-tinta px-22 pt-18 pb-20">
+            <span className="text-eyebrow font-bold uppercase tracking-[.16em] text-white/45">
+              Lançar frete
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setCalendarioAberto(true);
+                setTecladoAberto(false);
+                setFolhaAberta(null);
+              }}
+              className="-mx-8 mt-2 flex min-h-48 items-center gap-8 px-8 text-left"
+            >
+              <span className="text-[15px] font-semibold leading-[1] text-white">
+                {rotuloData(dataEscolhida, hoje)}
+              </span>
+              <span className="text-etiqueta font-bold uppercase leading-[1] tracking-[.1em] text-amarelo">
+                Trocar
+              </span>
+            </button>
+
+            {/* Escondido enquanto o teclado está aberto — ele já mostra o
+                mesmo valor no próprio cabeçalho (`TecladoNumerico.tsx`), e o
+                teclado cobre esta linha na maioria das telas de celular de
+                qualquer forma. O valor existe visível em um lugar só de cada
+                vez, por código, não por coincidência de tamanho de tela
+                (achado do fundador, `docs/diario.md`, 12–13/08/2026). */}
+            {!tecladoAberto ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setTecladoAberto(true);
+                  setFolhaAberta(null);
+                  setCalendarioAberto(false);
+                }}
+                className="mt-18 flex items-baseline gap-10 text-left"
+              >
+                <span className="text-[24px] font-bold leading-[1] text-white/45">R$</span>
+                <span className="min-w-0 flex-1 text-heroi font-extrabold leading-[1] tracking-[-0.035em] text-white [font-variant-numeric:tabular-nums]">
+                  {formatarCentavos(valorCentavos)}
+                </span>
+              </button>
+            ) : null}
+
+            {temSugestao ? (
+              <PilulaEmLinha className="mt-14 self-start" onClick={() => setValorCentavos(sugestaoValor)}>
+                Última vez neste trecho: R$ {formatarCentavos(sugestaoValor)}
+              </PilulaEmLinha>
+            ) : null}
+          </div>
+
           <LinhaRecolhida rotulo="Cliente" valor={nomeCliente} onClick={() => abrirFolha("cliente")} />
           {estado.erros?.clienteId ? (
             <span className="px-4 text-apoio font-medium text-vencido">{estado.erros.clienteId}</span>

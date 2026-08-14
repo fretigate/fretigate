@@ -6,10 +6,71 @@ retomar sem reconstruir contexto.
 
 ---
 
-## 13/08/2026 — correção: cartão fixo em "Lançar frete" durante a rolagem
+## 14/08/2026 — correção: cartão fixo em "Lançar frete" durante a rolagem
 
-Plano aprovado e commitado antes da construção:
+Plano aprovado e commitado em 13/08/2026:
 `docs/planos/correcao-cartao-fixo-lancar-frete.md`.
+
+Achado do fundador, testando no celular: o cartão escuro do topo (data +
+valor) ficava fixo durante a rolagem, enquanto o resto do conteúdo
+(Motorista, Origem, Destino, Salvar frete) rolava normalmente. Investigação
+antes do plano confirmou que não era regressão da tarefa de 13/08 (teclado
+mostrando o valor) — a estrutura de três blocos já nascia assim na criação
+da tela, 11/08/2026 (entrada acima, agora com nota de desatualização).
+
+**O que mudou** (`TelaLancarFrete.tsx`): o cartão escuro saiu do bloco fixo
+que existia fora do formulário e passou a ser o primeiro item dentro do
+bloco rolável, junto de Cliente/Caminhão/Motorista/Origem/Destino/Carga/Km.
+A folga do topo (antes `pt-66`, fixo) passou a usar
+`var(--area-segura-topo)`, a mesma técnica de toda outra tela do produto. O
+rodapé (teclado numérico + "Salvar frete") não mudou — continua fora da
+área de rolagem, por ser a única exceção documentada em
+`docs/componentes.md`, "Posição".
+
+**Divergência do plano, achada pelo `/revisar`:** o plano mandava `mb-20`
+no cartão, para "preservar a distância visual atual" (20px). Medido no
+navegador: `mb-20` somado ao `gap-6` do container dá **26px**, não 20 — a
+conta do plano estava errada. `mb-14` + `gap-6` = 20px, batendo com o gap
+original (`py-20` do bloco rolável de antes). O código ficou com `mb-14`,
+que cumpre o que o plano queria dizer; o valor escrito no plano não. Fica
+registrado aqui, como o próprio plano manda quando a construção diverge
+dele.
+
+**Lacuna achada pelo `/revisar`, virou pedido ao Design:** o protótipo em
+`referencia/` constrói o cabeçalho exatamente como o código **era** —
+fixo, fora do bloco rolável. É evidência corroborante, nunca autoridade
+(`CLAUDE.md` §13), e o fundador já tinha reportado o cabeçalho fixo como
+defeito antes desta investigação — sinal mais direto que o protótipo. Ainda
+assim, fica pendente confirmar com o Design: se o cabeçalho fixo foi desenho
+deliberado que nunca virou regra escrita em `docs/componentes.md`, o motivo
+importa e pode pedir reavaliação; se não foi, o protótipo precisa ser
+atualizado para acompanhar.
+
+**Verificado no navegador** (`lint`, `tsc --noEmit`, `npm test` — 158/158 —,
+e inspeção visual em viewport de celular): o cartão sai de cena ao rolar
+para baixo (só uma tira escura de ~8px permanece visível) e reaparece
+inteiro ao rolar de volta ao topo; o gap entre o cartão e "Cliente" mede
+20px, igual ao original; tocar no valor ainda abre o teclado numérico
+mostrando o valor sendo digitado (correção de 13/08 intacta); "Trocar"
+ainda abre a folha de calendário por cima do cartão; "Salvar frete"
+continua fixo no rodapé em qualquer posição de rolagem.
+
+**Pendência de UX, o fundador pediu para observar:** com o cartão rolando,
+o campo de valor — o mais tocado da tela — deixa de estar sempre à mão.
+Antes, bastava tocar; agora, se a tela já estiver rolada para baixo (por
+exemplo, depois de preencher Motorista/Origem/Destino), corrigir o valor
+exige rolar de volta ao topo primeiro. No fluxo natural de uso (abrir a
+tela → tocar no valor, que é a segunda coisa visível → preencher o resto)
+isso não custa nada, porque o cartão ainda está no topo na primeira vez que
+se toca nele. O custo aparece só ao **voltar** a editar o valor depois de já
+ter rolado — um caso plausível (perceber um erro de digitação tarde) mas
+não o caminho principal. Não consegui testar esse ponto com um gesto de
+rolagem real de dedo: o clique/scroll da ferramenta de automação ficou
+instável nesta sessão (todo clique virava seleção de texto em vez de toque),
+e a rolagem foi verificada programaticamente (`scrollTop`), não por gesto.
+Recomendo conferir no celular de verdade antes de considerar isto fechado —
+é exatamente o tipo de atrito que só aparece usando com o polegar, e a
+métrica do §1 (30 segundos) é sensível a isso.
 
 ## 13/08/2026 — correção: teclado escondendo o valor e botão "Salvar frete" apertado no canto
 
@@ -357,6 +418,10 @@ novo/`), com cabeçalho fixo (data + valor), meio rolável (as seis linhas + km)
 e rodapé fixo (a exceção documentada em `docs/componentes.md`, "Posição": o
 teclado numérico é sobreposição, e o salvar nunca fica coberto). O (+) da
 barra passou a abrir esta tela, como o item 2 já previa.
+
+> **Desatualizado em 14/08/2026:** "cabeçalho fixo" deixou de ser verdade —
+> ver a entrada de 14/08/2026, "cartão fixo em Lançar frete durante a
+> rolagem", abaixo. Só o rodapé continua sendo a exceção que não rola.
 
 **Data não estava na lista de seis linhas do plano** (cliente, caminhão,
 motorista, origem, destino, carga) mas é obrigatória para salvar
