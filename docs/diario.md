@@ -6,6 +6,11 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 13/08/2026 — correção: cartão fixo em "Lançar frete" durante a rolagem
+
+Plano aprovado e commitado antes da construção:
+`docs/planos/correcao-cartao-fixo-lancar-frete.md`.
+
 ## 13/08/2026 — correção: teclado escondendo o valor e botão "Salvar frete" apertado no canto
 
 Plano aprovado e commitado antes da construção:
