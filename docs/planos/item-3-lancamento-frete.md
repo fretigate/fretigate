@@ -290,11 +290,13 @@ criação de título pago via "Já recebi", recusa cruzada de `servico_id`/
 Decidido com o fundador: **duas ferramentas, papéis diferentes.**
 
 **1. Comando interno** (`npm run medir:municipios -- --empresa=<id>`) — a
-ferramenta de investigação. Usa `resolverMunicipio` para reclassificar
-cada `Servico` com `origem_texto` ou `destino_texto` preenchido e
-`municipio_id` correspondente nulo (só entra na conta quem **tem** texto
-— campo vazio é ausência de tentativa, não falha). Imprime:
-- percentual sobre o total elegível, com **piso de 20 fretes lançados**
+ferramenta de investigação (`scripts/medir-municipios.mts`, chamando
+`medirResolucaoDeMunicipios` em `src/lib/servicos/medicao-municipios.ts`).
+Usa `resolverMunicipio` para reclassificar **cada campo** (`origem_texto`
+e `destino_texto`, separadamente) com texto preenchido e `municipio_id`
+correspondente nulo — só entra na conta quem **tem** texto, campo vazio é
+ausência de tentativa, não falha. Imprime:
+- percentual sobre o total elegível, com **piso de 20 campos com texto**
   (abaixo disso, não imprime percentual — avisa que a base é pequena
   demais);
 - separado em **ambíguo** (conserta a tela) e **não encontrado** (conserta
@@ -304,16 +306,37 @@ cada `Servico` com `origem_texto` ou `destino_texto` preenchido e
 Por empresa — nunca uma média entre empresas, que esconderia a empresa
 que digita mal atrás da que digita bem.
 
-**2. Passo na esteira que avisa, não reprova** — roda o mesmo cálculo
-contra a empresa de teste (`tests/isolamento`, o único banco que a
-esteira toca) a cada execução do CI. Se passar de 10% (com o piso de 20),
-imprime um aviso visível no log — **não falha o build**. Decisão
-explícita do fundador: esteira vermelha por indicador de qualidade de
-dado ensina a ignorar vermelho, e o vermelho precisa continuar
-significando isolamento e regressão quebrados. Enquanto não houver
-cliente real, isto mede a consistência da própria suíte de teste — é o
-que interessa agora, confirmar que a resolução funciona antes de alguém
-de verdade usar.
+**A unidade é o campo, não o frete — corrigido em 14/08/2026.** Esta seção
+dizia "fretes" e "piso de 20 fretes lançados"; a implementação sempre
+contou por campo, e o `/revisar` pegou o texto divergente. Motivo, com o
+fundador: origem vem pré-preenchida (§4.1) e destino é digitado — são
+problemas diferentes, e "o frete tem problema" esconde qual dos dois é.
+Ver `docs/especificacao.md`, "A medição que o item 3 precisa entregar".
+
+**2. Passo na esteira que avisa, não reprova — reformulado em 14/08/2026.**
+A ideia original (rodar contra "a empresa de teste") não sobrevive ao
+próprio desenho da suíte: cada arquivo de teste semeia e apaga a própria
+empresa (`CLAUDE.md` §5), então não sobra nenhuma depois de `npm test`
+para um passo separado consultar. A saída, decidida com o fundador: o
+passo **é** um teste a mais (`tests/regressao-resolucao-municipios.test.ts`),
+dentro do `npm test` de sempre — sem `run:` novo no `ci.yml`. Ele semeia
+uma **lista fixa de 41 textos**, escrita uma vez para representar como
+gente de verdade digita (nome sem acento, formato "Cidade/UF", abreviação,
+erro de digitação comum, nome ambíguo em vários estados — nunca dado de
+cliente, que o projeto de teste não recebe). A lista não muda para o teste
+ficar mais fácil ou mais difícil: mudar a lista é mudar a régua.
+
+**O critério é desvio do esperado, não os 10% do limite de uso real —
+corrigido em 14/08/2026, mesma sessão.** A primeira versão reaproveitava o
+limite de 10% também aqui; numa lista de 41 itens isso quase não detecta
+nada (uma falha nova sobe de 3 para 4, ainda abaixo de 10%). Lista fixa tem
+número de falhas **conhecido** (3, hoje) — qualquer desvio, para mais ou
+para menos, é regressão ou correção real, não ruído de amostra. `console.warn`
+quando o número de falhas for diferente do esperado — **nunca falha o
+build**, pelo mesmo motivo já decidido: esteira vermelha por indicador de
+qualidade de dado ensina a ignorar vermelho. O que este número mede é se
+`resolverMunicipio` piorou (ou melhorou) desde ontem, não uso real — uso
+real só existe pelo comando 1, contra uma empresa de verdade.
 
 **Exposição numa tela dentro do app** fica para quando o item 10
 (Configurações) existir — decisão de lá, não desta tarefa.
