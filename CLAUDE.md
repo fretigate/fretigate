@@ -672,9 +672,38 @@ também fecha, mas o que se quer é zero linhas.
 de uma linha que transforma falha fechada em falha aberta, e é exatamente o
 atalho que alguém faz para "consertar" um teste que está devolvendo vazio.
 
-Toda política tem `USING` **e** `WITH CHECK`. Sem o segundo, a leitura fica
-travada e a escrita não: um `INSERT` gravaria linha com o `empresa_id` de outra
-empresa.
+Toda política tem `USING` **e** `WITH CHECK`, os dois explícitos — nunca um
+deles deixado para o Postgres deduzir. O que as duas cláusulas compartilham
+não é serem iguais; é serem **escritas**.
+
+**Política de isolamento** (as tabelas de domínio, comparando `empresa_id`/`id`
+com o contexto de empresa) leva o **mesmo texto** nas duas: quem pode ler é
+quem pode gravar, e é sempre a própria empresa.
+
+**A política de `municipio` é a exceção assimétrica, de propósito — e continua
+sendo, mesmo com a exigência acima.** `USING (true) WITH CHECK (false)`: todo
+mundo lê, ninguém grava (§2, sobre esta mesma política: "cumpre o §9 ao pé da
+letra **e** é mais rígida"). As duas cláusulas aqui são diferentes por
+desenho, não por omissão — a exigência é que as duas estejam escritas, não que
+digam a mesma coisa.
+
+**O perigo que esta regra evita não é a ausência do `WITH CHECK` isolada — é o
+`USING` não filtrar.** Medido em 15/08/2026, com as duas tentativas: uma
+política `ALL` com `USING (empresa_id = contexto)` e **sem** `WITH CHECK`
+recusou um `INSERT` gravando `empresa_id` de outra empresa — o Postgres deriva
+o `WITH CHECK` do `USING` quando ele falta, para política `ALL`. Já uma
+política com `USING (true)` sem `WITH CHECK` **aceitou** o mesmo `INSERT`: o
+perigo real é o `USING` aberto, não o `WITH CHECK` implícito.
+
+**Mesmo assim, o `WITH CHECK` explícito continua exigido em toda política — por
+convenção do projeto, não por necessidade técnica.** Depender da derivação
+implícita deixa uma migration futura escrever uma política só com `USING`,
+certa por sorte porque o `USING` também estava certo, sem que nada distinga
+esse caso do perigoso por leitura. Explícito é conferível — é o que
+`tests/isolamento/schema.test.ts` lê, campo a campo, para cada tabela contra o
+que está declarado para ela; implícito é suposição sobre o que o Postgres faz
+por trás, e é exatamente o tipo de suposição que este arquivo pede para medir,
+não deduzir.
 
 **Criar uma empresa exige definir o contexto ANTES de inserir.** Como a política
 de `empresa` tem `WITH CHECK (id = ...)`, o `INSERT` só passa se o contexto já

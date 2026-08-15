@@ -42,7 +42,52 @@ tabela nova — exatamente onde a política errada da tarefa 1 passaria em verde
    `afterAll` do arquivo), não uma só, porque cada uma cobre uma janela de
    falha diferente.
 
-   Ainda não construída — este commit é só o plano.
+   **Achado durante a construção, que corrigiu o `CLAUDE.md` §9.** Antes de
+   escrever a comparação de campos, medi o que o parágrafo do §9 afirmava —
+   "sem `WITH CHECK`, a leitura fica travada e a escrita não" — com duas
+   tentativas de `INSERT` reais, como `fretigate_app`, contra tabelas de
+   sondagem criadas e derrubadas na hora:
+
+   - `USING (empresa_id = contexto)` **sem** `WITH CHECK`: o `INSERT` gravando
+     `empresa_id` de outra empresa foi **recusado**. O Postgres deriva o
+     `WITH CHECK` do `USING` quando ele falta, em política `ALL` — a frase do
+     §9 estava errada nesse caso específico.
+   - `USING (true)` (a cópia de `municipio`) **sem** `WITH CHECK`: o mesmo
+     `INSERT` foi **aceito**. O perigo é o `USING` aberto, não a ausência do
+     segundo campo isolada.
+
+   O §9 foi corrigido para o mecanismo medido, mantendo a exigência de
+   `WITH CHECK` explícito por convenção do projeto (o que as 14 políticas de
+   hoje já fazem), não por necessidade técnica — decisão do fundador, para não
+   deixar uma migration futura escrever só `USING`, certa por sorte porque o
+   `USING` também estava certo, indistinguível do caso perigoso sem ler o
+   texto da política. O teste segue como planejado, sem mudança de desenho.
+
+   **Construída, testada e revisada.** `tests/isolamento/schema.test.ts`
+   compara os seis campos de cada política contra o catálogo (com o
+   contraste: uma tabela de sondagem, política aberta de verdade, derrubada
+   em duas camadas). `tests/isolamento/vazamento.test.ts` trocou os sete
+   blocos escritos à mão por um laço guiado pelo catálogo, com as duas travas
+   — tabela declarada (trava 1) e tabela semeada (trava 2). Suíte inteira
+   verde: 179 testes, 14 arquivos. Lint e checagem de tipo limpos.
+
+   **`/revisar` achou cinco coisas, todas aceitas.** A primeira versão da
+   correção do §9 dizia que `USING` e `WITH CHECK` precisam ser "idênticos" —
+   frase larga demais: contradizia o próprio §2, que já registra a política
+   de `municipio` (`USING (true) WITH CHECK (false)`) como a solução
+   *correta*. Corrigido: a exigência é as duas cláusulas **explícitas**, não
+   iguais — política de isolamento leva o mesmo texto nas duas por decisão de
+   desenho, `municipio` é a exceção assimétrica de propósito, e as duas
+   cumprem "explícito" igualmente. O comentário equivalente em
+   `schema.test.ts` já estava certo; foi o `CLAUDE.md` que preciso alinhar. A
+   tabela de sondagem em `schema.test.ts` ganhou marca de execução (mesma
+   técnica de `A`/`B` em `vazamento.test.ts`) — sem ela, duas execuções da
+   suíte ao mesmo tempo derrubariam a sondagem uma da outra, e o teste
+   reprovaria pelo motivo errado. E este parágrafo mesmo: a versão anterior
+   dizia "ainda não construída" sobre uma tarefa que, no momento em que o
+   diff foi mostrado, já estava construída e testada — o diário registra onde
+   o trabalho parou, e dizer o contrário do que o commit contém quebra
+   exatamente essa função.
 
 2. Trava de importação do cliente sem filtro de empresa: existe hoje só como
    frase em `sem-filtro-de-empresa.ts:34`, não em `eslint.config.mjs`. Vira

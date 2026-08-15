@@ -14,6 +14,17 @@ import { db } from "@/lib/db";
  *   2. concorrência real, compartilhando conexão do pool
  *   3. os três jeitos de não ter contexto
  *   4. contagem de verificações — o `expect` de cobertura no fim
+ *
+ * TABELA NOVA ENTRA NO LAÇO, NÃO NUM BLOCO NOVO (achado da auditoria de
+ * 15/08/2026). Até aqui, cada tabela de domínio tinha um bloco escrito à mão
+ * — "o Cliente da empresa B é invisível", "o Veiculo da empresa B é
+ * invisível" — e tabela nova sem bloco novo não fazia nada falhar: a prova de
+ * isolamento dependia de alguém lembrar de escrever mais um `it`. A seção "3."
+ * abaixo troca isso por um laço guiado pelo catálogo, com duas travas em
+ * série: tabela de domínio com `empresa_id` sem entrada declarada reprova
+ * (trava 1), e tabela declarada mas não semeada por `semear` também reprova
+ * (trava 2) — sem a segunda, "zero linhas da empresa B" seria indistinguível
+ * de "não olhei linha nenhuma".
  */
 
 // Identificadores próprios desta execução: os testes falam com o banco de
@@ -23,6 +34,70 @@ const A = `aaaaaaaa-aaaa-4aaa-8aaa-${marca.padStart(12, "0")}`;
 const B = `bbbbbbbb-bbbb-4bbb-8bbb-${marca.padStart(12, "0")}`;
 
 let raiz: Client;
+
+/**
+ * Tabelas com `empresa_id`, prova de vazamento ESCRITA À MÃO, fora do laço.
+ *
+ * Só `usuario`: ele TEM a coluna, mas já tem bloco próprio na seção "2."
+ * abaixo, testando por e-mail único — o caminho que mais escapa de revisão
+ * (`findUnique` por chave única) — o que a prova genérica do laço, por
+ * listagem, não cobriria com a mesma precisão.
+ *
+ * `empresa` NÃO entra aqui, e por um motivo diferente de `usuario`: ela não
+ * tem coluna `empresa_id` nenhuma — o escopo dela é o próprio `id` (mesma
+ * exceção que `SEM_EMPRESA_ID.empresa` registra em
+ * `tests/isolamento/schema.test.ts`). A prova de vazamento dela já existe na
+ * seção "2." (listar, buscar por id, `updateMany`), só que por um mecanismo
+ * que este laço — construído sobre a coluna `empresa_id` — não enxerga e não
+ * precisa enxergar.
+ */
+const FORA_DO_LACO = new Set(["usuario"]);
+
+/**
+ * As tabelas de domínio cobertas pelo laço de vazamento, e como perguntar a
+ * cada uma "o que a empresa X enxerga, entre A e B".
+ *
+ * Conferida por igualdade exata contra o catálogo (seção "3." abaixo): tabela
+ * nova com `empresa_id`, fora de `FORA_DO_LACO` e sem entrada aqui, reprova —
+ * é a trava 1. Toda função devolve `{ empresa_id }[]`, não os campos próprios
+ * de cada modelo: a prova de vazamento não precisa deles, e normalizar a
+ * forma é o que permite comparar as seis com o mesmo `it.each`.
+ */
+const TABELAS_DO_LACO: Record<
+  string,
+  (empresaId: string) => Promise<{ empresa_id: string }[]>
+> = {
+  tipo_operacao: (empresaId) =>
+    db(empresaId).tipoOperacao.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
+  cliente: (empresaId) =>
+    db(empresaId).cliente.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
+  veiculo: (empresaId) =>
+    db(empresaId).veiculo.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
+  motorista: (empresaId) =>
+    db(empresaId).motorista.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
+  servico: (empresaId) =>
+    db(empresaId).servico.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
+  titulo_receber: (empresaId) =>
+    db(empresaId).tituloReceber.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
+};
 
 const semear = async (id: string, nome: string) => {
   await raiz.query(
@@ -179,50 +254,6 @@ describe("2. a empresa A não alcança a empresa B", () => {
     ).rejects.toThrow();
   });
 
-  it("o TipoOperacao da empresa B é invisível (tarefa 2 do item 2)", async () => {
-    // Mesma política, mesma prova: `db(A)` não enxerga o "Frete" da empresa B,
-    // nem por listagem ampla.
-    const tipos = await db(A).tipoOperacao.findMany({
-      where: { empresa_id: { in: [A, B] } },
-    });
-    expect(tipos.map((t) => t.empresa_id)).toEqual([A]);
-  });
-
-  it("o Cliente da empresa B é invisível (tarefa 3 do item 2)", async () => {
-    const clientes = await db(A).cliente.findMany({
-      where: { empresa_id: { in: [A, B] } },
-    });
-    expect(clientes.map((c) => c.empresa_id)).toEqual([A]);
-  });
-
-  it("o Veiculo da empresa B é invisível (tarefa 6 do item 2)", async () => {
-    const veiculos = await db(A).veiculo.findMany({
-      where: { empresa_id: { in: [A, B] } },
-    });
-    expect(veiculos.map((v) => v.empresa_id)).toEqual([A]);
-  });
-
-  it("o Motorista da empresa B é invisível (tarefa 7 do item 2)", async () => {
-    const motoristas = await db(A).motorista.findMany({
-      where: { empresa_id: { in: [A, B] } },
-    });
-    expect(motoristas.map((m) => m.empresa_id)).toEqual([A]);
-  });
-
-  it("o Servico da empresa B é invisível (tarefa 1 do item 3)", async () => {
-    const servicos = await db(A).servico.findMany({
-      where: { empresa_id: { in: [A, B] } },
-    });
-    expect(servicos.map((s) => s.empresa_id)).toEqual([A]);
-  });
-
-  it("o TituloReceber da empresa B é invisível (tarefa 3 do item 3)", async () => {
-    const titulos = await db(A).tituloReceber.findMany({
-      where: { empresa_id: { in: [A, B] } },
-    });
-    expect(titulos.map((t) => t.empresa_id)).toEqual([A]);
-  });
-
   it("a empresa B continua intacta depois de tudo", async () => {
     // Se algum `updateMany` acima tivesse passado, o estrago apareceria aqui.
     const { rows } = await raiz.query(
@@ -233,7 +264,49 @@ describe("2. a empresa A não alcança a empresa B", () => {
   });
 });
 
-describe("3. concorrência — pedidos simultâneos compartilhando conexão", () => {
+describe("3. toda tabela de domínio com `empresa_id` está no laço", () => {
+  it("nenhuma ficou de fora sem ser declarada (trava 1)", async () => {
+    // Lê o catálogo, não a lista: tabela nova com `empresa_id`, fora de
+    // `FORA_DO_LACO` e sem entrada em `TABELAS_DO_LACO`, faz esta comparação
+    // divergir — igualdade exata nos dois sentidos, mesmo padrão de
+    // `SEM_EMPRESA_ID` em `tests/isolamento/schema.test.ts`.
+    const { rows } = await raiz.query<{ nome: string }>(`
+      SELECT c.relname AS nome
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public' AND c.relkind = 'r'
+         AND EXISTS (
+           SELECT 1 FROM information_schema.columns col
+            WHERE col.table_schema = 'public'
+              AND col.table_name = c.relname
+              AND col.column_name = 'empresa_id'
+         )`);
+    const tabelasComEmpresaId = rows.map((r) => r.nome).sort();
+    const declaradas = [...Object.keys(TABELAS_DO_LACO), ...FORA_DO_LACO].sort();
+    expect(declaradas).toEqual(tabelasComEmpresaId);
+  });
+});
+
+describe("4. nenhuma tabela do laço vaza, e todas foram semeadas", () => {
+  it.each(Object.entries(TABELAS_DO_LACO))(
+    "`%s`: a empresa A enxerga só a própria linha, nunca a de B",
+    async (_nomeTabela, buscar) => {
+      const vistas = await buscar(A);
+      const idsDeEmpresa = vistas.map((l) => l.empresa_id);
+
+      // Trava 2 (a semente): sem isto, uma tabela declarada mas esquecida em
+      // `semear` devolveria lista vazia aqui, e "zero linhas da empresa B"
+      // pareceria prova de isolamento quando na verdade não olhou linha
+      // nenhuma — a mesma armadilha que o §3, item 4, do CLAUDE.md nomeia.
+      expect(idsDeEmpresa.length).toBeGreaterThan(0);
+
+      // A prova de vazamento em si: toda linha vista pertence à empresa A.
+      expect(idsDeEmpresa.every((id) => id === A)).toBe(true);
+    },
+  );
+});
+
+describe("5. concorrência — pedidos simultâneos compartilhando conexão", () => {
   it("nenhum pedido enxerga a empresa do outro", async () => {
     // Isolamento que só funciona com um pedido por vez não é isolamento: em
     // produção nunca é um por vez.
@@ -257,7 +330,7 @@ describe("3. concorrência — pedidos simultâneos compartilhando conexão", ()
   });
 });
 
-describe("4. os três jeitos de não ter contexto", () => {
+describe("6. os três jeitos de não ter contexto", () => {
   // A política falha fechada nos três (§9). Aqui a checagem do `lib/db` recusa
   // antes do banco — e é o banco que garante, não ela.
   it.each([
