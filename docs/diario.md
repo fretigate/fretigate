@@ -6,6 +6,74 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 15/08/2026 — auditoria de segurança e as quatro tarefas que ela abriu
+
+Pedido do fundador: auditoria das cinco classes de proteção do produto —
+isolamento no banco, permissão decidida no navegador, acesso a dado alheio por
+identificador, segredo no código, entrada não tratada —, separando o que é
+estrutural do que depende de alguém lembrar. A auditoria em si não é
+documento — viveu na conversa, e o que fica registrado é o que ela abriu:
+quatro tarefas, nesta ordem, decidida pelo fundador para entrar **antes** do
+item 4 (Lista de fretes), que era o próximo. Razão: as quatro são sobre
+proteção que já deveria existir, e os itens 5 e 6 da ordem de construção criam
+tabela nova — exatamente onde a política errada da tarefa 1 passaria em verde.
+
+1. **O teste de RLS lê a política, não a conta.** Achado da auditoria: uma
+   tabela nova com a política copiada de `municipio` (`USING (true)`) passa em
+   verde nos seis arquivos de teste hoje, porque `schema.test.ts` só exige "pelo
+   menos uma política" — nunca lê o que ela diz. E os sete blocos de
+   `vazamento.test.ts` (um por tabela, escrito à mão) significam que tabela
+   nova sem bloco novo não falha nada.
+
+   Plano aprovado e commitado: `docs/planos/auditoria-1-teste-le-a-politica.md`.
+   **Medido antes de desenhar**, não deduzido: leitura de `pg_policies` no
+   banco de desenvolvimento revelou que política `PERMISSIVE` se combina com
+   OU — duas políticas na mesma tabela significam "passa se qualquer uma
+   deixar". Isso muda a correção: verificar "existe uma política boa" resolve
+   só metade, porque uma política ruim **acrescentada** ao lado da boa abre a
+   tabela sem apagar nada. A regra certa é "não existe nenhuma ruim" — os seis
+   campos de cada política (nome, papéis, permissiva/restritiva, comando,
+   `USING`, `WITH CHECK`) comparados por igualdade exata contra o catálogo.
+
+   Acréscimo do fundador ao plano: a tabela de sondagem do contraste (que
+   nasce com política aberta de propósito, para provar que o teste novo
+   reprova) precisa ser derrubada mesmo se a medição falhar no meio —
+   `DROP TABLE IF EXISTS` em duas camadas (`finally` da criação-e-medição, e
+   `afterAll` do arquivo), não uma só, porque cada uma cobre uma janela de
+   falha diferente.
+
+   Ainda não construída — este commit é só o plano.
+
+2. Trava de importação do cliente sem filtro de empresa: existe hoje só como
+   frase em `sem-filtro-de-empresa.ts:34`, não em `eslint.config.mjs`. Vira
+   regra de verdade, mais uma contra construir cliente de banco próprio fora
+   de `src/lib/db`. Se algo impedir, a frase sai e o motivo fica escrito.
+
+3. Mecanismo de sessão para ação de servidor — hoje sobrevive por acidente
+   feliz (`empresaId` só existe na sessão), não por trava. Opções de desenho
+   trazidas ao fundador antes de escolher, mesmo tratamento que o `db()` teve
+   para o filtro de empresa. Mais: teste de sessão e papel, incluindo
+   `exigirDono` (nunca rodou uma vez) e `sairDaConta` (única ação sem
+   `exigirSessao()`).
+
+4. Passo de varredura de segredo na esteira — hoje a limpeza do histórico é
+   disciplina, não mecanismo.
+
+**As duas pendências da auditoria entram em commit próprio**, antes das quatro
+tarefas técnicas — decisão do fundador, pelo mesmo motivo que o §2 do
+`CLAUDE.md` já registra sobre plano perdido: esperar custa risco por um
+commit barato. Cabeçalhos de segurança (`Content-Security-Policy` e
+correlatos — nenhum hoje, nem `next.config.ts` nem `middleware`) e o registro
+de que os três canais que saem do escape do React — PDF, WhatsApp, importação
+por IA — ainda não existem no produto: quando cada um nascer, a auditoria
+daquela classe se refaz, não se presume herdada.
+
+Próximo: construir a tarefa 1 (plano já aprovado), depois 2, 3 e 4, na ordem —
+uma por vez, cada uma testada e commitada antes da seguinte (`CLAUDE.md` §2).
+O item 4 (Lista de fretes) volta a ser o próximo depois das quatro.
+
+---
+
 ## 14/08/2026 — a marca do FretiGate no topo das telas de fora de sessão
 
 Plano aprovado e commitado antes da construção:
