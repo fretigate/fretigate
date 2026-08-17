@@ -25,7 +25,7 @@ export default async function Page(props: PageProps<"/termos">) {
       {/* Só no modo cadastro. A marca é para quem ainda está decidindo
           confiar no produto; vindo de Ajustes a pessoa já está dentro da
           sessão, já viu a marca e a tela é só leitura. */}
-      {deCadastro ? <Marca /> : null}
+      {deCadastro ? <Marca compacta /> : null}
       <h1
         className="text-titulo-tela font-bold leading-[1.1] tracking-[-.01em] text-tinta-apoio-forte"
         style={{ fontVariationSettings: "'wdth' 96" }}

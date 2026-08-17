@@ -12,7 +12,7 @@ O código do FretiGate vive inteiro em `src/`. A configuração vive na raiz.
 |---|---|
 | `marca/` | Os arquivos da marca — a **origem**, não o que o app carrega. Os `.psd` são o arquivo de trabalho e ficam fora do controle de versão. `_old/` é a marca antiga, também fora. |
 | `Design/Manual de Marca/` | As pranchas do manual, em imagem. |
-| `Design/Marca nas telas de autenticacao.html` | O documento que definiu a marca no topo das telas de fora de sessão (14/08/2026). É a **origem dos 140px**, e traz o próprio aviso do Design de que os valores são aproximação não confirmada. É um bundle de 380 KB, do tipo que o `.gitignore` normalmente ignora — fica versionado porque, ao contrário dos bundles do protótipo, **não existe fonte mais leve dele**: a política ali é "versiona o fonte, ignora o gerado", e aqui o bundle é o fonte. Sai quando o Design confirmar os valores. |
+| `Design/Marca nas telas de autenticacao.html` | O documento que definiu a marca no topo das telas de fora de sessão (14/08/2026, revisado em 16/08/2026). É a **origem de três valores** — largura da marca (140px), distância até o título (140px em quatro telas, 16px em Termos) e respiro do topo (66px, sem mudança) — e traz o próprio aviso do Design de que são aproximação não confirmada. É um bundle de 388 KB, do tipo que o `.gitignore` normalmente ignora — fica versionado porque, ao contrário dos bundles do protótipo, **não existe fonte mais leve dele**: a política ali é "versiona o fonte, ignora o gerado", e aqui o bundle é o fonte. Sai quando o Design confirmar os valores. |
 | `Design/Protótipo clicável de fretes/` | O protótipo que originou o produto. Cada tela é um `.dc.html`. |
 
 ## Por que continua no repositório

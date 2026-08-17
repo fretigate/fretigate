@@ -6,6 +6,71 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 16/08/2026 — ajusta o espaço entre a marca e o título
+
+Pedido do fundador: aplicar um documento novo do Design (revisão de
+`referencia/Design/Marca nas telas de autenticacao.html`, mesmo arquivo da
+tarefa de 14/08/2026, conteúdo atualizado). Plano aprovado e commitado antes
+da construção:
+`docs/planos/ajusta-espaco-entre-marca-e-titulo.md`.
+
+**O que mudou.** A distância entre a marca e o título deixa de reaproveitar
+"entre seções verticais" (24px, valor único para as cinco telas) e ganha
+número próprio: **140px** em Entrar, Criar conta, Esqueci a senha e Redefinir
+senha (com os estados que herdam a rota — Recuperação enviada, Link
+expirado, a trava de consulta de `redefinir-senha`); **16px** só em Termos
+(modo cadastro). Largura da marca (140px) e respiro do topo (66px) não
+mudaram. Os dois valores novos entram como lacuna aberta em
+`docs/estilo.md`, mesmo tratamento que a largura já tinha.
+
+**A contradição do documento — pedido ao Design.** O texto do documento
+afirma que os 140px valem "nas cinco telas — inclusive Termos". Medido
+pixel a pixel dentro do próprio arquivo, a tela de Termos do mockup mostra
+16px, não 140px. Eu medi e trouxe a divergência em vez de escolher; o
+fundador decidiu que vale a medida, não o texto — Termos fica com o espaço
+menor, diferente das outras quatro. **Vai para a lista "o que foi pedido ao
+Design"**: corrigir o texto do documento na fonte, para a próxima entrega
+não repetir a divergência entre o que ele afirma e o que ele desenha.
+
+**O portão do teclado — medido, condição cumprida antes de commitar.** Proxy
+de teclado (viewport 375×400, o mesmo encolhimento que um teclado aberto
+causa) nas telas que foram para 140px:
+
+- **Entrar** — campo Senha em foco visível, botão Entrar alcançável rolando,
+  alturas intactas (campo 56px, botão 60px).
+- **Criar conta** (a mais exposta — cinco campos, aceite dos Termos, botão) —
+  campo Telefone em foco visível (top 171,8 / bottom 227,8, dentro dos
+  400px), botão Criar conta alcançável (top 247,98 / bottom 307,98),
+  alturas intactas.
+- **Esqueci a senha** — campo E-mail em foco visível, botão alcançável,
+  alturas intactas.
+- **Redefinir senha, estado "link expirado"** (o único alcançável sem um
+  código de redefinição real) — conteúdo mais curto que os três acima, passa
+  com folga. O estado "link válido" (campo Senha nova) não foi medido
+  diretamente — teria exigido gerar um código real de redefinição — mas tem
+  menos conteúdo que Esqueci a senha, que já passou com folga.
+
+Nenhuma tela apertou. Nenhum valor foi ajustado por conta própria.
+
+**`/revisar` achou quatro divergências e três lacunas, quatro aceitas e
+corrigidas antes do commit** (mesma classe — precisão de texto e registro no
+diário —, sem novo passe, por decisão do fundador): a entrada do diário
+faltava, o pedido ao Design não estava registrado, `docs/estilo.md` e o
+comentário de `Marca.tsx` diziam "quatro telas com subtítulo" quando nenhuma
+das quatro tem subtítulo construído (só o mockup desenha, e isso já estava
+registrado como não-construído), e `referencia/LEIA-ME.md` ainda descrevia o
+documento como origem de um valor só, de 14/08. As outras duas lacunas —
+estados herdados sem decisão própria, e `mb-140` fora da escala — ficam
+resolvidas por este parágrafo e pela nota já existente de que o valor é
+lacuna de propósito, não esquecimento.
+
+Esta tarefa não fazia parte da ordem das quatro tarefas técnicas da
+auditoria de segurança (entrada de 15/08/2026, abaixo) — foi pedido à parte
+do fundador. Próximo: retoma a tarefa 2 daquela auditoria (trava de
+importação do cliente sem filtro de empresa), na ordem já decidida.
+
+---
+
 ## 15/08/2026 — auditoria de segurança e as quatro tarefas que ela abriu
 
 Pedido do fundador: auditoria das cinco classes de proteção do produto —

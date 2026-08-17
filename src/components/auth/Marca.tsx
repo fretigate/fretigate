@@ -6,21 +6,23 @@ import Image from "next/image";
 // marca pode se apresentar: a venda é autoatendida, sem vendedor e sem
 // demonstração (CLAUDE.md §1).
 //
-// PROVISÓRIO. Decisão de tela é do Design (CLAUDE.md §13), e a largura de
-// 140px veio do documento dele marcado como "aproximação não confirmada" —
-// NÃO é valor formal de docs/estilo.md. Está registrada lá como lacuna
-// aberta, junto do resto que falta ele definir.
+// PROVISÓRIO. Decisão de tela é do Design (CLAUDE.md §13). Nenhum dos três
+// valores é formal de docs/estilo.md — estão lá como lacuna aberta:
 //
-// Os 24px até o título têm lastro: estão na escala de espaçamento e dentro de
-// "entre seções verticais: 22–26px" (docs/estilo.md § Espaçamento). Cuidado:
-// aqui `--spacing: 1px`, então `mb-24` é 24px literais, não o Tailwind
-// padrão. A folga vive neste componente e não em cada página — com cinco
-// telas usando a mesma marca, é aqui que o valor existe uma vez só (§8),
-// mesmo que a convenção das telas de auth ponha a folga no elemento seguinte.
+// - largura 140px;
+// - distância até o título: 140px em Entrar, Criar conta, Esqueci a senha e
+//   Redefinir senha (`Marca` padrão), 16px só em Termos (`Marca compacta`) —
+//   valor medido no próprio mockup do Design, não no texto dele, que erra ao
+//   afirmar 140px para as cinco (docs/estilo.md § Espaçamento tem a nota
+//   completa da contradição);
+// - respiro do topo, 66px, sem mudança — confirmado pelo fundador em
+//   14/08/2026.
 //
-// O respiro do topo não muda: a marca entra dentro dos 66px de área segura
-// que toda tela já reserva (docs/estilo.md § Área segura, valor único), e o
-// conteúdo desce a partir dela. Confirmado pelo fundador em 14/08/2026.
+// A folga abaixo da marca vive neste componente, não em cada página — com
+// cinco telas usando a mesma marca, é aqui que cada valor existe uma vez só
+// (§8), mesmo que a convenção das telas de auth ponha a folga no elemento
+// seguinte. Cuidado: aqui `--spacing: 1px`, então `mb-140`/`mb-16` são
+// pixels literais, não a escala padrão do Tailwind.
 //
 // Variante colorida (verde escuro + verde rodovia) sobre o papel #FAF8F4 —
 // contraste de sobra. A branca é a de fundo escuro e não serve em nenhuma das
@@ -37,9 +39,9 @@ import Image from "next/image";
 // dimensões intrínsecas (1920×394) reservam o espaço antes de a imagem
 // chegar, então o título não pula; `priority` evita o piscar, porque a marca
 // está acima da dobra na primeira tela que a pessoa vê.
-export function Marca() {
+export function Marca({ compacta = false }: { compacta?: boolean }) {
   return (
-    <div className="mb-24 flex justify-center">
+    <div className={compacta ? "mb-16 flex justify-center" : "mb-140 flex justify-center"}>
       <Image
         src="/marca/fretigate.png"
         alt="FretiGate"

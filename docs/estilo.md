@@ -256,12 +256,31 @@ do documento que o Design mandou (`referencia/Design/Marca nas telas de
 autenticacao.html`), e o próprio documento se marca como *"Provisório —
 aproximação: os três valores abaixo ainda não foram confirmados"*.
 
-Os outros dois valores do conjunto têm lastro e **não** são lacuna: os
-**24px** entre a marca e o título estão na escala de espaçamento acima e
-dentro de "entre seções verticais: 22–26px"; o topo continua nos **66px** da
-área segura, sem mudança (confirmado pelo fundador em 14/08/2026 — a marca
-entra dentro da área segura que toda tela já reserva, e o conteúdo desce a
-partir dela).
+**A distância entre a marca e o título também é lacuna, e deixou de ser uma
+só.** A primeira versão (14/08/2026) reaproveitava "entre seções verticais:
+22–26px" com 24px, sem número próprio. O documento do Design revisado
+(16/08/2026) troca isso por dois valores dedicados, nenhum dos dois com
+lastro nesta folha:
+
+- **140px** em Entrar, Criar conta, Esqueci a senha e Redefinir senha (com os
+  estados que herdam a rota — Recuperação enviada, Link expirado, a trava de
+  consulta). Não está na escala de espaçamento acima.
+- **16px** só em Termos (modo cadastro) — está na escala como número, mas não
+  é o valor de nenhuma categoria nomeada desta seção.
+
+**O documento contradiz o próprio desenho, e o que vale é o desenho.** O
+texto do documento afirma que os 140px valem "nas cinco telas — inclusive
+Termos". Medido pixel a pixel dentro do mesmo arquivo
+(`referencia/Design/Marca nas telas de autenticacao.html`), a tela de Termos
+do mockup mostra 16px entre a marca e o título, não 140px. O fundador decidiu
+em 16/08/2026 que vale a medida, não o texto — Termos fica com o espaço
+menor, diferente das outras quatro — e pediu a correção na fonte ao Design,
+para a próxima entrega não repetir a divergência.
+
+O terceiro valor do conjunto tem lastro e **não** é lacuna: o topo continua
+nos **66px** da área segura, sem mudança (confirmado pelo fundador em
+14/08/2026 — a marca entra dentro da área segura que toda tela já reserva, e
+o conteúdo desce a partir dela).
 
 Nenhuma cor nova entrou por causa disso: a marca é **imagem**
 (`public/marca/fretigate.png`), não cor escrita em CSS — ver a precisão
