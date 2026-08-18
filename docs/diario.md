@@ -6,6 +6,55 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 18/08/2026 — o teto de pool aplicado aos dois testes que faltavam
+
+Pedido do fundador, imediatamente depois da correção de
+`tests/regressao-resolucao-municipios.test.ts`: os outros dois arquivos
+achados no mesmo levantamento (entrada anterior) — acima do limite, não
+alterados na hora — também corrigidos. Plano:
+`docs/planos/corrige-teto-de-pool-nos-testes-restantes.md`.
+
+**A afirmação "cada `criarServico` pede duas conexões" da entrada anterior
+estava mais larga do que o medido — achado pelo `/revisar`, aceito.** Só
+vale quando `origem_texto` **e** `destino_texto` chegam preenchidos; a
+resolução só roda para o campo que existe
+(`src/lib/servicos/servicos.ts:125-131`). Reconferido chamada a chamada:
+
+- `tests/medicao-municipios.test.ts` — das quatro chamadas de
+  `criarServicos`, **duas preenchem os dois campos** (quantidade 2, pico 4;
+  quantidade 10, pico **20** — a que realmente estourava) e **duas
+  preenchem só um** (quantidade 7 e quantidade 3, picos 7 e 3). Só a de
+  quantidade 10 estourava sozinha, mas a função compartilhada passa a
+  rodar em blocos de cinco **dentro dela mesma**, do jeito conservador (não
+  sabe de antemão o que cada chamada vai preencher), o que protege as
+  quatro de hoje e qualquer quantidade futura sem precisar recalcular por
+  chamada.
+- `tests/servicos.test.ts` — **revertido para o original.** O teste de
+  concorrência do contador `numero` usa `dadosMinimos(e)`, que nunca
+  preenche origem/destino — cada `criarServico` ali usa **uma** conexão,
+  não duas; oito simultâneas pedem até oito no pico, dentro do pool de
+  dez. Nunca esteve quebrado. O bloco de cinco que eu tinha aplicado era
+  uma correção não pedida, apoiada numa conta errada, que reduzia sem
+  necessidade a concorrência real que o teste existe para medir
+  (`CLAUDE.md` §2, "correção que não foi pedida precisa do mesmo cuidado
+  que a que foi").
+
+**Diverge do plano já commitado, de propósito — não reeditado.**
+`docs/planos/corrige-teto-de-pool-nos-testes-restantes.md` (§"O que muda")
+diz que `tests/servicos.test.ts` passaria a rodar em blocos de cinco; a
+construção real foi reverter o arquivo, pelo motivo acima, achado só
+durante a construção. O texto do plano também mantém "cada `criarServico`
+pede duas conexões" sem a ressalva (só quando os dois campos vêm
+preenchidos) — plano fica como foi escrito, a ressalva vive aqui e no
+comentário do código.
+
+`npm run lint`, `npx tsc --noEmit`, `npm test` (os dois arquivos e a suíte
+inteira) verdes — **local**. Confirmado também na **esteira**: branch de
+teste, PR, suíte inteira verde, 5m58s. PR fechado sem merge, branch
+apagada.
+
+---
+
 ## 18/08/2026 — a esteira estava vermelha há cinco commits, e "suíte verde" local não avisava
 
 Achado ao verificar a tarefa 4 na esteira de verdade (entrada abaixo): `main`
