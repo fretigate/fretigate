@@ -10,7 +10,66 @@ jobs:
   lint-e-testes:
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth 0 (o padrao e 1, so o commit mais recente) — a varredura
+      # de segredo abaixo precisa enxergar o historico inteiro, nao so o
+      # ultimo commit.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Varredura de segredo (tarefa 4 da auditoria, CLAUDE.md §4). Roda
+      # ANTES de instalar qualquer dependencia: nao precisa de node_modules,
+      # e segredo commitado torna o resto da esteira sem sentido.
+      #
+      # Binario baixado direto do GitHub Releases, versao FIXA (nao
+      # "latest" — mesmo motivo de node-version: 24 ser fixo), com o
+      # checksum conferido contra o arquivo publicado pelo proprio projeto
+      # antes de extrair ou executar qualquer coisa.
+      #
+      # `-f` nos dois `curl`: sem essa flag, um erro HTTP (404, rate limit)
+      # grava o corpo do erro no arquivo e o curl sai com sucesso mesmo
+      # assim — falha de download viraria varredura "aprovada" sem ter
+      # rodado, a mesma classe de defeito que o CLAUDE.md §3 registra sobre
+      # teste que não distingue "passou" de "não rodou". `set -euo
+      # pipefail` explicito no bloco: nao confia no padrao do executor,
+      # escreve a garantia (mesmo espirito do WITH CHECK explicito do §9).
+      - name: Baixar e conferir gitleaks
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION=8.30.1
+          curl -fsSLO "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSLO "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          sha256sum --ignore-missing -c "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" gitleaks
+          chmod +x gitleaks
+
+      # `--redact`: se achar um segredo de verdade, o valor nunca aparece em
+      # texto puro no log da esteira — so arquivo, linha e commit. O log e
+      # mais duradouro e mais visivel que o proprio repositorio; imprimir o
+      # segredo ali trocaria um vazamento por outro.
+      #
+      # `-v` (verbose) e OBRIGATORIO pro `--redact` valer alguma coisa:
+      # achado na primeira execucao real desta esteira (PR de teste da
+      # tarefa 4) — sem `-v`, o log so mostra "leaks found: N", sem
+      # arquivo nem linha, e quem visse o alarme nao teria por onde
+      # comecar a investigar.
+      #
+      # Varre o historico git INTEIRO a cada execucao, nao so o commit
+      # atual — medido (plano da tarefa 4): 80 commits, ~3,9 MB, 0,75 a
+      # 1,03s. Reavaliar so quando este passo especifico ficar lento de
+      # verdade, nao por numero de commits escolhido de antemao.
+      #
+      # `-c .gitleaks.toml` EXPLICITO, e a checagem `test -f` antes: sem os
+      # dois, um `.gitleaks.toml` movido, renomeado ou apagado por engano
+      # faria o gitleaks cair sozinho na configuracao padrao (que nao pega
+      # URL de conexao com senha embutida — a razao desta tarefa existir) e
+      # a esteira passaria verde SEM a regra propria, sem ninguem notar. A
+      # config nao lida sozinha, a checagem falha o passo primeiro.
+      - name: Varredura de segredo
+        run: |
+          set -euo pipefail
+          test -f .gitleaks.toml
+          ./gitleaks detect --source . --config .gitleaks.toml --redact -v
 
       - uses: actions/setup-node@v4
         with:

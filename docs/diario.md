@@ -6,6 +6,204 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 18/08/2026 — tarefa 4 da auditoria: a varredura de segredo vira mecanismo na esteira
+
+Última das quatro tarefas abertas pela auditoria de 15/08/2026. Plano
+aprovado e commitado antes da construção:
+`docs/planos/auditoria-4-varredura-de-segredo.md`.
+
+**Ferramenta.** `gitleaks`, binário próprio baixado do GitHub Releases,
+versão fixa (8.30.1, não "latest"), com checksum SHA-256 conferido contra o
+arquivo publicado pelo próprio projeto antes de executar qualquer coisa.
+Descartadas: GitHub Advanced Security (paga para repositório privado) e
+`gitleaks-action` (amarraria a esteira ao comportamento e licenciamento de
+uma Action de terceiro).
+
+**O achado que mudou o desenho.** A configuração padrão do gitleaks **não
+pega** o segredo mais provável deste projeto — uma URL de conexão com senha
+embutida (`DATABASE_URL`/`DIRECT_URL`/`AUTH_DATABASE_URL`). Medido num
+repositório descartável: `BETTER_AUTH_SECRET=<hex aleatório>` é pego pela
+regra padrão (`generic-api-key`); `AUTH_DATABASE_URL="postgres://usuario:
+<senha aleatória>@host/db"` passa limpo, porque a regra padrão exige um token
+isolado e a URL tem `:`, `/`, `@` no meio. Corrigido com uma regra própria em
+`.gitleaks.toml` (raiz do repositório, lida sozinha) para qualquer
+`protocolo://usuario:senha@host` — não só `postgres://`, para não abrir nova
+rodada de auditoria quando entrar outro serviço.
+
+**Os dois pedidos do fundador, os dois medidos, não só implementados:**
+
+- **A exceção do placeholder `senha`/`SENHA`** (as quatro ocorrências reais
+  em `docs/diario.md` e `tests/guarda-de-banco.test.ts`) é por **igualdade
+  exata do campo inteiro da senha**, nunca por conter a palavra — testado
+  nos dois lados: o campo exato `senha` fica isento; o mesmo texto embutido
+  numa senha maior (`Senha` + resto aleatório) reprova. "Contém" teria
+  reaberto exatamente o buraco que a regra existe para fechar.
+- **Falha de download reprova, nunca passa em silêncio.** `curl -f` nos dois
+  downloads (sem isso, um erro HTTP grava o corpo do erro no arquivo e o
+  curl sai com sucesso mesmo assim), `set -euo pipefail` explícito no bloco
+  (não confia no padrão do executor da esteira), checksum conferido antes de
+  extrair ou rodar qualquer coisa.
+
+**Custo do histórico inteiro, medido:** 80 commits, ~3,9 MB, escaneados em
+0,75 a 1,03 segundos a cada execução. Reavaliar (trocar para escanear só o
+intervalo do push atual) quando este passo especificamente ficar lento de
+verdade — não por um número de commits escolhido de antemão. Mesmo padrão do
+`CLAUDE.md` §9 sobre a distância geodésica.
+
+**Percalço no caminho — o próprio plano tropeçou na regra que descreve.** Para
+documentar a medição da seção acima, o plano continha exemplos de string
+aleatória com a FORMA de segredo (para ilustrar o que passa e o que não
+passa). Depois de commitado, a varredura contra o histórico real achou essas
+três linhas — o plano descrevendo o mecanismo tropeçou nele mesmo. **O plano
+fica como foi aprovado e commitado** — plano já commitado não se reedita
+(mesmo padrão desta entrada, tarefa 3, sobre a contagem errada). As três
+linhas do commit antigo, imutável, ficam cobertas por `.gitleaksignore`, uma
+entrada por fingerprint exato (commit + arquivo + regra + linha), com o
+motivo escrito no próprio arquivo — citando corretamente `CLAUDE.md` §3
+(migration aplicada não se edita), não o §9 que a primeira versão desta
+entrada citou por engano.
+
+**`/revisar` achou uma divergência real, duas de precisão de texto e três
+lacunas.** Trazidas ao fundador, e as duas primeiras já pedidas por ele antes
+mesmo do revisor rodar (as duas exigências da aprovação do plano):
+
+- **A exceção não era, de fato, por igualdade exata — era por subcadeia.**
+  A regra própria aceitava `:` dentro do campo da senha
+  (`[^\s@/'"]{3,200}}`); como o `allowlist` procura `:senha@` como texto
+  dentro do achado inteiro, uma senha real terminada em `:senha` (ex.:
+  `postgresql://user:aB9x7Kp2Qz:senha@host/db`) cria essa subcadeia sem
+  a senha *ser* "senha" — e passava isenta. **Medido, não só apontado**:
+  plantei esse caso exato num repositório descartável e ele passou limpo
+  antes da correção. Corrigido excluindo `:` também do campo da senha (a
+  mesma exclusão que o campo do usuário já tinha) — com isso só existe um
+  `:` antes do `@` naquela posição, e a subcadeia só pode ser o campo
+  inteiro. Retestado nos três lados: o disfarce (`xsenha`) volta a
+  reprovar, o placeholder exato (`senha`) continua isento, e a senha
+  aleatória de controle continua reprovando.
+- **A lista de literais tinha seis palavras, mas só duas ocorrem de
+  verdade** (`senha`, `SENHA`) — as outras quatro (`sua-senha`,
+  `SUA-SENHA`, `password`, `PASSWORD`) eram especulação, "para o caso de
+  precisar", e nenhuma bate com o que o próprio `CLAUDE.md` §4 descreve.
+  Cortadas as quatro. Lista agora bate exatamente com o texto do
+  `CLAUDE.md` e com o que existe hoje no repositório.
+- Duas afirmações de "cobre exatamente isto" eram mais estreitas do que a
+  regra de fato casa (a prosa descrevendo o próprio mecanismo, no plano e
+  no `.gitleaks.toml`, também casa com o padrão e fica isenta pelo mesmo
+  motivo — o campo ali também é literalmente "senha"). Reescritas para não
+  prometer uma lista exaustiva que não é.
+- **Lacuna aceita e fechada:** se `.gitleaks.toml` sumisse do lugar
+  esperado (movido, renomeado), o gitleaks cairia sozinho na configuração
+  padrão — sem a regra própria — e a esteira passaria verde do mesmo jeito.
+  O passo da esteira ganhou `test -f .gitleaks.toml` antes de rodar, e
+  `--config .gitleaks.toml` explícito em vez de depender da busca
+  automática.
+- **Lacuna aceita e fechada:** nem `CLAUDE.md` nem o plano diziam quem pode
+  acrescentar linha em `.gitleaksignore` nem sob qual critério — o
+  `.gitleaks.toml` já dizia isso de si mesmo, o `.gitleaksignore` não.
+  `CLAUDE.md` §4 ganhou um parágrafo tratando os dois arquivos com a mesma
+  regra: achado real e motivo escrito, nunca item especulativo.
+  Registrado aqui: a lacuna existia porque a tabela "Arquivos que a tarefa
+  toca" do plano (§9) não lista `.gitleaksignore` — não é enunciada de novo
+  no plano, mesmo padrão de não reeditar plano já commitado.
+- Lacuna aceita, sem ação: o revisor não conseguiu, só lendo, confirmar que
+  os três fingerprints do `.gitleaksignore` batem exatamente com os achados
+  do commit `4b7748d` (não sobra nem falta nenhum). Já verificado por fora,
+  com a ferramenta de verdade: histórico completo escaneado depois de todas
+  as correções acima — limpo, sem achado, sem alarme.
+
+Varredura local (binário Windows equivalente, mesma versão e configuração)
+contra o histórico real, depois de todas as correções acima: limpa, sem
+alarme falso. `npm run lint` inalterado (nenhum arquivo de app tocado).
+Sintaxe do `ci.yml` conferida por parser YAML.
+
+**Segundo `/revisar`, rodado por a correção acima ser classe nova (mudou a
+lógica central da regra, `CLAUDE.md` §2) — achou que a correção não tinha
+fechado o problema, só um sintoma dele.**
+
+- **A comparação continuava por subcadeia do achado inteiro, não por
+  igualdade do campo da senha.** A correção anterior fechou o disfarce
+  *dentro* do campo da senha, mas não tocou a causa: o `allowlist` do
+  gitleaks compara contra o texto inteiro que a regra capturou, e o final
+  da regra (`@[^\s/'"]+`, o "host") aceitava `@` e `:` livres — texto
+  depois do host (query string, path) podia conter `:senha@` de novo,
+  isentando uma senha real anterior. **Medido, não só apontado**: plantei
+  uma URL com senha real de alta entropia, seguida de um parâmetro de
+  consulta que só por coincidência de texto reproduzia o padrão do
+  placeholder mais adiante — e passou isento antes desta correção.
+
+  Corrigido na raiz, não remendando mais um sintoma: a regra ganhou um
+  grupo de captura só para o campo da senha
+  (`:([^\s:@/'"]{3,200})@`) e `secretGroup = 1`, que diz ao gitleaks para
+  tratar **só esse grupo** como "o segredo" — é contra esse texto isolado,
+  nunca a URL inteira, que a lista de isenção compara agora, com
+  `^(senha|SENHA)$` (âncoras de início e fim, igualdade de verdade, não
+  mais busca de subcadeia). O host também ficou restrito a caractere de
+  nome de host/porta (sem `@`/`/` livre) — por realismo, não como a defesa
+  contra o disfarce; a defesa é o `secretGroup` isolando o campo antes da
+  comparação.
+
+  **Seis controles plantados e retestados depois da correção** (repositório
+  descartável): senha real disfarçada por texto depois do host → reprova;
+  placeholder exato `senha`/`SENHA` (minúsculo e maiúsculo) → isento;
+  disfarce dentro do próprio campo → não casa a regra (mesmo resultado da
+  correção anterior); senha real genérica → reprova; usuário literalmente
+  chamado `senha` com senha real de verdade depois → reprova (o
+  `secretGroup` ignora o campo do usuário, só olha a senha). Os seis
+  bateram com o esperado.
+
+- **A tarefa estava sendo dada como concluída sem o item 6 do "Como eu sei
+  que terminou" do plano** (push real numa branch de teste, confirmando a
+  esteira de verdade) — e o `CLAUDE.md` §4 afirmava em tom de fato já em
+  vigor que "a esteira roda `gitleaks`... e falha o build se achar um",
+  quando o passo nunca rodou uma vez de verdade. Aceito, e **feito**: push
+  numa branch de teste, PR para acionar `pull_request` (push direto não
+  dispara — a esteira só ouve `main`), autorizado pelo fundador. O passo de
+  varredura passou de verdade. Achados só possíveis rodando contra o
+  GitHub real, não local: faltava `-v` no comando (sem ele, um achado
+  reprovaria sem dizer onde) e a própria entrada do diário descrevendo o
+  achado 2 continha a forma exata do exemplo que descrevia — mesmo
+  problema do plano, de novo, corrigido do mesmo jeito (exemplo reescrito
+  sem a forma de segredo). PR fechado sem merge, branch de teste apagada;
+  `CLAUDE.md` §4 corrigido para "confirmado", não "pendente".
+- **Lacuna aceita, mas sem ação nesta entrada:** o revisor não tinha, no
+  diff que recebeu, o parágrafo do `CLAUDE.md` §4 sobre a impressão digital
+  do `.gitleaksignore` envelhecer com o commit (a seção seguinte) — pedido
+  do fundador, chegou depois do diff ter sido capturado para o segundo
+  passe. Mesma classe do parágrafo anterior (governança de documentação),
+  não abriu terceiro passe.
+- **Lacuna aceita, verificada de outro jeito:** dúvida se a versão fixa do
+  gitleaks (8.30.1) aceita `[rules.allowlist]` no singular. Não é dúvida —
+  é o que os seis controles acima, rodados com o binário real da mesma
+  versão, já provam: a chave funciona, teria reprovado o teste de
+  placeholder se não funcionasse.
+- **Decisão para o fundador, não decidida aqui:** o `CLAUDE.md` §3 exige
+  teste de contraste **permanente**, dentro do repositório, para o
+  isolamento entre empresas — algo que reprova sozinho se a proteção for
+  enfraquecida por acidente numa mudança futura. Esta tarefa só tem
+  contraste **manual, fora do repositório**, feito nesta sessão. Não decidi
+  sozinho se uma trava de segurança desta natureza (ferramenta de
+  terceiro + configuração própria) precisa do mesmo tipo de teste
+  permanente que o isolamento de banco tem, ou se a verificação manual
+  desta sessão é suficiente — fica para o fundador decidir.
+
+**O item 6 do plano está cumprido — a varredura de segredo em si está
+provada.** Achado à parte, fora do escopo desta tarefa, que apareceu só por
+rodar a esteira de verdade: o resto do pipeline daquele PR falhou por um
+defeito não relacionado, já presente em `main` antes deste PR (esteira
+vermelha desde 14/08/2026) — diagnosticado e corrigido em entrada própria,
+acima.
+
+**Ainda falta, decidido mas não construído:** o teste de contraste
+permanente para este mecanismo (`CLAUDE.md` §3 exige isso para o
+isolamento; o fundador confirmou que vale o mesmo aqui, com o binário real
+do gitleaks, não reimplementação). Fica para a próxima tarefa.
+
+Próximo: construir o teste de contraste permanente da varredura de segredo.
+Só depois disso as quatro tarefas da auditoria de 15/08/2026 estão
+concluídas e o item 4 (Lista de fretes) volta a ser o próximo.
+
+---
+
 ## 18/08/2026 — tarefa 3 da auditoria: o mecanismo de sessão vira envelope provado por teste
 
 Pedido do fundador: mecanismo de sessão para ação de servidor — hoje

@@ -251,6 +251,45 @@ hoje e não roda amanhã não protege contra a regressão de amanhã.
 ## 4. Segurança — baseline obrigatório
 
 - Nenhum segredo no código ou no repositório. Só em variáveis de ambiente.
+
+  **Isso é mecanismo, não só disciplina** (tarefa 4 da auditoria, 18/08/2026):
+  a esteira roda `gitleaks` contra o histórico git inteiro antes de qualquer
+  outro passo, e falha o build se achar um — confirmado numa execução real
+  da esteira do GitHub (PR de teste, 18/08/2026): o passo passou. A
+  configuração padrão da ferramenta **não pega** o
+  segredo mais provável deste projeto — uma URL de conexão com senha
+  embutida (`DATABASE_URL`/`DIRECT_URL`/`AUTH_DATABASE_URL`), medido, não
+  suposto: ela exige um token isolado, e `protocolo://usuario:senha@host`
+  escapa por causa do `:`, `/`, `@` no meio. `.gitleaks.toml` soma uma regra
+  própria para esse formato. A exceção para o placeholder `senha`/`SENHA` já
+  usado em documentação e teste é por **igualdade exata do campo da senha
+  isolado** — a regra usa `secretGroup` para capturar só esse campo, e a
+  exceção compara só contra ele (`^senha$`/`^SENHA$`), nunca por "contém a
+  palavra" em lugar nenhum do texto ao redor. Comparar contra o achado
+  inteiro (URL completa) foi tentado primeiro e continha dois furos
+  medidos: um dentro do próprio campo da senha, outro através de um "@"
+  posterior na URL (query string) disfarçando uma senha real — os dois
+  fechados isolando o campo antes de comparar, não só restringindo o
+  formato aceito.
+
+  **Duas listas fechadas, mesmo cuidado nas duas.** `.gitleaks.toml` decide o
+  que a regra ignora **em geral** (um literal exato de placeholder, válido
+  para sempre). `.gitleaksignore` decide o que um **achado específico, já
+  visto e explicado**, não precisa repetir (por commit, arquivo, regra e
+  linha — nunca um padrão). Acrescentar linha em qualquer um dos dois é
+  alterar uma trava de segurança, não só documentação: exige achado real e
+  motivo escrito, nunca item especulativo "para o caso de precisar". Ver
+  `docs/planos/auditoria-4-varredura-de-segredo.md`.
+
+  **A entrada do `.gitleaksignore` envelhece com o commit, não com o
+  achado.** A impressão digital é `commit:arquivo:regra:linha` — se aquele
+  commit for reescrito por qualquer motivo (rebase, squash, qualquer
+  reescrita de histórico), o hash muda e a entrada para de bater. **O
+  sintoma: a esteira fica vermelha num achado antigo, que não mudou uma
+  vírgula** — lê como segredo novo, mas é impressão digital desatualizada.
+  A correção não é reabrir a investigação: é gerar a impressão nova
+  (`gitleaks detect -v`, ler o `Fingerprint:` do achado) e trocar a linha
+  velha pela nova, com o mesmo motivo já escrito ao lado.
 - Toda entrada validada no **servidor**, com schema.
 - Senha com hash forte. Nunca reversível, nunca em log.
 - Rate limit em login, recuperação de senha e toda rota que gere custo
