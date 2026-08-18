@@ -6,6 +6,104 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 18/08/2026 — publica os Termos e a Política de Privacidade, sem bloqueio de lançamento
+
+Pedido do fundador: os Termos de uso e a Política de Privacidade estavam em
+rascunho desde a tarefa 8 (07/08/2026), marcados como BLOQUEIO DE LANÇAMENTO
+no `CLAUDE.md` §14 — nem a forma do aceite nem a redação tinham passado por
+revisão jurídica. Decisão: publicar agora, com um acréscimo, e tirar a
+revisão jurídica do caminho do lançamento. Plano aprovado e commitado antes
+da construção: `docs/planos/publica-termos-sem-bloqueio.md`.
+
+**O parágrafo novo, e por que não podia esperar.** A Política de Privacidade
+ganhou uma cláusula autorizando uso agregado e anonimizado dos dados
+lançados no sistema, para melhorar o produto e produzir informação de
+mercado (médias de valor por rota, volume por região, comportamento de
+mercado) — explícito que esse agregado **pode** ser publicado ou
+compartilhado, inclusive como material de divulgação; o que nunca sai é
+dado que identifique empresa, cliente, motorista ou frete. A empresa pode
+pedir, pelo e-mail de contato, que seus dados deixem de ser usados dessa
+forma — atendido à mão até existir mecanismo próprio. Esse parágrafo entrou
+nesta data e não podia esperar a revisão jurídica do resto: a LGPD não se
+aplica retroativamente — dado coletado sem essa cláusula não pode passar a
+ser usado assim depois. O resto que a revisão jurídica ainda vai cobrir
+(retenção, direitos de titulares terceiros, transferência internacional,
+alteração dos termos, limitação de responsabilidade) vale do aceite em
+diante, então pode esperar.
+
+**`termos_versao` deixou de ser provisório.** Passa a guardar a **data de
+publicação** da versão do texto (`"2026-08-18"`), não um número sequencial —
+decisão do fundador: responde direto "quando essa versão passou a valer"
+sem precisar consultar outro lugar. Toda Empresa que aceitar esta versão
+grava a mesma data; `termos_aceitos_em` continua sendo o momento em que cada
+Empresa aceitou, e os dois podem divergir. Registrado em
+`src/lib/servicos/cadastro.ts` e em `docs/especificacao.md`: uma versão
+futura ganha data nova e vale só a partir do próprio aceite — não retroage
+sobre quem já aceitou esta. **A regra completa: só cláusula nova ou alterada
+conta como versão nova** e exige aceite de novo de quem já tinha aceitado;
+correção de redação que não muda o que o texto autoriza não conta.
+
+**O aviso "Rascunho" saiu da tela `/termos`, e nada entrou no lugar.**
+Decisão do fundador: se a decisão é publicar, este é o texto vigente, e um
+aviso de "isto pode não valer" na tela onde o cliente aceita é pior do que
+qualquer imprecisão do texto em si. A pendência de revisão jurídica continua
+registrada no `CLAUDE.md` §14 — ela some da tela, não do registro.
+
+**`/revisar` achou quatro divergências e três lacunas, todas aceitas e
+corrigidas antes do commit** (mesma classe — precisão do texto publicado e
+do registro em `CLAUDE.md`/especificação —, sem novo passe, por decisão do
+fundador):
+
+- O parágrafo novo se contradizia com dois outros do mesmo documento
+  ("não os usa para nenhum outro fim" / "nunca para outro fim"), publicados
+  no mesmo aceite. Corrigido com a ressalva "salvo o uso agregado e
+  anonimizado descrito na Política de privacidade" nos dois lugares.
+- A pendência nova do `CLAUDE.md` §14 citava os 90 dias do §10 como se
+  fossem do **cancelamento** voluntário; o §10 fala de assinatura
+  **vencida** (pagamento que falhou) — situação diferente. Corrigido, e a
+  lacuna que isso revelou virou item novo na lista de decisões em aberto:
+  ninguém decidiu o prazo de retenção para quem cancela por conta própria.
+- O plano foi escrito prometendo "commitado antes de a construção
+  começar", mas ficou para entrar junto do código — corrigido: vai num
+  commit próprio, antes deste.
+- A pendência nova do §14 contava só três promessas do texto (exportação,
+  cancelamento, retenção); a palavra "exclusão" no parágrafo novo era uma
+  quarta que ficou de fora — e colidia com o §7 ("nada é apagado"), sem
+  mecanismo nenhum por trás. Trocada por "deixar de ser usado dessa forma"
+  (oposição, não exclusão), e as quatro promessas entraram na pendência.
+- Se o agregado podia ser compartilhado com terceiros ou só uso interno
+  não estava decidido — resolvido acima, explícito no texto.
+
+**Banco de desenvolvimento limpo.** As quatro Empresas que existiam lá
+(`Transportadora Teste`, `Transportes Teste Lancamento`, `Transport`,
+`Teste Verificacao`) tinham aceitado a versão provisória, que não continha
+a cláusula nova — pela regra de reaceite acima, isso não conta como aceite
+desta versão. Apagadas as quatro e tudo que dependia delas (usuário,
+clientes, caminhões, motoristas, fretes, sessão de login), na ordem que
+respeita as travas de integridade referencial do §3
+(`servico` → `motorista` → `veiculo` → `cliente` → `usuario` → `empresa`).
+Conferido depois: nenhuma Empresa ficou com a versão antiga, e nenhuma
+sobrou fora da lista das quatro. Banco de teste (usado pela esteira) não
+precisou de limpeza — os testes semeiam e apagam os próprios dados a cada
+execução, com valores literais próprios.
+
+**Três pendências novas registradas no `CLAUDE.md` §14**, sem bloquear
+lançamento: a revisão jurídica da forma de aceite e da redação, agora
+marcada para depois do primeiro cliente pagante; uma pendência com prazo
+legal — o texto promete exportação, cancelamento, retenção de leitura por
+90 dias depois de a assinatura **vencer**, e oposição ao uso agregado, e
+nenhuma das quatro tem mecanismo automático no produto hoje (a exportação é
+a mais urgente, por ter prazo legal de resposta sob a LGPD); e o prazo de
+retenção para quem **cancela por conta própria** (diferente do vencimento),
+que o texto promete mas nenhum documento define.
+
+Próximo: tarefa 2 da auditoria de segurança (entrada de 15/08/2026, abaixo)
+— a trava de importação do cliente sem filtro de empresa vira regra de
+verdade no `eslint.config.mjs`, hoje só frase em
+`sem-filtro-de-empresa.ts:34`.
+
+---
+
 ## 16/08/2026 — ajusta o espaço entre a marca e o título
 
 Pedido do fundador: aplicar um documento novo do Design (revisão de

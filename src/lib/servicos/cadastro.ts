@@ -22,20 +22,22 @@ import { criarTiposDeOperacaoIniciais } from "./tipos-de-operacao";
  */
 
 /**
- * A tela de Termos ainda não existe, e o texto dos Termos também não (fica
- * para a próxima fatia da tarefa 8). Versão provisória só para o campo
- * obrigatório não ficar vazio — trocar por um identificador real quando o
- * texto nascer, e nenhuma antes disso.
+ * O valor é a data de publicação da versão do texto dos Termos e da
+ * Política de Privacidade (`src/app/(auth)/termos/ConteudoTermos.tsx`) —
+ * não um número sequencial. Toda Empresa que aceitar esta versão grava a
+ * mesma data aqui; `termos_aceitos_em`, abaixo, é o momento em que aquela
+ * Empresa aceitou, e os dois podem divergir. Empresas que já aceitaram esta
+ * não são reescritas retroativamente quando a próxima versão nascer.
  *
- * BLOQUEIO DE LANÇAMENTO (CLAUDE.md §14, registrado em 07/08/2026, depois do
- * /auditar-tela): o aceite virou texto acima do botão ("ao criar conta, você
- * aceita..."), sem marcação explícita — decisão do fundador para tirar o
- * alvo de toque pequeno e o componente fora do inventário. A FORMA do
- * aceite (texto implícito vs. caixa de marcação) ainda precisa de
- * confirmação jurídica, junto com a redação dos Termos — nenhuma das duas
- * existe ainda. Não pode ir ao ar (anúncio nem cliente pagante) antes disso.
+ * Nem toda mudança no texto muda esta data: só cláusula nova ou alterada
+ * exige aceite novo de quem já tinha aceitado (data nova aqui, e um fluxo
+ * de reaceite que ainda não existe). Correção de redação que não muda o que
+ * o texto autoriza — erro de digitação, clareza de frase — não precisa.
+ *
+ * Publicado em 18/08/2026 com revisão jurídica pendente, sem bloqueio de
+ * lançamento (CLAUDE.md §14) — decisão do fundador.
  */
-const VERSAO_TERMOS_PROVISORIA = "provisoria-antes-da-tela-de-termos";
+const VERSAO_TERMOS_PUBLICADA = "2026-08-18";
 
 const schema = z.object({
   nomeEmpresa: z.string().trim().min(1),
@@ -176,7 +178,7 @@ export async function criarConta(
           telefone: dados.seuTelefone || null,
           origem_declarada: origemDeclarada,
           termos_aceitos_em: new Date(),
-          termos_versao: VERSAO_TERMOS_PROVISORIA,
+          termos_versao: VERSAO_TERMOS_PUBLICADA,
         },
       });
       await criarTiposDeOperacaoIniciais(tx, empresaId);

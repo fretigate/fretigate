@@ -985,13 +985,19 @@ Nunca commitar exportação sem conferir: quatro das cinco tinham problema.
 
 Não invente resposta. Pergunte.
 
-- **BLOQUEIO DE LANÇAMENTO — forma do aceite dos Termos e a redação deles.**
-  A tela Criar conta (tarefa 8) grava `termos_aceitos_em`/`termos_versao` com
-  aceite implícito (texto acima do botão, sem caixa de marcação) e uma versão
-  provisória, porque nem a forma do aceite nem o texto dos Termos e da
-  Política de Privacidade passaram por revisão jurídica ainda. Isso **não
-  pode ir ao ar** — nem anúncio, nem cliente pagante — antes de resolver as
-  duas coisas. Decidido em 07/08/2026.
+- **Revisão jurídica dos Termos e da Política de Privacidade — pendente, sem
+  bloqueio de lançamento.** Publicados em 18/08/2026, decisão do fundador,
+  com a forma de aceite atual (texto acima do botão Criar conta, sem caixa
+  de marcação) e a redação atual — incluindo o parágrafo de uso agregado e
+  anonimizado dos dados para melhorar o produto e produzir informação de
+  mercado, que entrou nesta data porque a LGPD não se aplica
+  retroativamente: dado coletado sem essa cláusula não pode passar a ser
+  usado assim depois. `termos_versao` grava a data de publicação da versão
+  aceita (`src/lib/servicos/cadastro.ts`). A revisão jurídica de tudo o mais
+  — retenção, direitos de titulares terceiros, transferência internacional,
+  alteração dos termos, limitação de responsabilidade — fica para depois do
+  primeiro cliente pagante, porque essas cláusulas valem do aceite em diante
+  e uma versão futura não retroage sobre quem já aceitou esta.
 
   **Pendência somada, registrada em 07/08/2026 (tarefa 8, fatia 2):** hoje,
   tocar em "Termos de uso" ou "Política de privacidade" no meio do cadastro
@@ -1001,9 +1007,22 @@ Não invente resposta. Pergunte.
   aqui"). Guardar rascunho do formulário resolveria pela metade; a correção
   que elimina o problema de vez é os Termos abrirem **por cima** do
   formulário (folha ou modal), sem navegar para longe dele. Não construído
-  nesta fatia — fica registrado junto do bloqueio acima porque as duas coisas
-  (redação/forma do aceite e a tela de Termos em si) mudam juntas quando a
-  revisão jurídica acontecer.
+  ainda — muda junto da próxima revisão da tela de Termos, seja ela
+  motivada pela revisão jurídica ou por outro pedido.
+- **PENDÊNCIA COM PRAZO LEGAL — exportação, cancelamento, retenção e
+  oposição ao uso agregado prometidos nos Termos ainda não têm mecanismo
+  automático.** O texto publicado em 18/08/2026 promete quatro coisas:
+  exportação dos dados a qualquer momento; cancelamento da assinatura a
+  qualquer momento; leitura e exportação mantidas por 90 dias depois de a
+  assinatura **vencer** (`CLAUDE.md` §10 — vencimento por pagamento que
+  falhou, **não** cancelamento por vontade própria; o prazo para quem
+  cancela por conta própria ainda não foi decidido — ver bullet próprio mais
+  abaixo, na lista de decisões em aberto); e a empresa poder pedir que seus dados
+  deixem de ser usados no uso agregado e anonimizado da Política de
+  Privacidade. Nenhuma das quatro tem endpoint ou fluxo no produto hoje —
+  até existirem, são cumpridas à mão, por quem responder o e-mail de
+  contato. A exportação é a mais urgente de lembrar: diferente das outras
+  três, tem prazo legal de resposta ao titular sob a LGPD.
 - **PRAZO — `origem_cadastro` (atribuição de origem por primeiro toque).**
   O cadastro (tarefa 8) grava só `origem_declarada` (a resposta da pergunta
   tocável); `origem_cadastro` fica nulo, porque capturar UTM/referrer é um
@@ -1079,6 +1098,12 @@ Não invente resposta. Pergunte.
   reclama, some. Por isso a tarefa 7 não fecha sem envio conferido de verdade.
 
 - Gateway de pagamento
+- **Prazo de retenção de leitura/exportação depois de cancelamento
+  voluntário** — os 90 dias do §10 valem para assinatura **vencida**
+  (pagamento que falhou), não para cancelamento por vontade própria. O texto
+  dos Termos promete retenção "por um período" depois do cancelamento, sem
+  dizer quanto — esse prazo ainda não foi decidido. Achado ao revisar a
+  publicação dos Termos em 18/08/2026.
 - Revisão do valor do plano anual — R$ 840 dá 53% de desconto sobre o mensal, o
   que pode sinalizar que o mensal é inflado. Recomendação em aberto: R$ 990.
 - Valor à vista no Pix do plano anual

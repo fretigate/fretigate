@@ -630,12 +630,22 @@ do `/auditar-tela`: o checkbox não estava em nenhum documento e o alvo de
 toque dele (16px) furava o mínimo de 48px do `CLAUDE.md` §8. Clicar em
 **Criar conta** é o aceite.
 
-**BLOQUEIO DE LANÇAMENTO** (ver `CLAUDE.md` §14): essa forma de aceite —
-texto implícito, em vez de marcação explícita — ainda precisa de confirmação
-jurídica, junto com a redação dos Termos e da Política de Privacidade, que
-também não existe ainda. `termos_versao` guarda um identificador provisório
-(`src/lib/servicos/cadastro.ts`). **Não pode ir ao ar** — nem anúncio, nem
-cliente pagante — antes de resolver as duas coisas.
+**Publicado em 18/08/2026** (ver `CLAUDE.md` §14): a forma de aceite acima e
+a redação dos Termos e da Política de Privacidade foram ao ar por decisão do
+fundador, com a revisão jurídica das duas coisas virando pendência — sem
+bloquear lançamento — para depois do primeiro cliente pagante. `termos_versao`
+guarda a **data de publicação** da versão do texto aceita
+(`src/lib/servicos/cadastro.ts`), não um identificador provisório: toda
+Empresa que aceitar a mesma versão grava a mesma data ali, distinta de
+`termos_aceitos_em` (o momento em que aquela Empresa aceitou). Uma versão
+futura do texto ganha data nova e vale só a partir do próprio aceite — não
+retroage sobre quem já aceitou a anterior.
+
+**Nem toda mudança no texto conta como versão nova.** Cláusula nova ou
+alterada — algo que muda o que o texto autoriza — exige aceite novo de quem
+já tinha aceitado: data nova em `termos_versao` e um fluxo de reaceite que
+ainda não existe. Correção de redação que não muda o que o texto autoriza
+(erro de digitação, clareza de frase) não precisa de aceite novo.
 
 ### Usuario
 `nome` · `email` · `papel` (`dono` | `operador`) · `ultimo_acesso_em`
