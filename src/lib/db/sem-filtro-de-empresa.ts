@@ -31,7 +31,12 @@ import { PrismaClient } from "@/lib/generated/prisma/client";
  *
  * Ou seja: mesmo que este arquivo vaze para onde não devia, o estrago é
  * limitado pelo banco, não pela nossa disciplina. A trava de importação
- * (tarefa 9) existe para o erro aparecer no build, não para ser a garantia.
+ * (`eslint.config.mjs`, tarefa 2 da auditoria) existe para o erro aparecer em
+ * `npm run lint` — rodado pela esteira a cada `push` para `main` e a cada
+ * pull request (`.github/workflows/ci.yml`) — não para ser a garantia. NÃO é
+ * `next build`: a partir do Next.js 16, `next build` não roda mais ESLint
+ * (medido, não suposto — ver `docs/diario.md`, entrada de 18/08/2026, tarefa
+ * 2 da auditoria).
  */
 
 const URL_DA_AUTENTICACAO = process.env.AUTH_DATABASE_URL;

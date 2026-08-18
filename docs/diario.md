@@ -6,6 +6,84 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 18/08/2026 — tarefa 2 da auditoria: a trava de importação vira regra de verdade
+
+Pedido do fundador: `src/lib/db/sem-filtro-de-empresa.ts:34` afirmava que a
+trava de importação "existe para o erro aparecer no build" — e ela não estava
+em lugar nenhum do `eslint.config.mjs`. Afirmação de mecanismo sobre coisa que
+não existe, a classe que o `CLAUDE.md` §13 chama de pior tipo de erro de
+documento. Plano aprovado e commitado antes da construção:
+`docs/planos/auditoria-2-trava-de-importacao.md`.
+
+**Duas regras novas no ESLint**, no mesmo mecanismo que já protegia SQL cru
+(`no-restricted-imports` + `no-restricted-syntax`, tarefa 9): uma bane
+importar `sem-filtro-de-empresa` fora de `src/lib/auth`, outra bane construir
+`PrismaClient` próprio (o import de `@prisma/adapter-pg` e a sintaxe `new
+PrismaClient(...)` em si) fora de `src/lib/db`.
+
+**O conflito encontrado e a decisão do fundador.** `scripts/seed/municipios.mts`
+constrói o próprio `PrismaClient`, por fora de `db()`, por desenho (`CLAUDE.md`
+§6, §9 — município não tem `empresa_id`). A regra de cliente próprio, ao pé da
+letra, bloquearia esse arquivo. Perguntado antes de escolher: o fundador optou
+por uma exceção nomeada, só para este arquivo, escrita e justificada no
+`eslint.config.mjs` — não um "liga tudo de novo".
+
+**Achado durante a verificação, que derrubou um critério do plano.** O plano
+pedia confirmar, com `npm run build`, que o Next.js roda o ESLint durante o
+build. Medido criando um arquivo violando a trava e rodando o build com ele: o
+build passou limpo, sem etapa de lint nenhuma. **A partir do Next.js 16, `next
+lint` e a opção `eslint` do `next.config.ts` foram removidos** — confirmado em
+`node_modules/next/dist/docs/01-app/03-api-reference/05-config/03-eslint.md`.
+A garantia real é `npm run lint`, rodado pela esteira a cada `push` para
+`main` e a cada pull request (`.github/workflows/ci.yml`), não o build. O
+comentário do arquivo e o do `eslint.config.mjs` foram escritos para dizer
+isso, não o que o plano supunha.
+
+**`/revisar` achou quatro divergências e três lacunas.** Trazidas ao fundador
+item a item:
+
+- Diário sem entrada da tarefa — esta entrada.
+- O comentário apontando "ver o diário" antes de ele existir — resolvido
+  junto.
+- O critério do plano sobre `next build` rodar ESLint, contradito pela
+  medição acima, sem registro em nenhum documento — registrado aqui, sem
+  reescrever o plano já commitado (mesmo padrão da entrada de 18/08 anterior).
+- A regra de `sem-filtro-de-empresa` abria `src/lib/db` inteiro (pedido
+  original do fundador, por analogia com a exceção de SQL cru), o que
+  deixava o comentário original do arquivo ("⛔ SÓ src/lib/auth PODE
+  IMPORTAR") mais restrito do que a regra de verdade — e abriria uma
+  reexportação silenciosa via `src/lib/db/index.ts`. **Corrigido apertando a
+  regra, não afrouxando o comentário**: a exceção de `sem-filtro-de-empresa`
+  passou a ser só de `src/lib/auth`. As duas exceções têm motivos diferentes
+  — `src/lib/db` é exceção de SQL cru porque é a camada de acesso a dados; o
+  cliente sem filtro é trabalho exclusivo do login, sem motivo para existir
+  em mais nenhum arquivo de `src/lib/db`. Medido depois do aperto: nada em
+  `src/lib/db` importava o arquivo hoje, e um arquivo de teste criado ali de
+  propósito para violar a regra reprovou.
+- Wording impreciso ("a cada commit" em vez de "a cada push para main"),
+  corrigido.
+- Duas lacunas aceitas como limitação conhecida, sem ação: o seletor de
+  `new PrismaClient(...)` não pega import renomeado (ninguém renomeia hoje);
+  e `.mts`/`.mjs`/`.js` dentro de `/src` ficam fora do escopo das quatro
+  travas — herdado da regra de SQL cru já existente, mexer alargaria as duas
+  juntas, fora do pedido desta tarefa.
+
+**Prova de que a trava reprova de verdade** (o `/revisar` não consegue medir
+isso, só tem `Read`/`Grep`/`Glob`): três arquivos temporários criados um de
+cada vez — importando `sem-filtro-de-empresa` fora de `auth`/`db`, construindo
+`PrismaClient` fora de `db`, e importando `sem-filtro-de-empresa` de **dentro**
+de `src/lib/db` (o caso que motivou o aperto) — os três reprovaram com
+mensagem clara, apagados logo depois, com o lint voltando a passar limpo.
+Controles positivos depois do aperto: `src/lib/auth/index.ts`,
+`scripts/seed/municipios.mts`, `src/lib/db/index.ts` e o próprio
+`sem-filtro-de-empresa.ts` continuam passando.
+
+Próximo: tarefa 3 da auditoria (entrada de 15/08/2026, acima) — mecanismo de
+sessão para ação de servidor, hoje sobrevivendo por acidente feliz, não por
+trava.
+
+---
+
 ## 18/08/2026 — publica os Termos e a Política de Privacidade, sem bloqueio de lançamento
 
 Pedido do fundador: os Termos de uso e a Política de Privacidade estavam em
