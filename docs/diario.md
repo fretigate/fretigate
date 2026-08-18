@@ -6,6 +6,117 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 18/08/2026 — tarefa 3 da auditoria: o mecanismo de sessão vira envelope provado por teste
+
+Pedido do fundador: mecanismo de sessão para ação de servidor — hoje
+sobrevivia por acidente feliz (`empresaId` só existe na sessão), não por
+trava; `exigirDono()` nunca rodou uma vez, e nenhum teste passava por sessão
+de verdade. Plano aprovado e commitado antes da construção:
+`docs/planos/auditoria-3-mecanismo-de-sessao.md`.
+
+**Opções trazidas antes de escolher, mesmo tratamento que o `db()` teve.**
+Três mecanismos apresentados — só teste; teste + envelope; os dois mais
+middleware do Next.js. Escolhida a segunda: envelope sozinho é trava sem
+prova, teste sozinho só avisa depois. Middleware recusado por não distinguir
+dono de operador, exatamente o caso que motivou a tarefa.
+
+**O risco levantado, e a resposta.** A primeira ideia para tornar
+`exigirSessao()`/`exigirDono()` testáveis — um parâmetro opcional de
+cabeçalhos — foi apontada como o formato exato de uma porta dos fundos: se
+alcançável de uma rota real, contornaria a sessão inteira. Resposta:
+`exigirSessao()`/`exigirDono()` não ganharam parâmetro nenhum — continuam
+zero-argumento, sempre lendo `next/headers`. A lógica de verdade (achar
+sessão pelo cabeçalho, checar `arquivado_em`, checar papel) foi para
+`src/lib/auth/sessao-por-cabecalho.ts`, que recebe `Headers` como argumento
+comum — sem fabricar sessão nenhuma, continua exigindo cookie válido — e cuja
+importação é travada pelo `eslint.config.mjs`, só para `src/lib/auth`, mesmo
+mecanismo que já tranca `bancoSemFiltroDeEmpresa` (tarefa 2). `tests/` fica
+fora do escopo da regra pelo mesmo motivo que `/tests` já pode SQL cru (§3).
+
+**O envelope.** `src/lib/auth/acao.ts` — `comoUsuario`/`comoDono` entregam
+`sessao` como primeiro parâmetro da ação; a escolha do envelope É a
+declaração de "esta ação exige dono", sem lista separada para manter. As 17
+ações de hoje (3 em `clientes`, 3 em `caminhoes`, 3 em `motoristas`, 8 em
+`fretes`) passam a usar `comoUsuario` — o plano previa 16, contando `fretes`
+por estimar (marcado "conferir contagem exata na construção" no próprio
+plano); a contagem real, 8, veio a somar 17, achado pelo `/revisar`. Duas
+exceções, comentadas no próprio código: `sairDaConta` (sessão pode já ter
+vencido) e `criarConta` (cria a empresa; sessão não existe ainda).
+
+**Os dois testes novos.** `tests/protecao-de-acoes.test.ts` varre `src/**`
+sozinho (sem lista de arquivo à mão), acha todo arquivo `"use server"`, e
+confere por AST que cada exportação usa um dos dois envelopes — as duas
+exceções conferidas por igualdade exata nos dois sentidos.
+`tests/sessao-e-papel.test.ts` semeia empresa com dono e operador de
+verdade, loga os dois via `auth.api.signInEmail` (cookie real, sem
+simulação), e prova: os dois conseguem sessão comum; só dono passa em
+`exigirDonoPorCabecalho`; operador recebe `SemPermissao` — o contraste; sem
+cookie, `SemSessao` nos dois, inclusive na versão "dono" (ausência de sessão
+vem antes do papel). Mais uma checagem por AST: o corpo de
+`exigirSessao`/`exigirDono` em `sessao.ts` é literalmente `return
+xPorCabecalho(await headers());` e nada mais — fecha o intervalo entre o que
+o teste exercita e o que roda em produção, já que `next/headers` não funciona
+dentro do Vitest.
+
+**Prova de que a trava de importação reprova de verdade.** Arquivo temporário
+em `src/app/(app)/` importando `sessaoPorCabecalho` — reprovou com as duas
+mensagens (path e pattern), apagado depois, lint voltou a passar limpo.
+
+**Fluxo completo testado no navegador**, pedido do fundador porque o teste
+estrutural só confere que o envelope existe, não que a ação continua
+funcionando — mudança mecânica em 5 arquivos é onde escapa uma que perdeu o
+caminho: criar conta, criar cliente, editar cliente, arquivar cliente,
+cadastro rápido de cliente/caminhão/motorista dentro de Lançar frete,
+sugestão de município, salvar frete, "Já recebi" — todos via `npm run dev`
+de verdade, sem erro de servidor, só um 401 esperado (senha ainda não
+cadastrada, na primeira tentativa de login). Dado de teste apagado do banco
+de desenvolvimento depois.
+
+`npm run lint`, `npm run build` e a suíte inteira (`npm run test`, 16
+arquivos, 197 testes) verdes.
+
+**`/revisar` achou três divergências e duas lacunas.** Trazidas ao fundador
+item a item:
+
+- **O teste estrutural aprovava em silêncio forma de exportação que não
+  reconhecia** (`export { nome }`, `export default`, função `default`
+  anônima) — contradizia a própria frase escrita no `CLAUDE.md` ("confere que
+  cada exportação usa um dos dois envelopes"). Aceito e corrigido:
+  `classificarExports` (`tests/protecao-de-acoes.test.ts`) não pula mais
+  nenhuma forma — qualquer uma não reconhecida cai em `"sem-envelope"` e
+  reprova, a menos que esteja na lista de exceção. Contraste medido na hora:
+  um arquivo `"use server"` de prova com `export { acaoQualquer }` sem
+  envelope reprovou pelo motivo certo, apagado depois.
+- Contagem errada — "16 ações" no diário e no plano, o número real é 17
+  (`fretes` tem 8, não 7; o próprio plano já marcava isso como "conferir na
+  construção"). Corrigido aqui (sem reescrever o plano já commitado, mesmo
+  padrão da entrada de 18/08 anterior).
+- **`comoDono` sem uso em produção — aceito como desenho, não corrigido.**
+  Decisão do fundador, registrada em `CLAUDE.md` §6 como exceção declarada:
+  não é abstração especulativa (a que ninguém sabe se funciona) — é a metade
+  de um mecanismo que só existe em par com `comoUsuario`. Sem ela, o teste
+  estrutural não teria como distinguir ação comum de ação de dono, e a lista
+  de exceção viraria, na prática, a lista de ações de dono escrita à mão —
+  o problema que este desenho evita. E nasce medido: `tests/sessao-e-papel.test.ts`
+  prova com login real que barra operador e deixa dono passar, antes de
+  qualquer tela usá-lo.
+- **Ação de servidor inline (`"use server"` dentro do corpo da função) fica
+  fora das duas travas — aceito como limitação conhecida**, mesmo tratamento
+  das duas de `sem-filtro-de-empresa` (tarefa 2). Registrado com o sintoma,
+  não só o fato, em três lugares — `CLAUDE.md` §9,
+  `tests/protecao-de-acoes.test.ts` e `src/lib/auth/acao.ts` —: quem escrever
+  a primeira ação assim está fora da proteção do mecanismo, e nada avisa se
+  esquecer o envelope.
+- O quinto achado (o revisor não consegue confirmar, só lendo arquivo, que
+  `export const x = comoUsuario(...)` compila e roda como Server Action de
+  verdade) não é lacuna — é limite do método dele. Já verificado por fora:
+  `npm run build` e o fluxo completo no navegador, acima.
+
+Próximo: tarefa 4 da auditoria (entrada de 15/08/2026, abaixo) — varredura de
+segredo na esteira, hoje disciplina, não mecanismo.
+
+---
+
 ## 18/08/2026 — tarefa 2 da auditoria: a trava de importação vira regra de verdade
 
 Pedido do fundador: `src/lib/db/sem-filtro-de-empresa.ts:34` afirmava que a

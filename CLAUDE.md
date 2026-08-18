@@ -446,6 +446,20 @@ não tinha nome próprio.
   tela.
 - **Nada de arquivo "para depois".** Sem abstração especulativa, sem camada sem
   dois casos de uso reais.
+
+  **Exceção declarada: `comoDono` (`src/lib/auth/acao.ts`, tarefa 3 da
+  auditoria, 18/08/2026), que nasce sem nenhuma ação de dono chamando.** Não é
+  a mesma coisa que abstração especulativa — abstração especulativa é a que
+  ninguém sabe se funciona. `comoDono` é a **metade de um mecanismo que só
+  existe em par** com `comoUsuario`: se só `comoUsuario` existisse, o teste
+  estrutural (`tests/protecao-de-acoes.test.ts`) não teria como distinguir
+  ação comum de ação de dono, e a lista de exceção do teste viraria, na
+  prática, a lista de ações de dono escrita à mão — exatamente o problema que
+  este desenho existe para evitar. E `comoDono` nasce **medido**, não
+  suposto: `tests/sessao-e-papel.test.ts` prova com login real que ele barra
+  operador e deixa dono passar, antes de qualquer tela usá-lo. Fica pronto
+  para o item 10. Decisão do fundador — não reabrir por analogia com esta
+  regra sem reler este parágrafo.
 - **O teste é "junta coisas sem relação", não linha contada.** ~200 linhas é
   sinal para ir olhar, não limite — arquivo comprido com um assunto só não
   precisa separar por causa do número. Regra corrigida em 07/08/2026, depois
@@ -782,6 +796,48 @@ existe contexto de empresa: só se sabe de que empresa a pessoa é depois de
 achá-la pelo e-mail. Essa permissão é uma **política nomeada**, visível em
 `pg_policies` — nunca `BYPASSRLS`, que é atributo invisível e desliga o motor
 para todas as tabelas de uma vez.
+
+**Toda ação de servidor usa o envelope `comoUsuario`/`comoDono`, nunca
+verificação escrita à mão.** (`src/lib/auth/acao.ts`, tarefa 3 da auditoria de
+segurança, 18/08/2026). Antes, cada ação escrevia `const sessao = await
+exigirSessao();` na primeira linha — funcionava porque não existia outro jeito
+de conseguir `empresaId`, mas nada garantia que a linha continuasse ali numa
+ação nova, e nada distinguia uma ação que devesse exigir o dono
+(`exigirDono()`) de uma que exige só sessão comum. O envelope entrega `sessao`
+como primeiro parâmetro da ação: não tem como esquecer a verificação porque
+não existe verificação para escrever à mão. A escolha do envelope **é** a
+declaração de "esta ação exige dono" — não existe lista separada.
+
+A lógica de verdade (achar a sessão pelo cabeçalho, checar `arquivado_em`,
+checar o papel) mora em `src/lib/auth/sessao-por-cabecalho.ts`, que recebe o
+`Headers` como argumento comum em vez de chamar `next/headers` diretamente —
+só para poder ser testada com um cookie de sessão real
+(`tests/sessao-e-papel.test.ts`), já que `next/headers` só funciona dentro de
+um pedido de verdade, nunca dentro do Vitest. **Não fabrica sessão nenhuma:**
+continua exigindo um cookie válido; só muda de onde o `Headers` vem.
+`src/lib/auth/sessao.ts` (`exigirSessao`, `exigirDono`, `sessaoAtual` — a API
+que o resto do produto importa, inalterada) vira casca de uma linha por
+função, sempre com o cabeçalho do pedido real — e só pode ficar assim: lógica
+nova ali reabriria o mesmo problema que motivou a mudança.
+
+A importação de `sessao-por-cabecalho` é travada por `eslint.config.mjs`, só
+para `src/lib/auth` — mesmo mecanismo que já tranca
+`bancoSemFiltroDeEmpresa` (tarefa 2 da auditoria). `tests/` fica fora do
+escopo da regra, pelo mesmo motivo que `/tests` já pode SQL cru (§3).
+`tests/protecao-de-acoes.test.ts` lê o código-fonte de toda ação de servidor
+(varredura, não lista de arquivo à mão) e confere que cada exportação usa um
+dos dois envelopes, com só duas exceções aprovadas — `sairDaConta` (sessão
+pode já ter vencido) e `criarConta` (cria a empresa; sessão não existe
+ainda) —, cada uma conferida por igualdade exata nos dois sentidos.
+
+**Limitação conhecida, aceita — igual às duas de `sem-filtro-de-empresa`
+(tarefa 2): ação com a diretiva `"use server"` dentro do corpo da função
+(inline, não no topo do arquivo) passa despercebida pelas duas travas.** Nem
+`tests/protecao-de-acoes.test.ts` (que só varre arquivo com a diretiva na
+primeira linha) nem `eslint.config.mjs` alcançam essa forma. Hoje não existe
+nenhuma no produto. Quem escrever a primeira ação inline está, por isso,
+**fora da proteção deste mecanismo** — precisa aplicar `comoUsuario`/`comoDono`
+por decisão própria, porque nada vai avisar se esquecer.
 
 **Extração por IA é isolada em `/src/lib/importacao`.** Trocar de fornecedor tem
 que ser trocar uma peça. O modelo ainda não está decidido (ver §14).

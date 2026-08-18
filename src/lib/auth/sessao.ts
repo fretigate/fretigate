@@ -1,5 +1,12 @@
 import { headers } from "next/headers";
-import { auth } from "./index";
+import {
+  exigirDonoPorCabecalho,
+  exigirSessaoPorCabecalho,
+  sessaoPorCabecalho,
+  SemPermissao,
+  SemSessao,
+  type Autenticado,
+} from "./sessao-por-cabecalho";
 
 /**
  * Quem está falando com o servidor, e de que empresa.
@@ -10,32 +17,20 @@ import { auth } from "./index";
  * "sessão autenticada no servidor" dessa frase — e é por isso que nenhuma
  * função aqui recebe `empresa_id` como argumento. Não dá para passar o errado
  * porque não dá para passar nada.
+ *
+ * ⚠️ AS TRÊS FUNÇÕES ABAIXO FICAM EM UMA LINHA DE VERDADE CADA — SÓ
+ * `headers()` DO NEXT.JS, DELEGANDO PARA `sessao-por-cabecalho.ts`. Se algum
+ * dia alguém acrescentar lógica aqui (uma checagem a mais, um `if`), este
+ * arquivo volta a ser o lugar onde o problema se esconde: é exatamente o
+ * motivo de a lógica de verdade ter saído daqui na tarefa 3 da auditoria
+ * (`docs/planos/auditoria-3-mecanismo-de-sessao.md`) — para o `Headers` do
+ * pedido real virar a única coisa que muda entre isto e o que
+ * `tests/sessao-e-papel.test.ts` exercita. Lógica nova entra em
+ * `sessao-por-cabecalho.ts`, nunca aqui.
  */
 
-/** O que o resto do produto precisa saber de quem está logado. E só isso. */
-export type Autenticado = {
-  usuarioId: string;
-  empresaId: string;
-  papel: "dono" | "operador";
-  nome: string;
-  email: string;
-};
-
-/** Não há sessão: ninguém entrou, ou a sessão venceu. */
-export class SemSessao extends Error {
-  constructor() {
-    super("Sem sessão. É preciso entrar.");
-    this.name = "SemSessao";
-  }
-}
-
-/** Há sessão, mas a pessoa não tem o papel exigido pela ação. */
-export class SemPermissao extends Error {
-  constructor(exigido: string) {
-    super(`Esta ação é do ${exigido}.`);
-    this.name = "SemPermissao";
-  }
-}
+export type { Autenticado };
+export { SemSessao, SemPermissao };
 
 /**
  * A sessão, ou `null`. Use quando a ausência é um caso normal — a tela de
@@ -44,28 +39,7 @@ export class SemPermissao extends Error {
  * Quando a ausência é erro, use `exigirSessao`.
  */
 export async function sessaoAtual(): Promise<Autenticado | null> {
-  const sessao = await auth.api.getSession({ headers: await headers() });
-  if (!sessao) return null;
-
-  const { user } = sessao;
-
-  /**
-   * Usuário arquivado não entra, mesmo com sessão válida no cookie.
-   *
-   * O §7 diz que nada é apagado: tirar alguém da empresa é preencher
-   * `arquivado_em`. Sem esta verificação, quem foi removido continuaria
-   * entrando até a sessão vencer sozinha — que é justamente o intervalo em que
-   * ele mais tem motivo para entrar.
-   */
-  if (user.arquivado_em) return null;
-
-  return {
-    usuarioId: user.id,
-    empresaId: user.empresa_id,
-    papel: user.papel === "dono" ? "dono" : "operador",
-    nome: user.name,
-    email: user.email,
-  };
+  return sessaoPorCabecalho(await headers());
 }
 
 /**
@@ -78,9 +52,7 @@ export async function sessaoAtual(): Promise<Autenticado | null> {
  * uma resposta.
  */
 export async function exigirSessao(): Promise<Autenticado> {
-  const autenticado = await sessaoAtual();
-  if (!autenticado) throw new SemSessao();
-  return autenticado;
+  return exigirSessaoPorCabecalho(await headers());
 }
 
 /**
@@ -91,7 +63,5 @@ export async function exigirSessao(): Promise<Autenticado> {
  * mecanismo, e quem a chama é quem sabe se a ação é do dono.
  */
 export async function exigirDono(): Promise<Autenticado> {
-  const autenticado = await exigirSessao();
-  if (autenticado.papel !== "dono") throw new SemPermissao("dono da empresa");
-  return autenticado;
+  return exigirDonoPorCabecalho(await headers());
 }

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { exigirSessao } from "@/lib/auth/sessao";
+import { comoUsuario } from "@/lib/auth/acao";
 import { criarCliente } from "@/lib/servicos/clientes";
 import { criarCaminhao } from "@/lib/servicos/caminhoes";
 import { criarMotorista } from "@/lib/servicos/motoristas";
@@ -121,11 +121,11 @@ function erroDoServico(erro: unknown): EstadoServico {
   return { erroGeral: mensagem };
 }
 
-export async function criarServicoAction(
+export const criarServicoAction = comoUsuario(async (
+  sessao,
   _estadoAnterior: EstadoServico,
   formData: FormData,
-): Promise<EstadoServico> {
-  const sessao = await exigirSessao();
+): Promise<EstadoServico> => {
   const lido = lerFormulario(formData);
   if ("erro" in lido) return lido.erro;
 
@@ -146,7 +146,7 @@ export async function criarServicoAction(
   // (`docs/planos/item-3-lancamento-frete.md`, Tarefa 3) — não é dado
   // sensível, é o id do próprio frete que a empresa acabou de criar.
   redirect(`/fretes?criado=${servico.id}`);
-}
+});
 
 export type ResultadoRapido =
   | { ok: true; item: { id: string; nome: string; apoio?: string } }
@@ -182,12 +182,12 @@ const schemaMotoristaRapido = z.object({
   telefone: z.string().trim(),
 });
 
-export async function criarClienteRapidoAction(
+export const criarClienteRapidoAction = comoUsuario(async (
+  sessao,
   nome: string,
   telefone: string,
   prazoPagamentoDias: number | null,
-): Promise<ResultadoRapido> {
-  const sessao = await exigirSessao();
+): Promise<ResultadoRapido> => {
   const validado = schemaClienteRapido.safeParse({ nome, telefone, prazoPagamentoDias });
   if (!validado.success) return { ok: false, erro: "Diga um número de dias válido." };
 
@@ -201,14 +201,14 @@ export async function criarClienteRapidoAction(
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para cadastrar agora." };
   }
-}
+});
 
-export async function criarCaminhaoRapidoAction(
+export const criarCaminhaoRapidoAction = comoUsuario(async (
+  sessao,
   apelido: string,
   placa: string,
   tipo: TipoVeiculo | "",
-): Promise<ResultadoRapido> {
-  const sessao = await exigirSessao();
+): Promise<ResultadoRapido> => {
   const validado = schemaCaminhaoRapido.safeParse({ apelido, placa, tipo });
   if (!validado.success) return { ok: false, erro: "Diga o apelido e um tipo válido." };
 
@@ -225,13 +225,13 @@ export async function criarCaminhaoRapidoAction(
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para cadastrar agora." };
   }
-}
+});
 
-export async function criarMotoristaRapidoAction(
+export const criarMotoristaRapidoAction = comoUsuario(async (
+  sessao,
   nome: string,
   telefone: string,
-): Promise<ResultadoRapido> {
-  const sessao = await exigirSessao();
+): Promise<ResultadoRapido> => {
   const validado = schemaMotoristaRapido.safeParse({ nome, telefone });
   if (!validado.success) return { ok: false, erro: "Diga o nome do motorista." };
 
@@ -244,34 +244,38 @@ export async function criarMotoristaRapidoAction(
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para cadastrar agora." };
   }
-}
+});
 
 /** "Última vez neste trecho" — nunca preenche sozinho, só informa. */
-export async function buscarSugestaoDeValorAction(
+export const buscarSugestaoDeValorAction = comoUsuario(async (
+  sessao,
   clienteId: string,
   destinoTexto: string,
-): Promise<number | null> {
-  const sessao = await exigirSessao();
+): Promise<number | null> => {
   if (!clienteId || !destinoTexto.trim()) return null;
   return buscarUltimoValorDoTrecho(sessao.empresaId, clienteId, destinoTexto);
-}
+});
 
 /** Chips de destino — recarrega ao trocar de cliente. */
-export async function listarDestinosDoClienteAction(clienteId: string): Promise<string[]> {
-  const sessao = await exigirSessao();
+export const listarDestinosDoClienteAction = comoUsuario(async (
+  sessao,
+  clienteId: string,
+): Promise<string[]> => {
   if (!clienteId) return [];
   return listarDestinosDoCliente(sessao.empresaId, clienteId);
-}
+});
 
 /**
  * Sugestões de município enquanto digita o destino
  * (`docs/especificacao.md` §4.1) — nunca bloqueia o salvar, só ajuda a
  * escrever o texto de um jeito que `resolverMunicipio` reconhece depois.
  */
-export async function buscarMunicipiosAction(termo: string): Promise<Municipio[]> {
-  const sessao = await exigirSessao();
+export const buscarMunicipiosAction = comoUsuario(async (
+  sessao,
+  termo: string,
+): Promise<Municipio[]> => {
   return buscarMunicipios(sessao.empresaId, termo);
-}
+});
 
 const schemaJaRecebi = z.object({ servicoId: z.string().uuid() });
 
@@ -282,8 +286,10 @@ const schemaJaRecebi = z.object({ servicoId: z.string().uuid() });
  * `criarTituloJaRecebi` (`src/lib/servicos/titulos.ts`), não aqui — é ali
  * que fica a garantia, mesmo se o aviso reabrir por navegação/recarga.
  */
-export async function criarTituloJaRecebiAction(servicoId: string): Promise<ResultadoSimples> {
-  const sessao = await exigirSessao();
+export const criarTituloJaRecebiAction = comoUsuario(async (
+  sessao,
+  servicoId: string,
+): Promise<ResultadoSimples> => {
   const validado = schemaJaRecebi.safeParse({ servicoId });
   if (!validado.success) return { ok: false, erro: "Não deu para salvar agora." };
 
@@ -293,4 +299,4 @@ export async function criarTituloJaRecebiAction(servicoId: string): Promise<Resu
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };
   }
-}
+});

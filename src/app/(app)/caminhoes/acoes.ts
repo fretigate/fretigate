@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { exigirSessao } from "@/lib/auth/sessao";
+import { comoUsuario } from "@/lib/auth/acao";
 import {
   arquivarCaminhao as arquivarCaminhaoServico,
   criarCaminhao,
@@ -66,11 +66,11 @@ function lerFormulario(
   };
 }
 
-export async function criarCaminhaoAction(
+export const criarCaminhaoAction = comoUsuario(async (
+  sessao,
   _estadoAnterior: EstadoCaminhao,
   formData: FormData,
-): Promise<EstadoCaminhao> {
-  const sessao = await exigirSessao();
+): Promise<EstadoCaminhao> => {
   const lido = lerFormulario(formData);
   if ("erro" in lido) return lido.erro;
 
@@ -82,14 +82,14 @@ export async function criarCaminhaoAction(
   }
 
   redirect(`/caminhoes/${criado.id}`);
-}
+});
 
-export async function editarCaminhaoAction(
+export const editarCaminhaoAction = comoUsuario(async (
+  sessao,
   id: string,
   _estadoAnterior: EstadoCaminhao,
   formData: FormData,
-): Promise<EstadoCaminhao> {
-  const sessao = await exigirSessao();
+): Promise<EstadoCaminhao> => {
   const lido = lerFormulario(formData);
   if ("erro" in lido) return lido.erro;
 
@@ -100,10 +100,9 @@ export async function editarCaminhaoAction(
   }
 
   redirect(`/caminhoes/${id}`);
-}
+});
 
-export async function arquivarCaminhaoAction(id: string) {
-  const sessao = await exigirSessao();
+export const arquivarCaminhaoAction = comoUsuario(async (sessao, id: string) => {
   await arquivarCaminhaoServico(sessao.empresaId, id);
   redirect("/caminhoes");
-}
+});

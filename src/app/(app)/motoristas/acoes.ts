@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { exigirSessao } from "@/lib/auth/sessao";
+import { comoUsuario } from "@/lib/auth/acao";
 import {
   arquivarMotorista as arquivarMotoristaServico,
   criarMotorista,
@@ -86,11 +86,11 @@ function erroDoServico(erro: unknown): EstadoMotorista {
   return { erroGeral: mensagem };
 }
 
-export async function criarMotoristaAction(
+export const criarMotoristaAction = comoUsuario(async (
+  sessao,
   _estadoAnterior: EstadoMotorista,
   formData: FormData,
-): Promise<EstadoMotorista> {
-  const sessao = await exigirSessao();
+): Promise<EstadoMotorista> => {
   const lido = lerFormulario(formData);
   if ("erro" in lido) return lido.erro;
 
@@ -101,14 +101,14 @@ export async function criarMotoristaAction(
   }
 
   redirect("/motoristas");
-}
+});
 
-export async function editarMotoristaAction(
+export const editarMotoristaAction = comoUsuario(async (
+  sessao,
   id: string,
   _estadoAnterior: EstadoMotorista,
   formData: FormData,
-): Promise<EstadoMotorista> {
-  const sessao = await exigirSessao();
+): Promise<EstadoMotorista> => {
   const lido = lerFormulario(formData);
   if ("erro" in lido) return lido.erro;
 
@@ -119,10 +119,9 @@ export async function editarMotoristaAction(
   }
 
   redirect(`/motoristas/${id}`);
-}
+});
 
-export async function arquivarMotoristaAction(id: string) {
-  const sessao = await exigirSessao();
+export const arquivarMotoristaAction = comoUsuario(async (sessao, id: string) => {
   await arquivarMotoristaServico(sessao.empresaId, id);
   redirect("/motoristas");
-}
+});

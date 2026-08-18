@@ -80,6 +80,12 @@ function formatarHorarioFortaleza(data: Date): string {
   }).format(data);
 }
 
+/**
+ * ⛔ EXCEÇÃO DECLARADA ao envelope `comoUsuario`/`comoDono`
+ * (`docs/planos/auditoria-3-mecanismo-de-sessao.md`,
+ * `tests/protecao-de-acoes.test.ts`): esta ação CRIA a empresa e o usuário —
+ * não existe sessão para exigir nesse instante, por definição.
+ */
 export async function criarConta(
   _estadoAnterior: EstadoCadastro,
   formData: FormData,

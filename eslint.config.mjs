@@ -12,6 +12,9 @@ const MSG_CLIENTE_PROPRIO =
 const MSG_SEM_FILTRO =
   "bancoSemFiltroDeEmpresa só pode ser importado por src/lib/auth (o " +
   "login) — veja o comentário no arquivo.";
+const MSG_SESSAO_POR_CABECALHO =
+  "sessao-por-cabecalho só pode ser importado por src/lib/auth — veja o " +
+  "comentário no arquivo (docs/planos/auditoria-3-mecanismo-de-sessao.md).";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -58,6 +61,13 @@ const eslintConfig = defineConfig([
   // Antes desta tarefa a segunda só existia como frase no comentário de
   // sem-filtro-de-empresa.ts — afirmação de mecanismo sobre coisa que não
   // existia (CLAUDE.md §13).
+  //
+  // Uma terceira trava entrou na tarefa 3 da auditoria (18/08/2026):
+  // importar sessao-por-cabecalho, que só faz sentido em src/lib/auth (o
+  // único chamador de produção — sessao.ts). tests/ fica fora de src/**,
+  // então nunca esteve no escopo desta regra — é a exceção provada em
+  // docs/planos/auditoria-3-mecanismo-de-sessao.md §4, mesmo raciocínio que
+  // já vale para SQL cru.
   {
     files: ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx,mts,mjs}"],
     rules: {
@@ -71,6 +81,10 @@ const eslintConfig = defineConfig([
               name: "@/lib/db/sem-filtro-de-empresa",
               message: MSG_SEM_FILTRO,
             },
+            {
+              name: "@/lib/auth/sessao-por-cabecalho",
+              message: MSG_SESSAO_POR_CABECALHO,
+            },
           ],
           patterns: [
             // Defesa em profundidade contra import relativo (`../db/sem-
@@ -78,6 +92,10 @@ const eslintConfig = defineConfig([
             // do projeto (CLAUDE.md §6), mas a regra não deve depender só
             // dela ser seguida.
             { group: ["**/sem-filtro-de-empresa"], message: MSG_SEM_FILTRO },
+            {
+              group: ["**/sessao-por-cabecalho"],
+              message: MSG_SESSAO_POR_CABECALHO,
+            },
           ],
         },
       ],
@@ -113,9 +131,17 @@ const eslintConfig = defineConfig([
         {
           paths: [
             { name: "@/lib/db/sem-filtro-de-empresa", message: MSG_SEM_FILTRO },
+            {
+              name: "@/lib/auth/sessao-por-cabecalho",
+              message: MSG_SESSAO_POR_CABECALHO,
+            },
           ],
           patterns: [
             { group: ["**/sem-filtro-de-empresa"], message: MSG_SEM_FILTRO },
+            {
+              group: ["**/sessao-por-cabecalho"],
+              message: MSG_SESSAO_POR_CABECALHO,
+            },
           ],
         },
       ],
@@ -160,6 +186,10 @@ const eslintConfig = defineConfig([
           paths: [{ name: "pg", message: MSG_SQL_CRU }],
           patterns: [
             { group: ["**/sem-filtro-de-empresa"], message: MSG_SEM_FILTRO },
+            {
+              group: ["**/sessao-por-cabecalho"],
+              message: MSG_SESSAO_POR_CABECALHO,
+            },
           ],
         },
       ],
