@@ -1,0 +1,20 @@
+# Achados aceitos, um por um — nunca um padrão amplo. Cada linha aqui é uma
+# decisão registrada, não um jeito de silenciar a varredura (tarefa 4 da
+# auditoria: docs/planos/auditoria-4-varredura-de-segredo.md). Adicionar uma
+# linha aqui é a mesma classe de decisão que adicionar um literal ao
+# allowlist do .gitleaks.toml — exige achado real e motivo escrito, nunca
+# lista ampla.
+#
+# As três linhas abaixo são do commit 4b7748d, o plano desta própria tarefa
+# (docs/planos/auditoria-4-varredura-de-segredo.md): para ilustrar, com
+# medição real, o que a configuração padrão do gitleaks pega e o que não
+# pega, o plano continha exemplos de string aleatória com a FORMA de
+# segredo — nunca um valor usado em lugar nenhum, real ou de teste. O plano
+# CONTINUA como foi aprovado e commitado — plano já commitado não se
+# reedita (mesmo padrão já registrado no diário, tarefa 3, 18/08/2026;
+# análogo à regra de migration aplicada não se editar, CLAUDE.md §3). Estas
+# três linhas existem só porque o commit antigo, imutável, continua no
+# histórico e a varredura olha o histórico inteiro (§6 do plano).
+4b7748d930284a53a37e9dff46b38f97b19e86d9:docs/planos/auditoria-4-varredura-de-segredo.md:generic-api-key:44
+4b7748d930284a53a37e9dff46b38f97b19e86d9:docs/planos/auditoria-4-varredura-de-segredo.md:generic-connection-string-credential:45
+4b7748d930284a53a37e9dff46b38f97b19e86d9:docs/planos/auditoria-4-varredura-de-segredo.md:generic-connection-string-credential:85

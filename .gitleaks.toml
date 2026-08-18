@@ -1,0 +1,58 @@
+# Varredura de segredo na esteira — tarefa 4 da auditoria de seguranca.
+# Plano: docs/planos/auditoria-4-varredura-de-segredo.md
+#
+# Mantem toda a configuracao padrao do gitleaks (chaves de AWS, Slack,
+# GitHub etc.) e acrescenta uma regra propria: a padrao NAO pega uma URL de
+# conexao com usuario e senha embutidos (ex.: DATABASE_URL do CLAUDE.md §5) —
+# medido no plano, nao suposto. A regra padrao exige um token isolado
+# (`chave = "valor"`); uma URL de conexao tem `:`, `/`, `@` no meio e escapa
+# dela.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-connection-string-credential"
+description = "URL com usuario e senha embutidos (string de conexao) — cobre qualquer protocolo, nao so postgres, para nao precisar de outra rodada de auditoria quando entrar outro servico"
+# Duas correcoes sobre a primeira versao desta regra, as duas achadas em
+# revisao — nao supostas, medidas com caso plantado antes e depois:
+#
+# 1) O campo da senha (entre o primeiro ":" depois do usuario e o "@") NAO
+#    aceita ":" dentro dele. Sem isso, uma senha real terminada em ":senha"
+#    (ex.: "aB9x7Kp2Qz:senha") cria a subcadeia ":senha@" dentro do proprio
+#    campo, disfarcando uma senha de verdade.
+#
+# 2) O host (depois do "@") e restrito a caracteres de nome de host/porta
+#    (letras, numeros, ".", "-", ":porta") — NAO aceita "@" nem "/" livre.
+#    Sem isso, um "@" mais adiante na URL (query string, path) permite uma
+#    segunda ocorrencia de ":senha@" DEPOIS do campo real da senha — ex.:
+#    "postgres://user:SEGREDOREAL@host.com?p=:senha@x" tem senha real
+#    "SEGREDOREAL", mas contem a subcadeia ":senha@" perto do fim, fora do
+#    campo da senha.
+#
+# As duas, sozinhas, ainda deixariam a decisao de isencao (abaixo) comparar
+# por SUBCADEIA do achado inteiro — o defeito de fundo, nao so os dois
+# sintomas acima. `secretGroup = 1` diz ao gitleaks para tratar SÓ o grupo
+# capturado (o campo da senha, entre parenteses) como "o segredo" — e é
+# contra esse texto isolado, nunca a URL inteira, que a lista de isenção
+# abaixo compara. Com isso a comparação é igualdade de verdade, não
+# depende de restringir usuário/host para ficar correta — a restrição do
+# host acima fica por realismo (host de banco não tem "@" nem "/"), não
+# por ser a defesa contra o disfarce.
+regex = '''[a-zA-Z][a-zA-Z0-9+.-]{1,15}://[^\s:@/'"]{1,100}:([^\s:@/'"]{3,200})@[a-zA-Z0-9.-]+(:[0-9]{1,5})?'''
+secretGroup = 1
+
+  # Lista FECHADA, comparada por IGUALDADE EXATA (`^...$`) contra só o
+  # campo da senha (secretGroup acima) — nunca contém/subcadeia contra o
+  # achado inteiro. Os dois literais vêm do placeholder já usado como senha
+  # de exemplo em docs/diario.md e tests/guarda-de-banco.test.ts — não é
+  # lista exaustiva de todo texto que casa com a regra acima (prosa
+  # descrevendo o próprio mecanismo, como este arquivo e o plano da tarefa,
+  # também casa e fica isenta pelo mesmo motivo: o campo da senha ali
+  # também é literalmente "senha"). Nunca um literal especulativo "para o
+  # caso de precisar" — adicionar um novo exige achar a ocorrência real
+  # primeiro, não adivinhar.
+  [rules.allowlist]
+  description = "Placeholder de senha em documentacao/teste, igualdade exata do campo capturado — nunca padrao"
+  regexes = [
+    '''^(senha|SENHA)$''',
+  ]
