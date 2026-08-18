@@ -302,6 +302,15 @@ describe("3. número sequencial por empresa — contador atômico", () => {
     // Isolamento que só funciona com um pedido por vez não é isolamento —
     // aqui a garantia é unicidade, não vazamento (CLAUDE.md §3, "concorrência
     // real" aplicado a uma garantia diferente).
+    //
+    // Sem lote de conexão aqui, de propósito: `dadosMinimos(e)` não passa
+    // `origem_texto`/`destino_texto`, então `normalizarEntrada` não chama
+    // `resolverMunicipio` nenhuma vez (`src/lib/servicos/servicos.ts:125-131`)
+    // — cada `criarServico` desta chamada usa UMA conexão, não duas. Oito
+    // simultâneas pedem até oito no pico, dentro do pool de dez. Medido,
+    // não suposto, depois de uma primeira versão errada deste comentário
+    // (achada pelo `/revisar`) ter afirmado "duas conexões" como regra
+    // geral quando só vale com origem e destino preenchidos.
     const e = await criarEmpresaDeTeste("l");
     const QUANTIDADE = 8;
     const criados = await Promise.all(

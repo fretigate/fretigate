@@ -73,12 +73,36 @@ function dadosMinimos(e: EmpresaDeTeste, extra: Record<string, unknown> = {}) {
 // item 3) existe exatamente para suportar isto sem colidir, e uma criação de
 // cada vez multiplicava a ida e volta ao Supabase por `quantidade`, perto
 // demais do `testTimeout` global em suíte cheia.
-function criarServicos(e: EmpresaDeTeste, quantidade: number, extra: Record<string, unknown>) {
-  return Promise.all(
-    Array.from({ length: quantidade }, () =>
-      criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, extra)),
-    ),
-  );
+//
+// BLOCOS DE CINCO, DENTRO DA PRÓPRIA FUNÇÃO — não em cada chamador. O pool
+// do driver (`pg-pool`, padrão) tem dez conexões; `criarServico` chama
+// `normalizarEntrada`, que — SÓ QUANDO origem_texto E destino_texto vêm
+// preenchidos em `extra` — resolve os dois em paralelo, cada um seu
+// próprio `db()`, pedindo até duas conexões ao mesmo tempo
+// (`src/lib/servicos/servicos.ts:125-131`). A função não sabe de antemão
+// o que cada chamador vai passar em `extra` (hoje varia: duas chamadas
+// preenchem os dois campos, duas preenchem só um) — por isso usa o teto
+// conservador sempre, em vez de calcular por chamada. Cinco é o maior
+// bloco que nunca estoura mesmo no pior caso (5 × 2 = 10) — o mesmo
+// defeito que derrubou a esteira em
+// `tests/regressao-resolucao-municipios.test.ts`
+// (`docs/planos/correcao-pool-esteira-vermelha.md`) reapareceria com uma
+// chamada futura de quantidade maior se o teto vivesse só nos lugares que
+// chamam, em vez de na função.
+const TAMANHO_DO_BLOCO = 5;
+
+async function criarServicos(e: EmpresaDeTeste, quantidade: number, extra: Record<string, unknown>) {
+  const resultados: Awaited<ReturnType<typeof criarServico>>[] = [];
+  for (let inicio = 0; inicio < quantidade; inicio += TAMANHO_DO_BLOCO) {
+    const tamanho = Math.min(TAMANHO_DO_BLOCO, quantidade - inicio);
+    const lote = await Promise.all(
+      Array.from({ length: tamanho }, () =>
+        criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, extra)),
+      ),
+    );
+    resultados.push(...lote);
+  }
+  return resultados;
 }
 
 beforeAll(async () => {
