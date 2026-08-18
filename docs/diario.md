@@ -6,6 +6,98 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 18/08/2026 — a esteira estava vermelha há cinco commits, e "suíte verde" local não avisava
+
+Achado ao verificar a tarefa 4 na esteira de verdade (entrada abaixo): `main`
+vinha falhando desde 14/08/2026, cinco commits seguidos, sem que nenhuma
+entrada do diário registrasse isso — todas diziam "`npm test` (N testes)
+verdes".
+
+**Plano escrito depois da construção, não antes** — divergência do
+`CLAUDE.md` §2 achada pelo `/revisar` e aceita: a sessão foi conduzida
+turno a turno em conversa, sem plano commitado antes de eu editar código.
+Registrado em `docs/planos/correcao-pool-esteira-vermelha.md`, com a nota
+no topo explicando a ordem invertida.
+
+**Diagnóstico, pedido pelo fundador antes de qualquer correção.** Commit
+`89ec22e` (14/08/2026, "Tarefa 4 do item 3: medição dos 10%, comando e
+regressão fixa") introduziu `tests/regressao-resolucao-municipios.test.ts`,
+cujo `beforeAll` criava 21 `Servico` de uma vez, em paralelo
+(`Promise.all`). O pool do driver (`pg-pool`, padrão do `PrismaPg`, não
+sobrescrito em `src/lib/db/index.ts`) tem **dez** conexões — confirmado lendo
+`node_modules/pg-pool/index.js`, não suposto. Vinte e uma chamadas
+simultâneas estouram isso: algumas falham com `P2028 (Unable to start a
+transaction in the given time)`, `Promise.all` rejeita na primeira e o
+`beforeAll` lança — mas as chamadas que ainda estavam em voo **não são
+canceladas**, continuam rodando sozinhas. Uma delas terminava e inseria um
+`Servico` **depois** de o `afterAll` já ter rodado `DELETE FROM servico` —
+daí a violação de chave estrangeira ao tentar apagar o `Cliente` em seguida.
+Os dois erros observados eram o mesmo defeito, em duas fases.
+
+**Por que "verde" local não via isso.** `.env` desta máquina aponta para o
+projeto de **desenvolvimento** (`ysldmzvszjxdgcbtaurh`); a esteira fala com
+o projeto de **teste** (`qutzsvrkaqvpluqxbhmp`, `CLAUDE.md` §5) — bancos
+diferentes, pressão de pool diferente. `npm test` local não tinha motivo
+para reproduzir o esgotamento. Regra nova no `CLAUDE.md` §2 sobre isso: toda
+afirmação de verificação precisa dizer local ou esteira, nunca só "verde".
+
+**Correção do defeito — e um erro de conta na primeira tentativa, achado
+pelo `/revisar`.** Primeira versão: blocos de dez, mesmo número do
+precedente (`tests/isolamento/vazamento.test.ts`, "dez, e não vinte"). O
+`/revisar` (segundo passe) achou que a conta estava errada:
+`criarServico` chama `normalizarEntrada`
+(`src/lib/servicos/servicos.ts:128-130`), que resolve origem e destino em
+paralelo, cada um seu próprio `db()` — **cada `criarServico` pede duas
+conexões ao mesmo tempo, não uma.** Um bloco de dez chamadas pedia até vinte
+conexões no pico, o mesmo estouro que o bloco existia para evitar, só
+escondido atrás de um número que parecia certo. **Corrigido para blocos de
+cinco** (5 × 2 = 10, a mesma margem do precedente). `npm run lint`, `npx tsc
+--noEmit` e `npm test` (só este arquivo) verdes — **local**. Confirmado
+também na **esteira**: branch de teste, PR (push direto não aciona nada — a
+esteira só ouve `main`), suíte inteira verde, 8m30s. PR fechado sem merge,
+branch apagada (`CLAUDE.md` §2, item 9).
+
+**Outros arquivos com o mesmo formato, checados a pedido do fundador**
+(`grep` por `Promise.all`/`Array.from({ length` em `tests/**`, exaustivo, não
+por amostra) — **recontados com o fator de duas conexões por `criarServico`**,
+não só pelo número de chamadas:
+
+- `tests/medicao-municipios.test.ts` — usa a mesma `criarServico`; o maior
+  uso pede exatamente dez chamadas em paralelo, ou seja, **até vinte
+  conexões no pico** — acima do limite pela mesma conta que corrigiu o
+  arquivo desta tarefa. Não alterado — fica para o fundador decidir.
+- `tests/servicos.test.ts` — 8 chamadas × 2 = **até 16 no pico**, também
+  acima do limite correto. Não alterado.
+- `tests/titulos.test.ts` — 2 chamadas via `Promise.allSettled`, de
+  `criarTituloJaRecebi`, que não passa por `normalizarEntrada` — sem risco.
+- `tests/isolamento/vazamento.test.ts` — o precedente, dez chamadas de UMA
+  conexão cada (`db().empresa.findMany`, sem resolução de município) —
+  continua correto como está.
+
+**Lacuna achada no mesmo levantamento, fora de `tests/`:**
+`src/lib/servicos/medicao-municipios.ts:98` tem o mesmo formato
+(`Promise.all` sem teto sobre `resolverMunicipio`) em **código de
+produto**, usado por `scripts/medir-municipios.mts` contra uma empresa
+real — se ela acumular muitos textos únicos não resolvidos, o mesmo
+esgotamento pode acontecer contra o banco que a ferramenta apontar. Não
+corrigido — ferramenta manual, sob demanda, urgência menor; fica para o
+fundador decidir. Plano completo, incluindo os números exatos de cada
+achado: `docs/planos/correcao-pool-esteira-vermelha.md`.
+
+**O buraco de processo — decidido.** Três opções trazidas (leve:
+`/onde-paramos` confere a esteira; média: fechamento de tarefa espera e
+afirma o resultado real; pesada: branch protection no GitHub). Fundador
+escolheu as duas pontas: **média agora**, **pesada depois do lançamento do
+MVP**. A média virou regra escrita — `CLAUDE.md` §2, item 9 (novo): push faz
+parte do commit aprovado, e a tarefa não fecha até a esteira confirmar,
+espera o resultado de verdade, nunca só avisa que disparou. A pesada entrou
+em `CLAUDE.md` §14, com o gatilho (lançamento do MVP) e o motivo do porquê
+não agora (hoje é push direto, sem PR; a proteção exigiria PR para toda
+mudança, todo dia — custo que só compensa depois que o ritmo diário de
+mudança cai).
+
+---
+
 ## 18/08/2026 — tarefa 4 da auditoria: a varredura de segredo vira mecanismo na esteira
 
 Última das quatro tarefas abertas pela auditoria de 15/08/2026. Plano

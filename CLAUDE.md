@@ -66,6 +66,21 @@ você escreve.** O padrão é o meu.
   servidor com senha **certa**, que passaria a ser rotulada "senha
   incorreta", pior que a mensagem genérica que a correção queria
   melhorar. O `/revisar` achou; revertido para o código exato.
+- **"Suíte verde" local e "esteira verde" não são a mesma afirmação — dizem
+  qual das duas.** `npm test` nesta máquina fala com o banco de
+  **desenvolvimento**; a esteira do GitHub fala com o projeto de **teste**
+  (`CLAUDE.md` §5) — bancos diferentes, tamanho de pool diferente, latência
+  diferente. Uma suíte pode passar num e falhar no outro pelo mesmo motivo
+  que os dois nunca são o mesmo banco. Toda tarefa que afirmar verificação
+  precisa dizer qual das duas rodou — "local" ou "esteira, run tal" — nunca
+  só "verde", que deixa quem lê supor a mais forte das duas sem ter sido
+  dita. Registrado em 18/08/2026: a esteira ficou vermelha por cinco commits
+  seguidos (14 a 18/08) num defeito de concorrência que só aparece contra o
+  pool do projeto de teste — `tests/regressao-resolucao-municipios.test.ts`
+  pedia 21 conexões de uma vez a um pool de dez. `npm test` local continuou
+  verde a cada tarefa porque testava outro banco, sem pressão de pool
+  nenhuma, e "verde" no diário cinco vezes seguidas não queria dizer o que
+  parecia dizer.
 - Se auditassem esse código para comprar a empresa, não teria nada para ter vergonha.
 
 ### Como executar
@@ -116,16 +131,54 @@ você escreve.** O padrão é o meu.
 
    Um passe extra é barato; um laço de passes é a tarefa que não fecha.
 8. **Nunca commite sem eu aprovar.** Mostre o que vai entrar e espere o meu ok.
-9. **Ao fechar uma tarefa, feche a sessão junto.** Depois do commit aprovado,
-   termine a resposta com uma linha só, avisando que é hora de eu dar `/clear`
-   e dizendo **qual comando mandar ao reabrir**. Exemplo:
+9. **Commit aprovado inclui o push para `origin/main` — e a tarefa não fecha
+   até a esteira confirmar.** Push é parte do mesmo passo do commit: sem ele
+   a esteira não tem o que rodar. Depois do push, **espere o resultado real**
+   do GitHub Actions (`gh run watch`, ou equivalente) — nunca declare tarefa
+   concluída com a esteira ainda rodando ou não verificada. Esteira vermelha,
+   mesmo que por motivo alheio à tarefa, entra na conversa antes de qualquer
+   aviso de fechamento.
 
-   > Tarefa 6 commitada. Dê `/clear` agora e mande `/onde-paramos` ao reabrir.
+   Decisão do fundador, 18/08/2026, opção "B" entre três trazidas (a outra
+   opção considerada e adiada era não esperar o resultado, só avisar que
+   disparou — recusada por deixar a mesma janela que causou o problema
+   abaixo). **Depois do lançamento do MVP, este passo deixa de ser manual**:
+   branch protection no GitHub vai exigir o check passar antes de qualquer
+   coisa entrar em `main` — decisão já tomada, pendente só do lançamento
+   (§14).
 
-   O motivo é meu, não seu: conversa longa fica cara e imprecisa, e a próxima
-   tarefa começa melhor lendo o diário do que arrastando o histórico da
-   anterior. Sem esse aviso eu continuo digitando na mesma sessão e não
-   percebo.
+   Registrado porque aconteceu: `main` ficou vermelho por cinco commits
+   seguidos (14 a 18/08/2026) sem que uma entrada do diário percebesse — cada
+   uma dizia só "`npm test` verdes", que era verdade e não dizia nada sobre a
+   esteira, porque os dois falam com bancos diferentes (§2, "suíte verde"
+   acima). Ninguém tinha rodado `gh run list` desde 14/08. Ver
+   `docs/diario.md`.
+
+   **Se a esteira ficar vermelha depois do push:** conserta por cima, com
+   commit novo — nunca reescreve o commit já aprovado (mesma regra do §9,
+   sobre migration aplicada). Se o defeito for da própria tarefa, a correção
+   entra como parte dela, antes de fechar. Se for de motivo alheio (como o
+   caso registrado acima), a tarefa não fica bloqueada por ele, mas ele
+   também não é ignorado — vira achado, trazido ao fundador, com decisão
+   própria sobre corrigir agora ou depois. **A entrada do diário se atualiza
+   antes do commit final**, nunca depois: se a esteira ainda não tinha
+   confirmado quando a entrada foi escrita ("local, esteira pendente") e
+   confirma depois, a entrada muda para refletir isso antes de commitar —
+   uma entrada que afirma "pendente" sobre algo já confirmado é a mesma
+   classe de erro que o §13 já nomeia (afirmação que engana por dizer o
+   que não é mais verdade).
+10. **Ao fechar uma tarefa, feche a sessão junto.** Depois da esteira
+    confirmada (item 9), termine a resposta com uma linha só, avisando que é
+    hora de eu dar `/clear` e dizendo **qual comando mandar ao reabrir** —
+    junto do status da esteira, nunca omitido. Exemplo:
+
+    > Tarefa 6 commitada, esteira verde. Dê `/clear` agora e mande
+    > `/onde-paramos` ao reabrir.
+
+    O motivo é meu, não seu: conversa longa fica cara e imprecisa, e a
+    próxima tarefa começa melhor lendo o diário do que arrastando o
+    histórico da anterior. Sem esse aviso eu continuo digitando na mesma
+    sessão e não percebo.
 
 ### Como me explicar as coisas
 
@@ -1207,6 +1260,17 @@ Não invente resposta. Pergunte.
 - **Trocar a estimativa geodésica por API de rotas** — só quando a imprecisão
   aparecer no uso real. Se acontecer, decidir o fornecedor e medir o custo por
   par novo.
+- **Branch protection no GitHub, exigindo o check da esteira passar antes de
+  qualquer coisa entrar em `main` — decidido, gatilho é o lançamento do
+  MVP, não uma data.** Decisão do fundador, 18/08/2026, junto da criação do
+  §2 item 9 (esperar a esteira antes de fechar tarefa). Hoje o push é
+  direto, sem PR — a proteção viraria PR obrigatório para toda mudança,
+  todo dia, não só quando algo quebra, e o §2 inteiro ("commit a cada
+  tarefa que funciona") pressupõe commit direto. Por isso fica para depois
+  do lançamento, quando o ritmo de mudança diária pesa menos que a garantia
+  de `main` nunca ficar vermelho sem ninguém notar — o que já aconteceu uma
+  vez (`docs/diario.md`, 18/08/2026: cinco commits vermelhos, sem
+  ninguém perceber, entre 14 e 18/08).
 
 <!-- BEGIN:nextjs-agent-rules -->
 

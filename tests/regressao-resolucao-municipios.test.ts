@@ -106,23 +106,58 @@ beforeAll(async () => {
 
   const cliente = await criarCliente(empresaId, { nome: "Cliente Regressão" });
 
-  // Dois textos por Servico (origem + destino), em paralelo — o contador
-  // atômico de `numero` (Tarefa 1 do item 3) existe para suportar isto sem
-  // colidir, e em sequência 21 idas ao Supabase encostava no timeout da
-  // suíte cheia.
-  await Promise.all(
-    Array.from({ length: Math.ceil(CORPUS.length / 2) }, (_, indice) => {
+  // Dois textos por Servico (origem + destino) — 21 criações ao todo. O
+  // contador atômico de `numero` (Tarefa 1 do item 3) existe para suportar
+  // paralelismo sem colidir, mas paralelismo tem um teto: o pool do driver
+  // tem DEZ conexões (padrão do `pg-pool`, `src/lib/db/index.ts` não
+  // sobrescreve) — mesmo motivo, mesmo número, já registrado em
+  // `tests/isolamento/vazamento.test.ts` ("dez, e não vinte: o pool do
+  // driver tem dez conexões, e pedir mais do que isso ao mesmo tempo faz a
+  // transação estourar o tempo de espera ANTES de qualquer consulta
+  // rodar"). Rodar as 21 de uma vez foi exatamente o defeito que derrubou a
+  // esteira (não local — bancos e pools diferentes, `docs/diario.md`,
+  // tarefa 4 da auditoria, 18/08/2026): estourava o pool do projeto de
+  // teste, e a chamada que sobrava de um `Promise.all` já rejeitado
+  // continuava rodando sozinha e inseria um Servico DEPOIS do `afterAll` já
+  // ter limpado — a violação de chave estrangeira era o sintoma, a causa
+  // era esta.
+  //
+  // BLOCO DE CINCO, NÃO DEZ — achado numa segunda rodada de revisão, depois
+  // de a primeira correção (blocos de dez) ter sido escrita sem essa conta:
+  // `criarServico` chama `normalizarEntrada`
+  // (`src/lib/servicos/servicos.ts:128-130`), que resolve origem E destino
+  // em paralelo, cada um seu próprio `db()` — CADA `criarServico` pede DUAS
+  // conexões ao mesmo tempo, não uma. Um bloco de dez `criarServico` em
+  // paralelo pede até vinte conexões no pico (dez chamadas × duas
+  // resoluções cada) — o mesmo estouro que este bloco existe para evitar,
+  // só que escondido atrás de um número que parecia certo. Com blocos de
+  // CINCO, o pico é 5 × 2 = 10 — exatamente o tamanho do pool, a mesma
+  // margem que o precedente de `tests/isolamento/vazamento.test.ts` já usa
+  // (dez chamadas de UMA conexão cada). Continua rápido (5 idas e voltas
+  // de bloco, não 21 sequenciais) sem nunca pedir mais conexão do que o
+  // pool tem — agora contando o custo real de cada chamada, não só o
+  // número de chamadas.
+  const TAMANHO_DO_BLOCO = 5;
+  const criacoes = Array.from(
+    { length: Math.ceil(CORPUS.length / 2) },
+    (_, indice) => {
       const i = indice * 2;
-      return criarServico(empresaId, usuarioId, {
-        tipo_operacao_id: tipoOperacaoId,
-        cliente_id: cliente.id,
-        data_servico: new Date(),
-        valor: 150000,
-        origem_texto: CORPUS[i] ?? null,
-        destino_texto: CORPUS[i + 1] ?? null,
-      });
-    }),
+      return () =>
+        criarServico(empresaId, usuarioId, {
+          tipo_operacao_id: tipoOperacaoId,
+          cliente_id: cliente.id,
+          data_servico: new Date(),
+          valor: 150000,
+          origem_texto: CORPUS[i] ?? null,
+          destino_texto: CORPUS[i + 1] ?? null,
+        });
+    },
   );
+  for (let inicio = 0; inicio < criacoes.length; inicio += TAMANHO_DO_BLOCO) {
+    await Promise.all(
+      criacoes.slice(inicio, inicio + TAMANHO_DO_BLOCO).map((criar) => criar()),
+    );
+  }
 }, 60_000);
 
 afterAll(async () => {
