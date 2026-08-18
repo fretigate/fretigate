@@ -6,6 +6,20 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 18/08/2026 — limitação conhecida, registrada: blocos de pool sem folga
+
+Decisão do fundador, ao fechar a tarefa do teto de pool: os blocos de cinco
+aplicados hoje (`tests/regressao-resolucao-municipios.test.ts`,
+`tests/medicao-municipios.test.ts`) e o precedente de dez
+(`tests/isolamento/vazamento.test.ts`) usam o pool **até o limite exato**,
+sem conexão de folga para nenhuma outra consulta em voo no mesmo momento.
+Não corrigido — é o mesmo padrão já aceito no precedente, não um defeito
+novo. **Registrado como limitação conhecida**: se a esteira ficar instável
+nesses arquivos especificamente (não nos outros), este é o primeiro lugar a
+olhar.
+
+---
+
 ## 18/08/2026 — o teto de pool aplicado aos dois testes que faltavam
 
 Pedido do fundador, imediatamente depois da correção de
