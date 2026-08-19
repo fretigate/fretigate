@@ -133,9 +133,11 @@ export function validar(env: Record<string, string | undefined>): void {
 }
 
 /**
- * Mais rígida que `validar`: recusa também o projeto de desenvolvimento. Só
- * `tests/guarda-do-reset.ts` chama isto, e só antes de `prisma migrate reset
- * --force` na esteira — nunca em `npm test`, que precisa continuar
+ * Mais rígida que `validar`: recusa também o projeto de desenvolvimento.
+ * Chamada só pelos passos da esteira que mexem com o schema inteiro do
+ * banco de teste, nesta ordem — `tests/guarda-do-reset.ts`, depois
+ * `tests/encerra-conexoes-anteriores.ts` (matando conexão presa), depois
+ * `migrate reset` em si — nunca em `npm test`, que precisa continuar
  * aprovando as duas máquinas (`CLAUDE.md` §5).
  */
 export function validarSoTeste(env: Record<string, string | undefined>): void {
