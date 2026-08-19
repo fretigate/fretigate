@@ -131,21 +131,37 @@ você escreve.** O padrão é o meu.
 
    Um passe extra é barato; um laço de passes é a tarefa que não fecha.
 8. **Nunca commite sem eu aprovar.** Mostre o que vai entrar e espere o meu ok.
-9. **Commit aprovado inclui o push para `origin/main` — e a tarefa não fecha
-   até a esteira confirmar.** Push é parte do mesmo passo do commit: sem ele
-   a esteira não tem o que rodar. Depois do push, **espere o resultado real**
-   do GitHub Actions (`gh run watch`, ou equivalente) — nunca declare tarefa
-   concluída com a esteira ainda rodando ou não verificada. Esteira vermelha,
-   mesmo que por motivo alheio à tarefa, entra na conversa antes de qualquer
-   aviso de fechamento.
+9. **Commit aprovado inclui o push para `origin/main`.** Push é parte do
+   mesmo passo do commit: sem ele a esteira não tem o que rodar. A tarefa
+   fecha **sem esperar o resultado** — mas o fechamento (item 10) tem que
+   dizer isso explicitamente: "esteira disparada, ainda rodando, sem
+   confirmação", nunca "esteira verde" sem ter visto o resultado de
+   verdade.
 
-   Decisão do fundador, 18/08/2026, opção "B" entre três trazidas (a outra
-   opção considerada e adiada era não esperar o resultado, só avisar que
-   disparou — recusada por deixar a mesma janela que causou o problema
-   abaixo). **Depois do lançamento do MVP, este passo deixa de ser manual**:
-   branch protection no GitHub vai exigir o check passar antes de qualquer
-   coisa entrar em `main` — decisão já tomada, pendente só do lançamento
-   (§14).
+   A janela que isso abre — a esteira pode reprovar depois de a sessão já
+   ter fechado — é fechada pelo `/onde-paramos`: ele confere o status real
+   da esteira do commit mais recente (`gh run list`), sempre, antes de
+   responder onde o trabalho parou. A próxima sessão abre já vendo o
+   vermelho, se houver — não precisa de mais que isso, porque ninguém
+   trabalha sem antes perguntar onde parou.
+
+   **Decisão do fundador, 18/08/2026, revisada no mesmo dia.** A primeira
+   versão desta regra exigia esperar o resultado real (5 a 7 minutos por
+   tarefa) antes de fechar — substituída por esta: checagem no
+   `/onde-paramos` (opção "A") combinada com a versão que não espera da
+   "B", porque o custo de esperar em **toda** tarefa pesa mais do que o
+   problema que resolve — o buraco que motivou a regra (`main` vermelho por
+   cinco commits sem ninguém notar) já fica fechado só pelo
+   `/onde-paramos` conferir de verdade, sem pagar tempo de espera em cada
+   commit.
+
+   **Depois do lançamento do MVP, este passo deixa de ser manual**: branch
+   protection no GitHub vai exigir o check passar antes de qualquer coisa
+   entrar em `main` — decisão já tomada, pendente só do lançamento (§14).
+   Registrada como **reforço disponível, não descartada**: se A e B (nesta
+   versão) falharem — por exemplo, várias sessões sem ninguém rodar
+   `/onde-paramos` — C é a garantia estrutural que resolve de vez, ao custo
+   de mudar o fluxo de trabalho todo dia, não só quando algo quebra.
 
    Registrado porque aconteceu: `main` ficou vermelho por cinco commits
    seguidos (14 a 18/08/2026) sem que uma entrada do diário percebesse — cada
@@ -155,25 +171,35 @@ você escreve.** O padrão é o meu.
    `docs/diario.md`.
 
    **Se a esteira ficar vermelha depois do push:** conserta por cima, com
-   commit novo — nunca reescreve o commit já aprovado (mesma regra do §9,
-   sobre migration aplicada). Se o defeito for da própria tarefa, a correção
-   entra como parte dela, antes de fechar. Se for de motivo alheio (como o
-   caso registrado acima), a tarefa não fica bloqueada por ele, mas ele
+   commit novo — nunca reescreve o commit já aprovado (mesma regra do §3,
+   sobre migration aplicada). Isso vale **sempre que o vermelho for
+   descoberto** — na hora, se por algum motivo já se sabe antes de fechar, ou
+   só na sessão seguinte, via `/onde-paramos` (o caso comum, já que a tarefa
+   fecha sem esperar). Se o defeito for da própria tarefa, a correção é um
+   commit novo dedicado a ela, o quanto antes depois de descoberta — nunca
+   editando o commit já aprovado. Se for de motivo alheio (como o caso
+   registrado acima), a próxima tarefa não fica bloqueada por ele, mas ele
    também não é ignorado — vira achado, trazido ao fundador, com decisão
-   própria sobre corrigir agora ou depois. **A entrada do diário se atualiza
-   antes do commit final**, nunca depois: se a esteira ainda não tinha
-   confirmado quando a entrada foi escrita ("local, esteira pendente") e
-   confirma depois, a entrada muda para refletir isso antes de commitar —
-   uma entrada que afirma "pendente" sobre algo já confirmado é a mesma
-   classe de erro que o §13 já nomeia (afirmação que engana por dizer o
-   que não é mais verdade).
-10. **Ao fechar uma tarefa, feche a sessão junto.** Depois da esteira
-    confirmada (item 9), termine a resposta com uma linha só, avisando que é
-    hora de eu dar `/clear` e dizendo **qual comando mandar ao reabrir** —
-    junto do status da esteira, nunca omitido. Exemplo:
+   própria sobre corrigir agora ou depois.
 
-    > Tarefa 6 commitada, esteira verde. Dê `/clear` agora e mande
-    > `/onde-paramos` ao reabrir.
+   **Se o status real da esteira já for conhecido antes do próximo
+   commit** — porque foi checado, porque o `/onde-paramos` já rodou, ou por
+   qualquer outro motivo —, **a entrada do diário se atualiza para refletir
+   isso**, nunca fica dizendo "pendente" sobre algo que já se sabe
+   confirmado. Isto não reabre a exigência de esperar (o item começa
+   dizendo o contrário, de propósito): é sobre não deixar um registro
+   desatualizado quando a informação certa já está à mão. Uma entrada que
+   afirma "pendente" sobre algo já confirmado é a mesma classe de erro que
+   o §13 já nomeia (afirmação que engana por dizer o que não é mais
+   verdade).
+10. **Ao fechar uma tarefa, feche a sessão junto.** Depois do push (item 9),
+    termine a resposta com uma linha só, avisando que é hora de eu dar
+    `/clear` e dizendo **qual comando mandar ao reabrir** — junto do status
+    da esteira, sempre marcado como não confirmado se o push acabou de
+    acontecer. Exemplo:
+
+    > Tarefa 6 commitada e enviada. Esteira disparada, ainda rodando, sem
+    > confirmação. Dê `/clear` agora e mande `/onde-paramos` ao reabrir.
 
     O motivo é meu, não seu: conversa longa fica cara e imprecisa, e a
     próxima tarefa começa melhor lendo o diário do que arrastando o
@@ -1263,14 +1289,18 @@ Não invente resposta. Pergunte.
 - **Branch protection no GitHub, exigindo o check da esteira passar antes de
   qualquer coisa entrar em `main` — decidido, gatilho é o lançamento do
   MVP, não uma data.** Decisão do fundador, 18/08/2026, junto da criação do
-  §2 item 9 (esperar a esteira antes de fechar tarefa). Hoje o push é
-  direto, sem PR — a proteção viraria PR obrigatório para toda mudança,
-  todo dia, não só quando algo quebra, e o §2 inteiro ("commit a cada
-  tarefa que funciona") pressupõe commit direto. Por isso fica para depois
-  do lançamento, quando o ritmo de mudança diária pesa menos que a garantia
-  de `main` nunca ficar vermelho sem ninguém notar — o que já aconteceu uma
-  vez (`docs/diario.md`, 18/08/2026: cinco commits vermelhos, sem
-  ninguém perceber, entre 14 e 18/08).
+  §2 item 9 (`/onde-paramos` confere a esteira de verdade + fechamento de
+  tarefa afirma o status sem esperar por ele). Hoje o push é direto, sem
+  PR — a proteção viraria PR obrigatório para toda mudança, todo dia, não
+  só quando algo quebra, e o §2 inteiro ("commit a cada tarefa que
+  funciona") pressupõe commit direto. Por isso fica para depois do
+  lançamento, quando o ritmo de mudança diária pesa menos que a garantia de
+  `main` nunca ficar vermelho sem ninguém notar — o que já aconteceu uma
+  vez (`docs/diario.md`, 18/08/2026: cinco commits vermelhos, sem ninguém
+  perceber, entre 14 e 18/08). **Reforço disponível, não descartada**: se a
+  combinação de `/onde-paramos` + fechamento honesto falhar — ninguém rodar
+  o comando por várias sessões, por exemplo —, esta é a garantia
+  estrutural que fecha de vez.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
