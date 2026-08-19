@@ -6,6 +6,88 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 18/08/2026 — processo revisado: A + B não bloqueante, C fica de reforço — e o achado que corrigiu a própria revisão
+
+Pedido do fundador, depois de um dia de uso da regra criada mais cedo
+(esperar o resultado real da esteira em toda tarefa, 5-7 minutos): custa
+mais do que resolve. Plano:
+`docs/planos/revisa-processo-para-A-mais-B-nao-bloqueante.md`.
+
+- **`.claude/commands/onde-paramos.md`** — ganha um passo novo, conferindo a
+  esteira de verdade do commit mais recente. Se estiver vermelha, isso é
+  dito antes de "última tarefa concluída" — mesma prioridade que já existia
+  para divergência entre diário e `git status`; a ordem entre as duas, se
+  as duas acontecerem juntas, ficou escrita (divergência primeiro, muda o
+  que é "onde paramos" antes de qualquer outra leitura fazer sentido).
+- **`CLAUDE.md` §2, item 9** — reescrito: a tarefa fecha sem esperar o
+  resultado, mas o fechamento tem que dizer explicitamente "esteira
+  disparada, ainda rodando, sem confirmação". O histórico da decisão
+  original fica registrado, com a revisão explicada ao lado.
+- **`CLAUDE.md` §2, item 10** — o exemplo de mensagem de fechamento muda
+  para refletir isso.
+- **`CLAUDE.md` §14** — a entrada de branch protection ganha "reforço
+  disponível, não descartada", e a referência ao item 9 corrigida.
+
+C (branch protection) continua para depois do lançamento do MVP — não
+antecipada.
+
+**`/revisar` achou que `gh run list --branch main --limit 1` sozinho não
+prova nada — e tinha razão.** Ele devolve o run mais recente da branch, sem
+amarrar ao commit certo: um push muito recente, cujo run ainda não apareceu
+na lista, faria o comando devolver o resultado do commit **anterior**,
+relatado como se fosse do atual — confiança falsa, a mesma classe que o
+`CLAUDE.md` §3 já nomeia. Corrigido: o passo agora pede `--json
+headSha,conclusion,status` e compara o `headSha` (SHA **completo**, nunca a
+forma abreviada de `git log --oneline`) contra `origin/main` — não o HEAD
+local: os dois podem divergir (commit feito mas push falhou, por exemplo),
+e é o que está em `origin/main` que a esteira de verdade testou. Se não
+bater, ou o run ainda estiver `in_progress`, ou não existir nenhum — a
+resposta diz "ainda sem confirmação", nunca inventa um veredito. `gh`
+autenticado também virou dependência registrada — dentro do próprio
+`.claude/commands/onde-paramos.md`, não no `CLAUDE.md` §14 (que é sobre
+dependência de código, `tsx`; esta é de comando, lugar diferente) — mesmo
+espírito: se faltar de forma permanente, a checagem para de rodar em
+silêncio.
+
+**Contradição achada entre o item 9 novo e um parágrafo antigo do mesmo
+item — corrigida.** O parágrafo "a entrada do diário se atualiza antes do
+commit final, nunca depois" foi escrito para a versão anterior da regra
+(que esperava o resultado dentro da própria tarefa) e, ao pé da letra,
+contradizia a versão nova (que fecha sem esperar — não existe "depois",
+dentro da mesma tarefa, para atualizar). Reescrito: a atualização do
+diário vale **se** o status real já for conhecido antes do próximo commit
+(por ter sido checado, ou porque o `/onde-paramos` já rodou) — não é uma
+exigência de esperar disfarçada, é só não deixar um registro desatualizado
+quando a informação certa já está à mão.
+
+**O achado maior desta rodada não veio do `/revisar` — veio de verificar
+esta própria tarefa na esteira de verdade, o que a tarefa pede para
+fazer.** Ver a entrada "duas execuções da esteira se destruíram" (mais
+abaixo): o commit da tarefa anterior (teto de pool), empurrado direto pra
+`main`, reprovou por um motivo que não tinha nada a ver com o código —
+achado e corrigido antes desta tarefa, em commit próprio
+(`cb6834e`), já em `main`.
+
+**Segunda rodada de `/revisar`, depois de a tarefa de concorrência
+(entrada mais abaixo) já ter sido commitada — mais três achados:**
+
+- **Um segundo trecho do item 9 ainda presumia "antes de fechar"**: "se o
+  defeito for da própria tarefa, a correção entra como parte dela, antes
+  de fechar" — mas não há como saber isso antes de fechar, se a tarefa
+  fecha sem esperar. Reescrito para valer "sempre que o vermelho for
+  descoberto", não só antes do fechamento.
+- **Os cinco desfechos do passo novo não cobriam todo valor que o `gh run
+  list` devolve** (`queued`, `timed_out`, `action_required`, `skipped`,
+  etc.). Trocado por um desfecho-padrão: qualquer coisa que não seja
+  explicitamente "success" ou "failure" com o SHA batendo cai em "ainda
+  sem confirmação" — sem tentar enumerar cada valor possível.
+- A entrada do diário original desta tarefa (esta) tinha sido apagada por
+  engano ao separar o commit da revisão de processo do commit da correção
+  de concorrência — os dois foram pedidos e investigados juntos, mas são
+  tarefas diferentes (§2, "uma tarefa por vez"). Restaurada aqui.
+
+---
+
 ## 18/08/2026 — duas execuções da esteira se destruíram, e a correção é impedir a concorrência, não pedir disciplina
 
 Achado ao verificar a tarefa do teto de pool (entrada "o teto de pool
