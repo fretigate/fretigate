@@ -6,6 +6,66 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 18/08/2026 — duas execuções da esteira se destruíram, e a correção é impedir a concorrência, não pedir disciplina
+
+Achado ao verificar a tarefa do teto de pool (entrada "o teto de pool
+aplicado aos dois testes que faltavam", mais abaixo) na esteira de verdade:
+o commit `81e806f`, empurrado direto para `main`, reprovou —
+mas com erros sem relação nenhuma com o código: `relation "municipio" does
+not exist`, `table "motorista" does not exist`, `permission denied for
+schema public`.
+
+**Diagnóstico.** Dois commits seguidos (`81e806f` às 20:21:58, e o próximo,
+só de documentação, às 20:23:07) dispararam duas execuções da esteira ao
+mesmo tempo, contra o **mesmo** projeto de teste do Supabase — só existe um
+(`CLAUDE.md` §5). Cada execução roda `prisma migrate reset --force`, que
+derruba e recria o schema inteiro. Uma delas resetou o schema no meio da
+outra ainda testando — tabela que a segunda esperava já tinha sumido de
+baixo dela. O código da tarefa estava correto (já provado antes, isolado,
+numa branch de teste); o vermelho era só as duas execuções brigando pelo
+mesmo banco.
+
+**A correção pedida pelo fundador: impedir a concorrência, não confiar em
+disciplina de espaçar commits.** Plano:
+`docs/planos/impede-concorrencia-na-esteira.md`.
+
+- **`.github/workflows/ci.yml` ganhou `concurrency`, com `group` FIXO** (não
+  por branch) **e `cancel-in-progress: true`.** Toda execução desta esteira,
+  de qualquer branch, entra no mesmo grupo — uma execução nova cancela a
+  anterior em vez de rodar junto. Custo: zero em dinheiro (recurso nativo do
+  GitHub Actions); o único efeito colateral é que dois PRs de verdade,
+  simultâneos, brigariam pela mesma vez em vez de rodar em paralelo —
+  **limitação conhecida, aceita**: hoje só uma pessoa (mais este agente)
+  trabalha de cada vez, então isso nunca cancela trabalho de verdade. Fica
+  registrado para reabrir se o time crescer.
+- **O cancelamento sozinho não bastava — pesquisado, não suposto** (o
+  comportamento documentado do runner do GitHub Actions, não uma medição
+  direta forçando um cancelamento). O runner só manda sinal de
+  encerramento para o processo de topo de um passo (o `bash` do `run:`);
+  um processo filho (o `node`/`npx` falando com o Postgres) não recebe
+  nada, e pode continuar conectado por até dez segundos depois do
+  cancelamento — tempo suficiente para segurar um lock que travaria o
+  próximo `migrate reset --force`, esperando uma conexão que já devia ter
+  morrido.
+- **`tests/encerra-conexoes-anteriores.ts`** — passo novo, logo antes do
+  `migrate reset`, que mata as conexões dos quatro papéis do produto
+  (`CLAUDE.md` §9) no projeto de teste — nunca papéis internos do
+  Supabase. Testado que o papel `postgres` tem privilégio para isso
+  (`pg_terminate_backend`) — medido contra o banco de **desenvolvimento**,
+  com uma conexão própria de teste, não suposto; a prova contra o projeto
+  de **teste** de verdade é o push de verificação, abaixo. Confere o
+  resultado de cada sinal e espera a conexão sumir antes de seguir — não
+  só conta linhas devolvidas. Mesma trava de `guarda-do-reset.ts`: só roda
+  contra o projeto de teste, nunca desenvolvimento.
+
+**Enquanto isso não existia** (é dizer: para qualquer sessão antes deste
+commit), vale a regra provisória do fundador: **esperar a esteira do envio
+anterior terminar antes do próximo push** — não para fechar a tarefa (item
+9 continua sem esperar isso), só para não empurrar o commit seguinte em
+cima de uma execução ainda rodando.
+
+---
+
 ## 18/08/2026 — limitação conhecida, registrada: blocos de pool sem folga
 
 Decisão do fundador, ao fechar a tarefa do teto de pool: os blocos de cinco

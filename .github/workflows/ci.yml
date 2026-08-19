@@ -6,6 +6,26 @@ on:
   pull_request:
     branches: [main]
 
+# GRUPO FIXO, não por branch/ref — de propósito. Todas as execuções desta
+# esteira, de qualquer branch, falam com o MESMO projeto de teste do
+# Supabase (CLAUDE.md §5); duas rodando ao mesmo tempo brigam pelo mesmo
+# schema. Medido, não suposto (18/08/2026, CLAUDE.md §2 "suíte verde"):
+# duas execuções contra commits em sequência rápida se sobrepuseram, uma
+# derrubou o schema (`prisma migrate reset --force`) no meio da outra, e o
+# resultado foi vermelho sem relação nenhuma com o código — "relation does
+# not exist", "permission denied for schema public". `cancel-in-progress`
+# faz a execução nova cancelar a anterior em vez de rodar junto.
+#
+# LIMITAÇÃO CONHECIDA, ACEITA: hoje é só o fundador e este agente
+# trabalhando, uma coisa de cada vez — o grupo fixo nunca cancela trabalho
+# de verdade. Se um dia mais gente empurrar código ao mesmo tempo, PRs
+# paralelos disputariam o mesmo projeto de teste e se cancelariam um ao
+# outro — nesse ponto o projeto provavelmente já teria mais de um projeto
+# de teste, um por execução, e este grupo mudaria de desenho junto.
+concurrency:
+  group: esteira-banco-de-teste-unico
+  cancel-in-progress: true
+
 jobs:
   lint-e-testes:
     runs-on: ubuntu-latest
@@ -157,6 +177,23 @@ jobs:
       # schema inteiro. A trava geral aprova desenvolvimento OU teste; esta
       # aprova só teste.
       - run: node --env-file=.env tests/guarda-do-reset.ts
+
+      # `cancel-in-progress` (acima) cancela a execução anterior, mas só
+      # manda sinal para o processo de topo do passo — um processo filho
+      # (o `node`/`npx` que fala com o Postgres) não recebe nada, e pode
+      # continuar conectado ao Supabase por até dez segundos depois do
+      # cancelamento, segurando lock em cima do que `migrate reset --force`
+      # precisa derrubar (pesquisado no comportamento documentado do runner
+      # do GitHub Actions, não medido diretamente forçando um cancelamento).
+      # Este passo mata as conexões dos quatro papéis do produto no projeto
+      # de teste antes do reset — o resultado (o sinal chega, a conexão
+      # morre) é conferido pelo próprio script, não só suposto
+      # (`tests/encerra-conexoes-anteriores.ts`). O privilégio de
+      # `pg_terminate_backend` foi medido contra o papel `postgres`, mas
+      # contra o banco de DESENVOLVIMENTO — a prova de que o passo roda
+      # certo contra o projeto de TESTE de verdade é o push de verificação
+      # desta tarefa, não este comentário.
+      - run: node --env-file=.env tests/encerra-conexoes-anteriores.ts
       - run: npx prisma migrate reset --force
 
       # Os 5.570 municípios do IBGE. Passo PRÓPRIO, nunca `postinstall`
