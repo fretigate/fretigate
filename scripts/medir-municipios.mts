@@ -26,44 +26,28 @@
  * Passa por `db(empresaId)` como a função que chama por baixo
  * (`medirResolucaoDeMunicipios`) — fretes são dado de cliente, e o filtro de
  * empresa nunca é opcional, nem para ferramenta interna.
+ *
+ * FECHA A CONEXÃO ANTES DE SAIR — `db()` usa um cliente por processo
+ * (`src/lib/db/index.ts`, pensado para servidor de vida longa), e este é um
+ * processo curto. Esperado (não medido): sem fechar, a conexão fica presa
+ * até o sistema operacional ou o pooler notarem que o processo morreu, não
+ * até este comando terminar. Achado em 18/08/2026 (`docs/diario.md`)
+ * investigando suíte local instável — mesma classe de defeito, script
+ * diferente. Mesmo padrão do
+ * `finally` de `scripts/seed/municipios.mts` (que já fechava certo, com um
+ * `PrismaClient` próprio dela — este arquivo usa o `db()` compartilhado, daí
+ * `fecharConexao()` em vez de `$disconnect()` direto).
  */
 
 import { medirResolucaoDeMunicipios } from "@/lib/servicos/medicao-municipios";
+import { fecharConexao } from "@/lib/db";
 
 function parar(motivo: string): never {
   console.error(`\n  ${motivo}\n`);
   process.exit(1);
 }
 
-const argumento = process.argv.find((a) => a.startsWith("--empresa="));
-const empresaId = argumento?.slice("--empresa=".length);
-
-if (!empresaId) {
-  parar(
-    "Falta o identificador da empresa.\n  Uso: npm run medir:municipios -- --empresa=<id>",
-  );
-}
-
-const resultado = await medirResolucaoDeMunicipios(empresaId);
-
-if (resultado.situacao === "amostra_insuficiente") {
-  console.log(
-    `\n  Só ${resultado.totalElegivel} texto(s) de origem/destino elegível(is) — ` +
-      `abaixo do piso de ${resultado.piso}. Não dá para tirar percentual daqui: ` +
-      "base pequena demais, um texto não resolvido vira número alto sem " +
-      "significar nada.\n",
-  );
-  process.exit(0);
-}
-
-const { totalElegivel, totalFalho, percentual, ambiguos, naoEncontrados } = resultado;
-
-console.log(
-  `\n  ${totalFalho} de ${totalElegivel} (${percentual.toFixed(1)}%) sem município ` +
-    `resolvido — limite é 10%.\n`,
-);
-
-function imprimirLista(titulo: string, itens: typeof ambiguos) {
+function imprimirLista(titulo: string, itens: { texto: string; ocorrencias: number }[]) {
   if (itens.length === 0) {
     console.log(`  ${titulo}: nenhum.\n`);
     return;
@@ -75,5 +59,41 @@ function imprimirLista(titulo: string, itens: typeof ambiguos) {
   console.log("");
 }
 
-imprimirLista("Ambíguo — a sugestão de município não chamou atenção", ambiguos);
-imprimirLista("Não encontrado — erro de digitação, apelido local ou falha da busca", naoEncontrados);
+const argumento = process.argv.find((a) => a.startsWith("--empresa="));
+const empresaId = argumento?.slice("--empresa=".length);
+
+if (!empresaId) {
+  parar(
+    "Falta o identificador da empresa.\n  Uso: npm run medir:municipios -- --empresa=<id>",
+  );
+}
+
+try {
+  const resultado = await medirResolucaoDeMunicipios(empresaId);
+
+  if (resultado.situacao === "amostra_insuficiente") {
+    console.log(
+      `\n  Só ${resultado.totalElegivel} texto(s) de origem/destino elegível(is) — ` +
+        `abaixo do piso de ${resultado.piso}. Não dá para tirar percentual daqui: ` +
+        "base pequena demais, um texto não resolvido vira número alto sem " +
+        "significar nada.\n",
+    );
+  } else {
+    const { totalElegivel, totalFalho, percentual, ambiguos, naoEncontrados } = resultado;
+
+    console.log(
+      `\n  ${totalFalho} de ${totalElegivel} (${percentual.toFixed(1)}%) sem município ` +
+        `resolvido — limite é 10%.\n`,
+    );
+
+    imprimirLista("Ambíguo — a sugestão de município não chamou atenção", ambiguos);
+    imprimirLista(
+      "Não encontrado — erro de digitação, apelido local ou falha da busca",
+      naoEncontrados,
+    );
+  }
+} finally {
+  // Sem `process.exit` aqui — mesmo motivo do `finally` da seed: engoliria
+  // uma exceção que estivesse subindo.
+  await fecharConexao();
+}

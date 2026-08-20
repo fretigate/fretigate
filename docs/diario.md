@@ -6,6 +6,71 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 18/08/2026 — fecha o cliente de banco ao fim de processo curto
+
+Achado investigando a instabilidade local da tarefa anterior (entrada
+abaixo) — o fundador pediu para parar e investigar antes de fechar aquela
+tarefa, porque a suíte é a defesa que o projeto inteiro apoia, e
+intermitente ela deixa de distinguir "quebrou" de "falhou de novo". Plano:
+`docs/planos/fecha-cliente-de-banco.md`.
+
+`src/lib/db/index.ts` cacheia `clienteBase` em `globalThis` — "um cliente
+por processo, não um por pedido" — e nunca o fecha. Certo para um servidor
+(processo longo); todo processo **curto** que usa `db()` abre e nunca fecha.
+Achados dois: a suíte de testes e `scripts/medir-municipios.mts` (a seed já
+fechava certo, com seu próprio cliente). `fecharConexao()` nova, exportada;
+`tests/fecha-cliente-de-banco.ts` fecha ao fim de cada arquivo de teste
+(`setupFiles`); `medir-municipios.mts` ganha o mesmo `try/finally` que a
+seed já tinha.
+
+**Três coisas verdadeiras ao mesmo tempo — pedido do fundador para não
+deixar colapsar numa só, porque cada uma sozinha engana de um jeito
+diferente:**
+
+1. **O fechamento explícito é certo por princípio, independente da causa.**
+   Processo que abre conexão e não fecha é defeito — não precisava provar
+   que era A causa da instabilidade para valer a pena corrigir.
+2. **O resultado é real e medido.** Seis rodadas da suíte completa,
+   seguidas, sem pausa, depois da correção: as seis limpas (198/198),
+   duração consistente (158-172s). Antes: duas falhas em cinco tentativas,
+   sempre mais lentas (267-424s), em posições diferentes da suíte (uma vez
+   perto do fim, uma vez no primeiro teste) — o que já descartava "sempre
+   no mesmo lugar" (ordem) e "sempre no fim" (desgaste numa rodada só).
+
+   As seis rodadas acima foram medidas numa árvore que também tinha a
+   mudança **ainda não commitada** da tarefa "teto de pool em
+   `medicao-municipios.ts`" (entrada anterior a esta) — contra "uma tarefa
+   por vez". Achado pelo `/revisar`. Remedido isolando só esta tarefa (`git
+   stash` das mudanças da outra): três rodadas seguidas, `git status` limpo
+   de resto, 197/197 nas três, 146-155s — mesma faixa de duração, resultado
+   se sustenta sem a mistura.
+3. **A causa raiz não está provada — e não fica registrada como se
+   estivesse.** Conferido depois da correção, inclusive esperando 15s: as
+   dez conexões `fretigate_app` continuam aparecendo em
+   `pg_stat_activity`. Investigando os PIDs: são as MESMAS dez, com 17-18
+   minutos de vida no momento medido, alternando entre `active` e `idle` a
+   cada rodada — não contagem crescendo. Tem a forma de comportamento
+   normal do pooler de transação do Supabase (conjunto de conexões de
+   fundo, reaproveitadas entre sessões de cliente diferentes), não de
+   vazamento acumulando. Fechar essa dúvida por completo exigiria acesso à
+   configuração do pooler do lado do Supabase, fora do alcance desta
+   investigação.
+
+**O sintoma para a próxima vez, registrado a pedido do fundador:** rodada de
+suíte que demora bem mais que o normal é o primeiro sinal — antes de olhar
+qual teste falhou. As rodadas instáveis mediram 267-424s; as limpas,
+158-172s. O teste que reprova muda de posição entre tentativas; a duração,
+não.
+
+`npm run lint`, `npx tsc --noEmit` verdes, na árvore isolada desta tarefa.
+Local: nove rodadas completas da suíte no total (seis contaminadas + três
+isoladas, ambas limpas — ver item 2 acima). Esteira: push de verificação
+numa branch de teste isolada (PR #6, commit `1ba8eb7`), confirmado verde
+(`gh run view`, `conclusion: success`) — PR fechado sem mesclar, branch de
+teste apagada dos dois lados.
+
+---
+
 ## 18/08/2026 — processo revisado: A + B não bloqueante, C fica de reforço — e o achado que corrigiu a própria revisão
 
 Pedido do fundador, depois de um dia de uso da regra criada mais cedo

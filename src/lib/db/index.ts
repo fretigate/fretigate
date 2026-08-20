@@ -155,3 +155,26 @@ export function reverterCadastroIncompleto(empresaId: string): Promise<number> {
   // sabe desserializar coluna de tipo `void` num `SELECT` comum.
   return clienteBase.$executeRaw`SELECT reverter_cadastro_incompleto(${empresa}::uuid)`;
 }
+
+/**
+ * Fecha o pool de conexões do `clienteBase` — para processo CURTO que usa
+ * `db()`/`emTransacao()` e depois termina (comando de terminal, suíte de
+ * teste), nunca para o servidor em execução (lá o processo é longo, e o pool
+ * existe exatamente para ficar aberto).
+ *
+ * O comentário da linha 34 ("um cliente por processo, não um por pedido")
+ * explica por que o cliente é cacheado — não por que ele nunca precisa
+ * fechar. Processo servidor nunca chama isto; processo curto SEMPRE deveria.
+ * Esperado (não medido): sem isto, a conexão fica presa até o sistema
+ * operacional ou o pooler notarem que o processo morreu — o que pode levar
+ * bem mais que a duração do próprio comando.
+ *
+ * Achado em 18/08/2026, investigando suíte local instável
+ * (`docs/diario.md`): nenhum processo curto deste projeto chamava isto —
+ * nem a suíte de testes, nem `scripts/medir-municipios.mts`. A seed
+ * (`scripts/seed/municipios.mts`) já fazia o equivalente certo, com um
+ * `PrismaClient` próprio dela.
+ */
+export function fecharConexao(): Promise<void> {
+  return clienteBase.$disconnect();
+}

@@ -18,7 +18,13 @@ export default defineConfig({
     // Recusa rodar fora do projeto de desenvolvimento. Roda ANTES de cada
     // arquivo de teste ser importado, e os testes conectam no topo do módulo —
     // então é o único ponto que pega todos.
-    setupFiles: ["./tests/guarda-de-banco.ts"],
+    //
+    // `fecha-cliente-de-banco.ts` fecha o cliente de `src/lib/db` ao fim de
+    // CADA arquivo — achado em 18/08/2026 (docs/diario.md): com `isolate:
+    // true` (padrão, não sobrescrito aqui), cada arquivo cria o próprio
+    // `clienteBase`, e nada fechava esse pool entre arquivos nem entre
+    // execuções seguidas da suíte.
+    setupFiles: ["./tests/guarda-de-banco.ts", "./tests/fecha-cliente-de-banco.ts"],
 
     // Um arquivo por vez. Os testes semeiam empresas no mesmo banco, e dois
     // arquivos em paralelo disputariam as mesmas linhas — o teste passaria ou
