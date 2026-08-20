@@ -6,6 +6,111 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 20/08/2026 — plano do item 4 (Lista de fretes e detalhe do frete), em 6 tarefas
+
+Plano aprovado pelo fundador, commitado antes da construção começar
+(`CLAUDE.md` §2) — `docs/planos/item-4-lista-e-detalhe-do-frete.md`.
+
+Fatiado em 6 tarefas, mesma razão do item 3: leitura derivada (situação
+financeira), lista, detalhe, edição reaproveitando uma tela existente, e
+retrofit em cinco telas já construídas (perfis de cliente/caminhão/
+motorista, listas de cadastro) que ficaram com pendência apontando para
+este item desde os itens 2 e 3.
+
+**Três decisões do fundador sobre o plano, registradas no próprio
+arquivo:** incluir os três pills "Lançar frete para/com este X" (a
+dependência que os cortou no item 2 já não existe); o resumo do motorista
+usa o rótulo **"Valor transportado"**, não "valor rodado" — para não ler
+como remuneração do motorista, já que o valor é do dono; a etiqueta
+"Faturado" nasce com a cor neutra por não ter cor própria em
+`docs/estilo.md`, mas é lacuna registrada para o Design — o fundador
+discorda da neutra (é o estado onde o dinheiro fica parado esperando o
+cliente, o mais importante de destacar, não o de esconder).
+
+**`/revisar` achou bug de lógica de domínio — classe nova, primeira desta
+natureza na sessão (as anteriores eram precisão de texto/diário).** A
+derivação da situação financeira, do jeito que o plano descrevia,
+checava "existe título não pago" antes de "algum dinheiro entrou",
+e por isso "Parcial" nunca era alcançado — um frete com um título pago
+e outro em aberto (adiantamento + saldo) cairia em "Faturado", escondendo
+que dinheiro já tinha entrado. Mais dois achados de correção, não só de
+texto: `Servico.km` é guardado em metros, e a razão R$/km do resumo do
+caminhão dividia sem converter; e "Vencido" no resumo do cliente nunca
+sairia de zero nesta fatia, porque `TituloReceber.vencimento` só passa a
+ser preenchido a partir do item 6 (hoje todo título nasce via "Já recebi",
+sempre pago, sempre sem vencimento) — `CLAUDE.md` §8, número que nunca
+sai de zero é dado incompleto disfarçado de completo.
+
+**Decisão do fundador sobre a derivação corrigida, registrada em
+`docs/especificacao.md` §7** (nova ordem, que resolve o bug de raiz):
+título cancelado conta como se não existisse (mesmo raciocínio de
+arquivado — se todos os títulos do serviço estiverem cancelados, volta a
+"A faturar"); um frete com dinheiro parcial ou com um título pago e outro
+aberto é sempre "Parcial", nunca "Faturado" — dizer "Faturado" quando
+dinheiro já entrou esconde o que a situação existe para mostrar. "Vencido"
+sai do resumo do cliente nesta fatia, e entra no item 6, junto do resto de
+Cobranças. Teto de "Ver todos" confirmado em 5 — mesma conta das cinco
+sugestões de município, o que cabe acima do teclado sem rolar.
+
+Achados menores aceitos e corrigidos no mesmo passe: faltava a linha
+TELEFONE no detalhe do frete (`docs/componentes.md` exige); "Lançar frete
+com este motorista" é a ação **principal** do perfil do motorista, não
+pílula; "Lançar frete com este caminhão" não estava no inventário do
+perfil do caminhão — o plano já prevê sincronizar `docs/componentes.md`
+junto da Tarefa 6, por ser decisão já registrada em `docs/especificacao.md`
+§4.7 (`CLAUDE.md` §13, sincronizar estado é do repositório).
+
+`/revisar` roda de novo antes do commit — mesma classe de achado
+(lógica de domínio), corrigida uma vez, exige confirmação de que a
+correção não abriu outro problema, não só repetição do já resolvido.
+
+**Segundo passe do `/revisar` achou mais quatro divergências e quatro
+lacunas — a maior parte causada pela própria correção do primeiro
+passe.** Ao tirar "Vencido" do §7 sem tocar no §4.7, os dois documentos
+passaram a se contradizer sobre quantos números o resumo do cliente tem;
+corrigido com uma nota nova no §4.7. Ao corrigir a fórmula de "a receber"
+(devia somar só o que falta, não o valor cheio de um título com
+recebimento parcial), percebi que "a receber" é **também** sempre zero
+nesta fatia, pela mesma razão do "Vencido" — só "Já recebi" cria título, e
+ele já nasce pago. **Decisão do fundador:** tira "a receber" também; o
+resumo do cliente fica com dois números (já rodado · recebido no
+período). A mesma razão corta a ordenação "maior valor em aberto" de
+Clientes (Tarefa 5, fica só "mais recente"/"maior valor total" nesta
+fatia) e o apoio "· R$ X em aberto" da linha Clientes em "Mais" — os três
+voltam juntos no item 6. Outros achados corrigidos: "os três tocáveis"
+virou "recebido" tocável por engano (nunca foi; corrigido para só "já
+rodado"); "Ver todos os 5" confundia o teto de exibição (5, sua resposta)
+com o número do rótulo, que é o total real do histórico; faltava a
+palavra "adicionar" na linha TELEFONE, que o inventário exige nomeando
+essa linha; o texto do estado vazio de "Meus fretes" já está registrado em
+`docs/especificacao.md` ("lançar o primeiro frete", já pedido ao Design) —
+uso esse, não invento outro; verifiquei os três arquivos de perfil
+individualmente em vez de generalizar por analogia (`motoristas/[id]/
+page.tsx` cita item 3, não item 4; `AvisoFreteSalvo.tsx` não tem comentário
+nenhum sobre o corte do "Ver o frete" — só o plano do item 3 registra
+isso). Rejeitado: o achado sobre a cor "Faturado" — o revisor não vê a
+conversa, e a neutra foi decisão explícita sua, não omissão.
+
+**Decisão do fundador sobre volume da lista "Meus fretes"** (lacuna nova,
+sem documento que decidisse): carrega os 50 mais recentes por padrão —
+nunca o mês corrente, que esconderia o que acabou de ser lançado atrás de
+um mês anterior maior —, com o chip de Período trazendo outra janela sob
+pedido. Registrado que o filtro de período precisa funcionar por
+parâmetro de URL, não só por toque no chip, porque o item 8 (barras da
+dashboard) vai depender disso. O caso de adiantamento pago sem saldo
+lançado (derivaria "Quitado" errado) fica como lacuna registrada para o
+item 6 resolver — não alcançável nesta fatia, decidir agora seria decidir
+no escuro.
+
+Esta rodada de achados é a mesma classe da anterior (lógica de
+domínio/consistência entre documentos) mais precisão de texto já vista
+hoje — corrigida, sem novo passe.
+
+Próximo: Tarefa 1 do item 4 — situação financeira derivada e leituras em
+lote, só backend.
+
+---
+
 ## 20/08/2026 — teste de contraste permanente da varredura de segredo (fecha a tarefa 4 da auditoria)
 
 Última pendência da tarefa 4 da auditoria de segurança
@@ -92,8 +197,10 @@ Verificação — local: `npx vitest run tests/varredura-de-segredo.test.ts`
 (10/10, binário Windows baixado à parte para o teste, checksum conferido
 contra o mesmo `_checksums.txt` da esteira), suíte inteira
 (`GITLEAKS_BIN=<binário local> npm test`, 208/208), `npm run lint`, `npx tsc
---noEmit` — os quatro limpos. Esteira: pendente, confirma no próximo
-`/onde-paramos`.
+--noEmit` — os quatro limpos. Esteira do commit `93085a7`: confirmada
+verde (9m9s, todos os passos, inclusive "Varredura de segredo") — já
+sabida antes do próximo commit começar, então esta entrada reflete o
+estado real, não "pendente" (`CLAUDE.md` §2, item 9).
 
 **`/revisar` achou quatro divergências e duas lacunas.** Uma divergência
 (o disfarce 2 disparava a própria varredura, por causa da heurística

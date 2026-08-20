@@ -255,12 +255,32 @@ Ordenações: clientes por mais recente · maior valor em aberto · maior valor
 total. Caminhões e motoristas por mais recente · mais fretes · maior valor
 rodado. A linha mostra o dado da ordenação escolhida.
 
+**No item 4, "maior valor em aberto" nasce sem servir para nada — registrado
+para não confundir quem for construir.** Depende de título em aberto, e até o
+item 6 existir o único jeito de um título nascer é "Já recebi", que já cria
+pago — então todo cliente teria "valor em aberto" zero, e ordenar por um
+número sempre igual não ordena nada. As outras duas ("mais recente", "maior
+valor total") não dependem de título, então funcionam desde o item 4. O
+critério "maior valor em aberto" passa a valer de verdade a partir do item 6.
+
 **Perfil do cliente:** nome e cidade; resumo com **já rodado · a receber ·
-vencido · recebido no período**, com filtro de período que recalcula os quatro,
-e os três primeiros tocáveis para as listas filtradas; dados cadastrais;
-histórico de fretes. Ações: **Gerar relatório** (principal), **Editar**
-(cabeçalho), **Cobrar no WhatsApp** (só com valor em aberto), e **Lançar frete
-para este cliente** no fim do histórico.
+vencido · recebido no período**, com filtro de período que recalcula os
+quatro, e os três primeiros tocáveis para as listas filtradas; dados
+cadastrais; histórico de fretes. Ações: **Gerar relatório** (principal),
+**Editar** (cabeçalho), **Cobrar no WhatsApp** (só com valor em aberto), e
+**Lançar frete para este cliente** no fim do histórico.
+
+**No item 4, o resumo nasce com só dois dos quatro números.** "A receber" e
+"Vencido" dependem de título em aberto — pelo mesmo motivo do parágrafo
+acima (só "Já recebi" existe, e ele já nasce pago), os dois ficam
+estruturalmente em zero até o item 6 existir; um número que nunca sai de
+zero é dado incompleto disfarçado de completo (`CLAUDE.md` §8, regra 10 de
+`docs/especificacao.md` §8). O item 4 entrega **já rodado** e **recebido no
+período** — os únicos dois que não dependem de título em aberto — com só
+"já rodado" tocável (era um dos três tocáveis originais; "recebido" nunca
+foi). "A receber" e "Vencido" entram no item 6, junto do resto de
+Cobranças — o mesmo vale para o apoio "· R$ X em aberto" da linha Clientes
+em "Mais" (`src/app/(app)/mais/page.tsx`), cortado pelo mesmo motivo.
 
 **Campo vazio tocado no perfil do cliente, antes do item 3:** o inventário
 (`docs/componentes.md` 12) manda abrir a "folha do campo que falta" — ela só
@@ -977,10 +997,32 @@ Frete criado como ordem permanece `em_andamento` até ser finalizado.
 
 | Situação | Como se calcula |
 |---|---|
-| A faturar | Não existe título para o serviço |
-| Faturado | Existe título, nada pago |
-| Parcial | Recebimento parcial registrado |
-| Quitado | Todos os títulos do serviço estão pagos |
+| A faturar | Não existe título ativo para o serviço |
+| Faturado | Existe título ativo, nenhum centavo entrou ainda |
+| Parcial | Algum dinheiro já entrou, e ainda falta |
+| Quitado | Todos os títulos ativos do serviço estão pagos |
+
+**Título ativo** = não arquivado (§7 do `CLAUDE.md`, "nada é apagado") **e**
+`status !== "cancelado"`. Um título cancelado não conta para nada — mesmo
+raciocínio de um arquivado: se todos os títulos do serviço estiverem
+cancelados, o serviço volta a **A faturar**, porque de fato não há cobrança
+em aberto.
+
+**A ordem de avaliação importa, e é esta — decidido em 20/08/2026, achado do
+`/revisar` no plano do item 4** (a primeira redação checava "existe título
+não pago" antes de "algum dinheiro entrou", e isso nunca deixava "Parcial"
+ser alcançado):
+
+1. Nenhum título ativo → **A faturar**.
+2. Todos os títulos ativos pagos (e existe ao menos um) → **Quitado**.
+3. Algum dinheiro já entrou — existe título ativo **pago** ou com
+   recebimento parcial registrado (`valor_recebido > 0`) — e ainda falta
+   pagar algo → **Parcial**. Cobre tanto o recebimento parcial de um único
+   título quanto o frete com mais de um título (ex.: adiantamento pago +
+   saldo em aberto) — dizer "Faturado" quando dinheiro já entrou esconderia
+   exatamente o que a situação existe para mostrar.
+4. Nenhum dinheiro entrou (nenhum título ativo pago nem parcialmente
+   recebido) → **Faturado**.
 
 ### Como um serviço vira título
 1. **Automático:** ao gerar relatório com a marcação de cobrança ativa.
