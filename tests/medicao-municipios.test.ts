@@ -139,6 +139,22 @@ describe("1. abaixo do piso", () => {
   });
 });
 
+// Medido em 20/08/2026 (docs/diario.md): este é o teste mais pesado do
+// arquivo — 21 criações de Servico, cada uma com resolução de município —, com
+// folga local de só 2,6× sobre o timeout padrão de 30s (11,7s medidos). A
+// esteira roda cerca de 3× mais devagar que local numa rodada ruim (medido no
+// mesmo dia, mesmo fator nos outros dois testes deste arquivo) — fator maior
+// que a margem local, por isso é sempre ESTE teste que estoura, nunca os
+// outros dois (margem de 4,2× e 10,4×, que absorvem o mesmo fator sem
+// problema). 60s dá ≈5× de margem sobre o baseline local — folga sobre o pior
+// fator de desaceleração já visto (≈3×), não um número redondo.
+//
+// SE ESTOURAR MESMO COM 60S, NÃO É MARGEM — É REGRESSÃO DE DESEMPENHO.
+// Aumentar este número de novo esconderia o problema em vez de corrigi-lo:
+// investigue o que ficou mais lento (`medirResolucaoDeMunicipios`,
+// `criarServico`, a latência do próprio banco), não alargue o prazo.
+const TIMEOUT_MEDICAO_COMPLETA = 60_000;
+
 describe("2. medição completa", () => {
   it("separa ambíguo de não encontrado, ordena por frequência, e ignora quem resolveria hoje", async () => {
     const e = await criarEmpresaDeTeste("medicao");
@@ -191,7 +207,7 @@ describe("2. medição completa", () => {
     );
     expect(textosNasListas).not.toContain("Fortaleza");
     conferencias++;
-  });
+  }, TIMEOUT_MEDICAO_COMPLETA);
 });
 
 describe("3. mais de dez textos únicos não resolvidos", () => {

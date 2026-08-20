@@ -6,6 +6,130 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 20/08/2026 — processo de esteira: rerun ganha contagem e fila, `/onde-paramos` ganha janela maior, teto de tempo no teste mais pesado
+
+Pedido do fundador, ao revisar o fechamento da sessão anterior: aceitar
+`gh run rerun --failed` como mitigação da instabilidade (registrada em
+18-19/08/2026, `docs/diario.md`, suspeita do pooler de transação do
+Supabase) não dispensa medir a frequência — sem contar, não dá para saber se
+é ruído tolerável ou sintoma. Referência do fundador: 1 rerun em 10 envios é
+ruído; 1 em 3 vira prioridade de investigar a causa raiz.
+
+**Um commit só para quatro correções — decisão do fundador contra a regra
+geral do §2 ("uma tarefa por vez"), registrada para não virar precedente
+solto.** A convenção de rerun, a fila de reruns, os dois buracos do
+`/onde-paramos` e o timeout do teste nasceram do mesmo incidente desta
+sessão e se explicam juntos — separar em quatro commits obrigaria cada um a
+recontar o mesmo achado para fazer sentido sozinho. Não é o padrão daqui
+para frente: tarefas sem essa relação continuam uma por commit.
+
+**Achado ao aplicar a própria convenção — o `/onde-paramos` tinha dois
+buracos, não um:**
+
+1. O comando só lia a entrada mais recente do diário. A pendência
+   "construir o teste de contraste permanente da varredura de segredo"
+   (18/08, tarefa 4 da auditoria de segurança) ficou invisível: três
+   entradas mais novas (correções de pool de conexão, investigação de
+   instabilidade) não a mencionavam e não tinham "Próximo" próprio, e a
+   resposta deste comando na sessão anterior reportou o item 4 (Lista de
+   fretes) como próxima tarefa, por cima dela.
+2. O comando só olhava `gh run list --branch main --limit 1` — o run mais
+   recente. A esteira do commit `e183de5` reprovou (mesma assinatura
+   abaixo) e nunca foi revista: dois commits seguintes (`e5fd7dc`,
+   `c0a5773`) geraram runs próprios, então o vermelho de `e183de5` nunca
+   apareceu como "o mais recente" para ninguém checar. Ficou parado um dia
+   inteiro sem ninguém saber.
+
+**Correção dos dois, em `.claude/commands/onde-paramos.md`:**
+
+- Passo 1 agora rastreia o "Próximo:" mais recente do diário e confirma se
+  alguma entrada mais nova já fechou aquela pendência, em vez de parar na
+  entrada do topo.
+- Passo 5 agora pede `--limit 20` (cobre com folga o pior caso já visto,
+  cinco commits vermelhos seguidos em 14-18/08) e varre a lista inteira por
+  qualquer `conclusion: "failure"` ainda não corrigido (um rerun
+  bem-sucedido reescreve o mesmo run para `success`) — não só o commit do
+  topo.
+
+**A mesma assinatura de instabilidade, três vezes em quatro envios desde a
+correção de concorrência de 18/08 (`cb6834e`)** — `0cbe399` verde;
+`e183de5`, `e5fd7dc` e `c0a5773` vermelhos, todos em
+`tests/medicao-municipios.test.ts`, sempre o mesmo bloco ("2. medição
+completa"), sempre `Test timed out in 30000ms`. **3 em 4 — acima do limite
+de 1 em 3 que o fundador definiu para virar prioridade de investigar.**
+("Envio" = execução que de fato rodou, não commit — `CLAUDE.md` §2; os
+quatro contados aqui são as quatro únicas execuções da esteira no período,
+confirmado com `gh run list`.)
+
+Reruns desta sessão, um por linha, como a própria convenção acima exige:
+
+- `e183de5` — 20/08/2026 — vermelho desde o dia anterior, sem rerun até
+  agora. Rerun disparado nesta sessão, confirmou verde.
+- `c0a5773` — 20/08/2026 — vermelho no push desta sessão. Rerun disparado
+  nesta sessão (depois do de `e183de5` terminar, ver achado de método
+  abaixo), confirmou verde.
+
+**Achado de método, no processo do próprio rerun:** os dois reruns desta
+sessão foram disparados em sequência sem esperar o primeiro terminar, e
+caíram na mesma fila de concorrência fixa da esteira
+(`cancel-in-progress`, 18/08) — o segundo cancelou o primeiro, que precisou
+ser disparado de novo. Registrado em `CLAUDE.md` §2: rerun espera o
+anterior terminar antes do próximo, nunca dois em voo ao mesmo tempo.
+
+**Por que sempre este teste — investigado, não só registrado.** Medido
+local (cronômetro por teste) e comparado com os tempos individuais da
+esteira ruim de hoje (`c0a5773`, que imprime cada teste separado):
+
+| Teste | Local | Esteira (run ruim) | Fator |
+|---|---|---|---|
+| 1. abaixo do piso | 2,9s | 8,7s | ≈3,0× |
+| 2. medição completa | 11,7s | estourou em 30,0s | ≥2,6× |
+| 3. mais de dez textos únicos | 7,1s | 20,5s | ≈2,9× |
+
+Os três desaceleram pelo mesmo fator (≈2,9-3,0×) — a instabilidade continua
+genérica, não é este teste reagindo diferente do resto. O que muda é a
+margem: "2. medição completa" é o mais pesado do arquivo (21 criações de
+`Servico`, cada uma com resolução de município) e por isso o único cuja
+margem local (2,6×) já é menor que o próprio fator de desaceleração — os
+outros dois têm margem de 4,2× e 10,4×, e por isso nunca estouraram.
+
+**O que esta investigação prova, e o que não prova — distinção pedida pelo
+fundador.** Prova por que ESTE teste é o único do arquivo que estoura:
+margem menor que o fator de desaceleração já visto. **Não prova por que a
+esteira desacelera ≈3×** — essa causa continua sendo a "suspeita de
+comportamento do pooler de transação do Supabase", não confirmada desde
+18/08. Corrigir a margem deste teste resolve o sintoma que a proporção de
+reruns mediu; não fecha a pergunta da causa raiz.
+
+**Correção: timeout de 60s só neste teste** (`tests/medicao-municipios.test.ts`,
+constante `TIMEOUT_MEDICAO_COMPLETA`), não no `testTimeout` global — mantém
+os outros testes como sentinela real de travamento, em vez de mascarar
+travamento de verdade com um prazo maior em todo lugar. Comentário no
+código registra o que o número significa, a pedido do fundador: se estourar
+mesmo com 60s, não é margem — é regressão de desempenho, e aumentar o
+número de novo esconderia o problema em vez de corrigi-lo. Plano retroativo
+em `docs/planos/teto-de-tempo-no-teste-de-medicao-completa.md` — achado do
+`/revisar`: o código chegou antes do plano.
+
+**Decisão do fundador: aceita o teto de 60s por ora, com a contagem
+reiniciando a partir deste commit** — os 3 reruns em 4 envios valem para o
+período 18-20/08, antes desta correção. Mas a hipótese do pooler segue não
+confirmada: **se a proporção voltar a passar de 1 em 3 mesmo com os 60s, a
+causa é outra, não a mesma, e a investigação da causa raiz abre então** —
+não é o mesmo achado se repetindo, é sinal de que o teto não era a
+correção.
+
+Verificação — local: `npx vitest run tests/medicao-municipios.test.ts`
+(4/4, 22,5s), `npm run lint`, `npx tsc --noEmit`, os três limpos. Esteira:
+pendente, confirma no próximo `/onde-paramos`.
+
+Próximo: construir o teste de contraste permanente da varredura de segredo
+(tarefa 4 da auditoria de segurança, 18/08/2026) — a pendência que motivou
+a correção do item 1 acima. Só depois disso o item 4 (Lista de fretes)
+volta a ser o próximo.
+
+---
+
 ## 19/08/2026 — teto de pool em `medirResolucaoDeMunicipios`, código de produto
 
 Implementa `docs/planos/teto-de-pool-em-medicao-de-municipios.md` (commit
@@ -69,6 +193,17 @@ está verde. Mesma classe de instabilidade do episódio de 18/08, cuja causa
 raiz não foi fechada por completo (suspeita de comportamento do pooler de
 transação do Supabase) — trazido ao fundador como achado, decisão em aberto
 sobre investir mais agora ou aceitar o rerun manual como mitigação por ora.
+
+**Correção, 20/08/2026 — "main está verde" acima enganava.** Era verdade
+sobre `e5fd7dc`, o único commit checado; não era verdade sobre `main` como
+um todo. Naquele exato momento `e183de5` (o commit imediatamente anterior)
+estava vermelho, sem ninguém ter olhado — só descobrimos ao investigar a
+proporção de reruns na sessão seguinte (`docs/diario.md`, entrada de
+20/08). O motivo é o mesmo achado que corrigiu o `/onde-paramos` nessa
+sessão: o comando só olhava o run mais recente, e `e183de5` nunca foi "o
+mais recente" para ninguém checar depois que `e5fd7dc` e `c0a5773` geraram
+runs próprios. Classe de erro do `CLAUDE.md` §13 — afirmação que engana por
+dizer o que não era mais verdade.
 
 ---
 

@@ -81,6 +81,40 @@ você escreve.** O padrão é o meu.
   verde a cada tarefa porque testava outro banco, sem pressão de pool
   nenhuma, e "verde" no diário cinco vezes seguidas não queria dizer o que
   parecia dizer.
+- **Rerun por instabilidade se registra, um por um — sem contagem não dá para
+  saber se é ruído ou sintoma.** Decisão do fundador, 20/08/2026: aceitar
+  `gh run rerun --failed` como mitigação da instabilidade registrada em
+  18-19/08/2026 (`docs/diario.md`, suspeita de comportamento do pooler de
+  transação do Supabase) não dispensa medir a frequência. Toda vez que a
+  esteira reprovar por instabilidade (não defeito) e precisar de rerun, a
+  entrada do diário daquela sessão registra isso numa linha própria — commit
+  e data —, para poder contar depois contra o total de envios e saber a
+  proporção. Referência do fundador para julgar o número: **uma vez a cada
+  dez** envios é ruído tolerável; **uma vez a cada três** significa que o
+  vermelho perdeu significado de novo, e investigar a causa raiz vira
+  prioridade, não mais um achado registrado para depois.
+
+  **"Envio" é execução da esteira que de fato rodou, não commit — `git log`
+  sozinho superestima a lista de commits e subestima o que rodou.** O
+  GitHub Actions dispara uma execução por **evento de push**, não por
+  commit: quando dois commits seguem no mesmo `git push`, só o HEAD final
+  aciona um run. Medido em 20/08/2026 (`docs/diario.md`): `6fa82d7` e
+  `6bde7c5`, dois commits de plano enviados junto com o commit seguinte,
+  nunca geraram run próprio — `gh run list --json headSha,event` não tem
+  nenhuma entrada para eles. Contar por `git log` teria inflado o
+  denominador com envios que a esteira nunca viu. O total certo é `gh run
+  list --branch main --json headSha,conclusion,status` no período, contando
+  cada execução que existe de verdade.
+
+  **Rerun entra na mesma fila de concorrência que qualquer push — dois
+  disparados em sequência, o segundo cancela o primeiro.** Achado no mesmo
+  dia: dois `gh run rerun --failed` disparados um logo depois do outro
+  (commits `e183de5` e `c0a5773`) caíram no mesmo `group` fixo de
+  `.github/workflows/ci.yml` (`cancel-in-progress`, 18/08/2026) — o segundo
+  cancelou o primeiro, que teve que ser disparado de novo depois. Rerun
+  **espera o anterior terminar** (`gh run view <id> --json status` até
+  `completed`) antes do próximo — nunca dois em voo ao mesmo tempo, mesmo
+  quando são de commits diferentes.
 - Se auditassem esse código para comprar a empresa, não teria nada para ter vergonha.
 
 ### Como executar
