@@ -6,6 +6,118 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 20/08/2026 — teste de contraste permanente da varredura de segredo (fecha a tarefa 4 da auditoria)
+
+Última pendência da tarefa 4 da auditoria de segurança
+(`docs/planos/auditoria-4-varredura-de-segredo.md`), aberta em 18/08/2026: o
+`.gitleaks.toml` estava provado por verificação manual, feita uma vez dentro
+daquela sessão — não por teste que roda de novo a cada execução da suíte.
+Pedido explícito do fundador, na conversa; plano escrito depois da
+construção, por achado do `/revisar` — ver
+`docs/planos/teste-de-contraste-varredura-de-segredo.md`.
+
+**Roda o binário real, nunca reimplementa a regra.** Motivo registrado na
+própria sessão de 18/08 (acima): duas vezes o raciocínio sobre o que a regex
+deveria fazer estava errado, e só rodar a ferramenta de verdade contra um
+caso plantado revelou o erro. Um teste que reimplementasse "o que a regra
+deveria cobrir" testaria de novo o mesmo entendimento que já falhou duas
+vezes — por isso `tests/varredura-de-segredo.test.ts` **localiza e chama** o
+binário `gitleaks` de verdade contra o `.gitleaks.toml` real do repositório,
+lido do arquivo — nunca uma cópia. Ele não baixa nada: procura em quatro
+lugares (abaixo) e falha alto se não achar. Recusa também qualquer binário
+que não seja exatamente a versão fixa da esteira (`8.30.1`,
+`.github/workflows/ci.yml`) — comparação explícita contra a saída de
+`gitleaks version`, não "aceita o que responder".
+
+**Os dois disfarces que passaram, não só a versão final da regra** (pedido
+do fundador) — cada um plantado como fixture e conferido contra a
+configuração real:
+
+- **Disfarce 1** — senha real terminada em `:senha` (a subcadeia nascia
+  dentro do próprio campo). Medido: com a correção que exclui `:` do campo
+  da senha, este formato **deixa de casar com a regra inteira** — não é
+  mais "casa e é isentado por engano", é "não casa". A regra "pura" (sem a
+  lista de isenção) confirma isso: dá zero achados também, igual à
+  configuração real — as duas concordam, e é essa igualdade que o teste
+  verifica.
+- **Disfarce 2** — senha real seguida de `?p=:senha@` depois do endereço (a
+  comparação era contra a URL inteira, não contra o campo capturado). A
+  regra pura CAPTURA a senha real (`Secret` no relatório do gitleaks bate
+  com o valor plantado); a configuração real reprova esse mesmo achado —
+  prova de que a isenção não silencia o que não é, de fato, o placeholder.
+
+**O contraste** (`CLAUDE.md` §3, item 1, aplicado aqui pela primeira vez fora
+de RLS): cada caso roda duas vezes — regra "pura" (sem a seção
+`[rules.allowlist]`, cortada do texto do `.gitleaks.toml` real em tempo de
+teste) e configuração real. Sem a regra pura, um "isento" no teste normal não
+provaria nada: podia ser isento de verdade, ou um caso que a regra nunca
+alcança, como se a proteção nunca tivesse existido. Os placeholders exatos
+(`senha`, `SENHA`) também entram, nos dois lados: a regra pura confirma que
+os reconhece como conexão com senha (prova que a regra alcança o formato), a
+configuração real confirma que ficam isentos.
+
+**Achado sobre a ferramenta, não sobre a regra — registrado para não ser
+redescoberto.** O gitleaks não casa a regra de conexão contra texto no
+formato `${NOME}` (sintaxe de interpolação), mesmo com todos os outros
+ingredientes do padrão presentes — medido isolando `$`, `{`, `}` e o texto
+ao redor em casos de controle separados, não suposto. A primeira versão da
+fixture do disfarce 2 escrevia a senha disfarçada nesse formato, num
+template literal só, e o próprio arquivo de teste passava despercebido pela
+varredura que ele testa — não pela isenção do placeholder (a senha plantada
+não é `senha`/`SENHA`), mas por essa heurística não documentada do gitleaks.
+Achado do `/revisar` (abaixo). Corrigido reescrevendo a fixture por
+concatenação — protocolo, usuário e host em constantes separadas, nunca
+formando `protocolo://usuário:senha@host` como texto contíguo no arquivo
+fonte — o que fecha por construção, sem depender de qual heurística o
+binário aplicar. Confirmado rodando o binário real contra o arquivo já
+commitado: zero achados.
+
+**Falha alta se o binário não estiver disponível — nunca pula em
+silêncio**, mesmo mecanismo do §3 sobre teste que não distingue "passou" de
+"não rodou". Localiza o binário em ordem: `GITLEAKS_BIN` (override),
+`<raiz>/gitleaks` (onde a esteira já baixa, antes de `npm test` rodar),
+`<raiz>/gitleaks.exe` (convenção local no Windows), `gitleaks` no PATH.
+Testado localmente, com o binário real: `GITLEAKS_BIN` funciona,
+`<raiz>/gitleaks.exe` funciona, `gitleaks` pelo PATH funciona, e a ausência
+total falha alto com mensagem clara listando as quatro tentativas.
+`<raiz>/gitleaks` (sem extensão) — o candidato que a esteira Linux de fato
+usa — falha no Windows local (`ENOENT`, o Windows não executa binário sem
+extensão reconhecida sem shell); só a própria esteira confirma esse
+caminho, por ser específico do binário Linux.
+
+Contagem de verificações (§3, item 4): 9 conferências, mais a verificação de
+cobertura.
+
+Verificação — local: `npx vitest run tests/varredura-de-segredo.test.ts`
+(10/10, binário Windows baixado à parte para o teste, checksum conferido
+contra o mesmo `_checksums.txt` da esteira), suíte inteira
+(`GITLEAKS_BIN=<binário local> npm test`, 208/208), `npm run lint`, `npx tsc
+--noEmit` — os quatro limpos. Esteira: pendente, confirma no próximo
+`/onde-paramos`.
+
+**`/revisar` achou quatro divergências e duas lacunas.** Uma divergência
+(o disfarce 2 disparava a própria varredura, por causa da heurística
+`${...}` acima) foi contestada com medição — o revisor só tem `Read`,
+`Grep`, `Glob`, sem como rodar a ferramenta, e raciocinou sobre a regex do
+mesmo jeito que já errou duas vezes nesta regra; medido com o binário real,
+o arquivo commitado dava zero achados. Mesmo assim, a fundação da
+desconfiança era real (heurística não documentada) — corrigida por
+construção, não só justificada. As outras três divergências (diário
+afirmando que o teste "baixa" o binário e confere versão, quando não fazia
+nem uma coisa nem outra; a frase contraditória sobre "quatro caminhos
+testados"; falta de plano em `docs/planos/`) e as duas lacunas (versão do
+gitleaks não fixada; `CLAUDE.md` §4 sem plano que o listasse) foram aceitas
+e corrigidas nesta mesma sessão, sem novo passe — mesma classe já vista
+(precisão de texto do diário, §13; plano retroativo, já visto nesta sessão
+na tarefa do teto de tempo).
+
+As quatro tarefas da auditoria de segurança de 15/08/2026 estão concluídas.
+
+Próximo: item 4 da ordem de construção do produto — **Lista de fretes e
+detalhe do frete** (`docs/especificacao.md` §9).
+
+---
+
 ## 20/08/2026 — processo de esteira: rerun ganha contagem e fila, `/onde-paramos` ganha janela maior, teto de tempo no teste mais pesado
 
 Pedido do fundador, ao revisar o fechamento da sessão anterior: aceitar

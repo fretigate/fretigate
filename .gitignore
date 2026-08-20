@@ -51,6 +51,17 @@ coverage/
 *.tsbuildinfo
 
 # ---------------------------------------------------------------------------
+# gitleaks — a esteira baixa o binario na raiz do repositorio, sem commitar
+# (.github/workflows/ci.yml). tests/varredura-de-segredo.test.ts procura o
+# mesmo binario aqui para rodar localmente (CLAUDE.md §4).
+# ---------------------------------------------------------------------------
+/gitleaks
+/gitleaks.exe
+/gitleaks_*.tar.gz
+/gitleaks_*.zip
+/gitleaks_*_checksums.txt
+
+# ---------------------------------------------------------------------------
 # Hospedagem
 # ---------------------------------------------------------------------------
 .vercel/

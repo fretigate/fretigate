@@ -403,6 +403,24 @@ hoje e não roda amanhã não protege contra a regressão de amanhã.
   A correção não é reabrir a investigação: é gerar a impressão nova
   (`gitleaks detect -v`, ler o `Fingerprint:` do achado) e trocar a linha
   velha pela nova, com o mesmo motivo já escrito ao lado.
+
+  **O contraste dos dois disfarces acima é teste permanente, não só
+  verificação manual da sessão que corrigiu** (`tests/varredura-de-segredo.test.ts`,
+  20/08/2026) — a mesma exigência do §3 para o isolamento entre empresas,
+  aplicada aqui: verificação feita uma vez e não repetida não protege contra
+  a regressão de amanhã. Roda o binário **real** do gitleaks contra a
+  configuração real do repositório, nunca reimplementa a regra em código —
+  o raciocínio sobre o que a expressão deveria fazer já errou duas vezes
+  nesta mesma regra (18/08/2026, acima), e só a ferramenta de verdade
+  revelou o erro. Cada disfarce roda duas vezes: com a regra "pura" (sem a
+  isenção de placeholder) e com a configuração real, o mesmo contraste do
+  §3 aplicado à isenção em vez de ao RLS. Recusa qualquer binário que não
+  seja exatamente a versão fixa da esteira (8.30.1) — mesmo espírito do
+  `node-version: 24` fixo, porque `useDefault = true` herda o conjunto de
+  regras padrão da versão que rodou. Se o binário certo não estiver
+  disponível, o teste falha alto, nunca pula em silêncio nem roda contra
+  outra versão — na esteira, reaproveita o binário que o passo de varredura
+  já baixa.
 - Toda entrada validada no **servidor**, com schema.
 - Senha com hash forte. Nunca reversível, nunca em log.
 - Rate limit em login, recuperação de senha e toda rota que gere custo
