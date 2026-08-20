@@ -6,6 +6,54 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 19/08/2026 — teto de pool em `medirResolucaoDeMunicipios`, código de produto
+
+Implementa `docs/planos/teto-de-pool-em-medicao-de-municipios.md` (commit
+`6fa82d7`): a mesma proteção de blocos de dez já aplicada aos testes
+(`docs/diario.md`, 18/08) agora no código de produto —
+`medirResolucaoDeMunicipios` resolve `textosUnicos` em blocos de dez em vez
+de um `Promise.all` sem teto, prevenindo estouro do pool numa empresa real
+com muitos textos de origem/destino não resolvidos.
+
+**Diverge do plano já commitado, de propósito — não reeditado.** O plano
+afirmava que os testes que chamam a função continuariam "sem alteração...
+nenhum dos dois tem hoje mais de dez textos únicos não resolvidos de uma
+vez". O `/revisar` apontou que isso deixaria o próprio laço de blocos sem
+cobertura — um fatiamento errado, ou a volta a `Promise.all` sem teto,
+passaria sem nenhum teste acusar. Acrescentado
+`tests/medicao-municipios.test.ts`, seção 3: treze `Servico`, 26 textos
+únicos não resolvidos, cruzando duas fronteiras de bloco (dez, dez, seis).
+
+**Segunda rodada do `/revisar`, dois achados corrigidos antes do commit:**
+
+- O teste novo criava os treze `Servico` em sequência, um `await` por vez —
+  18,9s local, perto demais do `testTimeout` global de 30s. Na esteira
+  (latência maior que o banco de desenvolvimento), estourou por timeout.
+  Corrigido para blocos de cinco — mesmo padrão do resto do arquivo — caiu
+  para 6,7-7,5s.
+- O teste reescrevia o bloco de cinco à mão, em vez de usar a função
+  compartilhada — contradizia a decisão já escrita no próprio arquivo
+  (`tests/medicao-municipios.test.ts:77-91`) de manter o teto **dentro da
+  função**, não em cada chamador, para não ter dois tetos envelhecendo
+  separados. Extraído `criarServicosComExtras` (recebe uma lista de `extra`,
+  um por Serviço); `criarServicos` (mesmo `extra` para todas as chamadas)
+  virou um wrapper dela.
+
+**Verificação — local e esteira, as duas.** Local: `npm run lint`, `npx tsc
+--noEmit` limpos; suíte inteira, duas rodadas depois da correção final,
+198/198 (176s, 162s — dentro da faixa normal). Esteira: duas rodadas de
+branch de verificação, PR fechado sem mesclar em cada uma — a primeira (PR
+#7, commit `c1e0513`, antes da correção do teste sequencial) reprovou por
+timeout no teste novo, exatamente o achado acima; a segunda, depois das duas
+correções do `/revisar` (PR #8, commit `c7fb191`), confirmou verde (`gh run
+view`, `conclusion: success`).
+
+`npm run lint`, `npx tsc --noEmit` verdes na árvore final (restaurada do
+commit verificado `c7fb191` para `main`, depois de fechar a branch de
+teste).
+
+---
+
 ## 18/08/2026 — fecha o cliente de banco ao fim de processo curto
 
 Achado investigando a instabilidade local da tarefa anterior (entrada
