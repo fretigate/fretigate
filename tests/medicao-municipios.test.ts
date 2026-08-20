@@ -204,11 +204,23 @@ describe("3. mais de dez textos únicos não resolvidos", () => {
       (_, i) => `Textoinexistente${String(i + 1).padStart(2, "0")}`,
     );
 
-    for (let i = 0; i < QUANTIDADE_DE_SERVICOS; i++) {
-      await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, {
-        origem_texto: textos[i * 2],
-        destino_texto: textos[i * 2 + 1],
-      }));
+    // Blocos de cinco, não sequencial — mesmo motivo e mesmo número já
+    // usados por `criarServicos` acima (cada chamada com origem E destino
+    // preenchidos pede duas conexões; 5 × 2 = 10, o teto do pool).
+    // Sequencial multiplicava por 13 as idas e voltas e chegou perto demais
+    // do `testTimeout` global, achado ao rodar contra a esteira (latência
+    // maior que o banco de desenvolvimento).
+    for (let inicio = 0; inicio < QUANTIDADE_DE_SERVICOS; inicio += TAMANHO_DO_BLOCO) {
+      const tamanho = Math.min(TAMANHO_DO_BLOCO, QUANTIDADE_DE_SERVICOS - inicio);
+      await Promise.all(
+        Array.from({ length: tamanho }, (_, offset) => {
+          const i = inicio + offset;
+          return criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, {
+            origem_texto: textos[i * 2],
+            destino_texto: textos[i * 2 + 1],
+          }));
+        }),
+      );
     }
 
     const resultado = await medirResolucaoDeMunicipios(e.empresaId);
