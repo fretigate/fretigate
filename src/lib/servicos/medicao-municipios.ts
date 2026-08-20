@@ -95,9 +95,35 @@ export async function medirResolucaoDeMunicipios(
   }
 
   const textosUnicos = [...contagemPorTexto.keys()];
-  const resolucoes = await Promise.all(
-    textosUnicos.map((texto) => resolverMunicipio(empresaId, texto)),
-  );
+
+  // BLOCOS DE DEZ — o pool do driver (`pg-pool`, padrão) tem dez conexões;
+  // `resolverMunicipio` sozinho faz UMA consulta (`db().municipio.
+  // findMany`, `src/lib/servicos/municipios.ts:164` — não passa por
+  // `normalizarEntrada`, então não tem o fator de duas conexões que
+  // `criarServico` tem). Mesmo fator do precedente original
+  // (`tests/isolamento/vazamento.test.ts`, dez chamadas de uma conexão
+  // cada) — o teto seguro aqui é dez, não cinco. Sem isso, uma empresa real
+  // com muitos textos únicos não resolvidos estouraria o pool do banco que
+  // esta função apontar, o mesmo defeito que derrubou a esteira em
+  // `tests/regressao-resolucao-municipios.test.ts`
+  // (`docs/planos/correcao-pool-esteira-vermelha.md`), só que em código de
+  // produto, não teste.
+  //
+  // O TETO DE DEZ PRESSUPÕE QUE ESTA FUNÇÃO RODA SOZINHA NO PROCESSO — hoje
+  // só `scripts/medir-municipios.mts` chama, uma ferramenta de operação
+  // (`CLAUDE.md` §6), sem outro pedido concorrente no mesmo processo. Se um
+  // dia esta medição for exposta numa tela do produto (chamada de dentro de
+  // um pedido do app), um bloco de dez tomaria o pool inteiro do processo
+  // — o mesmo pool que atende TODOS os outros pedidos simultâneos, não só
+  // este. Quem construir esse caminho reexamina este teto antes de
+  // reaproveitar — não herda o número de dez por já estar aprovado aqui.
+  const TAMANHO_DO_BLOCO = 10;
+  const resolucoes: Awaited<ReturnType<typeof resolverMunicipio>>[] = [];
+  for (let inicio = 0; inicio < textosUnicos.length; inicio += TAMANHO_DO_BLOCO) {
+    const bloco = textosUnicos.slice(inicio, inicio + TAMANHO_DO_BLOCO);
+    const lote = await Promise.all(bloco.map((texto) => resolverMunicipio(empresaId, texto)));
+    resolucoes.push(...lote);
+  }
 
   const ambiguos = new Map<string, number>();
   const naoEncontrados = new Map<string, number>();

@@ -21,7 +21,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 5;
+const CONFERENCIAS_ESPERADAS = 7;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -182,6 +182,48 @@ describe("2. medição completa", () => {
       (i) => i.texto,
     );
     expect(textosNasListas).not.toContain("Fortaleza");
+    conferencias++;
+  });
+});
+
+describe("3. mais de dez textos únicos não resolvidos", () => {
+  it("processa todos, não só o primeiro bloco de dez", async () => {
+    // Prova o laço de blocos de `medirResolucaoDeMunicipios`
+    // (`src/lib/servicos/medicao-municipios.ts`), achado do `/revisar`:
+    // nenhum teste tinha mais de dez textos únicos não resolvidos, então um
+    // fatiamento errado — ou o laço voltando a ser `Promise.all` sem
+    // teto — passaria sem nenhum acusar. Treze Servico, origem E destino
+    // cada um com texto único (26 textos não resolvidos ao todo) — cima do
+    // piso de 20 elegíveis, e quebra em dois blocos cheios de dez mais um
+    // de seis, cruzando duas fronteiras.
+    const e = await criarEmpresaDeTeste("blocos");
+    const QUANTIDADE_DE_SERVICOS = 13;
+    const totalDeTextos = QUANTIDADE_DE_SERVICOS * 2;
+    const textos = Array.from(
+      { length: totalDeTextos },
+      (_, i) => `Textoinexistente${String(i + 1).padStart(2, "0")}`,
+    );
+
+    for (let i = 0; i < QUANTIDADE_DE_SERVICOS; i++) {
+      await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, {
+        origem_texto: textos[i * 2],
+        destino_texto: textos[i * 2 + 1],
+      }));
+    }
+
+    const resultado = await medirResolucaoDeMunicipios(e.empresaId);
+
+    expect(resultado.situacao).toBe("medido");
+    if (resultado.situacao !== "medido") throw new Error("inalcançável");
+
+    expect(resultado.totalElegivel).toBe(totalDeTextos);
+    expect(resultado.totalFalho).toBe(totalDeTextos);
+    conferencias++;
+
+    // Os 26 aparecem — nenhum perdido no corte entre blocos.
+    expect(resultado.naoEncontrados).toHaveLength(totalDeTextos);
+    const textosNaLista = resultado.naoEncontrados.map((t) => t.texto).sort();
+    expect(textosNaLista).toEqual([...textos].sort());
     conferencias++;
   });
 });
