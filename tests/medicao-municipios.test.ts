@@ -21,7 +21,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 5;
+const CONFERENCIAS_ESPERADAS = 7;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -91,18 +91,26 @@ function dadosMinimos(e: EmpresaDeTeste, extra: Record<string, unknown> = {}) {
 // chamam, em vez de na função.
 const TAMANHO_DO_BLOCO = 5;
 
-async function criarServicos(e: EmpresaDeTeste, quantidade: number, extra: Record<string, unknown>) {
+// Único lugar que sabe fatiar em blocos de cinco — `criarServicos` (mesmo
+// `extra` para todas as chamadas) e o teste da seção 3 (um `extra` diferente
+// por Serviço, texto único cada) chamam esta função em vez de reescrever o
+// laço. Achado do `/revisar`: um segundo teto de cinco, escrito à mão no
+// corpo de um teste, envelheceria separado deste.
+async function criarServicosComExtras(e: EmpresaDeTeste, extras: Record<string, unknown>[]) {
   const resultados: Awaited<ReturnType<typeof criarServico>>[] = [];
-  for (let inicio = 0; inicio < quantidade; inicio += TAMANHO_DO_BLOCO) {
-    const tamanho = Math.min(TAMANHO_DO_BLOCO, quantidade - inicio);
+  for (let inicio = 0; inicio < extras.length; inicio += TAMANHO_DO_BLOCO) {
     const lote = await Promise.all(
-      Array.from({ length: tamanho }, () =>
-        criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, extra)),
-      ),
+      extras
+        .slice(inicio, inicio + TAMANHO_DO_BLOCO)
+        .map((extra) => criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, extra))),
     );
     resultados.push(...lote);
   }
   return resultados;
+}
+
+async function criarServicos(e: EmpresaDeTeste, quantidade: number, extra: Record<string, unknown>) {
+  return criarServicosComExtras(e, Array.from({ length: quantidade }, () => extra));
 }
 
 beforeAll(async () => {
@@ -182,6 +190,51 @@ describe("2. medição completa", () => {
       (i) => i.texto,
     );
     expect(textosNasListas).not.toContain("Fortaleza");
+    conferencias++;
+  });
+});
+
+describe("3. mais de dez textos únicos não resolvidos", () => {
+  it("processa todos, não só o primeiro bloco de dez", async () => {
+    // Prova o laço de blocos de `medirResolucaoDeMunicipios`
+    // (`src/lib/servicos/medicao-municipios.ts`), achado do `/revisar`:
+    // nenhum teste tinha mais de dez textos únicos não resolvidos, então um
+    // fatiamento errado — ou o laço voltando a ser `Promise.all` sem
+    // teto — passaria sem nenhum acusar. Treze Servico, origem E destino
+    // cada um com texto único (26 textos não resolvidos ao todo) — cima do
+    // piso de 20 elegíveis, e quebra em dois blocos cheios de dez mais um
+    // de seis, cruzando duas fronteiras.
+    const e = await criarEmpresaDeTeste("blocos");
+    const QUANTIDADE_DE_SERVICOS = 13;
+    const totalDeTextos = QUANTIDADE_DE_SERVICOS * 2;
+    const textos = Array.from(
+      { length: totalDeTextos },
+      (_, i) => `Textoinexistente${String(i + 1).padStart(2, "0")}`,
+    );
+
+    // `criarServicosComExtras` já faz blocos de cinco — sequencial (um
+    // `criarServico` por vez) multiplicava por 13 as idas e voltas e
+    // chegou perto demais do `testTimeout` global, achado ao rodar contra a
+    // esteira (latência maior que o banco de desenvolvimento).
+    const extras = Array.from({ length: QUANTIDADE_DE_SERVICOS }, (_, i) => ({
+      origem_texto: textos[i * 2],
+      destino_texto: textos[i * 2 + 1],
+    }));
+    await criarServicosComExtras(e, extras);
+
+    const resultado = await medirResolucaoDeMunicipios(e.empresaId);
+
+    expect(resultado.situacao).toBe("medido");
+    if (resultado.situacao !== "medido") throw new Error("inalcançável");
+
+    expect(resultado.totalElegivel).toBe(totalDeTextos);
+    expect(resultado.totalFalho).toBe(totalDeTextos);
+    conferencias++;
+
+    // Os 26 aparecem — nenhum perdido no corte entre blocos.
+    expect(resultado.naoEncontrados).toHaveLength(totalDeTextos);
+    const textosNaLista = resultado.naoEncontrados.map((t) => t.texto).sort();
+    expect(textosNaLista).toEqual([...textos].sort());
     conferencias++;
   });
 });
