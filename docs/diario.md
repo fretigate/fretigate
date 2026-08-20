@@ -52,6 +52,24 @@ view`, `conclusion: success`).
 commit verificado `c7fb191` para `main`, depois de fechar a branch de
 teste).
 
+**A esteira do push para `main` (commit `e5fd7dc`), checada na sessão
+seguinte, reprovou uma vez — investigado, motivo alheio a esta tarefa.**
+`npm test` estourou o `testTimeout` de 30s em
+`tests/medicao-municipios.test.ts:143` ("2. medição completa..."), teste que
+esta tarefa não tocou. A suíte inteira levou 389s — bem acima da faixa
+normal (158-172s) e dentro da faixa "instável" já registrada em 18/08
+(`docs/diario.md`, "fecha o cliente de banco ao fim de processo curto"):
+todos os testes ficaram de 5 a 10× mais lentos que o normal
+(`tests/servicos.test.ts`, por exemplo, 118,6s para 21 testes, contra a
+faixa de 600-700ms por teste vista em `tests/isolamento/vazamento.test.ts`
+no mesmo run) — assinatura de lentidão geral, não de um teste com lógica
+quebrada. Confirmado com `gh run rerun --failed` no mesmo commit, sem
+nenhuma mudança de código: `npm test` passou limpo (7m35s no total). `main`
+está verde. Mesma classe de instabilidade do episódio de 18/08, cuja causa
+raiz não foi fechada por completo (suspeita de comportamento do pooler de
+transação do Supabase) — trazido ao fundador como achado, decisão em aberto
+sobre investir mais agora ou aceitar o rerun manual como mitigação por ora.
+
 ---
 
 ## 18/08/2026 — fecha o cliente de banco ao fim de processo curto
