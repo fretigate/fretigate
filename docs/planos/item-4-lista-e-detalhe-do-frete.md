@@ -148,6 +148,22 @@ padrão nos perfis de cliente/caminhão/motorista, e é o mesmo aqui.
   a tela do perfil do caminhão, usa duas casas por não haver outra definida,
   e pede confirmação.
 
+- **Nome do cliente na linha de "Meus fretes" não linka para o perfil dele
+  — `docs/navegacao.md` pede, a medida não permite.** Achado do `/revisar`
+  na Tarefa 2 (21/08/2026): uma primeira versão dava ao nome um link próprio
+  para o perfil do cliente, com a linha inteira linkando para o frete por
+  baixo (link "esticado", sem aninhar `<a>`). Medido no navegador: o alvo de
+  toque do nome ficava em **~178×19,5px**, contra o mínimo de **48px** do
+  §8 — o cartão de **78px** de altura não tem espaço para dois alvos de
+  48px empilhados sem o do nome invadir a linha de apoio/situação. Decisão
+  do fundador, revertendo a primeira versão no mesmo dia: um alvo de 19px
+  dentro de um cartão já tocável faz o dedo errar — quem mira o frete e
+  passa perto do nome cai no perfil por engano, erro silencioso, repetido a
+  cada toque. Removido; o caminho para o perfil do cliente continua sendo
+  Mais → Clientes. Se o Design achar como acomodar os dois alvos na mesma
+  linha, revisita — com a medida acima, não como se a exigência do
+  `docs/navegacao.md` nunca tivesse existido.
+
 - **Como o frete cancelado se distingue na lista e no histórico.** Frete
   cancelado (`status_operacional`) continua aparecendo em "Meus fretes" e no
   histórico do perfil (decisão do fundador, 20/08/2026, `docs/especificacao.md`

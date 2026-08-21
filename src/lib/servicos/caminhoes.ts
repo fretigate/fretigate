@@ -55,6 +55,15 @@ export function buscarCaminhao(empresaId: string, id: string) {
   return db(empresaId).veiculo.findUnique({ where: { id }, select: CAMPOS });
 }
 
+/** Mesmo motivo de `buscarClientesPorIds` (`src/lib/servicos/clientes.ts`) — inclui arquivado. */
+export function buscarCaminhoesPorIds(empresaId: string, ids: string[]) {
+  if (ids.length === 0) return Promise.resolve([]);
+  return db(empresaId).veiculo.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, apelido: true, placa: true },
+  });
+}
+
 export async function criarCaminhao(empresaId: string, dados: DadosCaminhao) {
   const entrada = normalizarEntrada(dados);
   return db(empresaId).veiculo.create({

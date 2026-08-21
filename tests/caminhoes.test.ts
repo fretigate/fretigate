@@ -4,6 +4,7 @@ import { Client } from "pg";
 import {
   listarCaminhoes,
   buscarCaminhao,
+  buscarCaminhoesPorIds,
   criarCaminhao,
   editarCaminhao,
   arquivarCaminhao,
@@ -26,7 +27,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 11;
+const CONFERENCIAS_ESPERADAS = 14;
 
 async function criarEmpresaDeTeste(sufixo: string): Promise<string> {
   const id = randomUUID();
@@ -167,6 +168,34 @@ describe("3. listar, buscar, editar e arquivar", () => {
 
     expect(await buscarCaminhao(empresaA, daB.id)).toBeNull();
     expect(await listarCaminhoes(empresaA)).toEqual([]);
+    conferencias++;
+  });
+});
+
+describe("4. buscarCaminhoesPorIds — para \"Meus fretes\" (item 4), inclui arquivado", () => {
+  it("acha ativo e arquivado juntos, numa lista de ids", async () => {
+    const empresaId = await criarEmpresaDeTeste("k1");
+    const ativo = await criarCaminhao(empresaId, { apelido: "Ativo" });
+    const arquivado = await criarCaminhao(empresaId, { apelido: "Arquivado" });
+    await arquivarCaminhao(empresaId, arquivado.id);
+
+    const encontrados = await buscarCaminhoesPorIds(empresaId, [ativo.id, arquivado.id]);
+    expect(encontrados.map((c) => c.apelido).sort()).toEqual(["Arquivado", "Ativo"]);
+    conferencias++;
+  });
+
+  it("lista vazia de ids não vai ao banco e devolve vazio", async () => {
+    const empresaId = await criarEmpresaDeTeste("k2");
+    expect(await buscarCaminhoesPorIds(empresaId, [])).toEqual([]);
+    conferencias++;
+  });
+
+  it("isolamento: não acha caminhão de outra empresa, mesmo com id real", async () => {
+    const empresaA = await criarEmpresaDeTeste("k3a");
+    const empresaB = await criarEmpresaDeTeste("k3b");
+    const daB = await criarCaminhao(empresaB, { apelido: "Só da B" });
+
+    expect(await buscarCaminhoesPorIds(empresaA, [daB.id])).toEqual([]);
     conferencias++;
   });
 });

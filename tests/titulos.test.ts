@@ -44,7 +44,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 24;
+const CONFERENCIAS_ESPERADAS = 26;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -453,6 +453,67 @@ describe("4. listarServicosComSituacao — leitura em lote, sem N+1", () => {
 
     const lista = await listarServicosComSituacao(a.empresaId);
     expect(lista.map((s) => s.id)).toEqual([a.servicoId]);
+    conferencias++;
+  });
+
+  /**
+   * Achado do segundo `/revisar`: `periodo`/`limite` (Tarefa 2, filtro de
+   * "Meus fretes") nunca tinham sido exercidos contra o banco de verdade —
+   * só as funções puras de `periodo.ts` (`tests/periodo.test.ts`), que não
+   * tocam a consulta em si. É sobre esta janela que a soma de dinheiro da
+   * tela é feita, então a borda (dentro/fora do intervalo) precisa medir
+   * contra o banco, não só contra a lógica pura de data.
+   */
+  it("periodo filtra por data_servico — fora do intervalo não aparece, dentro aparece", async () => {
+    const e = await criarEmpresaDeTeste("s4");
+    const dentro = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date("2026-03-15T12:00:00Z"),
+      valor: 50000,
+    });
+    const fora = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date("2026-01-01T12:00:00Z"),
+      valor: 50000,
+    });
+
+    const lista = await listarServicosComSituacao(e.empresaId, {
+      periodo: { inicio: new Date("2026-03-01T00:00:00Z"), fim: new Date("2026-03-31T23:59:59Z") },
+    });
+    const ids = lista.map((s) => s.id);
+    expect(ids).toContain(dentro.id);
+    expect(ids).not.toContain(fora.id);
+    expect(ids).not.toContain(e.servicoId); // criado fora da janela de março
+    conferencias++;
+  });
+
+  it("limite corta a quantidade retornada, mantendo os mais recentes primeiro", async () => {
+    const e = await criarEmpresaDeTeste("s5");
+    const dadosServico = {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      valor: 10000,
+    };
+    const criados = await Promise.all(
+      Array.from({ length: 5 }, (_, i) =>
+        criarServico(e.empresaId, e.usuarioId, {
+          ...dadosServico,
+          data_servico: new Date(Date.now() + i * 60_000),
+        }),
+      ),
+    );
+
+    const lista = await listarServicosComSituacao(e.empresaId, { limite: 3 });
+    expect(lista).toHaveLength(3);
+    // Os 3 mais recentes dos 5 criados (e.servicoId é o mais antigo — criado
+    // antes do laço, na própria `criarEmpresaDeTeste`).
+    const idsEsperados = criados
+      .slice(-3)
+      .reverse()
+      .map((s) => s.id);
+    expect(lista.map((s) => s.id)).toEqual(idsEsperados);
     conferencias++;
   });
 });

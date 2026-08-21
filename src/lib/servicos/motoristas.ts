@@ -86,6 +86,15 @@ export function buscarMotorista(empresaId: string, id: string) {
   return db(empresaId).motorista.findUnique({ where: { id }, select: CAMPOS });
 }
 
+/** Mesmo motivo de `buscarClientesPorIds` (`src/lib/servicos/clientes.ts`) — inclui arquivado. */
+export function buscarMotoristasPorIds(empresaId: string, ids: string[]) {
+  if (ids.length === 0) return Promise.resolve([]);
+  return db(empresaId).motorista.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, nome: true },
+  });
+}
+
 export async function criarMotorista(empresaId: string, dados: DadosMotorista) {
   const entrada = await normalizarEntrada(empresaId, dados);
   try {

@@ -31,9 +31,24 @@ type Props = {
   escolhida: string;
   onEscolher: (dia: string) => void;
   onFechar: () => void;
+  /** "Data do frete" (Lançamento) por padrão — o filtro de Período (Meus fretes, item 4 Tarefa 2) passa "Data inicial"/"Data final". */
+  titulo?: string;
+  /**
+   * `false` para o filtro de Período escolher duas datas em sequência
+   * (`FolhaDePeriodo`): a primeira escolha avança de passo em vez de fechar
+   * a folha inteira. Todo outro uso (Lançamento de frete) mantém o padrão.
+   */
+  fecharAoEscolher?: boolean;
 };
 
-export function FolhaDeCalendario({ hoje, escolhida, onEscolher, onFechar }: Props) {
+export function FolhaDeCalendario({
+  hoje,
+  escolhida,
+  onEscolher,
+  onFechar,
+  titulo = "Data do frete",
+  fecharAoEscolher = true,
+}: Props) {
   const [mesExibido, setMesExibido] = useState(() => `${escolhida.slice(0, 7)}-01`);
 
   const [ano, mes] = mesExibido.split("-").map(Number);
@@ -44,14 +59,14 @@ export function FolhaDeCalendario({ hoje, escolhida, onEscolher, onFechar }: Pro
 
   function escolherEFechar(dia: string) {
     onEscolher(dia);
-    onFechar();
+    if (fecharAoEscolher) onFechar();
   }
 
   return (
     <FolhaInferior onFechar={onFechar}>
       <div className="flex items-center gap-8">
         <span className="flex-1 text-titulo-folha font-extrabold leading-[1.1] text-tinta">
-          Data do frete
+          {titulo}
         </span>
         <button
           type="button"

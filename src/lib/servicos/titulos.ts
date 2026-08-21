@@ -192,10 +192,14 @@ async function comSituacaoEmLote<T extends { id: string }>(
 }
 
 /**
- * Substitui `listarServicos` na tela "Meus fretes" (Tarefa 2). Sem `filtros`
- * nesta fatia — a Tarefa 2 decide o que precisa (período, cliente, situação)
- * dentro dela mesma, não antes (`CLAUDE.md` §6, "nada de arquivo para
- * depois").
+ * Substitui `listarServicos` na tela "Meus fretes" (Tarefa 2).
+ *
+ * **`periodo` é o único filtro que vira consulta nova ao servidor.**
+ * Cliente e situação são filtrados no cliente, sobre o que já está
+ * carregado — decisão do fundador registrada no plano do item 4, Tarefa 2:
+ * "trocar Período dispara nova consulta ao servidor, não um filtro em cima
+ * do que já veio". Por isso só `periodo` (e `limite`, para o teto de 50 por
+ * padrão) chegam aqui; cliente/situação ficam por conta da tela.
  *
  * **Ordena por `data_servico`, não por `criado_em`** — mesmo critério de
  * `historicoPorEntidade` (abaixo), pela mesma razão: "Meus fretes" agrupa
@@ -205,11 +209,20 @@ async function comSituacaoEmLote<T extends { id: string }>(
  * a própria docstring dela já afirmava (incorretamente) que as duas
  * concordavam. `criado_em desc` desempata no mesmo dia.
  */
-export async function listarServicosComSituacao(empresaId: string) {
+export async function listarServicosComSituacao(
+  empresaId: string,
+  filtros?: { periodo?: Periodo; limite?: number },
+) {
   const servicos = await db(empresaId).servico.findMany({
-    where: { arquivado_em: null },
+    where: {
+      arquivado_em: null,
+      ...(filtros?.periodo
+        ? { data_servico: { gte: filtros.periodo.inicio, lte: filtros.periodo.fim } }
+        : {}),
+    },
     select: CAMPOS_SERVICO,
     orderBy: [{ data_servico: "desc" }, { criado_em: "desc" }],
+    take: filtros?.limite,
   });
   return comSituacaoEmLote(empresaId, servicos);
 }

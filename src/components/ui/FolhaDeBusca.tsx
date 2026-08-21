@@ -8,15 +8,18 @@ import { PilulaCabecalho } from "./PilulaCabecalho";
 import { normalizarParaBusca } from "@/lib/utils/texto";
 
 /**
- * Folha de busca — serve só cliente, caminhão e motorista dentro do
+ * Folha de busca — serve cliente, caminhão e motorista dentro do
  * Lançamento de frete (`docs/planos/item-3-lancamento-frete.md`, Tarefa 2;
- * origem, destino e carga usam outro mecanismo, sem folha). **Tela cheia**,
- * não folha inferior (`docs/especificacao.md` §4.1: "folha de busca em tela
- * cheia") — sem alça, sem overlay.
+ * origem, destino e carga usam outro mecanismo, sem folha), e o chip
+ * "Cliente" de "Meus fretes" (item 4, Tarefa 2), que só filtra — não
+ * cadastra. **Tela cheia**, não folha inferior (`docs/especificacao.md`
+ * §4.1: "abre folha de busca em tela cheia") — sem alça, sem overlay.
  *
  * Botões conforme `docs/componentes.md`, "Onde cada tela usa o quê": pílula
  * de cabeçalho **+ Novo** / **+ Cadastrar** (06) e texto neutra **Fechar**
- * (03) — "é a neutra que fecha folha, nunca verde".
+ * (03) — "é a neutra que fecha folha, nunca verde". `onNovo` é opcional: sem
+ * ele (uso como filtro), a pílula de cabeçalho some — nenhum botão sem
+ * destino (`CLAUDE.md` §8).
  */
 
 export type ItemFolhaDeBusca = {
@@ -32,7 +35,7 @@ type Props = {
   placeholder: string;
   itens: ItemFolhaDeBusca[];
   onSelecionar: (id: string) => void;
-  onNovo: (nomeDigitado: string) => void;
+  onNovo?: (nomeDigitado: string) => void;
   onFechar: () => void;
 };
 
@@ -59,9 +62,11 @@ export function FolhaDeBusca({ titulo, placeholder, itens, onSelecionar, onNovo,
         <span className="min-w-0 flex-1 truncate text-titulo-folha font-extrabold leading-[1.1] text-tinta">
           {titulo}
         </span>
-        <PilulaCabecalho onClick={() => onNovo(busca.trim())} className="flex-none">
-          {rotuloNovo}
-        </PilulaCabecalho>
+        {onNovo ? (
+          <PilulaCabecalho onClick={() => onNovo(busca.trim())} className="flex-none">
+            {rotuloNovo}
+          </PilulaCabecalho>
+        ) : null}
       </div>
 
       <div className="flex-none px-16 pb-14">
@@ -88,7 +93,7 @@ export function FolhaDeBusca({ titulo, placeholder, itens, onSelecionar, onNovo,
 
         {filtrados.length === 0 ? (
           <div className="px-4 pt-30 text-apoio font-medium text-tinta-apoio-forte">
-            Nenhum resultado. Toque em {rotuloNovo} para cadastrar agora.
+            {onNovo ? `Nenhum resultado. Toque em ${rotuloNovo} para cadastrar agora.` : "Nenhum resultado."}
           </div>
         ) : null}
       </div>

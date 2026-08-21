@@ -833,6 +833,17 @@ Vieram de defeitos reais encontrados nos protótipos. São obrigatórias.
      caminho.
 
   Sem as três, é a mesma falha do alvo pequeno com roupa nova.
+
+  **Exceção — chip de filtro em fileira** (decidida em 21/08/2026, achado do
+  segundo `/revisar` na Tarefa 2 do item 4, primeiro chip de filtro
+  construído em código). O mínimo de 48px vale para **controle isolado e
+  para ação de consequência** — errar o toque em "Salvar" ou "Arquivar"
+  custa uma ação errada. Chip de filtro em fileira usa **40px**, pelo
+  `docs/estilo.md` — o respiro entre chips compõe a área alcançável, e
+  errar o vizinho custa um toque a mais, não uma ação errada. A
+  contradição entre este parágrafo e o 40px de `docs/estilo.md` existia
+  desde antes desta tarefa; só ficou visível agora, no primeiro chip de
+  filtro que o código constrói.
 - Interface clara, não escura — o app é usado no pátio, sob sol forte.
 - Vocabulário do usuário: frete, cliente, caminhão, motorista, **relatório**.
   Nunca "registro", "entidade", "item", "transação", "extrato".

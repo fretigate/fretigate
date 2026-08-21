@@ -104,6 +104,23 @@ export function buscarCliente(empresaId: string, id: string) {
   return db(empresaId).cliente.findUnique({ where: { id }, select: CAMPOS });
 }
 
+/**
+ * Uma consulta só para vários clientes, **incluindo arquivado** — para
+ * telas que exibem o nome do cliente a partir de um `Servico` já lançado
+ * (`docs/planos/item-4-lista-e-detalhe-do-frete.md`, Tarefa 2: "Meus
+ * fretes"). Um frete antigo pode apontar para um cliente já arquivado, e
+ * `listarClientes` (só ativos) não o acharia — a linha ficaria sem nome.
+ * `servico_id`/`empresa_id` já garantiram que esses ids pertencem à empresa
+ * quando o `Servico` foi criado (`CLAUDE.md` §3); aqui é só leitura.
+ */
+export function buscarClientesPorIds(empresaId: string, ids: string[]) {
+  if (ids.length === 0) return Promise.resolve([]);
+  return db(empresaId).cliente.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, nome: true },
+  });
+}
+
 export async function criarCliente(empresaId: string, dados: DadosCliente) {
   const entrada = normalizarEntrada(dados);
   try {

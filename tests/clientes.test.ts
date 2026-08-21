@@ -5,6 +5,7 @@ import { cpf, cnpj } from "cpf-cnpj-validator";
 import {
   listarClientes,
   buscarCliente,
+  buscarClientesPorIds,
   criarCliente,
   editarCliente,
   arquivarCliente,
@@ -26,7 +27,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 13;
+const CONFERENCIAS_ESPERADAS = 16;
 
 async function criarEmpresaDeTeste(sufixo: string): Promise<string> {
   const id = randomUUID();
@@ -197,6 +198,34 @@ describe("4. listar, buscar e editar", () => {
 
     expect(await buscarCliente(empresaA, daB.id)).toBeNull();
     expect(await listarClientes(empresaA)).toEqual([]);
+    conferencias++;
+  });
+});
+
+describe("5. buscarClientesPorIds — para \"Meus fretes\" (item 4), inclui arquivado", () => {
+  it("acha ativo e arquivado juntos, numa lista de ids", async () => {
+    const empresaId = await criarEmpresaDeTeste("n1");
+    const ativo = await criarCliente(empresaId, { nome: "Ativo" });
+    const arquivado = await criarCliente(empresaId, { nome: "Arquivado" });
+    await arquivarCliente(empresaId, arquivado.id);
+
+    const encontrados = await buscarClientesPorIds(empresaId, [ativo.id, arquivado.id]);
+    expect(encontrados.map((c) => c.nome).sort()).toEqual(["Arquivado", "Ativo"]);
+    conferencias++;
+  });
+
+  it("lista vazia de ids não vai ao banco e devolve vazio", async () => {
+    const empresaId = await criarEmpresaDeTeste("n2");
+    expect(await buscarClientesPorIds(empresaId, [])).toEqual([]);
+    conferencias++;
+  });
+
+  it("isolamento: não acha cliente de outra empresa, mesmo com id real", async () => {
+    const empresaA = await criarEmpresaDeTeste("n3a");
+    const empresaB = await criarEmpresaDeTeste("n3b");
+    const daB = await criarCliente(empresaB, { nome: "Só da B" });
+
+    expect(await buscarClientesPorIds(empresaA, [daB.id])).toEqual([]);
     conferencias++;
   });
 });

@@ -6,6 +6,129 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 21/08/2026 — tarefa 2 do item 4: lista "Meus fretes"
+
+Substitui a tela provisória (`src/app/(app)/fretes/page.tsx`). Componentes
+novos: `EtiquetaSituacao`, `ChipFiltro`, `FolhaDePeriodo` (janelas prontas +
+personalizado, em duas etapas de calendário), `FolhaDeSituacao`. A linha do
+frete **não** nasceu componente à parte — `LinhaDeLista` (já usada por
+Clientes/Motoristas/Caminhões) ganhou uma segunda variante de conteúdo
+(`valorCentavos`/`situacao`), achado do primeiro `/revisar` (ver abaixo).
+`FolhaDeBusca` ganhou `onNovo` opcional (o chip "Cliente" só filtra, não
+cadastra) e `FolhaDeCalendario` ganhou `fecharAoEscolher`/`titulo` (para o
+intervalo personalizado escolher duas datas em sequência sem fechar a folha
+inteira na primeira). Backend: `listarServicosComSituacao` ganhou
+`periodo`/`limite`; `buscarClientesPorIds`/`buscarCaminhoesPorIds`/
+`buscarMotoristasPorIds` (incluindo arquivado, para o nome aparecer mesmo
+num frete antigo).
+
+**Decisão do fundador, 21/08/2026:** o chip Período abre janelas prontas
+(Este mês · Mês passado · Todos os fretes) mais "Personalizado" — as duas
+opções que a pergunta trazia, decisão de ir com as duas.
+
+**Achado da verificação manual no navegador, não do `/revisar`:** o estado
+vazio mostrava "Nenhum frete lançado ainda" (com o convite de lançar o
+primeiro) quando o filtro de Período ativo devolvia zero — mesmo a empresa
+já tendo frete em outro período. Só o teste automatizado não pegaria isso
+(não existe teste de tela ainda); apareceu usando de verdade. Corrigido:
+o convite de "nenhum frete ainda" só aparece sem nenhum período escolhido;
+com período ativo e zero resultado, vira "Nenhum frete com esse filtro" —
+mesma mensagem que busca/cliente/situação já usam.
+
+**`/auditar-tela` achou quatro divergências, todas "valor fora do sistema"
+— corrigidas no mesmo passe** (categoria que não abre passe extra,
+`CLAUDE.md` §2): faltava o "Título de tela" ("Meus fretes", 20/700,
+`docs/estilo.md`); o valor da linha sem `tabular-nums` (números
+desalinhavam na coluna); o placeholder do campo de busca era longo — o
+documento nomeia "Buscar frete" como exemplo desta própria tela; e o chip
+de filtro sem o ícone `seta-chip.svg` que `docs/estilo.md`/`docs/componentes.md`
+exigem para ele.
+
+**Primeiro passe do `/revisar`: dez divergências, cinco lacunas.** Nove
+corrigidas no mesmo passe (contradição doc×código, valor fora do sistema,
+botão fora do inventário) — teto de 50 lido pela string da URL em vez do
+`Periodo` resolvido (um `?periodo=` desconhecido tirava o teto e lia a
+tabela inteira); mesmo problema no estado vazio; `LinhaDeFrete` duplicando
+`LinhaDeLista` em vez de estendê-la (§8, "componente existe uma vez");
+`px-16`/`px-20` da tela com título de página; `gap-4`→`gap-7` e ícone do
+chip; alturas de "item de folha" (`FolhaDePeriodo`/`FolhaDeSituacao` usavam
+a medida de linha de lista, não a de item de folha); busca varrendo só
+`nomeCaminhao()` (apelido OU placa) em vez dos dois. Cinco lacunas
+registradas (não corrigidas): paginação de "Todos os fretes"; frete
+cancelado sem distinção visual (já pendente desde a Tarefa 1); chip de
+Período sem estado carregando; textos novos sem documento; `cliente_id`
+não resolvido é caso hoje inalcançável.
+
+**Dois achados exigiram decisão do fundador, não correção automática:**
+
+- **Link de `/fretes/${id}` (Tarefa 3 ainda não existe — 404 até lá):**
+  mantido, registrado como provisório com prazo (Tarefa 3, próxima da
+  fila). Decisão do fundador — não é o mesmo caso do (+) da barra (aquele
+  apontava para uma tela que já existia; este ainda não tem destino
+  nenhum).
+- **Nome do cliente linkando para o perfil dele** (`docs/navegacao.md`),
+  com a linha inteira linkando para o frete por baixo (link "esticado",
+  sem aninhar `<a>`): medido no navegador — alvo de toque do nome em
+  **~178×19,5px**, contra o mínimo de **48px** do `CLAUDE.md` §8, sem
+  espaço no cartão de 78px para os dois. **Decisão do fundador: removido.**
+  Alvo pequeno num cartão já tocável faz o dedo errar (mira o frete, cai no
+  cliente). O caminho para o perfil continua por Mais → Clientes.
+  Registrado em "O que precisa chegar ao Design"
+  (`docs/planos/item-4-lista-e-detalhe-do-frete.md`) com a medida, para o
+  Design decidir se há como acomodar os dois alvos.
+
+**Segundo passe do `/revisar`: seis divergências corrigidas, uma levada ao
+fundador, quatro lacunas.** Duas eram rigor total (dinheiro — `CLAUDE.md`
+§2) e por isso corrigidas sem discussão: o total contextual ("N fretes ·
+R$ X") somava frete **cancelado** junto (`docs/especificacao.md` §7 já
+exclui cancelado de todo resumo derivado — este total é o mesmo tipo de
+soma, só ainda não tinha sido nomeado ali); e o mesmo total, na visão
+padrão sem período escolhido, somava só os 50 mais recentes e mostrava como
+se fosse o total de verdade — agora troca para "50 mais recentes" quando o
+teto corta e nenhum filtro de cliente/situação/busca está ativo. Mais
+quatro corrigidas no mesmo passe: `de`/`ate` do período personalizado sem
+validar formato (um valor digitado à mão virava `Invalid Date` e ainda
+tirava o teto — mesma regra de validação já usada em `fretes/acoes.ts`,
+agora testada contra o banco também em `tests/titulos.test.ts`); botão do
+estado vazio dizia "Lançar frete" em vez do texto exato já registrado em
+`docs/especificacao.md` ("lançar o primeiro frete"); ícone do chip de
+Período com cor própria inventada (`docs/estilo.md` não dá cor a
+`seta-chip.svg` — só à seta de linha — e a regra geral é herdar
+`currentColor` do botão) e traço renderizando fino demais (~1,23px em vez
+de 1,8px — fechado com `vector-effect="non-scaling-stroke"`);
+`docs/navegacao.md` ainda afirmava o link do nome que a Tarefa 2 removeu —
+marcado com ⚠️.
+
+**Levado ao fundador — decidido no mesmo dia:** `docs/estilo.md` documenta
+o chip de filtro em 40px, e `CLAUDE.md` §8 exigia mínimo de 48px para
+"controle isolado", sem distinguir chip em fileira de ação isolada de
+consequência ("Salvar", "Arquivar"). Contradição anterior a esta tarefa,
+só visível agora porque é o primeiro chip de filtro construído. Decisão do
+fundador: vale o `estilo.md` — 40px, porque o respiro entre chips numa
+fileira compõe a área alcançável, e errar o vizinho custa um toque a mais,
+não uma ação errada. `CLAUDE.md` §8 ganhou a exceção por escrito, para não
+reabrir a cada chip novo.
+
+**Quatro lacunas registradas, sem corrigir agora:** "Todos os fretes"
+ainda sem paginação; formato do cabeçalho de grupo de data ("Hoje",
+"12 de agosto") sem documento; textos de estado vazio/filtro sem
+documento; teste de banco fechado para `periodo`/`limite` (adicionado
+nesta correção, `tests/titulos.test.ts`, "5. período e limite").
+
+**Verificação:** `npm run lint`, `npx tsc --noEmit`, `npm run build` — os
+três verdes, depois de cada passe. `npm test` **local** — 278/278, código
+de saída 0 (verde de verdade, gitleaks presente). Fluxo completo testado no
+navegador nos dois passes: criar conta → lançar frete → ver na lista →
+filtrar por período/cliente/situação → buscar por placa e por apelido;
+depois do segundo passe, conferido de novo que frete cancelado soma fora do
+total mas continua na lista, e os três riscos do link "esticado" (toque,
+foco, alvo) antes de ele ser removido. Dados de verificação removidos do
+banco de desenvolvimento ao final dos dois passes.
+
+Próximo: Tarefa 3 do item 4 — Detalhe do frete.
+
+---
+
 ## 21/08/2026 — esteira do commit `868a653` reprovou por timeout, não defeito
 
 `gh run list` confirmou: 244 de 245 testes passaram, um só reprovou —
