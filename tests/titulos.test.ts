@@ -1,9 +1,26 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
-import { criarTituloJaRecebi, buscarTituloPorServico } from "@/lib/servicos/titulos";
-import { criarServico, arquivarServico } from "@/lib/servicos/servicos";
+import {
+  criarTituloJaRecebi,
+  buscarTituloPorServico,
+  listarServicosComSituacao,
+  buscarServicoComTitulos,
+  resumoFinanceiroDoCliente,
+  listarServicosDoCliente,
+  listarServicosDoCaminhao,
+  listarServicosDoMotorista,
+} from "@/lib/servicos/titulos";
+import {
+  criarServico,
+  arquivarServico,
+  resumoDoCaminhao,
+  resumoDoMotorista,
+  type Periodo,
+} from "@/lib/servicos/servicos";
 import { criarCliente } from "@/lib/servicos/clientes";
+import { criarCaminhao } from "@/lib/servicos/caminhoes";
+import { criarMotorista } from "@/lib/servicos/motoristas";
 
 /**
  * TituloReceber (tarefa 3 do item 3): "Já recebi" cria um título já pago,
@@ -27,15 +44,94 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 7;
+const CONFERENCIAS_ESPERADAS = 24;
 
 type EmpresaDeTeste = {
   empresaId: string;
   usuarioId: string;
+  tipoOperacaoId: string;
   clienteId: string;
   servicoId: string;
   valorServico: number;
 };
+
+/** Uma janela de 2 dias em volta de agora — cobre `data_servico`/`data_pagamento` de hoje. */
+function periodoAmplo(): Periodo {
+  const agora = new Date();
+  return {
+    inicio: new Date(agora.getTime() - 24 * 60 * 60 * 1000),
+    fim: new Date(agora.getTime() + 24 * 60 * 60 * 1000),
+  };
+}
+
+/**
+ * Planta um título direto por SQL (`raiz`, o mesmo papel que já insere
+ * `tipo_operacao` nestes testes) — só para alcançar estados que nenhuma
+ * função de serviço cria ainda (`aberto`, ou um segundo título não integral
+ * para o mesmo frete). `criarTituloJaRecebi` é o único caminho de produção
+ * até o item 6 existir, e ele só cria título pago e integral.
+ */
+async function plantarTitulo(
+  e: { empresaId: string; clienteId: string },
+  servicoId: string,
+  dados: { valor: number; valorRecebido: number | null; status: "aberto" | "pago" | "cancelado"; integral: boolean; dataPagamento?: Date },
+) {
+  // Sem DEFAULT para "id" (migration `20260814140000_titulo_receber`) — a
+  // aplicação gera o uuid antes do INSERT, como em toda tabela do domínio.
+  await raiz.query(
+    `INSERT INTO "titulo_receber"
+       (id, servico_id, cliente_id, valor, valor_recebido, status, integral, data_pagamento, empresa_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      randomUUID(),
+      servicoId,
+      e.clienteId,
+      dados.valor,
+      dados.valorRecebido,
+      dados.status,
+      dados.integral,
+      dados.dataPagamento ?? null,
+      e.empresaId,
+    ],
+  );
+}
+
+/**
+ * Conta quantas vezes o driver `pg` foi chamado — não `xact_commit` do
+ * banco. Achado ao rodar pela primeira vez: `pg_stat_database` soma commits
+ * de TODAS as sessões do banco de teste compartilhado (autovacuum incluso),
+ * e a contagem saiu 8 num cenário que deveria ser ~2 — ruído de fundo, não
+ * sinal.
+ *
+ * **Não é `Pool.prototype.query`.** `db()` sempre embrulha a operação em
+ * `$transaction([...])` (`src/lib/db/index.ts`), e o adaptador abre a
+ * transação com `pool.connect()` — pegando um `PoolClient` emprestado — e
+ * emite cada consulta por **esse client**, não pelo `Pool`
+ * (`node_modules/@prisma/adapter-pg/dist/index.js`, `startTransaction` +
+ * `PgQueryable.performIO`, `this.client.query(...)` onde `this.client` já é
+ * o `PoolClient`). Achado do segundo `/revisar`: a primeira versão
+ * interceptava `Pool.prototype.query`, que nunca é chamado nesse caminho —
+ * as duas contagens saíam zero, e `0 - 0 <= 2` passava sem medir nada. Um
+ * `PoolClient` do `pg` é, por baixo, uma instância de `Client` — é
+ * `Client.prototype.query` que precisa ser interceptado.
+ */
+function monitorarConsultasPg() {
+  const original = Client.prototype.query;
+  let total = 0;
+  // A assinatura de `Client.prototype.query` tem várias sobrecargas; aqui só
+  // se conta a chamada, o `apply` repassa os argumentos como vieram.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Client.prototype.query = function (this: Client, ...args: any[]) {
+    total++;
+    return (original as (...a: unknown[]) => unknown).apply(this, args);
+  } as typeof Client.prototype.query;
+  return {
+    total: () => total,
+    parar: () => {
+      Client.prototype.query = original;
+    },
+  };
+}
 
 /**
  * Empresa + usuário + `TipoOperacao` (via SQL cru, como `servicos.test.ts` já
@@ -75,7 +171,14 @@ async function criarEmpresaDeTeste(sufixo: string): Promise<EmpresaDeTeste> {
     valor: valorServico,
   });
 
-  return { empresaId, usuarioId, clienteId: cliente.id, servicoId: servico.id, valorServico };
+  return {
+    empresaId,
+    usuarioId,
+    tipoOperacaoId,
+    clienteId: cliente.id,
+    servicoId: servico.id,
+    valorServico,
+  };
 }
 
 beforeAll(async () => {
@@ -90,6 +193,16 @@ afterAll(async () => {
       empresasParaLimpar,
     ]);
     await raiz.query(`DELETE FROM "servico" WHERE empresa_id = ANY($1)`, [
+      empresasParaLimpar,
+    ]);
+    // `motorista` referencia `veiculo` (veiculo_habitual_id) — sai antes
+    // dele, mesma ordem de `tests/servicos.test.ts`. Achado do quarto
+    // /revisar: a versão anterior invertia essa ordem; passava só porque
+    // nenhum teste deste arquivo grava veiculo_habitual_id ainda.
+    await raiz.query(`DELETE FROM "motorista" WHERE empresa_id = ANY($1)`, [
+      empresasParaLimpar,
+    ]);
+    await raiz.query(`DELETE FROM "veiculo" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
     await raiz.query(`DELETE FROM "cliente" WHERE empresa_id = ANY($1)`, [
@@ -205,6 +318,438 @@ describe("3. um título integral por frete — achado da revisão do fundador", 
       [e.servicoId],
     );
     expect(rows[0].n).toBe(1);
+    conferencias++;
+  });
+});
+
+describe("4. listarServicosComSituacao — leitura em lote, sem N+1", () => {
+  it("os quatro estados aparecem corretamente numa leitura em lote", async () => {
+    const e = await criarEmpresaDeTeste("s1");
+    // e.servicoId já existe, sem título nenhum → a_faturar.
+
+    const dadosServico = {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 100000,
+    };
+
+    const servicoQuitado = await criarServico(e.empresaId, e.usuarioId, dadosServico);
+    await criarTituloJaRecebi(e.empresaId, servicoQuitado.id);
+
+    const servicoFaturado = await criarServico(e.empresaId, e.usuarioId, dadosServico);
+    await plantarTitulo(e, servicoFaturado.id, {
+      valor: 100000,
+      valorRecebido: null,
+      status: "aberto",
+      integral: true,
+    });
+
+    // Adiantamento pago + saldo em aberto — o segundo caminho para Parcial,
+    // distinto do recebimento parcial num título só (já coberto na função
+    // pura, `tests/situacao-financeira.test.ts`).
+    const servicoParcial = await criarServico(e.empresaId, e.usuarioId, dadosServico);
+    await plantarTitulo(e, servicoParcial.id, {
+      valor: 40000,
+      valorRecebido: 40000,
+      status: "pago",
+      integral: false,
+    });
+    await plantarTitulo(e, servicoParcial.id, {
+      valor: 60000,
+      valorRecebido: null,
+      status: "aberto",
+      integral: false,
+    });
+
+    const lista = await listarServicosComSituacao(e.empresaId);
+    const porId = new Map(lista.map((s) => [s.id, s.situacao_financeira]));
+    expect(porId.get(e.servicoId)).toBe("a_faturar");
+    expect(porId.get(servicoQuitado.id)).toBe("quitado");
+    expect(porId.get(servicoFaturado.id)).toBe("faturado");
+    expect(porId.get(servicoParcial.id)).toBe("parcial");
+    conferencias++;
+  });
+
+  it(
+    "não faz uma consulta por frete — o número de idas ao banco não cresce com a quantidade de fretes",
+    async () => {
+      // Compara o custo com POUCOS fretes contra o custo com MUITOS —
+      // em vez de um teto absoluto. `pg_stat_database.xact_commit` foi
+      // tentado primeiro e reprovou por ruído: soma commit de TODAS as
+      // sessões do banco de teste compartilhado (autovacuum incluso), não só
+      // do nosso processo — saiu 8 num cenário que deveria ser ~2.
+      // `monitorarConsultasPg` conta só as chamadas que O NOSSO processo fez
+      // ao driver `pg`, imune a esse ruído. Se a leitura fosse uma consulta
+      // por frete (N+1), o custo cresceria com N; sendo em lote, a diferença
+      // entre pouco e muito fica presa a uma folga pequena e fixa.
+      async function criarFretes(empresa: EmpresaDeTeste, quantidade: number) {
+        const dadosServico = {
+          tipo_operacao_id: empresa.tipoOperacaoId,
+          cliente_id: empresa.clienteId,
+          data_servico: new Date(),
+          valor: 10000,
+        };
+        const servicos = await Promise.all(
+          Array.from({ length: quantidade }, () =>
+            criarServico(empresa.empresaId, empresa.usuarioId, dadosServico),
+          ),
+        );
+        // Metade ganha título — cada `criarTituloJaRecebi` é sequencial por
+        // dentro (busca → busca → cria), então em paralelo usa no máximo uma
+        // conexão por chamada, não três.
+        await Promise.all(
+          servicos
+            .slice(0, Math.floor(quantidade / 2))
+            .map((s) => criarTituloJaRecebi(empresa.empresaId, s.id)),
+        );
+      }
+
+      // Oito em paralelo no laço "grande" — mesmo teto já validado pela
+      // concorrência de `criarServico` em `tests/servicos.test.ts` ("dentro
+      // do pool de dez"). Achado do quinto /revisar: uma versão anterior
+      // deste teste usava 16, que ultrapassa esse teto e arrisca a mesma
+      // instabilidade de pool já documentada (`CLAUDE.md` §2, "21 conexões
+      // de uma vez a um pool de dez").
+      const e = await criarEmpresaDeTeste("s2");
+      await criarFretes(e, 2);
+      const monitorPequeno = monitorarConsultasPg();
+      const resultadoPequeno = await listarServicosComSituacao(e.empresaId);
+      const consultasPequeno = monitorPequeno.total();
+      monitorPequeno.parar();
+
+      const f = await criarEmpresaDeTeste("s2b");
+      await criarFretes(f, 8);
+      const monitorGrande = monitorarConsultasPg();
+      const resultadoGrande = await listarServicosComSituacao(f.empresaId);
+      const consultasGrande = monitorGrande.total();
+      monitorGrande.parar();
+
+      // e.servicoId/f.servicoId (auto-criados) + os fretes de cada laço.
+      expect(resultadoPequeno).toHaveLength(1 + 2);
+      expect(resultadoGrande).toHaveLength(1 + 8);
+
+      // A instrumentação precisa provar que MEDIU, não só que não achou
+      // nada (CLAUDE.md §3, item 4) — achado do segundo /revisar: a versão
+      // anterior interceptava o método errado (`Pool`, não `Client`) e as
+      // duas contagens saíam zero, o que teria passado em qualquer cenário,
+      // N+1 incluso.
+      expect(consultasPequeno).toBeGreaterThan(0);
+      expect(consultasGrande).toBeGreaterThan(0);
+
+      // A lista grande tem 3x mais fretes que a pequena (9 contra 3), mas o
+      // número de idas ao banco não acompanha — uma consulta por frete
+      // faria essa diferença crescer com N; aqui fica presa a uma folga
+      // pequena e fixa.
+      expect(consultasGrande - consultasPequeno).toBeLessThanOrEqual(2);
+      conferencias++;
+    },
+    60_000,
+  );
+
+  it("isolamento: não mistura frete de outra empresa — leitura nova, CLAUDE.md §3", async () => {
+    const a = await criarEmpresaDeTeste("s3a");
+    await criarEmpresaDeTeste("s3b");
+
+    const lista = await listarServicosComSituacao(a.empresaId);
+    expect(lista.map((s) => s.id)).toEqual([a.servicoId]);
+    conferencias++;
+  });
+});
+
+describe("5. buscarServicoComTitulos", () => {
+  it("traz o servico com os títulos e a situação derivada", async () => {
+    const e = await criarEmpresaDeTeste("t1");
+    await criarTituloJaRecebi(e.empresaId, e.servicoId);
+
+    const detalhe = await buscarServicoComTitulos(e.empresaId, e.servicoId);
+    expect(detalhe?.id).toBe(e.servicoId);
+    expect(detalhe?.titulos).toHaveLength(1);
+    expect(detalhe?.situacao_financeira).toBe("quitado");
+    conferencias++;
+  });
+
+  it("retorna null para id de outra empresa", async () => {
+    const a = await criarEmpresaDeTeste("t2a");
+    const b = await criarEmpresaDeTeste("t2b");
+
+    const detalhe = await buscarServicoComTitulos(a.empresaId, b.servicoId);
+    expect(detalhe).toBeNull();
+    conferencias++;
+  });
+});
+
+describe("6. resumoFinanceiroDoCliente — dois números, título cancelado não conta para recebido", () => {
+  it("soma já rodado e recebido no período, ignorando título cancelado", async () => {
+    const e = await criarEmpresaDeTeste("u1");
+    // e.servicoId (150000, sem título) já conta para "já rodado".
+
+    const servicoRecebido = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 50000,
+    });
+    await criarTituloJaRecebi(e.empresaId, servicoRecebido.id);
+
+    const servicoCancelado = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 30000,
+    });
+    await plantarTitulo(e, servicoCancelado.id, {
+      valor: 30000,
+      valorRecebido: 30000,
+      status: "cancelado",
+      integral: true,
+      dataPagamento: new Date(),
+    });
+
+    const resumo = await resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoAmplo());
+    // "Já rodado" é o valor do frete em si — não depende do título nem do
+    // seu status, por isso inclui o serviço com título cancelado.
+    expect(resumo.jaRodado).toBe(e.valorServico + 50000 + 30000);
+    // "Recebido" ignora o título cancelado — mesmo raciocínio de situacaoFinanceira.
+    expect(resumo.recebidoNoPeriodo).toBe(50000);
+    conferencias++;
+  });
+
+  it("fora do período não conta", async () => {
+    const e = await criarEmpresaDeTeste("u2");
+    const haUmAno = new Date();
+    haUmAno.setUTCFullYear(haUmAno.getUTCFullYear() - 1);
+
+    const servicoAntigo = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: haUmAno,
+      valor: 80000,
+    });
+    await plantarTitulo(e, servicoAntigo.id, {
+      valor: 80000,
+      valorRecebido: 80000,
+      status: "pago",
+      integral: true,
+      dataPagamento: haUmAno,
+    });
+
+    const resumo = await resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoAmplo());
+    // e.servicoId (auto-criado, dentro do período) ainda conta.
+    expect(resumo.jaRodado).toBe(e.valorServico);
+    expect(resumo.recebidoNoPeriodo).toBe(0);
+    conferencias++;
+  });
+
+  it("frete cancelado (status_operacional) não conta para já rodado — decisão do fundador, 20/08/2026", async () => {
+    const e = await criarEmpresaDeTeste("u3");
+    const cancelado = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 999999,
+    });
+    await raiz.query(
+      `UPDATE "servico" SET status_operacional = 'cancelado' WHERE id = $1`,
+      [cancelado.id],
+    );
+
+    const resumo = await resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoAmplo());
+    // Só e.servicoId (auto-criado) conta — o cancelado não vai acontecer.
+    expect(resumo.jaRodado).toBe(e.valorServico);
+    conferencias++;
+  });
+
+  it("isolamento: resumoFinanceiroDoCliente não enxerga cliente de outra empresa, mesmo com id real", async () => {
+    const a = await criarEmpresaDeTeste("u4a");
+    const b = await criarEmpresaDeTeste("u4b");
+
+    const resumo = await resumoFinanceiroDoCliente(a.empresaId, b.clienteId, periodoAmplo());
+    expect(resumo.jaRodado).toBe(0);
+    expect(resumo.recebidoNoPeriodo).toBe(0);
+    conferencias++;
+  });
+});
+
+describe("7. históricos dos perfis — teto de 5, total real, situação em cada linha, isolamento", () => {
+  it("listarServicosDoCliente traz os 5 mais recentes, o total real, e cada linha já com a situação financeira", async () => {
+    const e = await criarEmpresaDeTeste("v1");
+    const outroCliente = await criarCliente(e.empresaId, { nome: "Não entra" });
+    const dadosServico = {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 10000,
+    };
+
+    let ultimo = { id: e.servicoId };
+    for (let i = 0; i < 7; i++) {
+      ultimo = await criarServico(e.empresaId, e.usuarioId, dadosServico);
+    }
+    // O mais recente ganha título — decisão do fundador, 20/08/2026: toda
+    // linha de frete no produto mostra a etiqueta, o histórico do perfil
+    // também precisa.
+    await criarTituloJaRecebi(e.empresaId, ultimo.id);
+    // Frete de outro cliente não deve contar nem aparecer.
+    await criarServico(e.empresaId, e.usuarioId, { ...dadosServico, cliente_id: outroCliente.id });
+
+    const historico = await listarServicosDoCliente(e.empresaId, e.clienteId);
+    expect(historico.servicos).toHaveLength(5);
+    expect(historico.total).toBe(8); // e.servicoId (auto-criado) + os 7 do laço
+    const porId = new Map(historico.servicos.map((s) => [s.id, s.situacao_financeira]));
+    expect(porId.get(ultimo.id)).toBe("quitado");
+    conferencias++;
+  });
+
+  it("listarServicosDoCaminhao e listarServicosDoMotorista filtram cada um pela própria entidade", async () => {
+    const e = await criarEmpresaDeTeste("v2");
+    const caminhaoA = await criarCaminhao(e.empresaId, { apelido: "A" });
+    const caminhaoB = await criarCaminhao(e.empresaId, { apelido: "B" });
+    const motorista = await criarMotorista(e.empresaId, { nome: "Do histórico" });
+    const dadosServico = {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 10000,
+    };
+    await criarServico(e.empresaId, e.usuarioId, { ...dadosServico, veiculo_id: caminhaoA.id });
+    await criarServico(e.empresaId, e.usuarioId, { ...dadosServico, veiculo_id: caminhaoB.id });
+    await criarServico(e.empresaId, e.usuarioId, { ...dadosServico, motorista_id: motorista.id });
+
+    const historicoA = await listarServicosDoCaminhao(e.empresaId, caminhaoA.id);
+    const historicoMotorista = await listarServicosDoMotorista(e.empresaId, motorista.id);
+    expect(historicoA.total).toBe(1);
+    expect(historicoMotorista.total).toBe(1);
+    conferencias++;
+  });
+
+  it("isolamento: listarServicosDoCliente não enxerga cliente de outra empresa, mesmo com id real", async () => {
+    // Achado do /revisar (20/08/2026): um teste de isolamento com um id que
+    // não existe em lugar nenhum passaria de qualquer jeito e não prova nada
+    // (CLAUDE.md §3). Aqui o id É real — b.clienteId tem um frete de verdade
+    // (o auto-criado por criarEmpresaDeTeste) — e a empresa A não pode vê-lo.
+    const a = await criarEmpresaDeTeste("v3a");
+    const b = await criarEmpresaDeTeste("v3b");
+
+    const historicoVistoPorA = await listarServicosDoCliente(a.empresaId, b.clienteId);
+    expect(historicoVistoPorA.total).toBe(0);
+    expect(historicoVistoPorA.servicos).toEqual([]);
+    conferencias++;
+  });
+
+  it("isolamento: resumoDoCaminhao não enxerga caminhão de outra empresa, mesmo com id real", async () => {
+    const a = await criarEmpresaDeTeste("v4a");
+    const b = await criarEmpresaDeTeste("v4b");
+    const caminhaoDeB = await criarCaminhao(b.empresaId, { apelido: "Só da B" });
+    await criarServico(b.empresaId, b.usuarioId, {
+      tipo_operacao_id: b.tipoOperacaoId,
+      cliente_id: b.clienteId,
+      veiculo_id: caminhaoDeB.id,
+      data_servico: new Date(),
+      valor: 70000,
+      km: 10000,
+    });
+
+    const resumoVistoPorA = await resumoDoCaminhao(a.empresaId, caminhaoDeB.id, periodoAmplo());
+    expect(resumoVistoPorA.kmPeriodoMetros).toBeNull();
+    expect(resumoVistoPorA.rsPorKm).toBeNull();
+    conferencias++;
+  });
+
+  it("isolamento: listarServicosDoCaminhao e listarServicosDoMotorista não enxergam entidade de outra empresa, mesmo com id real", async () => {
+    const a = await criarEmpresaDeTeste("v5a");
+    const b = await criarEmpresaDeTeste("v5b");
+    const caminhaoDeB = await criarCaminhao(b.empresaId, { apelido: "Só da B" });
+    const motoristaDeB = await criarMotorista(b.empresaId, { nome: "Só da B" });
+    await criarServico(b.empresaId, b.usuarioId, {
+      tipo_operacao_id: b.tipoOperacaoId,
+      cliente_id: b.clienteId,
+      veiculo_id: caminhaoDeB.id,
+      motorista_id: motoristaDeB.id,
+      data_servico: new Date(),
+      valor: 50000,
+    });
+
+    const historicoCaminhaoVistoPorA = await listarServicosDoCaminhao(a.empresaId, caminhaoDeB.id);
+    const historicoMotoristaVistoPorA = await listarServicosDoMotorista(a.empresaId, motoristaDeB.id);
+    expect(historicoCaminhaoVistoPorA.total).toBe(0);
+    expect(historicoMotoristaVistoPorA.total).toBe(0);
+    conferencias++;
+  });
+
+  it("isolamento: resumoDoMotorista não enxerga motorista de outra empresa, mesmo com id real", async () => {
+    const a = await criarEmpresaDeTeste("v6a");
+    const b = await criarEmpresaDeTeste("v6b");
+    const motoristaDeB = await criarMotorista(b.empresaId, { nome: "Só da B" });
+    await criarServico(b.empresaId, b.usuarioId, {
+      tipo_operacao_id: b.tipoOperacaoId,
+      cliente_id: b.clienteId,
+      motorista_id: motoristaDeB.id,
+      data_servico: new Date(),
+      valor: 50000,
+    });
+
+    const resumoVistoPorA = await resumoDoMotorista(a.empresaId, motoristaDeB.id, periodoAmplo());
+    expect(resumoVistoPorA.fretesNoPeriodo).toBe(0);
+    expect(resumoVistoPorA.valorTransportadoNoPeriodo).toBe(0);
+    conferencias++;
+  });
+
+  it("ordena por data_servico (quando o frete aconteceu), não por criado_em (quando foi lançado)", async () => {
+    // Decisão do fundador, 20/08/2026: a lista "Meus fretes" agrupa por
+    // data_servico, e o histórico do perfil precisa da mesma ordem — senão
+    // duas telas mostram ordens diferentes para o mesmo frete.
+    const e = await criarEmpresaDeTeste("v7");
+    const dadosServico = {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      valor: 10000,
+    };
+    const ontem = new Date();
+    ontem.setUTCDate(ontem.getUTCDate() - 1);
+    const semanaQuePassou = new Date();
+    semanaQuePassou.setUTCDate(semanaQuePassou.getUTCDate() - 7);
+
+    // Lançado (criado_em) DEPOIS, mas aconteceu (data_servico) ANTES —
+    // ordenar por criado_em inverteria a posição dos dois.
+    const antigo = await criarServico(e.empresaId, e.usuarioId, {
+      ...dadosServico,
+      data_servico: semanaQuePassou,
+    });
+    const recente = await criarServico(e.empresaId, e.usuarioId, {
+      ...dadosServico,
+      data_servico: ontem,
+    });
+
+    const historico = await listarServicosDoCliente(e.empresaId, e.clienteId);
+    const ids = historico.servicos.map((s) => s.id);
+    // e.servicoId (auto-criado, data_servico = agora) vem primeiro; depois
+    // o "recente" (ontem); depois o "antigo" (semana passada) — mesmo tendo
+    // sido criado ANTES do "recente".
+    expect(ids.indexOf(e.servicoId)).toBeLessThan(ids.indexOf(recente.id));
+    expect(ids.indexOf(recente.id)).toBeLessThan(ids.indexOf(antigo.id));
+    conferencias++;
+  });
+
+  it("frete cancelado continua na lista e no histórico — sai das somas, não das telas", async () => {
+    const e = await criarEmpresaDeTeste("v8");
+    const cancelado = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 50000,
+    });
+    await raiz.query(
+      `UPDATE "servico" SET status_operacional = 'cancelado' WHERE id = $1`,
+      [cancelado.id],
+    );
+
+    const lista = await listarServicosComSituacao(e.empresaId);
+    expect(lista.map((s) => s.id)).toContain(cancelado.id);
+
+    const historico = await listarServicosDoCliente(e.empresaId, e.clienteId);
+    expect(historico.servicos.map((s) => s.id)).toContain(cancelado.id);
+    expect(historico.total).toBe(2); // e.servicoId + o cancelado
     conferencias++;
   });
 });

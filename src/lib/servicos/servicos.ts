@@ -33,7 +33,20 @@ export type DadosServico = {
   km?: number | null;
 };
 
-const CAMPOS = {
+/**
+ * Uma janela de tempo para os resumos dos perfis (Tarefa 6) — quem decide o
+ * que "período" significa (mês corrente, últimos 30 dias, etc.) é a tela;
+ * aqui é só o intervalo de instantes já resolvido.
+ */
+export type Periodo = { inicio: Date; fim: Date };
+
+/**
+ * Exportado porque `src/lib/servicos/titulos.ts` reusa a mesma seleção em
+ * `listarServicosComSituacao`/`buscarServicoComTitulos` — que substituem
+ * `listarServicos`/`buscarServico` nas telas do item 4 e precisam do mesmo
+ * formato de linha, com a situação financeira derivada por cima.
+ */
+export const CAMPOS_SERVICO = {
   id: true,
   numero: true,
   tipo_operacao_id: true,
@@ -151,13 +164,13 @@ async function normalizarEntrada(empresaId: string, dados: DadosServico) {
 export function listarServicos(empresaId: string) {
   return db(empresaId).servico.findMany({
     where: { arquivado_em: null },
-    select: CAMPOS,
+    select: CAMPOS_SERVICO,
     orderBy: { criado_em: "desc" },
   });
 }
 
 export function buscarServico(empresaId: string, id: string) {
-  return db(empresaId).servico.findUnique({ where: { id }, select: CAMPOS });
+  return db(empresaId).servico.findUnique({ where: { id }, select: CAMPOS_SERVICO });
 }
 
 /**
@@ -199,7 +212,7 @@ export async function criarServico(
         empresa_id: empresaId,
         criado_por_usuario_id: usuarioId,
       },
-      select: CAMPOS,
+      select: CAMPOS_SERVICO,
     });
   });
 }
@@ -213,7 +226,7 @@ export async function editarServico(
   return db(empresaId).servico.update({
     where: { id },
     data: entrada,
-    select: CAMPOS,
+    select: CAMPOS_SERVICO,
   });
 }
 
@@ -222,7 +235,7 @@ export function arquivarServico(empresaId: string, id: string) {
   return db(empresaId).servico.update({
     where: { id },
     data: { arquivado_em: new Date() },
-    select: CAMPOS,
+    select: CAMPOS_SERVICO,
   });
 }
 
@@ -311,12 +324,14 @@ export async function listarMotoristasPorUsoRecente(empresaId: string) {
 }
 
 /**
- * Quantas linhas os chips de destino/carga mostram. Decisão do fundador,
- * revisão da Tarefa 2: cinco, igual `SUGESTOES` em
+ * Quantas linhas os chips de destino/carga mostram — e, desde a Tarefa 1 do
+ * item 4, o teto de exibição do histórico dos perfis
+ * (`src/lib/servicos/titulos.ts`, `historicoPorEntidade`). Decisão do
+ * fundador, revisão da Tarefa 2 do item 3: cinco, igual `SUGESTOES` em
  * `src/lib/servicos/municipios.ts` — mesmo teto, mesmo motivo (cabe acima do
- * teclado aberto sem rolar).
+ * teclado aberto sem rolar). Exportado para não duplicar o número.
  */
-const CHIPS_DE_HISTORICO = 5;
+export const CHIPS_DE_HISTORICO = 5;
 
 /**
  * Chips de destino — "os destinos já usados **com aquele cliente**" (§4.1).
@@ -371,4 +386,128 @@ export async function buscarUltimoValorDoTrecho(
     select: { valor: true },
   });
   return servico?.valor ?? null;
+}
+
+/**
+ * Leituras para os perfis de cliente/caminhão/motorista (Tarefa 6,
+ * `docs/planos/item-4-lista-e-detalhe-do-frete.md`) — construídas na Tarefa 1
+ * porque carregam o risco de cálculo errado, mesmo raciocínio de
+ * `situacaoFinanceira` em `src/lib/servicos/titulos.ts`.
+ */
+
+/**
+ * Km e R$/km do caminhão no período — `docs/especificacao.md` §4.7: "exibidos
+ * só quando houver km preenchido".
+ *
+ * **`kmPeriodoMetros` sai em metros, inteiro — nunca quilômetros.**
+ * `CLAUDE.md` §7: "distância em metros, inteiro" vale para toda distância
+ * guardada OU somada, não só para o campo `Servico.km` isolado; a exceção
+ * de métrica calculada na exibição é só para `rsPorKm`, que é **razão**
+ * (não poderia ser inteira sem perder informação) — uma soma de distâncias
+ * continua sendo distância. Decisão do fundador, 20/08/2026, depois de eu
+ * ter estendido a exceção para cobrir `kmPeriodo` em quilômetros também:
+ * float em quilômetros na camada de dados criaria uma segunda unidade
+ * convivendo com `Servico.km` em metros — o mesmo problema que motivou
+ * `Servico.km` nascer em metros no item 3, para não conviver com
+ * `distancia_m`. A tela (Tarefa 6) converte para quilômetros na exibição.
+ *
+ * **Frete cancelado (`status_operacional`) não conta.** Decisão do fundador,
+ * 20/08/2026, registrada em `docs/especificacao.md` §7: ele não vai acontecer, e
+ * somar em já rodado/km/R$/km infla o número que decide preço. Continua
+ * aparecendo na lista e no histórico (`listarServicosComSituacao`,
+ * `historicoPorEntidade`) — sai das somas, não das telas.
+ *
+ * **Numerador e denominador vêm do MESMO conjunto de fretes** — os que têm
+ * km preenchido. Achado do `/revisar` na Tarefa 1 (20/08/2026): a primeira
+ * versão somava o valor de TODOS os fretes do período e dividia pelo km só
+ * dos que tinham km, inflando o R$/km sempre que algum frete do período
+ * ficava sem km — a mesma classe de engano de número incompleto exibido como
+ * completo (`CLAUDE.md` §8, `docs/especificacao.md` §8 regra 10). `null`
+ * quando nenhum frete do período tem km.
+ *
+ * **O filtro é `km: { gt: 0 }`, não `km: { not: null }`** — achado do
+ * quinto `/revisar`: com `not: null`, um frete com `km = 0` entraria no
+ * numerador (`valor`) sem contribuir nada ao denominador, a MESMA inflação
+ * que a nota acima já corrige para "sem km preenchido" — só que disfarçada,
+ * porque o frete tecnicamente "tem km" (não é nulo). `gt: 0` garante que
+ * todo frete contado contribui distância de verdade. Na prática não
+ * deveria aparecer (não existe frete real com distância zero), mas o filtro
+ * certo não depende disso ser sempre verdade.
+ *
+ * `fretesComKm`/`fretesNoPeriodo` existem para a Tarefa 6 poder cumprir a
+ * mesma regra 10 quando a cobertura for parcial (nem todo frete do período
+ * tem km) — achado do segundo `/revisar`: sem esses dois números, a tela não
+ * tem como saber que o R$/km não cobre o período inteiro.
+ *
+ * `rsPorKm` é métrica calculada na exibição, nunca gravada — não é
+ * "dinheiro" no sentido do `CLAUDE.md` §7 (que fala de valor *guardado*),
+ * por isso sai como float, não como centavos inteiros. **Sai em reais, não
+ * centavos** — achado do quarto `/revisar`: `valorComKm` é centavos, e
+ * dividir por km sem converter devolveria centavos-por-km (ex.:
+ * `133333,33`), não os `R$133,33/km` que todo comentário e teste deste
+ * arquivo já esperava. O `/100` é a conversão para reais, feita aqui e só
+ * aqui — nunca antes, nunca na tela.
+ */
+export async function resumoDoCaminhao(
+  empresaId: string,
+  veiculoId: string,
+  periodo: Periodo,
+) {
+  const baseWhere = {
+    veiculo_id: veiculoId,
+    arquivado_em: null,
+    status_operacional: { not: "cancelado" as const },
+    data_servico: { gte: periodo.inicio, lte: periodo.fim },
+  };
+  const [comKm, fretesNoPeriodo] = await Promise.all([
+    db(empresaId).servico.aggregate({
+      where: { ...baseWhere, km: { gt: 0 } },
+      _sum: { valor: true, km: true },
+      _count: true,
+    }),
+    db(empresaId).servico.count({ where: baseWhere }),
+  ]);
+  const kmTotalMetros = comKm._sum.km ?? 0;
+  if (kmTotalMetros <= 0) {
+    return { kmPeriodoMetros: null, rsPorKm: null, fretesComKm: 0, fretesNoPeriodo };
+  }
+  const valorComKm = comKm._sum.valor ?? 0;
+  const kmPeriodoKm = kmTotalMetros / 1000;
+  return {
+    kmPeriodoMetros: kmTotalMetros,
+    rsPorKm: valorComKm / 100 / kmPeriodoKm,
+    fretesComKm: comKm._count,
+    fretesNoPeriodo,
+  };
+}
+
+/**
+ * Fretes e valor transportado do motorista no período. Rótulo "valor
+ * transportado", não "valor rodado" — decisão do fundador no plano: o
+ * dinheiro é do dono, não remuneração do motorista.
+ *
+ * Frete cancelado não conta — mesmo raciocínio de `resumoDoCaminhao`: um
+ * frete cancelado não vai acontecer (diferente de `em_andamento`, que
+ * conta — a tese do produto é o frete nascer na ordem, `CLAUDE.md` §1), e
+ * contá-lo infla a contagem e o valor.
+ */
+export async function resumoDoMotorista(
+  empresaId: string,
+  motoristaId: string,
+  periodo: Periodo,
+) {
+  const agregado = await db(empresaId).servico.aggregate({
+    where: {
+      motorista_id: motoristaId,
+      arquivado_em: null,
+      status_operacional: { not: "cancelado" },
+      data_servico: { gte: periodo.inicio, lte: periodo.fim },
+    },
+    _sum: { valor: true },
+    _count: true,
+  });
+  return {
+    fretesNoPeriodo: agregado._count,
+    valorTransportadoNoPeriodo: agregado._sum.valor ?? 0,
+  };
 }

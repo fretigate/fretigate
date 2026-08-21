@@ -7,6 +7,9 @@ import {
   criarServico,
   editarServico,
   arquivarServico,
+  resumoDoCaminhao,
+  resumoDoMotorista,
+  type Periodo,
 } from "@/lib/servicos/servicos";
 import { criarCliente, arquivarCliente } from "@/lib/servicos/clientes";
 import { criarCaminhao, arquivarCaminhao } from "@/lib/servicos/caminhoes";
@@ -31,7 +34,16 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 20;
+const CONFERENCIAS_ESPERADAS = 28;
+
+/** Uma janela de 2 dias em volta de agora — cobre `data_servico: new Date()` de `dadosMinimos`. */
+function periodoAmplo(): Periodo {
+  const agora = new Date();
+  return {
+    inicio: new Date(agora.getTime() - 24 * 60 * 60 * 1000),
+    fim: new Date(agora.getTime() + 24 * 60 * 60 * 1000),
+  };
+}
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -358,6 +370,181 @@ describe("4. resolução de município — nunca bloqueia o salvar", () => {
     expect(s.origem_municipio_id).toBeNull();
     expect(s.destino_texto).toBeNull();
     expect(s.destino_municipio_id).toBeNull();
+    conferencias++;
+  });
+});
+
+describe("5. resumoDoCaminhao — km convertido de metros, R$/km só sobre fretes com km", () => {
+  it("soma valor e km só dos fretes que TÊM km — frete sem km não entra em nenhum dos dois lados", async () => {
+    const e = await criarEmpresaDeTeste("p1");
+    const caminhao = await criarCaminhao(e.empresaId, { apelido: "Do resumo" });
+    // 10km + 5km = 15km; R$1.500,00 + R$500,00 = R$2.000,00 → R$133,33/km.
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, valor: 150000, km: 10000 }),
+    );
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, valor: 50000, km: 5000 }),
+    );
+    // Achado do /revisar (20/08/2026): um terceiro frete SEM km, com valor
+    // alto, provaria o bug se entrasse no numerador sem entrar no
+    // denominador — o R$/km sairia inflado.
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, valor: 900000 }),
+    );
+
+    const resumo = await resumoDoCaminhao(e.empresaId, caminhao.id, periodoAmplo());
+    // kmPeriodoMetros é metros, inteiro — CLAUDE.md §7: soma de distância
+    // continua sendo distância, nunca float em quilômetros (achado do
+    // terceiro /revisar, corrigindo a versão anterior deste campo).
+    expect(resumo.kmPeriodoMetros).toBe(15000);
+    // rsPorKm sai em REAIS, não centavos — achado do quarto /revisar: sem o
+    // /100, o retorno seria centavos-por-km (13333,33), não os R$133,33/km
+    // que o comentário acima já prometia.
+    expect(resumo.rsPorKm).toBeCloseTo(2000 / 15, 5);
+    // Achado do segundo /revisar: a tela precisa saber quantos fretes do
+    // período têm km, contra o total, para exibir a cobertura quando for
+    // parcial (CLAUDE.md §8, regra 10). Aqui: 2 de 3.
+    expect(resumo.fretesComKm).toBe(2);
+    expect(resumo.fretesNoPeriodo).toBe(3);
+    conferencias++;
+  });
+
+  it("sem km preenchido em nenhum frete do período, kmPeriodoMetros e rsPorKm ficam nulos", async () => {
+    const e = await criarEmpresaDeTeste("p2");
+    const caminhao = await criarCaminhao(e.empresaId, { apelido: "Sem km" });
+    await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { veiculo_id: caminhao.id, valor: 90000 }));
+
+    const resumo = await resumoDoCaminhao(e.empresaId, caminhao.id, periodoAmplo());
+    expect(resumo.kmPeriodoMetros).toBeNull();
+    expect(resumo.rsPorKm).toBeNull();
+    expect(resumo.fretesComKm).toBe(0);
+    expect(resumo.fretesNoPeriodo).toBe(1);
+    conferencias++;
+  });
+
+  it("frete fora do período não entra na soma, mesmo tendo km", async () => {
+    const e = await criarEmpresaDeTeste("p3");
+    const caminhao = await criarCaminhao(e.empresaId, { apelido: "Fora do período" });
+    const haUmAno = new Date();
+    haUmAno.setUTCFullYear(haUmAno.getUTCFullYear() - 1);
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, valor: 90000, km: 9000, data_servico: haUmAno }),
+    );
+
+    const resumo = await resumoDoCaminhao(e.empresaId, caminhao.id, periodoAmplo());
+    expect(resumo.kmPeriodoMetros).toBeNull();
+    expect(resumo.rsPorKm).toBeNull();
+    expect(resumo.fretesNoPeriodo).toBe(0);
+    conferencias++;
+  });
+
+  it("frete cancelado não conta nem no valor nem no km — decisão do fundador, 20/08/2026", async () => {
+    const e = await criarEmpresaDeTeste("p4");
+    const caminhao = await criarCaminhao(e.empresaId, { apelido: "Com cancelado" });
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, valor: 100000, km: 10000 }),
+    );
+    const cancelado = await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, valor: 999999, km: 999999 }),
+    );
+    await raiz.query(
+      `UPDATE "servico" SET status_operacional = 'cancelado' WHERE id = $1`,
+      [cancelado.id],
+    );
+
+    const resumo = await resumoDoCaminhao(e.empresaId, caminhao.id, periodoAmplo());
+    expect(resumo.kmPeriodoMetros).toBe(10000);
+    expect(resumo.rsPorKm).toBeCloseTo(1000 / 10, 5);
+    expect(resumo.fretesNoPeriodo).toBe(1);
+    conferencias++;
+  });
+
+  it("km = 0 não conta — entraria no numerador sem contribuir ao denominador", async () => {
+    // Achado do quinto /revisar: `km: { not: null }` deixaria um frete com
+    // km=0 (tecnicamente "não nulo") somar seu valor sem somar distância
+    // nenhuma, inflando o R$/km — a mesma classe de bug do primeiro passe,
+    // só que disfarçada. O filtro certo é `km: { gt: 0 }`.
+    const e = await criarEmpresaDeTeste("p5");
+    const caminhao = await criarCaminhao(e.empresaId, { apelido: "Com km zero" });
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, valor: 100000, km: 10000 }),
+    );
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, valor: 999999, km: 0 }),
+    );
+
+    const resumo = await resumoDoCaminhao(e.empresaId, caminhao.id, periodoAmplo());
+    expect(resumo.kmPeriodoMetros).toBe(10000);
+    expect(resumo.rsPorKm).toBeCloseTo(1000 / 10, 5);
+    expect(resumo.fretesComKm).toBe(1);
+    expect(resumo.fretesNoPeriodo).toBe(2);
+    conferencias++;
+  });
+});
+
+describe("6. resumoDoMotorista — fretes e valor transportado no período", () => {
+  it("conta fretes e soma valor transportado no período", async () => {
+    const e = await criarEmpresaDeTeste("q1");
+    const motorista = await criarMotorista(e.empresaId, { nome: "Do resumo" });
+    await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { motorista_id: motorista.id, valor: 100000 }));
+    await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { motorista_id: motorista.id, valor: 50000 }));
+
+    const resumo = await resumoDoMotorista(e.empresaId, motorista.id, periodoAmplo());
+    expect(resumo.fretesNoPeriodo).toBe(2);
+    expect(resumo.valorTransportadoNoPeriodo).toBe(150000);
+    conferencias++;
+  });
+
+  it("frete fora do período não entra na contagem nem na soma", async () => {
+    const e = await criarEmpresaDeTeste("q2");
+    const motorista = await criarMotorista(e.empresaId, { nome: "Fora do período" });
+    const haUmAno = new Date();
+    haUmAno.setUTCFullYear(haUmAno.getUTCFullYear() - 1);
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { motorista_id: motorista.id, valor: 70000, data_servico: haUmAno }),
+    );
+
+    const resumo = await resumoDoMotorista(e.empresaId, motorista.id, periodoAmplo());
+    expect(resumo.fretesNoPeriodo).toBe(0);
+    expect(resumo.valorTransportadoNoPeriodo).toBe(0);
+    conferencias++;
+  });
+
+  it("frete cancelado não conta nem na contagem nem no valor transportado", async () => {
+    const e = await criarEmpresaDeTeste("q3");
+    const motorista = await criarMotorista(e.empresaId, { nome: "Com cancelado" });
+    await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { motorista_id: motorista.id, valor: 60000 }));
+    const cancelado = await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { motorista_id: motorista.id, valor: 999999 }),
+    );
+    await raiz.query(
+      `UPDATE "servico" SET status_operacional = 'cancelado' WHERE id = $1`,
+      [cancelado.id],
+    );
+
+    const resumo = await resumoDoMotorista(e.empresaId, motorista.id, periodoAmplo());
+    expect(resumo.fretesNoPeriodo).toBe(1);
+    expect(resumo.valorTransportadoNoPeriodo).toBe(60000);
     conferencias++;
   });
 });

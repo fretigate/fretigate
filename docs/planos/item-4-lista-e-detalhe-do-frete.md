@@ -141,6 +141,22 @@ padrão nos perfis de cliente/caminhão/motorista, e é o mesmo aqui.
   cor que mais passa despercebida no inventário. Precisa de uma cor
   própria em `docs/estilo.md`, na tabela de "Etiqueta de situação".
 
+- **Quantas casas decimais o R$/km do perfil do caminhão mostra.**
+  `resumoDoCaminhao` (Tarefa 1) devolve a razão sem arredondar — decisão do
+  fundador, 20/08/2026 (`CLAUDE.md` §7): cálculo é serviço, casas decimais
+  são tela. Ainda sem regra em `docs/estilo.md`; quando a Tarefa 6 construir
+  a tela do perfil do caminhão, usa duas casas por não haver outra definida,
+  e pede confirmação.
+
+- **Como o frete cancelado se distingue na lista e no histórico.** Frete
+  cancelado (`status_operacional`) continua aparecendo em "Meus fretes" e no
+  histórico do perfil (decisão do fundador, 20/08/2026, `docs/especificacao.md`
+  §7) — só sai das somas dos resumos, nunca das telas. Não existe hoje uma
+  etiqueta de "cancelado" em `docs/estilo.md` (a lista de "Etiqueta de
+  situação" fecha em A FATURAR/FATURADO/PARCIAL/QUITADO/VENCIDO/BOLETO) —
+  pedido ao Design: como marcar visualmente essa linha, quando a Tarefa 2/6
+  construir a tela.
+
 ---
 
 ## Tarefa 1 — Backend: situação financeira derivada e leituras em lote
@@ -177,27 +193,62 @@ barato e mais preciso que montar cenário no Postgres para cada combinação.
 - `buscarServicoComTitulos(empresaId, id)` — para o detalhe (Tarefa 3): o
   `Servico` mais a lista de títulos associados (hoje, no máximo um).
 
+**Frete cancelado (`status_operacional`) não entra em nenhuma das somas
+abaixo** — decisão do fundador, 20/08/2026, achado do segundo `/revisar`,
+registrada em `docs/especificacao.md` §7 junto da situação financeira
+derivada: ele não vai acontecer (diferente de `em_andamento`, que conta —
+achado do quinto `/revisar`, a tese do produto é o frete nascer na ordem,
+`CLAUDE.md` §1), e somar infla o número que decide preço. Continua
+aparecendo na lista e no histórico do perfil — sai das somas, não das
+telas. Como ele se distingue visualmente é pedido em aberto ao Design (ver
+"O que precisa chegar ao Design"), não existe hoje etiqueta de "cancelado"
+em `docs/estilo.md`.
+
 **Resumos para os perfis (Tarefa 6), cada um também livre de N+1:**
 - `resumoFinanceiroDoCliente(empresaId, clienteId, periodo)` — **dois
-  números, não quatro:** já rodado (soma de `Servico.valor` no período) ·
-  recebido no período (soma de `valor_recebido` com `data_pagamento` no
-  período). **Sem "A receber" nem "Vencido" nesta fatia** — os dois
+  números, não quatro:** já rodado (soma de `Servico.valor` no período,
+  excluindo frete cancelado) · recebido no período (soma de
+  `valor_recebido` com `data_pagamento` no período, excluindo título
+  cancelado). **Sem "A receber" nem "Vencido" nesta fatia** — os dois
   dependem de título **em aberto**, e até o item 6 existir o único jeito
   de um título nascer é "Já recebi", que já cria **pago**; um número que
   só pode ser zero é a mesma classe de engano que número incompleto
   (`CLAUDE.md` §8, regra 10 de `docs/especificacao.md` §8, e a nota nova
   em `docs/especificacao.md` §4.7). Os dois entram no item 6, junto do
   resto da tela de Cobranças.
-- `resumoDoCaminhao(empresaId, veiculoId, periodo)` — km no período (soma
-  de `Servico.km`, **convertida de metros para quilômetros** — o campo é
-  guardado em metros, `src/lib/servicos/servicos.ts`) · R$/km (valor total
-  / km total **em quilômetros**, só quando `km total > 0`).
+- `resumoDoCaminhao(empresaId, veiculoId, periodo)` — `kmPeriodoMetros`,
+  soma de `Servico.km`, **em metros, inteiro** (`CLAUDE.md` §7 — distância
+  guardada ou somada é sempre metros; a tela converte para quilômetros na
+  exibição, decisão do fundador depois de uma primeira versão que devolvia
+  já em quilômetros, float) · `rsPorKm` (razão entre valor **em reais** e km
+  **em quilômetros**, calculada só na função, nunca gravada — é aqui que o
+  float cabe, por ser razão; `Servico.valor` é centavos, então a função
+  divide por 100 antes de dividir por km — achado do quarto `/revisar`: sem
+  essa conversão o retorno seria centavos-por-km, não os R$/km que a tela
+  espera) — os dois só sobre fretes que têm km preenchido, dos
+  dois lados da divisão (achado do `/revisar`: numerador e denominador
+  precisam vir do MESMO conjunto, senão o R$/km sai inflado). Retorna também
+  `fretesComKm`/`fretesNoPeriodo`, para a Tarefa 6 poder exibir a cobertura
+  quando nem todo frete do período tem km (`CLAUDE.md` §8, regra 10 de
+  `docs/especificacao.md` §8).
 - `resumoDoMotorista(empresaId, motoristaId, periodo)` — fretes no período
-  (contagem) · **valor transportado** no período (soma de `Servico.valor`
-  — rótulo escolhido pelo fundador para não ler como remuneração do
-  motorista, ver "Decisões do fundador" acima).
+  (contagem, excluindo cancelado) · **valor transportado** no período (soma
+  de `Servico.valor`, excluindo cancelado — rótulo escolhido pelo fundador
+  para não ler como remuneração do motorista, ver "Decisões do fundador"
+  acima).
 - `listarServicosDoCliente/DoCaminhao/DoMotorista(empresaId, id)` — para o
-  histórico de cada perfil, mesma forma de `listarServicosComSituacao`.
+  histórico de cada perfil, mesma técnica de leitura em lote de
+  `listarServicosComSituacao` (nunca uma consulta por linha) — **e cada
+  linha vem com a situação financeira também**, decisão do fundador,
+  20/08/2026: toda linha de frete no produto já mostra a etiqueta de
+  situação (lista, detalhe), o histórico do perfil não seria exceção.
+  **Ordena por `data_servico`** (quando o frete aconteceu), não por
+  `criado_em` (quando foi lançado no sistema) — mesmo critério da lista
+  "Meus fretes" (Tarefa 2); `criado_em desc` desempata dentro do mesmo dia.
+  Frete cancelado continua aparecendo aqui — só sai das somas dos resumos
+  acima, nunca da lista. Como ele se distingue na linha (etiqueta, cor,
+  outro tratamento) é pedido em aberto ao Design (ver abaixo) — não existe
+  hoje etiqueta de "cancelado" em `docs/estilo.md`.
 
 **Teto de exibição do histórico (Tarefa 6): 5 linhas.** Mesma conta de
 `CHIPS_DE_HISTORICO` em `src/lib/servicos/servicos.ts` — é o que cabe acima
@@ -390,6 +441,13 @@ Motoristas).
 `docs/especificacao.md` §4.7, um perfil por vez (podem ser três commits
 se cada um for grande o bastante para valer a pena separar — decido ao
 sentir o tamanho de cada um durante a construção, registrado no diário).
+
+**Lacuna conhecida, registrada no quinto `/revisar` da Tarefa 1: qual é o
+período padrão dos três resumos** (mês corrente, últimos 30 dias, outro
+recorte) antes de alguém tocar no filtro — `Periodo` (Tarefa 1) só aceita o
+intervalo já resolvido, e `docs/especificacao.md` §4.7 diz apenas que há
+"filtro de período que recalcula", sem valor inicial. Decide aqui, não
+antes.
 
 **Perfil do cliente** (`clientes/[id]/page.tsx`): resumo com **dois**
 números — já rodado · recebido no período (sem "A receber" nem "Vencido"

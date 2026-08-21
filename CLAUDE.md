@@ -150,20 +150,40 @@ você escreve.** O padrão é o meu.
    ele, não pedido educado. Me traga os achados item a item, dizendo o que você
    aceita e o que discorda e por quê. O que fazer com cada um é decisão minha.
 
-   **Quantas vezes rodar, para isso não virar laço.** Rodar de novo a cada
-   achado nunca termina: toda correção é diff novo, e diff novo tem achado
-   novo. Então o último passe **não** cobre a correção que veio depois dele —
-   isso é aceito de propósito, e o critério para aceitar é a **classe** dos
-   achados, nunca a quantidade:
+   **Quantas vezes rodar — no máximo dois passes por tarefa.** Regra revisada
+   em 21/08/2026, decisão do fundador, depois de uma tarefa (situação
+   financeira derivada e leituras em lote, item 4) que levou cinco passes
+   porque cada correção abria uma classe nova de achado — sem teto, um passe
+   sempre acha algo, e não existe ponto de parada natural.
 
-   - **Mesma classe dos já resolvidos** — corrija e commite, **sem novo passe**.
-     O revisor já provou que enxerga aquela classe; repetir só confirma o que
-     está confirmado.
-   - **Classe nova** — rode de novo. Ele achou um tipo de defeito que ninguém
-     tinha olhado ainda, e o que veio junto dessa correção não foi visto por
-     ninguém.
+   O **segundo** passe roda sempre, como já valia. Se ele só trouxer achados
+   que não mudam comportamento hoje, **fecha ali**: registre o que sobrou como
+   lacuna conhecida (no documento certo, não só na conversa) e peça o commit.
+   Um **terceiro** passe (ou além) só se justifica se o achado for de uma das
+   duas primeiras categorias abaixo — nenhuma outra categoria abre passe novo,
+   por menor que pareça o achado:
 
-   Um passe extra é barato; um laço de passes é a tarefa que não fecha.
+   - **Rigor total — sempre corrige, quantos passes forem precisos:**
+     isolamento entre empresas, permissão, segredo; dinheiro (valor, situação
+     financeira, o que entra em soma); dado que se perde e não volta
+     (resolução de município, dado que não é gravado); teste que passaria de
+     qualquer jeito, ou que afirma o que não mediu.
+   - **Corrige no passe, sem abrir outro:** contradição entre documento e
+     código; valor fora do sistema, botão fora do inventário; citação errada,
+     afirmação imprecisa.
+   - **Registra como lacuna e segue — não corrige agora:** caso inalcançável
+     pela interface hoje (a ação que o produziria não existe); decisão de
+     domínio do Design que não bloqueia a construção; borda que não ocorre na
+     prática.
+
+   **O porquê, para não ser reaberto por analogia:** o rigor deste projeto foi
+   calibrado para isolamento entre empresas, onde o erro é irreversível.
+   Aplicar a mesma intensidade a ordenação de lista ou cor de etiqueta custa
+   dias e não protege nada.
+
+   **Uma coisa não muda:** se um achado da primeira categoria (rigor total)
+   aparecer no terceiro passe ou no décimo, corrige — o teto é sobre achado
+   pequeno, nunca sobre risco real.
 8. **Nunca commite sem eu aprovar.** Mostre o que vai entrar e espere o meu ok.
 9. **Commit aprovado inclui o push para `origin/main`.** Push é parte do
    mesmo passo do commit: sem ele a esteira não tem o que rodar. A tarefa
@@ -666,6 +686,31 @@ calado. Ao mover pasta, conferir `tsconfig.json` (`paths`), `.gitignore`
 - Código e variáveis internas em inglês. Sem acento em arquivo, tabela ou campo.
 - Dinheiro em **centavos, inteiro**. Nunca decimal flutuante.
 - Distância em **metros, inteiro**.
+
+  **A regra é sobre valor guardado — incluindo soma de valor guardado —,
+  não sobre razão calculada na exibição.** `resumoDoCaminhao`
+  (`src/lib/servicos/servicos.ts`) devolve `kmPeriodoMetros`, a soma de
+  `Servico.km` no período: continua **metros, inteiro**, porque uma soma de
+  distâncias continua sendo distância — a tela converte para quilômetros na
+  exibição. Só `rsPorKm` (a **razão** entre valor e km) não é "dinheiro" nem
+  "distância" no sentido acima — é métrica derivada, calculada na hora e
+  nunca gravada, então sai como float. Registrado em 20/08/2026, achado do
+  `/revisar` na Tarefa 1 do item 4, **corrigido no mesmo dia**: a primeira
+  redação estendia a exceção também para a soma de km em quilômetros, float
+  — o fundador recusou: float em quilômetros na camada de dados criaria uma
+  segunda unidade convivendo com `Servico.km` em metros, exatamente o
+  problema que motivou `Servico.km` nascer em metros no item 3, para não
+  conviver com `distancia_m`. A exceção vale só para razão, nunca para soma.
+
+  **Quantas casas aparecem na tela é decisão de exibição, separada desta
+  regra** — sem ela, uma tela mostra "133,33" e outra "133,3" para o mesmo
+  R$/km. `resumoDoCaminhao` devolve `rsPorKm` sem arredondar (o cálculo é
+  serviço, a formatação é tela — mesma separação que já vale para `valor`
+  em centavos, nunca formatado antes da exibição). Quem decide as casas é a
+  tela que vai exibir R$/km, ainda não construída (item 4, Tarefa 6) — até
+  lá, fica como lacuna para o Design; quando a tela nascer, constrói com
+  duas casas por não haver outra definida, e registra o pedido de
+  confirmação.
 - Data e hora em UTC. Exibidas no fuso de Fortaleza.
 - Toda tabela tem `criado_em` e `atualizado_em`.
 - **Nada é apagado.** Exclusão é `arquivado_em` preenchido.

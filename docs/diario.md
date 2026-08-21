@@ -6,6 +6,125 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 20/08/2026 — tarefa 1 do item 4: situação financeira derivada e leituras em lote
+
+Backend só, sem tela — `docs/planos/item-4-lista-e-detalhe-do-frete.md`,
+Tarefa 1. `situacaoFinanceira` (função pura, `src/lib/servicos/titulos.ts`),
+`listarServicosComSituacao`/`buscarServicoComTitulos` (leitura em lote, nunca
+uma consulta por frete), e os três resumos dos perfis (`resumoFinanceiroDoCliente`,
+`resumoDoCaminhao`, `resumoDoMotorista`) com os históricos
+(`listarServicosDoCliente/DoCaminhao/DoMotorista`).
+
+**Cinco passes do `/revisar`** — a mesma tarefa que qualquer outra teria
+fechado num passe só, alongada porque cada correção abriu uma classe de
+achado que ninguém tinha olhado ainda nesta sessão. **Foi esta tarefa que
+motivou o teto de dois passes registrado no `CLAUDE.md` §2** — regra nova a
+partir de agora, não aplicada retroativamente aqui.
+
+1. **Primeiro passe**, duas divergências: `resumoDoCaminhao` dividia o valor
+   de TODOS os fretes do período pelo km só dos que tinham km, inflando o
+   R$/km (`CLAUDE.md` §8, "com dado parcial, exibir a cobertura"); e um
+   teste de isolamento usava um `randomUUID()` que não era caminhão de
+   ninguém — passaria de qualquer jeito, não provava nada (`CLAUDE.md` §3).
+   Corrigidos: numerador e denominador passaram a vir do mesmo conjunto de
+   fretes, e o teste passou a usar um caminhão real de outra empresa.
+2. **Segundo passe**, achado maior: o teste de N+1 media
+   `pg_stat_database.xact_commit`, que soma commit de TODAS as sessões do
+   banco de teste compartilhado (autovacuum incluso) — saiu 8 num cenário
+   que deveria ser ~2, ruído de fundo, não sinal. Reescrito para comparar o
+   custo de listar poucos fretes contra muitos (crescimento, não teto
+   absoluto). Também: `resumoDoCaminhao` não expunha quantos fretes do
+   período tinham km (`fretesComKm`/`fretesNoPeriodo`, para a tela cumprir
+   "exibir a cobertura"); faltavam testes de isolamento para
+   `resumoFinanceiroDoCliente`/`resumoDoMotorista`/históricos de
+   caminhão/motorista; e nasceu a primeira versão da decisão "frete
+   cancelado não conta nas somas" (`docs/especificacao.md` §7) e "histórico
+   do perfil ordena por `data_servico`, não `criado_em`" — as duas do
+   fundador, decididas na hora por serem mais baratas de decidir agora do
+   que descobrir quando o item 5 (cancelar frete) for construído.
+3. **Terceiro passe**, achado sério na própria correção do segundo: a nova
+   medição de N+1 interceptava `Pool.prototype.query`, mas o adaptador do
+   Prisma sempre abre a transação com `pool.connect()` e consulta pelo
+   `PoolClient` emprestado — `Pool.prototype.query` nunca é chamado nesse
+   caminho, e as duas contagens saíam zero, o que teria passado mesmo com
+   N+1 de verdade. Corrigido para `Client.prototype.query` (o que o
+   `PoolClient` de fato é por baixo), com verificação de que a contagem não
+   fica em zero. Também achado: `listarServicosComSituacao` continuava
+   ordenando por `criado_em`, enquanto o texto que eu mesmo tinha acabado de
+   escrever afirmava (errado) que ela concordava com o histórico; e eu tinha
+   escrito "com a etiqueta de cancelado" em `docs/especificacao.md` como se
+   fosse decidido — não existe essa etiqueta em `docs/estilo.md`, e o
+   próprio fundador reconheceu o pedido dele como a origem do erro.
+4. **Quarto passe**, focado na correção da etiqueta (acima) — mais uma
+   ocorrência da mesma frase escapou para o texto do plano; corrigida.
+5. **Quinto passe**, um achado de rigor total: `resumoDoCaminhao` filtrava
+   `km: { not: null }`, que aceita `km = 0` como "tem km" — um frete com
+   km zero entraria no numerador sem contribuir nada ao denominador, a
+   MESMA inflação do bug do primeiro passe, só disfarçada. Corrigido para
+   `km: { gt: 0 }`. Também: o teste de N+1 disparava 16 conexões
+   simultâneas (acima do teto de 8 já validado pela concorrência de
+   `criarServico`, risco da mesma instabilidade de pool já documentada);
+   reduzido para 8. E o diário não registrava `lint`/`tsc`/`build`, só
+   `npm test` — corrigido.
+
+**Decisões do fundador ao longo dos passes:**
+- Frete cancelado (`status_operacional`) não conta em nenhuma soma derivada
+  dele (já rodado, km, R$/km, fretes/valor do motorista) — **porque não vai
+  acontecer**, não porque "ainda não aconteceu" (correção do quinto passe:
+  a frase original também valeria, ao pé da letra, para um frete
+  `em_andamento`, e não é essa a régua — ver o item abaixo). Continua na
+  lista e no histórico do perfil — sai das somas, não das telas. Registrado
+  em `docs/especificacao.md` §7, junto da situação financeira.
+- **Frete `em_andamento` CONTA nas somas** — decisão confirmada no quinto
+  passe: a tese do produto (`CLAUDE.md` §1) é o frete nascer no momento da
+  ordem; se a ordem lançada não contasse, o painel ficaria vazio até
+  alguém voltar para marcar como finalizado — o próprio trabalho de
+  reconstrução que o produto existe para eliminar. `cancelado` é
+  diferente de "ainda não terminou": ele não vai acontecer; `em_andamento`
+  vai.
+- Histórico do perfil e "Meus fretes" ordenam por `data_servico` (quando o
+  frete aconteceu), com `criado_em` como desempate — nunca por `criado_em`
+  sozinho, que embaralharia a ordem quando alguém lança dias depois.
+- `kmPeriodoMetros` (soma de km do resumo do caminhão) é metros, inteiro —
+  não quilômetros em float. A exceção do `CLAUDE.md` §7 (métrica calculada
+  na exibição pode ser float) vale só para a RAZÃO (`rsPorKm`), nunca para
+  uma soma de distância — mesmo raciocínio que fez `Servico.km` nascer em
+  metros no item 3. Eu tinha estendido a exceção errado da primeira vez;
+  perguntei antes de estender de novo, e foi a pergunta certa.
+- `recebidoNoPeriodo` (resumo do cliente) NÃO exclui título de frete
+  cancelado, de propósito — dinheiro recebido é fato, independente do frete
+  depois ser cancelado. Cancelamento afeta o que foi operado, não o que foi
+  recebido.
+- Histórico do perfil mostra a situação financeira de cada linha, como
+  qualquer linha de frete no produto.
+
+**Pendências registradas para o Design** (`docs/planos/item-4-lista-e-detalhe-do-frete.md`,
+"O que precisa chegar ao Design"): cor da etiqueta "Faturado"; quantas casas
+decimais o R$/km mostra; como o frete cancelado se distingue visualmente na
+lista/histórico (não existe etiqueta de "cancelado" hoje).
+
+**Lacuna conhecida, não bloqueante** (registrada na Tarefa 6 do plano): qual
+é o período padrão dos três resumos de perfil (mês corrente, últimos 30
+dias, outro recorte) antes de alguém tocar no filtro — `Periodo` só aceita
+o intervalo já resolvido; decide quando a Tarefa 6 construir a tela.
+
+**Verificação:** `npm run lint`, `npx tsc --noEmit` e `npm run build` — os
+três verdes. `npm test` **local** — os 235 testes de código do produto
+passam; o comando termina em falha (código de saída 1) porque
+`tests/varredura-de-segredo.test.ts` não encontra o binário do gitleaks
+**nesta máquina** (gap conhecido, sem relação com esta tarefa, `CLAUDE.md`
+§4 — falha alta de propósito, nunca pula). Não é "suíte verde" no sentido do
+`CLAUDE.md` §2: o processo sai com erro; achado do quarto `/revisar`, que
+pegou a entrada anterior deste parágrafo dizendo as duas coisas ao mesmo
+tempo. A esteira do commit anterior (`1b5e301`, ainda rodando quando a
+sessão abriu) já terminou — `success`, conferido por `gh run list` nesta
+sessão. Esteira desta tarefa ainda não disparada (push pendente) — ver
+`/onde-paramos` na próxima sessão.
+
+Próximo: Tarefa 2 do item 4 — Lista "Meus fretes".
+
+---
+
 ## 20/08/2026 — plano do item 4 (Lista de fretes e detalhe do frete), em 6 tarefas
 
 Plano aprovado pelo fundador, commitado antes da construção começar

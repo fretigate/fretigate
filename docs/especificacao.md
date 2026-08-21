@@ -1024,6 +1024,36 @@ ser alcançado):
 4. Nenhum dinheiro entrou (nenhum título ativo pago nem parcialmente
    recebido) → **Faturado**.
 
+**Frete cancelado (`Servico.status_operacional`) não conta nas somas
+derivadas dele** — decisão do fundador, 20/08/2026, achado do segundo
+`/revisar` no plano do item 4: "já rodado" (resumo do cliente), km e R$/km
+(resumo do caminhão), e fretes/valor transportado (resumo do motorista) todos
+excluem frete cancelado. Somar infla o número que decide preço.
+
+**A razão é "não vai acontecer", não "ainda não aconteceu"** — corrigido em
+20/08/2026, achado do quinto `/revisar`: a redação original dizia "ele não
+aconteceu", o que também valeria, ao pé da letra, para um frete
+`em_andamento` (uma ordem lançada para daqui a alguns dias também "ainda não
+aconteceu"). Não é essa a régua. `em_andamento` **conta** nas somas — é a
+tese do produto (`CLAUDE.md` §1): o frete nasce no momento da ordem, e se a
+ordem lançada não contasse, o painel ficaria vazio até alguém voltar para
+marcar como finalizado, que é exatamente o trabalho de reconstrução que o
+produto existe para eliminar. `cancelado` é diferente: ele não vai
+acontecer, e é só por isso que sai das somas.
+
+**Continua aparecendo na lista e no histórico do perfil** — sai das somas,
+não das telas, porque `CLAUDE.md` §7 ("nada é apagado") também vale para o
+que um frete cancelado já foi. Como ele é exibido na linha (etiqueta
+própria, cor do texto, ou outro tratamento) ainda não está definido — não
+existe hoje uma etiqueta de "cancelado" em `docs/estilo.md`; pedido registrado
+para o Design junto do plano do item 4, mesmo padrão da cor de "Faturado".
+
+Esta regra é sobre `status_operacional`, um campo diferente da situação
+financeira acima (que deriva de `TituloReceber.status`) — um frete pode estar
+cancelado e ainda ter título associado; a situação financeira dele continua
+calculada normalmente pelas quatro regras acima, só as somas por período é
+que excluem o frete.
+
 ### Como um serviço vira título
 1. **Automático:** ao gerar relatório com a marcação de cobrança ativa.
    Vencimento = data do relatório + prazo do cliente.
