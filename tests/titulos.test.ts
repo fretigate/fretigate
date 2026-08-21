@@ -572,34 +572,52 @@ describe("6. resumoFinanceiroDoCliente — dois números, título cancelado não
 });
 
 describe("7. históricos dos perfis — teto de 5, total real, situação em cada linha, isolamento", () => {
-  it("listarServicosDoCliente traz os 5 mais recentes, o total real, e cada linha já com a situação financeira", async () => {
-    const e = await criarEmpresaDeTeste("v1");
-    const outroCliente = await criarCliente(e.empresaId, { nome: "Não entra" });
-    const dadosServico = {
-      tipo_operacao_id: e.tipoOperacaoId,
-      cliente_id: e.clienteId,
-      data_servico: new Date(),
-      valor: 10000,
-    };
+  it(
+    "listarServicosDoCliente traz os 5 mais recentes, o total real, e cada linha já com a situação financeira",
+    async () => {
+      // Achado na esteira (CLAUDE.md §2, "suíte verde" ≠ "esteira verde"):
+      // a primeira versão criava os 7 fretes num laço sequencial, rápido o
+      // bastante localmente mas não contra o banco da esteira — estourou o
+      // testTimeout de 30s lá, mesmo com a suíte inteira local verde.
+      // Paralelizado (Promise.all) e com data_servico explícita em cada um
+      // — não dependendo mais da ordem de chegada do INSERT, já que a
+      // ordenação real é por data_servico, não por quando o teste rodou.
+      const e = await criarEmpresaDeTeste("v1");
+      const outroCliente = await criarCliente(e.empresaId, { nome: "Não entra" });
+      const agora = new Date();
+      const dadosServicoBase = {
+        tipo_operacao_id: e.tipoOperacaoId,
+        cliente_id: e.clienteId,
+        valor: 10000,
+      };
 
-    let ultimo = { id: e.servicoId };
-    for (let i = 0; i < 7; i++) {
-      ultimo = await criarServico(e.empresaId, e.usuarioId, dadosServico);
-    }
-    // O mais recente ganha título — decisão do fundador, 20/08/2026: toda
-    // linha de frete no produto mostra a etiqueta, o histórico do perfil
-    // também precisa.
-    await criarTituloJaRecebi(e.empresaId, ultimo.id);
-    // Frete de outro cliente não deve contar nem aparecer.
-    await criarServico(e.empresaId, e.usuarioId, { ...dadosServico, cliente_id: outroCliente.id });
+      const servicos = await Promise.all(
+        Array.from({ length: 7 }, (_, i) =>
+          criarServico(e.empresaId, e.usuarioId, {
+            ...dadosServicoBase,
+            // i=0 → +7 dias (o mais recente); i=6 → +1 dia — todos depois
+            // de `agora` (data de e.servicoId), ordem determinística.
+            data_servico: new Date(agora.getTime() + (7 - i) * 24 * 60 * 60 * 1000),
+          }),
+        ),
+      );
+      const ultimo = servicos[0];
+      // O mais recente ganha título — decisão do fundador, 20/08/2026: toda
+      // linha de frete no produto mostra a etiqueta, o histórico do perfil
+      // também precisa.
+      await criarTituloJaRecebi(e.empresaId, ultimo.id);
+      // Frete de outro cliente não deve contar nem aparecer.
+      await criarServico(e.empresaId, e.usuarioId, { ...dadosServicoBase, cliente_id: outroCliente.id, data_servico: agora });
 
-    const historico = await listarServicosDoCliente(e.empresaId, e.clienteId);
-    expect(historico.servicos).toHaveLength(5);
-    expect(historico.total).toBe(8); // e.servicoId (auto-criado) + os 7 do laço
-    const porId = new Map(historico.servicos.map((s) => [s.id, s.situacao_financeira]));
-    expect(porId.get(ultimo.id)).toBe("quitado");
-    conferencias++;
-  });
+      const historico = await listarServicosDoCliente(e.empresaId, e.clienteId);
+      expect(historico.servicos).toHaveLength(5);
+      expect(historico.total).toBe(8); // e.servicoId (auto-criado) + os 7 em paralelo
+      const porId = new Map(historico.servicos.map((s) => [s.id, s.situacao_financeira]));
+      expect(porId.get(ultimo.id)).toBe("quitado");
+      conferencias++;
+    },
+    60_000,
+  );
 
   it("listarServicosDoCaminhao e listarServicosDoMotorista filtram cada um pela própria entidade", async () => {
     const e = await criarEmpresaDeTeste("v2");

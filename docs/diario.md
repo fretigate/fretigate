@@ -6,6 +6,33 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 21/08/2026 — esteira do commit `868a653` reprovou por timeout, não defeito
+
+`gh run list` confirmou: 244 de 245 testes passaram, um só reprovou —
+`listarServicosDoCliente traz os 5 mais recentes...` (`tests/titulos.test.ts`)
+estourou o `testTimeout` de 30s. Mesma classe já documentada (`CLAUDE.md`
+§2, "suíte verde" ≠ "esteira verde"): o teste criava 7 fretes num laço
+**sequencial**, rápido o bastante contra o banco de desenvolvimento local,
+lento demais contra o banco da esteira. Reescrito para criar os 7 em
+paralelo (`Promise.all`), com `data_servico` explícita em cada um — a
+ordenação do histórico não dependia mais de qual chegou primeiro no banco,
+só do valor gravado, então paralelizar não quebra a garantia que o teste
+prova. Timeout do teste também subiu para 60s, mesmo padrão já usado no
+teste de N+1 do mesmo arquivo.
+
+Também baixado nesta sessão, na máquina de quem programa: o binário do
+gitleaks (8.30.1, checksum conferido), fechando o gap que fazia `npm test`
+local terminar sempre vermelho por essa suíte, mesmo sem segredo nenhum no
+repositório — `npm test` local confirmado 245/245, verde de verdade agora.
+
+**Verificação:** `npm run lint`, `npx tsc --noEmit` verdes; `npx vitest run
+tests/titulos.test.ts` **local**, 25/25. Esteira deste commit ainda não
+disparada — ver `/onde-paramos`.
+
+Próximo: Tarefa 2 do item 4 — Lista "Meus fretes".
+
+---
+
 ## 20/08/2026 — tarefa 1 do item 4: situação financeira derivada e leituras em lote
 
 Backend só, sem tela — `docs/planos/item-4-lista-e-detalhe-do-frete.md`,
