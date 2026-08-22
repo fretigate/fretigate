@@ -894,49 +894,105 @@ lógica para escondê-lo condicionalmente.
 
 ## Tarefa 6 — Resumo e histórico nos três perfis
 
-`docs/especificacao.md` §4.7, um perfil por vez (podem ser três commits
-se cada um for grande o bastante para valer a pena separar — decido ao
-sentir o tamanho de cada um durante a construção, registrado no diário).
+`docs/especificacao.md` §4.7. **Última tarefa do item 4 — três commits
+separados, um por perfil.** Decisão do fundador, 22/08/2026: telas
+diferentes, dados diferentes, `/auditar-tela` roda em cada uma; se um perfil
+tiver problema, não desfaz os outros dois já fechados — três commits
+pequenos fecham melhor que um grande sendo a última tarefa do item. Não é a
+tarefa dividida em três tarefas novas: é a mesma tarefa fechando em três
+passos, cada um com a régua completa da seção "Verificação" abaixo
+(`lint`/`tsc`/`build`, `npm test` local, `/auditar-tela` daquele perfil,
+`/revisar`) antes do pedido de commit daquele passo.
 
-**Lacuna conhecida, registrada no quinto `/revisar` da Tarefa 1: qual é o
-período padrão dos três resumos** (mês corrente, últimos 30 dias, outro
-recorte) antes de alguém tocar no filtro — `Periodo` (Tarefa 1) só aceita o
-intervalo já resolvido, e `docs/especificacao.md` §4.7 diz apenas que há
-"filtro de período que recalcula", sem valor inicial. Decide aqui, não
-antes.
+**Período padrão = mês corrente**, decisão do fundador nesta sessão,
+registrada em `docs/especificacao.md` §4.7: é como o dono pensa a operação
+("quanto rodei esse mês"), e é o mesmo recorte do card de faturamento da
+dashboard (item 8) — dois lugares com padrões diferentes criaria
+contradição aparente. Resolvido com `resolverPeriodoDaUrl("mes-atual", de,
+ate)` (`src/lib/utils/periodo.ts`, Tarefa 2), que já resolve "hoje" em
+Fortaleza via `diaEmFortaleza(new Date())` — o mesmo mecanismo que fechou o
+defeito do item 3 ("hoje" virando "ontem" depois das 21h no servidor).
+Reaproveitado, não reconstruído — fecha a lacuna registrada no quinto
+`/revisar` da Tarefa 1.
 
-**Perfil do cliente** (`clientes/[id]/page.tsx`): resumo com **dois**
-números — já rodado · recebido no período (sem "A receber" nem "Vencido"
-nesta fatia, ver Tarefa 1) —, filtro de período que recalcula os dois; só
-**já rodado** é tocável, levando à lista de fretes filtrada (Tarefa 2) —
-"recebido" nunca foi um dos tocáveis, nem na versão completa do resumo
-(`docs/especificacao.md` §4.7: "os três primeiros tocáveis", e "recebido"
-é o quarto); histórico de fretes (`LinhaDeLista` por frete, pílula
-"Ver todos os N" — N é o total real do histórico daquele cliente, teto de
-exibição em 5 linhas antes da pílula, ver Tarefa 1); pílula **Lançar frete
-para este cliente** no fim do histórico.
+**Mecanismo comum às três telas:**
+- `searchParams` com `periodo`/`de`/`ate`, igual "Meus fretes" — mas com um
+  default que "Meus fretes" não tem: ausência de `periodo` na URL é tratada
+  como `"mes-atual"` antes de chamar `resolverPeriodoDaUrl` (em "Meus
+  fretes", ausência = sem filtro, 50 mais recentes). Só `?periodo=todos`
+  explícito mostra o total da vida do cadastro.
+- Um componente novo, único e reaproveitado nos três perfis (não três
+  cópias, `CLAUDE.md` §8) — chip "Período" + `FolhaDePeriodo` +
+  `router.push` para o mesmo caminho do perfil com a nova query. Reaproveita
+  `FolhaDePeriodo`, `resolverPeriodoDaUrl`, `rotuloDoPeriodo`, todos já
+  existentes desde a Tarefa 2.
+- Chip sozinho na fileira → 48px (`ChipFiltro altura={48}`, exceção do §8
+  corrigida na Tarefa 5).
+- Ordem na tela (`docs/componentes.md`, "Onde cada tela usa o quê", Perfil
+  do cliente): resumo (números + chip de período) → campos que já existem
+  (Identificação/Condição comercial) → ação → histórico.
 
-**Perfil do caminhão** (`caminhoes/[id]/page.tsx`): km no período e R$/km,
-exibidos só quando houver km preenchido (`docs/especificacao.md` §4.7 —
-número incompleto não aparece como completo, `CLAUDE.md` §8); histórico;
-pílula **Lançar frete com este caminhão**. **Sincroniza o inventário
-junto:** `docs/componentes.md` linha 373 hoje lista só "sem principal ·
-Editar no cabeçalho" para esta tela — não é pedido ao Design, é o
-repositório sincronizando o inventário com uma decisão que
-`docs/especificacao.md` §4.7 já registra (`CLAUDE.md` §13, "Estado... é do
-repositório").
+**Perfil do cliente** (`clientes/[id]/page.tsx`): dois números — **já
+rodado** (tocável, leva a `/fretes` filtrado pelo cliente e pelo mesmo
+período — não um histórico interno) e **recebido no período** (não
+tocável) — `resumoFinanceiroDoCliente`. Histórico via
+`listarServicosDoCliente` (`LinhaDeLista` por frete, teto 5, pílula "Ver
+todos os N" com o total real). Pílula em linha **Lançar frete para este
+cliente** no fim do histórico → `/fretes/novo?cliente=<id>`. Sem "Gerar
+relatório"/"Cobrar no WhatsApp" (dependem do item 6/7).
+
+**Perfil do caminhão** (`caminhoes/[id]/page.tsx`): km (convertido para km
+só na exibição) e R$/km com **duas casas decimais** (confirmado pelo
+fundador — era o default já previsto "por não haver outra definida"), só
+quando `resumoDoCaminhao` devolver `kmPeriodoMetros !== null`. Sem km no
+período: convite **"Preencha o km ao lançar para ver o R$/km"** (convida a
+preencher um campo opcional, não só informa a ausência — decisão do
+fundador). Cobertura parcial (`fretesComKm < fretesNoPeriodo`): nota **"N
+de M fretes com km"**. Histórico igual ao cliente. Pílula **Lançar frete
+com este caminhão** → `/fretes/novo?caminhao=<id>`. **Sincroniza
+`docs/componentes.md` linha 373** (hoje só lista "sem principal · Editar no
+cabeçalho"; ganha a pílula) — não é pedido ao Design, é o repositório
+sincronizando o inventário com uma decisão que `docs/especificacao.md` §4.7
+já registra (`CLAUDE.md` §13).
 
 **Perfil do motorista** (`motoristas/[id]/page.tsx`): resumo com fretes no
 período e **valor transportado** no período (não "valor rodado" — ver
-"Decisões do fundador"); histórico; **Lançar frete com este motorista**
-como a ação **principal** da tela (variante **01**, não pílula —
-`docs/componentes.md` linha 374 já a define assim) — a mesma ação que o
-comentário do arquivo já cita como pendente "por depender do item 3", que
-fechou.
+"Decisões do fundador") — `resumoDoMotorista`. **Lançar frete com este
+motorista** como a ação **principal** da tela (variante **01**, não pílula
+— `docs/componentes.md` linha 374 já a define assim) → `/fretes/novo?
+motorista=<id>`. Histórico igual aos outros dois. `docs/estilo.md` não tem
+linha própria para este perfil na tabela de níveis tipográficos — lacuna,
+mesma classe da já registrada para Caminhões/Motoristas (lista) na Tarefa
+5; registra e segue, não bloqueia.
 
 Os três continuam **sem** "Gerar relatório"/"Cobrar no WhatsApp" (cliente)
 e sem qualquer coisa que dependa dos itens 5/6/7 — mesma régua desta
 fatia inteira.
+
+**Risco levado pelo fundador ao aprovar este plano — mesmo rótulo, recortes
+diferentes — verificação obrigatória antes de fechar cada um dos três
+commits.** O resumo do perfil mostra o número **por período** (mês corrente
+por padrão, com o chip de período visível ao lado); a lista de cadastro
+correspondente (Tarefa 5, já commitada) mostra o mesmo conceito como
+**total da vida do cadastro**, sem chip nem qualificador algum — conferido
+nos três arquivos: `ListaClientes.tsx` linha 104
+(`` apoio={... `R$ ${formatarCentavos(valorTotalCentavos)}` } ``),
+`ListaCaminhoes.tsx` linha 124 e `ListaMotoristas.tsx` linha 113, todos
+`R$ X`/`N fretes` em texto puro, sem palavra que diga "total" nem período
+nenhum ao lado. A mitigação do chip de período só cobre o lado do perfil —
+o lado da lista, pela leitura do código, não tem nada.
+
+**Teste no `/auditar-tela` de cada perfil, com dado plantado que torna os
+dois números diferentes de propósito:** abrir a lista de cadastro ordenada
+pelo critério de valor/fretes, abrir o perfil do mesmo cadastro ao lado, e
+checar se dá para entender por que os números não batem, sem precisar
+explicar em voz alta. **Se não der — e a leitura do código acima sugere que
+não vai dar —, a correção entra no fechamento daquele commit**, mesmo
+tocando um arquivo da Tarefa 5 (já commitada): fundador já autorizou, não é
+reabrir a Tarefa 5, é fechar a Tarefa 6 de verdade. Provável ajuste — a
+decidir durante a verificação, não antes — é o `apoio` da linha de lista
+ganhar um qualificador curto (ex.: "R$ X no total"); pequeno e contido, não
+uma reforma do componente.
 
 ---
 

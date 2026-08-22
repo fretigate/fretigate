@@ -298,6 +298,15 @@ justifica. Até lá, tocar em "adicionar" leva para o formulário de edição
 inteiro. **Provisório, decidido na tarefa 5 (10/08/2026):** troca pela folha
 de verdade quando o item 3 a construir — não antes.
 
+**Período padrão dos três resumos (cliente, caminhão, motorista) é o mês
+corrente.** Decisão do fundador, 22/08/2026, planejamento da Tarefa 6 do item
+4: é como o dono pensa a operação — "quanto rodei esse mês" — e é o mesmo
+recorte do card de faturamento da dashboard (item 8, §4.6). Dois lugares
+mostrando o mesmo tipo de número com padrões diferentes criaria contradição
+aparente entre eles. Resolvido em Fortaleza pelo mesmo mecanismo que já
+corrige "hoje" no fuso local (`src/lib/utils/data-fortaleza.ts`, item 3) —
+sem isso, o resumo do dia 1º de manhã mostraria o mês anterior.
+
 **Perfil do caminhão:** apelido, placa, tipo; **km no período e R$/km**,
 exibidos só quando houver km preenchido; histórico. Ação: lançar frete com este
 caminhão.
