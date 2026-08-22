@@ -219,6 +219,40 @@ padrão nos perfis de cliente/caminhão/motorista, e é o mesmo aqui.
   própria no inventário de avisos — só a mesma revisão de vocabulário do
   parágrafo acima, quando o Design responder.
 
+- **Em Clientes, escolher "Maior valor total" faz o valor substituir a
+  cidade na linha — os dois nunca aparecem juntos.** Achados do `/revisar`
+  na Tarefa 5: `docs/estilo.md`, tabela "Onde cada nível cai, tela por
+  tela", linha Clientes, define Primário como "nome do cliente **+ valor
+  da ordenação**" e Secundário como "cidade, dado de contexto" — os dois
+  deveriam conviver na linha, não se revezar. `LinhaDeLista` (variante
+  clássica) só tem dois slots de texto (`nome`, `apoio`); com o critério de
+  valor ativo, o valor ocupa o único slot de apoio disponível e a cidade
+  some. O mesmo achado aponta um segundo furo: mesmo quando o valor
+  aparece, ele sai com o tratamento tipográfico do slot `apoio`
+  (terciário, `text-tinta-apoio`) — a tabela pede tratamento Primário
+  (mesmo peso do nome).
+
+  **Os dois lados do argumento, para o Design decidir:** substituir a
+  cidade não é irracional — quem escolhe ordenar por valor quer ver o
+  valor, e a cidade tem pouco uso ali; mas `docs/estilo.md` diz
+  explicitamente que os dois convivem. Resolver dentro do escopo desta
+  tarefa exigiria redesenhar `LinhaDeLista` para caber um terceiro dado
+  (nome + valor Primário + cidade Secundária) — decisão de layout que este
+  plano não toma sozinho. Registrado como lacuna, não corrigido nesta
+  tarefa; decisão do fundador, 22/08/2026.
+
+- **Escolher "Mais recente" explicitamente na folha de ordenação não deixa
+  o chip em estado ativo.** Achado do `/revisar` na Tarefa 5:
+  `docs/componentes.md`, "Chips de seleção › Ordenação", diz "Neutro mostra
+  Ordenar por; escolhido mostra o critério" — mas não define se o critério
+  **padrão** ("Mais recente"), escolhido de propósito na folha, conta como
+  "escolhido". Hoje `ativo={criterio !== "recente"}` trata os dois casos
+  (nunca tocou a folha · tocou e escolheu "Mais recente") como o mesmo
+  estado neutro, então o chip não confirma visualmente que o toque surtiu
+  efeito. Pedido ao Design: definir se "Mais recente" escolhido de
+  propósito deveria mostrar o próprio rótulo no chip (estado ativo) ou se
+  o neutro genérico é o comportamento pretendido.
+
 ---
 
 ## Tarefa 1 — Backend: situação financeira derivada e leituras em lote

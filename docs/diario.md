@@ -6,6 +6,54 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 22/08/2026 — tarefa 5 do item 4: ordenações nas listas de cadastro, e o chip
+
+Construída conforme o plano (`docs/planos/item-4-lista-e-detalhe-do-frete.md`,
+Tarefa 5): três funções novas em `src/lib/servicos/servicos.ts`
+(`valoresTotaisPorCliente`, `estatisticasPorCaminhao`,
+`estatisticasPorMotorista`), uma consulta cada, sem N+1 — estrutural, não só
+testado como ausente. `FolhaDeOrdenacao` novo, genérico sobre critérios;
+`ChipFiltro` reaproveitado, sem alteração de comportamento no chamador
+existente (`ListaFretes.tsx`).
+
+**O risco central que o fundador nomeou ao aprovar o plano — o número da
+lista precisa ser o MESMO cálculo que o resumo do perfil (Tarefa 1), não só
+parecido — é o que os testes provam**: `tests/servicos.test.ts` (seções 7 e
+8) compara `valoresTotaisPorCliente` contra `resumoFinanceiroDoCliente.
+jaRodado` e `estatisticasPorMotorista` contra `resumoDoMotorista`, para o
+mesmo cadastro, exigindo igualdade exata — não dois cálculos que só parecem
+bater. Confirmado também no navegador, com dado real plantado e apagado
+depois: os totais batiam exatamente com a soma esperada.
+
+**Dois passes de `/revisar`, três divergências corrigidas nesta sessão:**
+1. Chip de ordenação sozinho usava 40px (herdado de `ChipFiltro`); a exceção
+   de `CLAUDE.md` §8 a 48px é só para chip **em fileira** (erra o vizinho,
+   custo baixo) — sem vizinho, o mínimo geral vale. `ChipFiltro` ganhou a
+   prop `altura` (padrão 40, chip sozinho passa `altura={48}`); `CLAUDE.md`
+   §8 e `docs/componentes.md` corrigidos para dizer a distinção
+   explicitamente.
+2. `mb-2` (2px) fora da escala de espaçamento, nas três listas — trocado por
+   `gap-8`/`gap-6` herdados do pai, sem margem própria.
+3. Verificado, sem correção: em Clientes, escolher "Maior valor total" faz o
+   valor substituir a cidade na linha (`docs/estilo.md` pede os dois
+   convivendo) — decisão do fundador: fica como está, registrado como
+   lacuna com os dois lados do argumento em
+   `docs/planos/item-4-lista-e-detalhe-do-frete.md`, para o Design decidir.
+   Mesma lacuna: a tabela de níveis tipográficos não cobre Caminhões/
+   Motoristas (`docs/estilo.md`); e o chip não fica "ativo" ao escolher
+   "Mais recente" de propósito (`docs/componentes.md`).
+
+**Verificação:** `npm run lint`, `npx tsc --noEmit`, `npm run build`
+verdes; `npm test` **local** 299/299 (antes e depois das correções do
+segundo passe). Fluxo completo no navegador: clientes/caminhões/motoristas
+com dado plantado e apagado ao final, trocando os três critérios de
+ordenação nas três listas, conferindo os números batendo com o esperado.
+Esteira deste commit ainda não disparada — ver `/onde-paramos`.
+
+Próximo: Tarefa 6 do item 4 — Resumo e histórico nos três perfis.
+
+---
+
 ## 22/08/2026 — plano da tarefa 5 do item 4, detalhado: ordenações e o chip
 
 Antes de construir, duas perguntas levadas ao fundador (`docs/planos/

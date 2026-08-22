@@ -45,19 +45,28 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
  * sólido"). Sigo o documento, não o protótipo (`CLAUDE.md` §13: protótipo é
  * evidência corroborante, nunca autoridade, quando em conflito com o
  * documento).
+ *
+ * **`altura` — 40px é só para chip em fileira.** Achado do `/revisar` na
+ * Tarefa 5 do item 4 (22/08/2026): a exceção de `CLAUDE.md` §8 ao mínimo de
+ * 48px existe porque errar o toque acerta o vizinho, custo baixo — um chip
+ * sozinho na fileira (o de "Ordenar por" em Clientes/Caminhões/Motoristas)
+ * não tem vizinho para absorver o erro, então segue o mínimo geral. O
+ * padrão continua 40px (não muda nenhum chamador existente); só quem sabe
+ * que o chip está sozinho passa `altura={48}`.
  */
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   rotulo: ReactNode;
   ativo: boolean;
+  altura?: 40 | 48;
 };
 
-export function ChipFiltro({ rotulo, ativo, className, ...resto }: Props) {
+export function ChipFiltro({ rotulo, ativo, altura = 40, className, ...resto }: Props) {
   return (
     <button
       type="button"
       className={[
-        "flex h-40 max-w-[148px] items-center gap-7 rounded-pilula px-16 text-chip-filtro leading-[1]",
+        `flex ${altura === 48 ? "h-48" : "h-40"} max-w-[148px] items-center gap-7 rounded-pilula px-16 text-chip-filtro leading-[1]`,
         ativo ? "bg-pilula font-bold text-acao" : "bg-separacao font-semibold text-tinta-apoio",
         className,
       ]

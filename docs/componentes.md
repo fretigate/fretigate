@@ -330,7 +330,7 @@ Controles de estado, não ações. Não entram na regra de hierarquia e nunca fi
 |---|---|
 | Filtro | 40px · raio 999 · `13px/600` · largura máx. `148px`, uma linha só com reticências — neutro `#F0EDE6`/`#6E7770`, selecionado `#E4E9E5`/`#1B6B3A` em 700, mostrando o valor escolhido. **Nunca verde sólido** — esse é exclusivo da ação principal. |
 | Escolha | 48px · raio 999 · `15px/600` — não escolhido `#F0EDE6`/`#141A17`, escolhido `#E4E9E5`/`#1B6B3A` em 700. **Nunca verde sólido** — nenhum chip usa. |
-| Ordenação | mesma medida do filtro — 40px · raio 999 · `13px/600`, largura máx. `148px`. Neutro mostra **Ordenar por**; escolhido mostra o critério (`Maior valor em aberto`) em `#E4E9E5`/`#1B6B3A` peso 700. Só nas listas de cadastro: Clientes, Caminhões, Motoristas |
+| Ordenação | mesma medida do filtro — **48px** (não 40 — é sempre um chip sozinho na fileira, sem vizinho para absorver o erro de toque; `CLAUDE.md` §8) · raio 999 · `13px/600`, largura máx. `148px`. Neutro mostra **Ordenar por**; escolhido mostra o critério (`Maior valor em aberto`) em `#E4E9E5`/`#1B6B3A` peso 700. Só nas listas de cadastro: Clientes, Caminhões, Motoristas |
 | Variável | 44px · raio 999 · `13.5px/700` · `#E4E9E5`/`#1B6B3A` |
 
 ## Auditoria da regra de posição

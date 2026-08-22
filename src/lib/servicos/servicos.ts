@@ -597,3 +597,69 @@ export async function resumoDoMotorista(
     valorTransportadoNoPeriodo: agregado._sum.valor ?? 0,
   };
 }
+
+/**
+ * Leituras para o critério de ordenação das listas de cadastro (Tarefa 5,
+ * `docs/planos/item-4-lista-e-detalhe-do-frete.md`) — `docs/especificacao.md`
+ * §4.7. Mesmo filtro-base das somas acima (`resumoFinanceiroDoCliente.
+ * jaRodado`, `resumoDoMotorista`): `arquivado_em: null`,
+ * `status_operacional: { not: "cancelado" }` — frete cancelado fora,
+ * `em_andamento` dentro. **Sem período** — é o total da vida do cadastro,
+ * não do perfil (que tem filtro de período); `docs/especificacao.md` §4.7
+ * nunca menciona período para esta ordenação.
+ *
+ * **O risco central desta tarefa:** o número que ordena a lista e o número
+ * que o resumo do perfil (Tarefa 1/6) mostra são o MESMO cálculo visto de
+ * dois lugares — `tests/servicos.test.ts` prova que os dois batem
+ * exatamente para o mesmo cadastro, não só que cada função roda sem erro.
+ *
+ * **Cada uma é uma consulta só, para a empresa inteira** — nunca um
+ * `groupBy`/resumo chamado por item da lista. O N+1 aqui é estruturalmente
+ * impossível, não apenas testado como ausente: não existe laço nenhum entre
+ * a leitura e o resultado, a própria consulta já é a leitura completa.
+ */
+export async function valoresTotaisPorCliente(
+  empresaId: string,
+): Promise<Map<string, number>> {
+  const linhas = await db(empresaId).servico.groupBy({
+    by: ["cliente_id"],
+    where: { arquivado_em: null, status_operacional: { not: "cancelado" } },
+    _sum: { valor: true },
+  });
+  return new Map(linhas.map((l) => [l.cliente_id, l._sum.valor ?? 0]));
+}
+
+type EstatisticasDeFretes = { fretes: number; valorTransportadoCentavos: number };
+
+/**
+ * Compartilhado por `estatisticasPorCaminhao`/`estatisticasPorMotorista` —
+ * diferem só no campo de agrupamento. Duas cópias quase idênticas do mesmo
+ * `groupBy` seriam a mesma duplicação que `ChipFiltro` já evita para o chip
+ * de ordenação, só que em serviço em vez de componente.
+ */
+async function estatisticasDeFretesPor(
+  empresaId: string,
+  campo: "veiculo_id" | "motorista_id",
+): Promise<Map<string, EstatisticasDeFretes>> {
+  const linhas = await db(empresaId).servico.groupBy({
+    by: [campo],
+    where: { arquivado_em: null, status_operacional: { not: "cancelado" } },
+    _count: true,
+    _sum: { valor: true },
+  });
+  const mapa = new Map<string, EstatisticasDeFretes>();
+  for (const linha of linhas) {
+    const id = linha[campo];
+    if (!id) continue; // frete sem caminhão/motorista definido
+    mapa.set(id, { fretes: linha._count, valorTransportadoCentavos: linha._sum.valor ?? 0 });
+  }
+  return mapa;
+}
+
+export function estatisticasPorCaminhao(empresaId: string) {
+  return estatisticasDeFretesPor(empresaId, "veiculo_id");
+}
+
+export function estatisticasPorMotorista(empresaId: string) {
+  return estatisticasDeFretesPor(empresaId, "motorista_id");
+}

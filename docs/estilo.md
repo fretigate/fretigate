@@ -122,6 +122,15 @@ dinheiro, nome do cliente e número-herói não perdem peso em nenhuma tela.
 | Formulários | valor digitado (17/600) | — | rótulo do campo, texto explicativo, cabeçalho de seção |
 | Mais | nome da empresa (19/800), nome de cada linha (16.5/700) | plano | subtítulos, cabeçalho de grupo |
 
+**Lacuna — Caminhões e Motoristas (lista) não têm linha nesta tabela.**
+Achado do `/revisar` na Tarefa 5 do item 4 (22/08/2026): só Clientes tem
+Primário/Secundário/Terciário definidos para a lista de cadastro. O dado da
+ordenação nessas duas telas (`N fretes`/`R$ X`) hoje sai em tratamento
+terciário, por analogia com o que já existia (`tipo`/veículo habitual), sem
+nenhuma linha desta tabela confirmar ou contradizer isso. Registrado para o
+Design decidir junto da lacuna irmã (ver "O que precisa chegar ao Design" em
+`docs/planos/item-4-lista-e-detalhe-do-frete.md`).
+
 ---
 
 ## Espaçamento

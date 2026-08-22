@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { exigirSessao } from "@/lib/auth/sessao";
 import { listarMotoristas } from "@/lib/servicos/motoristas";
+import { estatisticasPorMotorista } from "@/lib/servicos/servicos";
 import { PilulaCabecalho } from "@/components/ui/PilulaCabecalho";
 import { nomeCaminhao } from "@/lib/utils/caminhao";
 import { ListaMotoristas } from "./ListaMotoristas";
@@ -9,10 +10,16 @@ import { ListaMotoristas } from "./ListaMotoristas";
  * Motoristas — lista. `docs/navegacao.md` linha 42: chega de Mais, a linha
  * leva ao perfil, "+ Novo" leva ao cadastro. Mesma casca de `clientes/page.tsx`
  * e `caminhoes/page.tsx` (tarefas 5 e 6) — tela de nível 2.
+ *
+ * `estatisticasPorMotorista` busca em paralelo com `listarMotoristas`
+ * (item 4, Tarefa 5) — mesmo padrão de `clientes/page.tsx`.
  */
 export default async function Pagina() {
   const sessao = await exigirSessao();
-  const motoristas = await listarMotoristas(sessao.empresaId);
+  const [motoristas, estatisticas] = await Promise.all([
+    listarMotoristas(sessao.empresaId),
+    estatisticasPorMotorista(sessao.empresaId),
+  ]);
 
   return (
     <main
@@ -59,6 +66,8 @@ export default async function Pagina() {
             veiculoHabitual: m.veiculo_habitual
               ? nomeCaminhao(m.veiculo_habitual) + (m.veiculo_habitual.arquivado_em ? " (arquivado)" : "")
               : null,
+            fretes: estatisticas.get(m.id)?.fretes ?? 0,
+            valorTransportadoCentavos: estatisticas.get(m.id)?.valorTransportadoCentavos ?? 0,
           }))}
         />
       </div>

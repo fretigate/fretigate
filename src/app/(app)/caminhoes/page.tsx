@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { exigirSessao } from "@/lib/auth/sessao";
 import { listarCaminhoes } from "@/lib/servicos/caminhoes";
+import { estatisticasPorCaminhao } from "@/lib/servicos/servicos";
 import { PilulaCabecalho } from "@/components/ui/PilulaCabecalho";
 import { TIPOS_VEICULO } from "@/lib/utils/caminhao";
 import { ListaCaminhoes } from "./ListaCaminhoes";
@@ -9,10 +10,16 @@ import { ListaCaminhoes } from "./ListaCaminhoes";
  * Caminhões — lista. `docs/navegacao.md` linha 41: chega de Mais, a linha
  * leva ao perfil, "+ Novo" leva ao cadastro. Mesma casca de `clientes/page.tsx`
  * (tarefa 5) — tela de nível 2.
+ *
+ * `estatisticasPorCaminhao` busca em paralelo com `listarCaminhoes`
+ * (item 4, Tarefa 5) — mesmo padrão de `clientes/page.tsx`.
  */
 export default async function Pagina() {
   const sessao = await exigirSessao();
-  const caminhoes = await listarCaminhoes(sessao.empresaId);
+  const [caminhoes, estatisticas] = await Promise.all([
+    listarCaminhoes(sessao.empresaId),
+    estatisticasPorCaminhao(sessao.empresaId),
+  ]);
   const rotuloPorTipo = Object.fromEntries(TIPOS_VEICULO.map((t) => [t.valor, t.rotulo]));
 
   return (
@@ -59,6 +66,8 @@ export default async function Pagina() {
             apelido: c.apelido,
             placa: c.placa,
             tipo: c.tipo ? rotuloPorTipo[c.tipo] : null,
+            fretes: estatisticas.get(c.id)?.fretes ?? 0,
+            valorTransportadoCentavos: estatisticas.get(c.id)?.valorTransportadoCentavos ?? 0,
           }))}
         />
       </div>

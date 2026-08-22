@@ -9,8 +9,12 @@ import {
   arquivarServico,
   resumoDoCaminhao,
   resumoDoMotorista,
+  valoresTotaisPorCliente,
+  estatisticasPorCaminhao,
+  estatisticasPorMotorista,
   type Periodo,
 } from "@/lib/servicos/servicos";
+import { resumoFinanceiroDoCliente } from "@/lib/servicos/titulos";
 import { criarCliente, arquivarCliente } from "@/lib/servicos/clientes";
 import { criarCaminhao, arquivarCaminhao } from "@/lib/servicos/caminhoes";
 import { criarMotorista, arquivarMotorista } from "@/lib/servicos/motoristas";
@@ -34,7 +38,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 33;
+const CONFERENCIAS_ESPERADAS = 42;
 
 /** Uma janela de 2 dias em volta de agora — cobre `data_servico: new Date()` de `dadosMinimos`. */
 function periodoAmplo(): Periodo {
@@ -621,6 +625,220 @@ describe("6. resumoDoMotorista — fretes e valor transportado no período", () 
     const resumo = await resumoDoMotorista(e.empresaId, motorista.id, periodoAmplo());
     expect(resumo.fretesNoPeriodo).toBe(1);
     expect(resumo.valorTransportadoNoPeriodo).toBe(60000);
+    conferencias++;
+  });
+});
+
+describe("7. valoresTotaisPorCliente — mesmo número do resumo do perfil (Tarefa 5)", () => {
+  it("bate exatamente com resumoFinanceiroDoCliente.jaRodado, para o mesmo cliente — o risco central desta tarefa", async () => {
+    // O número que ordena a lista de Clientes e o número que o resumo do
+    // perfil mostra são o MESMO cálculo visto de dois lugares. Esta
+    // igualdade é o teste em si, não uma conferência a mais: se um dia
+    // alguém alterar um dos dois filtros (por exemplo, parar de excluir
+    // cancelado só num dos dois lugares), é aqui que quebra — um teste que
+    // só conferisse "valoresTotaisPorCliente roda sem erro" passaria mesmo
+    // com o filtro errado.
+    const e = await criarEmpresaDeTeste("s1");
+    const haDoisAnos = new Date();
+    haDoisAnos.setUTCFullYear(haDoisAnos.getUTCFullYear() - 2);
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { valor: 100000, data_servico: haDoisAnos }),
+    );
+    await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { valor: 50000 }));
+    const cancelado = await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { valor: 999999 }),
+    );
+    await raiz.query(`UPDATE "servico" SET status_operacional = 'cancelado' WHERE id = $1`, [
+      cancelado.id,
+    ]);
+
+    const periodoLargo: Periodo = {
+      inicio: new Date(haDoisAnos.getTime() - 24 * 60 * 60 * 1000),
+      fim: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    };
+
+    const [mapa, resumo] = await Promise.all([
+      valoresTotaisPorCliente(e.empresaId),
+      resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoLargo),
+    ]);
+
+    expect(mapa.get(e.clienteId)).toBe(resumo.jaRodado);
+    expect(mapa.get(e.clienteId)).toBe(150000);
+    conferencias++;
+  });
+});
+
+describe("8. estatisticasPorMotorista — mesmo número do resumo do perfil (Tarefa 5)", () => {
+  it("bate exatamente com resumoDoMotorista, para o mesmo motorista — mesma técnica do teste anterior", async () => {
+    const e = await criarEmpresaDeTeste("s2");
+    const motorista = await criarMotorista(e.empresaId, { nome: "Comparado" });
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { motorista_id: motorista.id, valor: 80000 }),
+    );
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { motorista_id: motorista.id, valor: 40000 }),
+    );
+
+    const [mapa, resumo] = await Promise.all([
+      estatisticasPorMotorista(e.empresaId),
+      resumoDoMotorista(e.empresaId, motorista.id, periodoAmplo()),
+    ]);
+
+    const estatistica = mapa.get(motorista.id);
+    expect(estatistica?.fretes).toBe(resumo.fretesNoPeriodo);
+    expect(estatistica?.valorTransportadoCentavos).toBe(resumo.valorTransportadoNoPeriodo);
+    expect(estatistica).toEqual({ fretes: 2, valorTransportadoCentavos: 120000 });
+    conferencias++;
+  });
+});
+
+describe("9. estatisticasPorCaminhao — sem par direto, valor plantado conhecido", () => {
+  it("soma fretes e valor transportado do caminhão, com ou sem km preenchido", async () => {
+    // resumoDoCaminhao (Tarefa 1) não expõe "valor total transportado": seu
+    // único número de valor é o numerador de rsPorKm, restrito aos fretes
+    // COM km — um filtro a mais, para um propósito diferente. Por isso não
+    // há par direto para comparação cruzada; testado como as outras
+    // leituras de agregação do projeto, com valor plantado conhecido.
+    const e = await criarEmpresaDeTeste("s3");
+    const caminhao = await criarCaminhao(e.empresaId, { apelido: "Estatística" });
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, valor: 70000 }),
+    );
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, valor: 30000, km: 5000 }),
+    );
+
+    const mapa = await estatisticasPorCaminhao(e.empresaId);
+    expect(mapa.get(caminhao.id)).toEqual({ fretes: 2, valorTransportadoCentavos: 100000 });
+    conferencias++;
+  });
+});
+
+describe("10. frete cancelado não conta em nenhuma das três leituras de ordenação", () => {
+  it("valoresTotaisPorCliente ignora frete cancelado", async () => {
+    const e = await criarEmpresaDeTeste("s4");
+    await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { valor: 50000 }));
+    const cancelado = await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { valor: 50000 }));
+    await raiz.query(`UPDATE "servico" SET status_operacional = 'cancelado' WHERE id = $1`, [
+      cancelado.id,
+    ]);
+
+    const mapa = await valoresTotaisPorCliente(e.empresaId);
+    expect(mapa.get(e.clienteId)).toBe(50000);
+    conferencias++;
+  });
+
+  it("estatisticasPorCaminhao ignora frete cancelado", async () => {
+    const e = await criarEmpresaDeTeste("s5");
+    const caminhao = await criarCaminhao(e.empresaId, { apelido: "Com cancelado" });
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, valor: 50000 }),
+    );
+    const cancelado = await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, valor: 50000 }),
+    );
+    await raiz.query(`UPDATE "servico" SET status_operacional = 'cancelado' WHERE id = $1`, [
+      cancelado.id,
+    ]);
+
+    const mapa = await estatisticasPorCaminhao(e.empresaId);
+    expect(mapa.get(caminhao.id)).toEqual({ fretes: 1, valorTransportadoCentavos: 50000 });
+    conferencias++;
+  });
+
+  it("estatisticasPorMotorista ignora frete cancelado", async () => {
+    const e = await criarEmpresaDeTeste("s6");
+    const motorista = await criarMotorista(e.empresaId, { nome: "Com cancelado" });
+    await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { motorista_id: motorista.id, valor: 50000 }),
+    );
+    const cancelado = await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { motorista_id: motorista.id, valor: 50000 }),
+    );
+    await raiz.query(`UPDATE "servico" SET status_operacional = 'cancelado' WHERE id = $1`, [
+      cancelado.id,
+    ]);
+
+    const mapa = await estatisticasPorMotorista(e.empresaId);
+    expect(mapa.get(motorista.id)).toEqual({ fretes: 1, valorTransportadoCentavos: 50000 });
+    conferencias++;
+  });
+});
+
+describe("11. isolamento entre empresas — as três leituras novas (CLAUDE.md §3)", () => {
+  it("valoresTotaisPorCliente só enxerga a própria empresa", async () => {
+    const a = await criarEmpresaDeTeste("s7a");
+    const b = await criarEmpresaDeTeste("s7b");
+    await criarServico(a.empresaId, a.usuarioId, dadosMinimos(a, { valor: 70000 }));
+    await criarServico(b.empresaId, b.usuarioId, dadosMinimos(b, { valor: 999999 }));
+
+    const mapaA = await valoresTotaisPorCliente(a.empresaId);
+    expect(mapaA.get(a.clienteId)).toBe(70000);
+    expect(mapaA.has(b.clienteId)).toBe(false);
+    conferencias++;
+  });
+
+  it("estatisticasPorCaminhao só enxerga a própria empresa", async () => {
+    const a = await criarEmpresaDeTeste("s8a");
+    const b = await criarEmpresaDeTeste("s8b");
+    const caminhaoA = await criarCaminhao(a.empresaId, { apelido: "A" });
+    const caminhaoB = await criarCaminhao(b.empresaId, { apelido: "B" });
+    await criarServico(
+      a.empresaId,
+      a.usuarioId,
+      dadosMinimos(a, { veiculo_id: caminhaoA.id, valor: 70000 }),
+    );
+    await criarServico(
+      b.empresaId,
+      b.usuarioId,
+      dadosMinimos(b, { veiculo_id: caminhaoB.id, valor: 999999 }),
+    );
+
+    const mapaA = await estatisticasPorCaminhao(a.empresaId);
+    expect(mapaA.get(caminhaoA.id)).toEqual({ fretes: 1, valorTransportadoCentavos: 70000 });
+    expect(mapaA.has(caminhaoB.id)).toBe(false);
+    conferencias++;
+  });
+
+  it("estatisticasPorMotorista só enxerga a própria empresa", async () => {
+    const a = await criarEmpresaDeTeste("s9a");
+    const b = await criarEmpresaDeTeste("s9b");
+    const motoristaA = await criarMotorista(a.empresaId, { nome: "A" });
+    const motoristaB = await criarMotorista(b.empresaId, { nome: "B" });
+    await criarServico(
+      a.empresaId,
+      a.usuarioId,
+      dadosMinimos(a, { motorista_id: motoristaA.id, valor: 70000 }),
+    );
+    await criarServico(
+      b.empresaId,
+      b.usuarioId,
+      dadosMinimos(b, { motorista_id: motoristaB.id, valor: 999999 }),
+    );
+
+    const mapaA = await estatisticasPorMotorista(a.empresaId);
+    expect(mapaA.get(motoristaA.id)).toEqual({ fretes: 1, valorTransportadoCentavos: 70000 });
+    expect(mapaA.has(motoristaB.id)).toBe(false);
     conferencias++;
   });
 });

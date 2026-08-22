@@ -878,6 +878,19 @@ Vieram de defeitos reais encontrados nos protótipos. São obrigatórias.
   contradição entre este parágrafo e o 40px de `docs/estilo.md` existia
   desde antes desta tarefa; só ficou visível agora, no primeiro chip de
   filtro que o código constrói.
+
+  **A exceção depende de existir vizinho — chip sozinho na fileira segue os
+  48px.** Corrigido em 22/08/2026, achado do segundo `/revisar` na Tarefa 5
+  do item 4: a redação acima não distinguia "chip em fileira" (várias opções
+  lado a lado, onde errar o toque acerta a vizinha) de "chip sozinho na
+  fileira" (o chip de ordenação "Ordenar por" em Clientes/Caminhões/
+  Motoristas, único chip da tela) — e é essa distinção que sustenta o
+  respiro entre chips como parte do alvo tocável. Sem vizinho, não existe
+  "custo baixo" nenhum para absorver: errar o toque simplesmente erra, a
+  mesma falha do alvo pequeno que a regra geral já cobre. `ChipFiltro.tsx`
+  ganhou a prop `altura` (padrão 40, chip sozinho passa `altura={48}`) para
+  tornar essa distinção explícita em cada chamada, não implícita no
+  contexto de onde o componente é usado.
 - Interface clara, não escura — o app é usado no pátio, sob sol forte.
 - Vocabulário do usuário: frete, cliente, caminhão, motorista, **relatório**.
   Nunca "registro", "entidade", "item", "transação", "extrato".
