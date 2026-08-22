@@ -21,9 +21,17 @@ type Props = {
   rotulo: string;
   valor: string | null;
   mono?: boolean;
+  /**
+   * Vazio vira branco, nunca "adicionar" — para campos sem essa regra
+   * escrita. `docs/componentes.md` linha 177 nomeia só os três perfis e a
+   * linha TELEFONE do detalhe do frete; os demais campos daquela tela usam
+   * esta prop (`docs/planos/item-4-lista-e-detalhe-do-frete.md`, Tarefa 3:
+   * "aparecem vazios sem rótulo extra"). Achado do `/revisar`.
+   */
+  semAdicionarQuandoVazio?: boolean;
 };
 
-export function LinhaDePerfil({ href, rotulo, valor, mono }: Props) {
+export function LinhaDePerfil({ href, rotulo, valor, mono, semAdicionarQuandoVazio }: Props) {
   return (
     <div className="flex items-start gap-12 rounded-campo bg-separacao px-18 py-14">
       <span className="w-96 flex-none pt-2 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
@@ -35,6 +43,8 @@ export function LinhaDePerfil({ href, rotulo, valor, mono }: Props) {
         <span className="min-w-0 flex-1 text-campo leading-[1.35] font-semibold text-tinta [overflow-wrap:anywhere]">
           {valor}
         </span>
+      ) : semAdicionarQuandoVazio ? (
+        <span className="min-w-0 flex-1" />
       ) : (
         <Link
           href={href}

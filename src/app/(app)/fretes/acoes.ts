@@ -8,6 +8,7 @@ import { criarCaminhao } from "@/lib/servicos/caminhoes";
 import { criarMotorista } from "@/lib/servicos/motoristas";
 import { buscarTipoOperacaoAtivo } from "@/lib/servicos/tipos-de-operacao";
 import {
+  arquivarServico,
   buscarUltimoValorDoTrecho,
   criarServico,
   listarDestinosDoCliente,
@@ -299,4 +300,19 @@ export const criarTituloJaRecebiAction = comoUsuario(async (
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };
   }
+});
+
+const schemaArquivarServico = z.object({ id: z.string().uuid() });
+
+/**
+ * "Arquivar frete", no detalhe (item 4, Tarefa 3). Achado do `/revisar`:
+ * repassava `id` direto ao serviço sem schema (`CLAUDE.md` §4) — mesma
+ * classe já corrigida nesta tela para `criarTituloJaRecebiAction`, acima.
+ */
+export const arquivarServicoAction = comoUsuario(async (sessao, id: string) => {
+  const validado = schemaArquivarServico.safeParse({ id });
+  if (!validado.success) return;
+
+  await arquivarServico(sessao.empresaId, validado.data.id);
+  redirect("/fretes");
 });

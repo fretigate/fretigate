@@ -231,15 +231,7 @@ export function ListaFretes({
               </span>
               <div className="flex flex-col gap-6">
                 {grupo.itens.map((frete) => (
-                  // Achado do /revisar: linka para `/fretes/${id}`, que a
-                  // Tarefa 3 do item 4 (próxima da fila, mesma sessão) ainda
-                  // vai construir — 404 até lá. Decisão do fundador,
-                  // 21/08/2026: mantém, registrado como provisório com prazo
-                  // (Tarefa 3). Não é o mesmo caso do (+) da barra apontando
-                  // para `/clientes/novo` (`BarraDeNavegacao.tsx`) — aquele
-                  // destino já existia; aqui não existe nenhum ainda. Mesmo
-                  // tratamento por decisão explícita, não por precedente
-                  // idêntico.
+                  // Leva ao detalhe do frete (item 4, Tarefa 3).
                   <LinhaDeLista
                     key={frete.id}
                     href={`/fretes/${frete.id}`}

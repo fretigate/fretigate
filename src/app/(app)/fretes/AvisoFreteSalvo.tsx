@@ -55,14 +55,21 @@ export function AvisoFreteSalvo({ servicoId }: Props) {
       onSumir={sumir}
       botoes={
         erro ? undefined : (
-          <PilulaSobreEscuro
-            dentroDoAviso
-            className="flex-1"
-            carregando={salvando}
-            onClick={jaRecebi}
-          >
-            Já recebi
-          </PilulaSobreEscuro>
+          <>
+            <PilulaSobreEscuro
+              dentroDoAviso
+              className="flex-1"
+              carregando={salvando}
+              onClick={jaRecebi}
+            >
+              Já recebi
+            </PilulaSobreEscuro>
+            {/* Fecha a pendência do item 3 — a tela de detalhe (item 4,
+                Tarefa 3) agora existe. */}
+            <PilulaSobreEscuro dentroDoAviso className="flex-1" href={`/fretes/${servicoId}`}>
+              Ver o frete
+            </PilulaSobreEscuro>
+          </>
         )
       }
     />

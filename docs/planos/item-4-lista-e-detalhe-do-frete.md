@@ -164,14 +164,20 @@ padrão nos perfis de cliente/caminhão/motorista, e é o mesmo aqui.
   linha, revisita — com a medida acima, não como se a exigência do
   `docs/navegacao.md` nunca tivesse existido.
 
-- **Como o frete cancelado se distingue na lista e no histórico.** Frete
-  cancelado (`status_operacional`) continua aparecendo em "Meus fretes" e no
-  histórico do perfil (decisão do fundador, 20/08/2026, `docs/especificacao.md`
-  §7) — só sai das somas dos resumos, nunca das telas. Não existe hoje uma
-  etiqueta de "cancelado" em `docs/estilo.md` (a lista de "Etiqueta de
-  situação" fecha em A FATURAR/FATURADO/PARCIAL/QUITADO/VENCIDO/BOLETO) —
-  pedido ao Design: como marcar visualmente essa linha, quando a Tarefa 2/6
-  construir a tela.
+- **Como o frete cancelado se distingue na lista, no detalhe e no
+  histórico.** Frete cancelado (`status_operacional`) continua aparecendo em
+  "Meus fretes" e no histórico do perfil (decisão do fundador, 20/08/2026,
+  `docs/especificacao.md` §7) — só sai das somas dos resumos, nunca das
+  telas. Não existe hoje uma etiqueta de "cancelado" em `docs/estilo.md` (a
+  lista de "Etiqueta de situação" fecha em A FATURAR/FATURADO/PARCIAL/
+  QUITADO/VENCIDO/BOLETO) — pedido ao Design: como marcar visualmente essa
+  linha, quando a Tarefa 2/6 construir a tela.
+
+  **Ampliado na Tarefa 3, achado do segundo `/revisar`:** o detalhe do frete
+  também não distingue — um frete cancelado abre com a etiqueta "A faturar"
+  igual a um em andamento, porque `situacaoFinanceira` não enxerga
+  `status_operacional` (só título). O pedido ao Design acima vale também
+  para esta tela, não só lista e histórico.
 
 ---
 

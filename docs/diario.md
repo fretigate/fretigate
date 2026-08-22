@@ -6,6 +6,88 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 22/08/2026 — tarefa 3 do item 4: detalhe do frete
+
+Nova rota `src/app/(app)/fretes/[id]/page.tsx` — server component, busca
+`buscarServicoComTitulos` (Tarefa 1) mais cliente, tipo de operação, caminhão
+e motorista em paralelo. Cabeçalho: "TIPO · data" (terciário), nome do
+cliente (26px), rota, valor (46px) e `EtiquetaSituacao` — sem principal
+nesta fatia, mesmo precedente do perfil do caminhão. Nove linhas de campo
+com `LinhaDePerfil`; ações no fim: **Editar frete** (secundária,
+`/fretes/[id]/editar`, que só a Tarefa 4 constrói — 404 até lá, como o
+próprio plano já previa) e **Arquivar frete** (texto destrutiva, nova
+`arquivarServicoAction`). Fecha as duas pendências registradas no plano: o
+link provisório de "Meus fretes" e o "Ver o frete" do aviso pós-lançamento
+(`AvisoFreteSalvo.tsx`, que ganhou a segunda pílula).
+
+**`LinhaDePerfil` ganhou `semAdicionarQuandoVazio`** (achado do primeiro
+`/revisar`): o componente sempre mostrava "adicionar" em campo vazio, mas
+`docs/componentes.md` linha 177 só nomeia essa palavra para os três perfis e
+para TELEFONE nesta tela — os outros oito campos, sem essa regra escrita,
+agora aparecem em branco quando vazios. Confirmado no navegador que os
+outros três perfis (cliente, caminhão, motorista) continuam mostrando
+"adicionar" normalmente, sem a prop nova.
+
+**Decisão do fundador, 22/08/2026:** campo preenchido do detalhe não é
+tocável — só o botão "Editar frete" leva à edição, igual aos outros três
+perfis. Pergunta levantada pela segunda passagem do `/revisar`, que leu o
+plano ("toca e vai para Editar") como exigindo toda linha tocável; a leitura
+oposta (só o botão) também cabia no texto, então foi para decisão do
+fundador em vez de escolhida sozinha.
+
+**Primeiro passe do `/revisar`: quatro divergências, corrigidas no mesmo
+passe.** Além do `semAdicionarQuandoVazio` acima: valor 46px sem `wdth 94%`/
+`ls -.03em` (achado também do `/auditar-tela`, que rodou antes); valor e
+`EtiquetaSituacao` na mesma linha flex, sem truncamento — separados em duas
+linhas, o que também resolve o vazamento de texto para frete de valor alto;
+`arquivarServicoAction` repassava `id` ao serviço sem schema — ganhou
+`z.string().uuid()`, mesmo padrão de `criarTituloJaRecebiAction` no mesmo
+arquivo.
+
+**Segundo passe: uma divergência de comentário, corrigida — o resto foi a
+pergunta acima e lacunas.** O código afirmava que o link provisório de
+Editar estava "registrado... no diário", antes de esta entrada existir
+(`CLAUDE.md` §13: afirmação sobre o que não foi feito ainda). Corrigido para
+citar o próprio plano aprovado, que já escreve esse destino para a Tarefa 3.
+
+**Lacunas registradas, não corrigidas (nenhuma bloqueia a tarefa):**
+- rótulo de seção "Detalhes" sem documento que o defina;
+- "Frete" aparece duas vezes perto do topo (rótulo da tela + "FRETE · data");
+  data por extenso ("22 de agosto de 2026") é formato escolhido aqui;
+- destino do "adicionar" de Telefone sem telefone cadastrado (leva ao
+  cadastro do motorista) e sem motorista nenhum (leva a Editar frete) — sem
+  regra escrita;
+- `km` sem separador de milhar na exibição — hoje inalcançável (só existe
+  caminho de criação em múltiplos de 1000), registrado para quando outro
+  caminho (edição, importação) puder gravar valor diferente;
+- frete arquivado continua abrindo por URL direta e oferece "Arquivar" de
+  novo (sobrescreve a data) — mesmo padrão pré-existente dos outros três
+  perfis, não é regressão desta tarefa;
+- frete cancelado no detalhe mostra "A faturar" sem distinção visual —
+  ampliei o pedido já registrado ao Design (lista/histórico) para incluir o
+  detalhe (`docs/planos/item-4-lista-e-detalhe-do-frete.md`);
+- "Voltar" sempre para `/fretes` — a segunda origem que `docs/navegacao.md`
+  registra (histórico do perfil do cliente) só existe na Tarefa 6.
+
+**Verificação:** `npm run lint`, `npx tsc --noEmit`, `npm run build` —
+verdes, depois de cada passe. `npm test` **local** — 278/278 (mesma
+contagem da tarefa anterior; nada de backend novo, a Tarefa 1 já cobre
+`buscarServicoComTitulos`/`arquivarServico`). Fluxo completo testado no
+navegador: criar conta → lançar frete completo → abrir detalhe (campos
+preenchidos, "Editar frete"/"Arquivar frete" presentes e não tocáveis nos
+campos) → lançar frete sem caminhão/motorista/origem/destino/carga/km →
+abrir detalhe (oito campos em branco, só Telefone com "adicionar") →
+arquivar os dois, mais cliente/caminhão/motorista de teste, pelo fluxo do
+produto. Confirmado que "Ver o frete" no aviso e a linha da lista levam ao
+mesmo id e que a lista deixa de ter link morto — critério de fechamento da
+tarefa. Dados de verificação arquivados no banco de desenvolvimento (não há
+hoje mecanismo de exclusão de conta pelo produto — `CLAUDE.md` §14 —, então
+a empresa e o usuário de teste continuam existindo, só sem dado ativo).
+
+Próximo: Tarefa 4 do item 4 — Lançar frete ganha edição e pré-seleção.
+
+---
+
 ## 21/08/2026 — tarefa 2 do item 4: lista "Meus fretes"
 
 Substitui a tela provisória (`src/app/(app)/fretes/page.tsx`). Componentes
