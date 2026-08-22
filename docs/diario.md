@@ -6,6 +6,50 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 22/08/2026 — plano da tarefa 4 do item 4, detalhado: edição e pré-seleção
+
+`editarServico` existe desde o item 3 mas nunca foi chamado por nenhuma
+tela — planejar a Tarefa 4 (`docs/planos/item-4-lista-e-detalhe-do-frete.md`)
+é a primeira vez que o caminho de edição fica alcançável pela interface, e
+isso quebrou duas premissas que o código de criação escreveu quando só
+existia um caminho. As duas, mais um terceiro ponto sem risco, foram
+levadas ao fundador antes de começar a construção (`CLAUDE.md` §2).
+
+**Decisão 1 — frete com título ativo trava `valor` e `cliente_id`.**
+`criarTituloJaRecebi` copia os dois do `Servico` ao nascer e nunca mais
+sincroniza; deixar os dois livres na edição permitiria o frete mostrar um
+valor e o título registrar outro, sem nada acusar a diferença — dinheiro,
+rigor total (`CLAUDE.md` §2). Registrado em `docs/especificacao.md` §8,
+item 12. Trava em duas camadas: servidor (`conferirEdicaoContraTitulo`,
+novo em `titulos.ts`) e tela (campos desabilitados, com o motivo escrito).
+Destrava se todos os títulos do frete forem cancelados.
+
+**Decisão 2 — referência arquivada (cliente/caminhão/motorista) é aceita na
+edição quando o id não muda.** `normalizarEntrada` recusa arquivado nas
+quatro referências desde a tarefa 7 do item 2, com a premissa escrita no
+próprio código: "aqui é sempre a criação de uma referência NOVA". Sem
+ajuste, arquivar um cliente travaria a edição de **todo** frete antigo
+dele, mesmo para corrigir outro campo. Passa a recusar arquivado só quando
+o id mudou em relação ao que já estava gravado — mesmo espírito do
+precedente de `veiculo_habitual_id` que o próprio comentário já cita. O
+comentário de `normalizarEntrada` será reescrito na construção da tarefa,
+não hoje (é comentário de código, muda junto do código).
+
+**Terceiro ponto, sem decisão necessária — resolução de município.**
+`resolverMunicipio` roda de novo a cada edição, mesmo com o texto
+inalterado; confirmado que não precisa de um desvio "só resolve se
+mudou", porque é função pura contra tabela fixa — mesmo texto, mesmo
+resultado, sempre. Raciocínio completo registrado no plano, para não ser
+reaberto por dúvida se alguém ler o código e estranhar a ausência do
+desvio.
+
+Desenho completo (como a tela sabe o modo, as duas travas, a pré-seleção
+pelos três pills) na Tarefa 4 do plano, substituindo o esboço anterior.
+
+Próximo: Tarefa 4 do item 4 — Lançar frete ganha edição e pré-seleção.
+
+---
+
 ## 22/08/2026 — tarefa 3 do item 4: detalhe do frete
 
 Nova rota `src/app/(app)/fretes/[id]/page.tsx` — server component, busca

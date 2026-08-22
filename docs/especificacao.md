@@ -1079,6 +1079,17 @@ que excluem o frete.
     Lucro sem despesa e R$/km sem km mostram convite; com dado parcial, exibem a
     cobertura.
 11. Cobrança marcada como boleto não gera pendência nem ação de cobrar.
+12. **Frete com título ativo trava a edição de `valor` e `cliente_id`** — são
+    os dois campos que o título copia do serviço ao nascer (`TituloReceber.
+    valor`/`cliente_id`, "Já recebi"); deixar os dois livres deixaria o frete
+    dizer um valor e o título registrar outro, sem nada acusar a diferença.
+    Os demais campos (caminhão, motorista, data, origem, destino, carga, km)
+    continuam livres — não têm reflexo no título. Destrava quando todos os
+    títulos do frete estão cancelados (mesmo critério de "título ativo" do
+    §7): sem título ativo, não há dinheiro amarrado ao valor antigo. Para
+    corrigir com o título ainda ativo, o caminho é estornar — item 6, ainda
+    não construído. Decisão do fundador, 22/08/2026, achada ao planejar a
+    edição de frete (item 4, tarefa 4).
 
 ---
 

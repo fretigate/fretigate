@@ -393,26 +393,136 @@ aceito para a tela de Fretes inteira em 09/08/2026 (`CLAUDE.md` §8).
 ## Tarefa 4 — Lançar frete ganha edição e pré-seleção
 
 `TelaLancarFrete.tsx`/`fretes/novo/page.tsx` (item 3) só sabem **criar**,
-sempre pré-preenchidos com o último serviço da empresa. Duas capacidades
-novas, no mesmo arquivo por tocarem a mesma tela:
+sempre pré-preenchidos com o último serviço da empresa. `editarServico`
+(`src/lib/servicos/servicos.ts`) já existe desde o item 3, mas nunca foi
+chamado por nenhuma tela — esta tarefa é a primeira vez que o caminho de
+edição fica alcançável pela interface, e isso muda premissas que o código
+de criação escreveu quando só existia um caminho. Duas capacidades novas,
+mais dois achados de projeto — tudo no mesmo arquivo por tocarem a mesma
+tela.
 
-**Edição** — rota nova `src/app/(app)/fretes/[id]/editar/page.tsx`, mesmo
-padrão de `clientes/[id]/editar`. Carrega o `Servico` por id, passa os
-valores dele (não "último lançado") para `TelaLancarFrete`, que ganha uma
-prop `servicoId?` — presente: salvar chama `editarServico` e volta para
-`/fretes/[id]` (sem aviso "Já recebi", que é só de criação); ausente:
-comportamento de hoje, sem mudança.
+### Como a tela sabe o modo
 
-**Pré-seleção** — aprovada (ver "Decisões do fundador", item 1).
-`fretes/novo` aceita `?cliente=<id>` / `?caminhao=<id>` / `?motorista=<id>`;
-quando presente, substitui o pré-preenchimento de "último lançado" **só
-naquele campo** (os outros dois continuam vindo do último serviço). O
-identificador da URL é resolvido pelo `buscar<Entidade>` já escopado por
-`db(empresaId)` (mesma função que `criarServico`/`normalizarEntrada` já
-usam) antes de virar valor pré-preenchido — nunca usado direto
-(`CLAUDE.md` §3); id que não pertence à empresa, ou de registro arquivado,
-cai no mesmo comportamento de hoje (nenhuma pré-seleção, campo vazio).
-Usado pelos três pills da Tarefa 6.
+`TelaLancarFrete` ganha uma prop nova, `edicao?`, com o id do frete e os
+campos que hoje nascem vazios na criação (`destinoTexto`, `cargaTexto`,
+`km`, `valorCentavos`, `dataServico`) — presente, é edição; ausente, é
+criação, sem mudança de comportamento. Fica separada de `padrao` (que
+continua servindo só ao pré-preenchimento por "último frete", usado nos
+dois modos) para não sobrecarregar o significado de uma prop com dois
+papéis diferentes.
+
+Mesmo padrão já usado em `FormularioCliente.tsx`/`editarClienteAction`
+(`ehEdicao = cliente !== undefined`, `acao = ehEdicao ?
+editarClienteAction.bind(null, cliente.id) : criarClienteAction`, botão
+"Salvar alterações"): `editarServicoAction` (novo, mesmo arquivo de
+`criarServicoAction`) recebe `servicoId` como primeiro argumento, o mesmo
+`comoUsuario` de sempre; a tela troca `useActionState(criarServicoAction,
+...)` por `useActionState(edicao ? editarServicoAction.bind(null,
+edicao.servicoId) : criarServicoAction, ...)`. Botão vira "Salvar
+alterações" (mesmo texto que Clientes já usa). Ao salvar, redireciona para
+`/fretes/[id]` (detalhe) — nunca para `/fretes?criado=`, que é o aviso
+"Já recebi" e é só de criação.
+
+Rota nova `src/app/(app)/fretes/[id]/editar/page.tsx`, mesmo padrão de
+`clientes/[id]/editar`: carrega `buscarServicoComTitulos` (Tarefa 1) —
+`notFound()` se não existir ou estiver arquivado —, monta `padrao` com os
+valores do próprio `Servico` (não "último lançado") e `edicao` com o
+resto.
+
+### Município — sem caso especial
+
+`normalizarEntrada` (`servicos.ts`) roda para editar exatamente como roda
+para criar: resolve `origem_texto`/`destino_texto` de novo, sempre, mesmo
+que o texto não tenha mudado. **Decisão: não construir um desvio "só
+resolve se o texto mudou".** `resolverMunicipio` é função pura contra uma
+tabela fixa (a base do IBGE) — mesmo texto, mesmo resultado, sempre; re-
+resolver um texto inalterado é indistinguível, na prática, de pular a
+resolução. A única situação em que os dois caminhos dariam resultado
+diferente é a base de municípios mudar entre a criação e a edição do
+mesmo frete — o que hoje não acontece (dado fixo, `CLAUDE.md` §9) — e,
+se um dia acontecer (correção de nome de município, por exemplo), o
+comportamento certo É re-resolver com o dado novo, não preservar uma
+resolução desatualizada. Decisão do fundador, 22/08/2026: concorda, sem
+caso especial, com este raciocínio registrado para não ser reaberto por
+dúvida.
+
+### As quatro conferências de empresa — referência arquivada é aceita quando não muda
+
+`normalizarEntrada` confere cliente/tipo/caminhão/motorista contra a
+empresa e recusa qualquer um arquivado (`CLAUDE.md` §3) — construído
+quando só existia o caminho de criação, e o próprio comentário do código
+registra a premissa: "aqui é sempre a criação de uma referência NOVA".
+Essa premissa deixa de valer nesta tarefa.
+
+**O caso real:** um cliente é arquivado; semanas depois é preciso corrigir
+um erro de digitação na carga de um frete antigo daquele mesmo cliente.
+Reusar `normalizarEntrada` sem ajuste bloquearia esse salvar inteiro —
+"Selecione um cliente válido" — mesmo sem tocar no campo Cliente, porque o
+id (que sempre viaja no formulário, tocado ou não) não passa mais na
+checagem de arquivado.
+
+**Decisão do fundador, 22/08/2026: aceitar a referência antiga sem exigir
+troca.** `normalizarEntrada` passa a receber o `Servico` atual (nulo na
+criação); para cliente/caminhão/motorista, a checagem de "não arquivado"
+só roda quando o id **mudou** em relação ao que já estava gravado. Trocar
+para uma referência diferente continua exigindo uma ativa, igual à
+criação; manter a que já existia continua aceita mesmo arquivada — mesmo
+espírito do precedente de `veiculo_habitual_id` (`src/lib/servicos/
+motoristas.ts`) que o comentário atual já cita, agora também aplicado
+aqui. O comentário de `normalizarEntrada` é reescrito nesta tarefa para
+não afirmar mais "sempre uma referência nova".
+
+### Frete com título já lançado
+
+`criarTituloJaRecebi` copia `valor` e `cliente_id` do `Servico` na hora de
+criar o título e nunca mais sincroniza. A especificação (§8.5) já dizia
+que "título pago não é editado", mas nada cobria editar o **frete por
+trás** de um título já lançado — deixar os dois campos livres permitiria
+o frete mostrar um valor e o título registrar outro, sem nada acusar a
+divergência.
+
+**Decisão do fundador, 22/08/2026, registrada em `docs/especificacao.md`
+§8, item 12: `valor` e `cliente_id` travam quando o frete tem título
+ativo** (mesmo critério de "ativo" do §7: não arquivado e `status !==
+"cancelado"` — hoje, na prática, todo título existente é sempre "pago",
+único caminho é "Já recebi"). Os outros sete campos (caminhão, motorista,
+data, origem, destino, carga, km) continuam livres — não têm reflexo em
+`TituloReceber`. Destrava se todos os títulos do frete estiverem
+cancelados.
+
+**Trava em duas camadas, não só na tela.** Servidor:
+`conferirEdicaoContraTitulo` (novo, `src/lib/servicos/titulos.ts` — é onde
+mora a definição de "título ativo" e `criarTituloJaRecebi`, não em
+`servicos.ts`, que não conhece `TituloReceber`) compara `valor`/
+`cliente_id` recebidos contra o `Servico` atual quando existe título
+ativo, e recusa a diferença — chamada por `editarServicoAction` antes de
+`editarServico`. Tela: os dois campos ficam desabilitados (`LinhaRecolhida`
+do Cliente sem `onClick`; o toque no valor do cabeçalho não abre o
+teclado), com uma linha explicando o motivo e o caminho — "Frete já
+recebido — para alterar valor ou cliente, estorne o título" (texto sujeito
+a ajuste do Design; estorno é o item 6, ainda não construído, então hoje
+não há link nenhum atrás dessa frase, só a explicação). Sem a trava do
+servidor, desabilitar só a tela seria proteção de aparência — um pedido
+formado por fora do formulário chegaria do mesmo jeito.
+
+### Pré-seleção pelos três pills
+
+Aprovada (ver "Decisões do fundador", item 1, no topo deste plano).
+`fretes/novo` aceita `?cliente=<id>` / `?caminhao=<id>` / `?motorista=<id>`
+via `searchParams` (mesmo padrão de `fretes/page.tsx`,
+`clientes/novo/page.tsx`); quando presente, substitui o pré-preenchimento
+de "último lançado" **só naquele campo** (os outros dois continuam vindo
+do último serviço). O identificador da URL é resolvido pelo
+`buscar<Entidade>` já escopado por `db(empresaId)` (mesma função que
+`criarServico`/`normalizarEntrada` já usam) antes de virar valor
+pré-preenchido — nunca usado direto (`CLAUDE.md` §3; achado do `/revisar`
+na Tarefa 2: parâmetro de URL que vira consulta precisa ser validado). Id
+que não pertence à empresa, ou de registro arquivado, cai no mesmo
+comportamento de hoje (nenhuma pré-seleção, campo vazio). Usado pelos três
+pills da Tarefa 6.
+
+Não interage com o modo edição — são rotas diferentes (`/fretes/novo` com
+`?cliente=` vs. `/fretes/[id]/editar`), nunca as duas ao mesmo tempo.
 
 ---
 
@@ -518,5 +628,14 @@ fatia inteira.
 - Fluxo completo no navegador: lançar frete → ver na lista → abrir
   detalhe → editar → arquivar; trocar ordenação nas três listas de
   cadastro; abrir os três perfis e conferir resumo/histórico.
+- **Tarefa 4, casos que só existem porque a edição virou alcançável:**
+  editar um frete sem título (tudo livre, inclusive valor e cliente);
+  clicar "Já recebi" e então tentar editar esse mesmo frete (valor e
+  cliente travados na tela **e** recusados se forçados por fora dela);
+  arquivar um cliente/caminhão/motorista e editar um frete antigo dele sem
+  trocar essa referência (salva); tentar trocar essa mesma referência por
+  outra arquivada (recusa, igual à criação); os três `?cliente=`/
+  `?caminhao=`/`?motorista=` em `/fretes/novo`, com id válido, de outra
+  empresa e inexistente.
 - Nenhum cronômetro-portão nesta fatia — a meta dos 30 segundos é do
   lançamento (item 3), não desta leitura.
