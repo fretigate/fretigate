@@ -1,4 +1,8 @@
+import { z } from "zod";
 import { exigirSessao } from "@/lib/auth/sessao";
+import { buscarCaminhao } from "@/lib/servicos/caminhoes";
+import { buscarCliente } from "@/lib/servicos/clientes";
+import { buscarMotorista } from "@/lib/servicos/motoristas";
 import {
   buscarUltimoServico,
   listarCaminhoesPorUsoRecente,
@@ -11,19 +15,60 @@ import { nomeCaminhao, TIPOS_VEICULO } from "@/lib/utils/caminhao";
 import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { TelaLancarFrete } from "./TelaLancarFrete";
 
+const SCHEMA_ID = z.string().uuid();
+
+/**
+ * Resolve um id de pré-seleção vindo da URL (Tarefa 4) contra a empresa da
+ * sessão — nunca usado direto (`CLAUDE.md` §3; achado do `/revisar` na
+ * Tarefa 2: parâmetro de URL que vira consulta precisa ser validado). Id
+ * malformado, de outra empresa, ou de registro arquivado: mesmo
+ * comportamento de nenhuma pré-seleção — cai no pré-preenchimento por
+ * "último frete", como hoje.
+ */
+async function resolverPreSelecao<T extends { id: string; arquivado_em: Date | null }>(
+  buscar: (empresaId: string, id: string) => Promise<T | null>,
+  empresaId: string,
+  idBruto: string | undefined,
+): Promise<string | null> {
+  if (!idBruto) return null;
+  const validado = SCHEMA_ID.safeParse(idBruto);
+  if (!validado.success) return null;
+  const entidade = await buscar(empresaId, validado.data);
+  return entidade && !entidade.arquivado_em ? entidade.id : null;
+}
+
 /**
  * Lançar frete — `docs/planos/item-3-lancamento-frete.md`, Tarefa 2. Chega
- * do (+) da barra, de qualquer tela (`docs/navegacao.md` linha 18).
+ * do (+) da barra, de qualquer tela (`docs/navegacao.md` linha 18), ou dos
+ * três pills "Lançar frete para/com este X" (item 4, Tarefa 6), com
+ * `?cliente=`/`?caminhao=`/`?motorista=` na URL.
  */
-export default async function Pagina() {
+export default async function Pagina({
+  searchParams,
+}: {
+  searchParams: Promise<{ cliente?: string; caminhao?: string; motorista?: string }>;
+}) {
   const sessao = await exigirSessao();
+  const parametros = await searchParams;
 
-  const [clientes, caminhoes, motoristas, cargasRecentes, ultimoServico] = await Promise.all([
+  const [
+    clientes,
+    caminhoes,
+    motoristas,
+    cargasRecentes,
+    ultimoServico,
+    clienteIdPreSelecionado,
+    veiculoIdPreSelecionado,
+    motoristaIdPreSelecionado,
+  ] = await Promise.all([
     listarClientesPorUsoRecente(sessao.empresaId),
     listarCaminhoesPorUsoRecente(sessao.empresaId),
     listarMotoristasPorUsoRecente(sessao.empresaId),
     listarCargasRecentes(sessao.empresaId),
     buscarUltimoServico(sessao.empresaId),
+    resolverPreSelecao(buscarCliente, sessao.empresaId, parametros.cliente),
+    resolverPreSelecao(buscarCaminhao, sessao.empresaId, parametros.caminhao),
+    resolverPreSelecao(buscarMotorista, sessao.empresaId, parametros.motorista),
   ]);
 
   /**
@@ -46,8 +91,17 @@ export default async function Pagina() {
     ? (ultimoServico?.motorista_id ?? null)
     : null;
 
-  const destinosIniciais = clienteIdValido
-    ? await listarDestinosDoCliente(sessao.empresaId, clienteIdValido)
+  /**
+   * A pré-seleção da URL (Tarefa 4) substitui o pré-preenchimento de
+   * "último frete" **só no campo que ela preenche** — os outros dois
+   * continuam vindo do último serviço, como hoje.
+   */
+  const clienteId = clienteIdPreSelecionado ?? clienteIdValido;
+  const veiculoId = veiculoIdPreSelecionado ?? veiculoIdValido;
+  const motoristaId = motoristaIdPreSelecionado ?? motoristaIdValido;
+
+  const destinosIniciais = clienteId
+    ? await listarDestinosDoCliente(sessao.empresaId, clienteId)
     : [];
 
   return (
@@ -73,9 +127,9 @@ export default async function Pagina() {
       cargasRecentes={cargasRecentes}
       destinosIniciais={destinosIniciais}
       padrao={{
-        clienteId: clienteIdValido,
-        veiculoId: veiculoIdValido,
-        motoristaId: motoristaIdValido,
+        clienteId,
+        veiculoId,
+        motoristaId,
         origemTexto: ultimoServico?.origem_texto ?? "",
       }}
     />

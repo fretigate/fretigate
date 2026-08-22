@@ -115,6 +115,40 @@ você escreve.** O padrão é o meu.
   **espera o anterior terminar** (`gh run view <id> --json status` até
   `completed`) antes do próximo — nunca dois em voo ao mesmo tempo, mesmo
   quando são de commits diferentes.
+- **"A regra vale para todos os itens de uma coleção" e "o código olha um
+  item da coleção" são duas afirmações diferentes — a segunda não implica a
+  primeira, mesmo quando a regra está escrita certa.** Padrão a procurar de
+  propósito, não achado isolado: apareceu pelo menos duas vezes, as duas em
+  dinheiro ou confiabilidade de operação, nunca em código onde o erro
+  passaria despercebido sem custo.
+
+  A primeira: o `/onde-paramos` checava `gh run list --branch main --limit
+  1` — só o run **mais recente** —, e um push seguinte tirava um commit
+  vermelho da posição "mais recente" antes de alguém checar aquele commit
+  (`docs/diario.md`, 20/08/2026: `e183de5` ficou vermelho um dia inteiro,
+  sem ninguém notar, porque `e5fd7dc` e `c0a5773` já tinham runs próprios).
+  Corrigido para conferir os últimos 20 runs, não só o topo —
+  `.claude/commands/onde-paramos.md`, "Por que 20, e não 1."
+
+  A segunda: a primeira versão da trava de edição de frete com título
+  (item 4, tarefa 4, `src/lib/servicos/titulos.ts`,
+  `editarServicoComProtecaoDeTitulo`) decidia se um frete tinha "título
+  ativo" chamando `buscarTituloPorServico` — que devolve **um** título
+  (`findFirst`). A regra escrita já dizia "quando **todos** os títulos do
+  frete estiverem cancelados" (`docs/especificacao.md` §8, item 12); o
+  código checava só o primeiro que o banco devolvesse. Com dois títulos no
+  mesmo frete (um cancelado, um ativo — possível pelo schema desde o item
+  3), a checagem podia examinar o cancelado e destravar por engano, valor
+  e cliente livres com dinheiro de verdade amarrado a eles. Corrigido para
+  `titulos_receber: { none: {...} } }` — a ausência verificada sobre a
+  relação inteira, não sobre uma linha escolhida por acaso.
+
+  **O que procurar, da próxima vez:** todo código que decide algo do tipo
+  "existe X"/"não existe X"/"todos são Y" a partir de uma coleção que PODE
+  ter mais de um item — `findFirst`, `.limit(1)`, "o mais recente", "o
+  primeiro que bater" — merece a pergunta explícita: a regra fala de UM
+  item ou de TODOS eles? Se for de todos, o código precisa examinar todos,
+  não confiar que o primeiro que aparecer representa o resto.
 - Se auditassem esse código para comprar a empresa, não teria nada para ter vergonha.
 
 ### Como executar

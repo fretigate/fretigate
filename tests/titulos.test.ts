@@ -4,6 +4,7 @@ import { Client } from "pg";
 import {
   criarTituloJaRecebi,
   buscarTituloPorServico,
+  editarServicoComProtecaoDeTitulo,
   listarServicosComSituacao,
   buscarServicoComTitulos,
   resumoFinanceiroDoCliente,
@@ -16,6 +17,7 @@ import {
   arquivarServico,
   resumoDoCaminhao,
   resumoDoMotorista,
+  type DadosServico,
   type Periodo,
 } from "@/lib/servicos/servicos";
 import { criarCliente } from "@/lib/servicos/clientes";
@@ -44,7 +46,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 26;
+const CONFERENCIAS_ESPERADAS = 33;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -318,6 +320,121 @@ describe("3. um título integral por frete — achado da revisão do fundador", 
       [e.servicoId],
     );
     expect(rows[0].n).toBe(1);
+    conferencias++;
+  });
+});
+
+describe("3b. editarServicoComProtecaoDeTitulo — trava valor e cliente do frete com título ativo (item 4, tarefa 4)", () => {
+  /** `e.servicoId` já existe (`tipo_operacao_id`/`cliente_id`/`data_servico`/`valor` de `criarEmpresaDeTeste`). */
+  function dadosParaEditar(e: EmpresaDeTeste, extra: Partial<DadosServico> = {}): DadosServico {
+    return {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: e.valorServico,
+      ...extra,
+    };
+  }
+
+  it("sem título nenhum, edita valor e cliente livremente", async () => {
+    const e = await criarEmpresaDeTeste("w1");
+    const outroCliente = await criarCliente(e.empresaId, { nome: "Outro" });
+    const editado = await editarServicoComProtecaoDeTitulo(
+      e.empresaId,
+      e.servicoId,
+      dadosParaEditar(e, { cliente_id: outroCliente.id, valor: e.valorServico + 999 }),
+    );
+    expect(editado.cliente_id).toBe(outroCliente.id);
+    expect(editado.valor).toBe(e.valorServico + 999);
+    conferencias++;
+  });
+
+  it("com título ativo, recusa mudar o valor — a gravação nem chega a acontecer", async () => {
+    const e = await criarEmpresaDeTeste("w2");
+    await criarTituloJaRecebi(e.empresaId, e.servicoId);
+    await expect(
+      editarServicoComProtecaoDeTitulo(e.empresaId, e.servicoId, dadosParaEditar(e, { valor: e.valorServico + 1 })),
+    ).rejects.toThrow(/valor/);
+    const depois = await buscarServicoComTitulos(e.empresaId, e.servicoId);
+    expect(depois?.valor).toBe(e.valorServico);
+    conferencias++;
+  });
+
+  it("com título ativo, recusa trocar o cliente", async () => {
+    const e = await criarEmpresaDeTeste("w3");
+    const outroCliente = await criarCliente(e.empresaId, { nome: "Outro" });
+    await criarTituloJaRecebi(e.empresaId, e.servicoId);
+    await expect(
+      editarServicoComProtecaoDeTitulo(e.empresaId, e.servicoId, dadosParaEditar(e, { cliente_id: outroCliente.id })),
+    ).rejects.toThrow(/cliente/);
+    conferencias++;
+  });
+
+  it("com título ativo, aceita quando valor e cliente ficam iguais — os outros sete campos continuam livres", async () => {
+    const e = await criarEmpresaDeTeste("w4");
+    await criarTituloJaRecebi(e.empresaId, e.servicoId);
+    const editado = await editarServicoComProtecaoDeTitulo(
+      e.empresaId,
+      e.servicoId,
+      dadosParaEditar(e, { carga_texto: "Mudou só a carga" }),
+    );
+    expect(editado.carga_texto).toBe("Mudou só a carga");
+    expect(editado.valor).toBe(e.valorServico);
+    conferencias++;
+  });
+
+  it("título cancelado destrava — não há mais dinheiro amarrado ao valor antigo", async () => {
+    const e = await criarEmpresaDeTeste("w5");
+    await plantarTitulo(e, e.servicoId, {
+      valor: e.valorServico,
+      valorRecebido: e.valorServico,
+      status: "cancelado",
+      integral: true,
+      dataPagamento: new Date(),
+    });
+    const editado = await editarServicoComProtecaoDeTitulo(
+      e.empresaId,
+      e.servicoId,
+      dadosParaEditar(e, { valor: e.valorServico + 1 }),
+    );
+    expect(editado.valor).toBe(e.valorServico + 1);
+    conferencias++;
+  });
+
+  /**
+   * Prova o achado do `/revisar`: a primeira versão decidia "ativo" olhando
+   * só um título (`buscarTituloPorServico`, `findFirst`) — com dois títulos
+   * no mesmo frete, um cancelado e outro ativo, o `findFirst` podia pegar o
+   * cancelado e destravar por engano, mesmo a regra escrita já dizendo
+   * "todos". Dois não-integrais, de propósito — o índice único
+   * (`titulo_receber_um_integral_por_servico`) só limita título integral.
+   */
+  it("dois títulos no mesmo frete (um cancelado, um ativo) continuam travando — não basta olhar só um", async () => {
+    const e = await criarEmpresaDeTeste("w6");
+    await plantarTitulo(e, e.servicoId, {
+      valor: e.valorServico,
+      valorRecebido: e.valorServico,
+      status: "cancelado",
+      integral: false,
+      dataPagamento: new Date(),
+    });
+    await plantarTitulo(e, e.servicoId, {
+      valor: e.valorServico,
+      valorRecebido: null,
+      status: "aberto",
+      integral: false,
+    });
+    await expect(
+      editarServicoComProtecaoDeTitulo(e.empresaId, e.servicoId, dadosParaEditar(e, { valor: e.valorServico + 1 })),
+    ).rejects.toThrow(/valor/);
+    conferencias++;
+  });
+
+  it("recusa frete que não existe", async () => {
+    const e = await criarEmpresaDeTeste("w7");
+    await expect(
+      editarServicoComProtecaoDeTitulo(e.empresaId, randomUUID(), dadosParaEditar(e)),
+    ).rejects.toThrow("Frete não encontrado.");
     conferencias++;
   });
 });

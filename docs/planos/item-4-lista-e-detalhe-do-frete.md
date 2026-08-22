@@ -179,6 +179,38 @@ padrão nos perfis de cliente/caminhão/motorista, e é o mesmo aqui.
   `status_operacional` (só título). O pedido ao Design acima vale também
   para esta tela, não só lista e histórico.
 
+- **Estado "travado" da tela de Lançar frete (Cliente e valor, quando o
+  frete já tem título ativo) não tem cor própria no inventário.** Achado do
+  `/revisar` na Tarefa 4: construído com o que já existia mais perto —
+  `disabled:bg-secundario-desabilitado`/`disabled:text-tinta-desabilitada`
+  (`docs/componentes.md`, hoje só para campo de texto desabilitado, não
+  para linha recolhida) na linha Cliente, e `text-white/70` no valor sobre
+  o cartão escuro (sem correspondência na escada de opacidade de
+  `docs/estilo.md`, que vai de rótulo `.45` a nome da empresa `.82`, nem no
+  único desabilitado sobre escuro do inventário, `rgba(255,255,255,.55)`,
+  variante 05 de `PilulaSobreEscuro`). Pedido ao Design: uma cor própria
+  para "linha recolhida desabilitada" e para "número-herói travado" — hoje
+  nenhum dos dois existe em `docs/componentes.md`/`docs/estilo.md`.
+
+- **O texto do aviso de trava ("Frete já recebido — para alterar valor ou
+  cliente, estorne o título.") não está no inventário de avisos, e usa
+  "estornar" — palavra fora do vocabulário de `CLAUDE.md` §8 e de
+  `docs/especificacao.md`.** Achado do `/revisar` na Tarefa 4. Aponta para
+  uma ação (estorno) que ainda não existe no produto — só chega no item 6.
+  Construído com este texto por não haver outro definido; pedido ao
+  Design: rótulo e redação finais, coerentes com o vocabulário do produto.
+
+  **Ampliado no segundo `/revisar`:** o mesmo pedido vale para as duas
+  mensagens que o servidor devolve quando a trava é forçada por fora da
+  tela ("Frete já recebido: não é possível trocar o cliente/alterar o
+  valor. Estorne o título para corrigir.",
+  `src/lib/servicos/titulos.ts`) — usam "estornar" pelo mesmo motivo, e
+  também não estão no inventário. Aparecem no campo errado
+  (`estado.erros.clienteId`/`valorCentavos`), mesmo mecanismo genérico de
+  erro de campo que o resto do formulário já usa, então não pedem entrada
+  própria no inventário de avisos — só a mesma revisão de vocabulário do
+  parágrafo acima, quando o Design responder.
+
 ---
 
 ## Tarefa 1 — Backend: situação financeira derivada e leituras em lote
@@ -490,20 +522,92 @@ data, origem, destino, carga, km) continuam livres — não têm reflexo em
 `TituloReceber`. Destrava se todos os títulos do frete estiverem
 cancelados.
 
-**Trava em duas camadas, não só na tela.** Servidor:
-`conferirEdicaoContraTitulo` (novo, `src/lib/servicos/titulos.ts` — é onde
-mora a definição de "título ativo" e `criarTituloJaRecebi`, não em
-`servicos.ts`, que não conhece `TituloReceber`) compara `valor`/
-`cliente_id` recebidos contra o `Servico` atual quando existe título
-ativo, e recusa a diferença — chamada por `editarServicoAction` antes de
-`editarServico`. Tela: os dois campos ficam desabilitados (`LinhaRecolhida`
-do Cliente sem `onClick`; o toque no valor do cabeçalho não abre o
-teclado), com uma linha explicando o motivo e o caminho — "Frete já
-recebido — para alterar valor ou cliente, estorne o título" (texto sujeito
-a ajuste do Design; estorno é o item 6, ainda não construído, então hoje
-não há link nenhum atrás dessa frase, só a explicação). Sem a trava do
+**Trava em duas camadas, não só na tela.** Tela: os dois campos ficam
+desabilitados (`LinhaRecolhida` do Cliente sem `onClick`; o toque no valor
+do cabeçalho não abre o teclado), com uma linha explicando o motivo e o
+caminho — "Frete já recebido — para alterar valor ou cliente, estorne o
+título" (texto sujeito a ajuste do Design, ver "O que precisa chegar ao
+Design"; estorno é o item 6, ainda não construído). Sem a trava do
 servidor, desabilitar só a tela seria proteção de aparência — um pedido
 formado por fora do formulário chegaria do mesmo jeito.
+
+**A trava do servidor é do `UPDATE`, não de uma consulta antes dele —
+achado do primeiro `/revisar`.** A primeira versão desta tarefa fazia
+`conferirEdicaoContraTitulo` (uma checagem separada) e só DEPOIS chamava
+`editarServico`: um "Já recebi" concorrente entre as duas chamadas criava
+o título com o valor antigo e a edição em andamento trocava o valor por
+cima, sem nada acusar — a mesma corrida que a trava existe para fechar, só
+que um nível abaixo. `editarServicoComProtecaoDeTitulo`
+(`src/lib/servicos/titulos.ts`) grava a condição dentro do próprio
+`UPDATE`, via `condicaoDeGravacao` (`editarServico`, `src/lib/servicos/
+servicos.ts`): OU o frete não muda `cliente_id`/`valor`, OU não existe
+título ativo NO INSTANTE da gravação — as duas coisas na mesma instrução
+do banco, sem janela entre "checar" e "gravar".
+
+**A janela que sobra, decisão do fundador, 22/08/2026 — fechar só o lado
+da edição agora, com a sequência exata registrada, não como "risco
+aceito" genérico.** `criarTituloJaRecebi` lê `servico.valor`
+(`buscarServico`) ANTES de gravar o título — se essa leitura acontecer um
+instante antes desta gravação committar, e o `INSERT` do título só
+committar DEPOIS, o título nasce com o valor ANTIGO. Sequência exata: (1)
+"Já recebi" lê `servico.valor` = 100; (2) `editarServicoComProtecaoDeTitulo`
+grava `valor` = 200 — passa, porque ainda não existe título nenhum no
+banco; (3) o `INSERT` de `criarTituloJaRecebi` completa, gravando
+`valor: 100` (o que foi lido no passo 1, não o que está gravado agora).
+Fechar por completo exigiria travar a MESMA linha do frete também dentro
+de `criarTituloJaRecebi` (item 3, já em produção) — fora do escopo desta
+tarefa; revisita se essa janela um dia se mostrar mais que teórica.
+
+**"Ativo" é verificado sobre TODOS os títulos do frete, não o primeiro que
+aparecer — achado do primeiro `/revisar`.** A primeira versão usava
+`buscarTituloPorServico` (devolve um título só) para decidir "ativo"; com
+dois títulos no mesmo frete (um cancelado, um ativo — possível desde já
+pelo schema, mesmo a interface de hoje só criando um por vez),
+`findFirst` podia pegar o cancelado e destravar por engano — a regra
+escrita já dizia "todos os títulos", o código olhava um só.
+`titulos_receber: { none: {...} } }` (Prisma, sobre a relação inteira)
+fecha isso. **Mesma classe do achado que corrigiu o `/onde-paramos`**
+(`.claude/commands/onde-paramos.md`, "Por que 20, e não 1." — checar só
+um item de uma coleção quando a regra vale para todos ela): a segunda vez
+que essa classe aparece neste projeto, as duas em dinheiro/confiabilidade
+de operação — vale procurar de propósito toda vez que um código decidir
+algo "existe X" a partir de uma coleção que pode ter mais de um item.
+Nomeado como padrão em `CLAUDE.md` §2.
+
+**Lacuna registrada, não corrigida agora — achado do primeiro `/revisar`:**
+toda edição regrava `tipo_operacao_id` com o tipo ativo do momento
+(mesma busca que a criação já fazia); um frete de tipo diferente do ativo
+teria o tipo trocado em silêncio ao editar qualquer outro campo. Hoje
+inalcançável — cada empresa nasce com um único tipo ativo
+(`docs/especificacao.md` §9, "MVP entrega só a experiência de
+transportadora de carga") — revisita quando o segundo tipo (guincho/
+reboque) existir.
+
+**Duas lacunas registradas, não corrigidas agora — achados do segundo
+`/revisar`:**
+
+- **`km` no modo edição pode virar outro número se não for múltiplo de
+  1000.** `editar/page.tsx` converte `servico.km` (metros) de volta para o
+  texto do campo com `String(servico.km / 1000)`; um `km` que não seja
+  múltiplo exato de 1000 chegaria com casa decimal, e o filtro do próprio
+  campo (`km.replace(/[^\d]/g, "")`, `TelaLancarFrete.tsx`) apaga a vírgula
+  no primeiro toque, trocando o número. Hoje inalcançável — o único
+  caminho que grava `km` é a criação, sempre `× 1000` exato
+  (`fretes/acoes.ts`) — revisita se um caminho futuro (importação, edição
+  de km em outra unidade) puder gravar um valor não múltiplo de 1000.
+
+- **Arquivar um frete no exato instante em que ele está sendo editado não
+  é impedido.** A recusa de frete arquivado (`editarServico`) é uma
+  consulta (`findUnique`) separada, antes do `UPDATE` — diferente da trava
+  de título, que é a condição do próprio `UPDATE` (ver acima). Um
+  arquivamento concorrente, bem no meio dessas duas chamadas, ainda
+  gravaria a edição. Não é a mesma classe de risco do título (não é
+  dinheiro, e "nada é apagado" — `CLAUDE.md` §7 — então arquivar não
+  destrói o que a edição gravou); janela mais estreita que a de "Já
+  recebi" (exige o mesmo operador arquivando e editando o mesmo frete ao
+  mesmo tempo). Revisita se um dia dois operadores da mesma empresa
+  puderem mexer no mesmo frete ao mesmo tempo na prática (`CLAUDE.md`
+  §10, hoje até 3 usuários por empresa no plano pago).
 
 ### Pré-seleção pelos três pills
 
@@ -517,8 +621,14 @@ do último serviço). O identificador da URL é resolvido pelo
 `criarServico`/`normalizarEntrada` já usam) antes de virar valor
 pré-preenchido — nunca usado direto (`CLAUDE.md` §3; achado do `/revisar`
 na Tarefa 2: parâmetro de URL que vira consulta precisa ser validado). Id
-que não pertence à empresa, ou de registro arquivado, cai no mesmo
-comportamento de hoje (nenhuma pré-seleção, campo vazio). Usado pelos três
+malformado, que não pertence à empresa, ou de registro arquivado, cai no
+pré-preenchimento normal por "último frete" — o mesmo que já valeria numa
+visita sem parâmetro nenhum, nunca um campo mais vazio do que uma visita
+comum daria. **Corrigido nesta seção, achado do segundo `/revisar`:** a
+redação original dizia "campo vazio", que não bate com o que a Tarefa 2
+(`clienteIdValido` etc.) já fazia antes desta tarefa existir — só o campo
+sem pré-seleção alguma já vem pré-preenchido por último frete; um id ruim
+na URL não devia deixar a tela pior do que ela já era. Usado pelos três
 pills da Tarefa 6.
 
 Não interage com o modo edição — são rotas diferentes (`/fretes/novo` com

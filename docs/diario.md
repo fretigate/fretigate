@@ -6,6 +6,91 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 22/08/2026 — tarefa 4 do item 4: lançar frete ganha edição e pré-seleção
+
+Rota nova `src/app/(app)/fretes/[id]/editar/page.tsx`; `TelaLancarFrete`
+ganha a prop `edicao?` (id do frete + os campos que a criação não tinha) e
+reusa o mesmo `<form>` para os dois modos — `editarServicoAction`
+(`.bind(null, servicoId)`, mesmo padrão de `editarClienteAction`) no lugar
+de `criarServicoAction`. `fretes/novo` ganha `?cliente=`/`?caminhao=`/
+`?motorista=`, resolvidos e validados contra a empresa antes de virar
+pré-preenchimento (mesmo cuidado do achado da Tarefa 2 com parâmetro de
+URL). Botão e cabeçalho trocam de texto no modo edição ("Salvar
+alterações"/"Editar frete").
+
+**Primeiro `/revisar`: quatro divergências, seis lacunas — três achados
+mudaram o desenho, não só o texto.**
+
+1. **Referência arquivada travava a edição inteira.** `normalizarEntrada`
+   recusava cliente/caminhão/motorista arquivado mesmo quando o campo não
+   tinha sido tocado — arquivar um cliente travaria a edição de todo frete
+   antigo dele. Corrigido: recusa arquivado só quando o id muda em relação
+   ao que já estava gravado (mesmo espírito do `veiculo_habitual_id`).
+2. **Frete com título ativo podia divergir do valor recebido.** Não havia
+   trava nenhuma para editar `valor`/`cliente_id` de um frete já pago —
+   decisão do fundador, registrada em `docs/especificacao.md` §8, item 12:
+   trava os dois campos, os outros sete continuam livres.
+3. **A trava inicial (`conferirEdicaoContraTitulo`) era uma checagem
+   separada, antes da gravação — corrida real com "Já recebi" concorrente.**
+   Achado do próprio `/revisar`. Refeita como `editarServicoComProtecaoDeTitulo`
+   (`titulos.ts`): a condição vira parte do próprio `UPDATE`
+   (`condicaoDeGravacao`, `editarServico`), não uma consulta antes dele.
+   Decisão do fundador: fechar só o lado da edição agora — a janela que
+   sobra (`criarTituloJaRecebi` lendo o valor antigo um instante antes da
+   gravação) está registrada por escrito, sequência exata, no plano e no
+   código — não como "risco aceito" genérico.
+
+As outras: sincronizar `docs/componentes.md`/`docs/navegacao.md` com o
+rótulo novo e a rota de edição; `editarServico` passou a recusar frete
+arquivado (mesma mensagem de "não encontrado"). Três lacunas registradas
+para o Design (cor do estado travado, texto do aviso com "estornar" —
+palavra fora do vocabulário) e uma lacuna técnica (tipo_operacao_id
+inalcançável hoje, só um tipo ativo por empresa).
+
+**Segundo `/revisar`: quatro divergências de precisão de texto, cinco
+lacunas — nenhuma mudou comportamento, nada abriu terceiro passe
+(`CLAUDE.md` §2).** Citação errada duas vezes ("CLAUDE.md §2, por que 20 e
+não 1" — esse texto vive em `.claude/commands/onde-paramos.md`, não em
+CLAUDE.md; corrigido nos dois lugares que citavam errado); comentário no
+CLAUDE.md ainda nomeava `conferirEdicaoContraTitulo`, já substituída;
+plano dizia que pré-seleção inválida cai em "campo vazio", quando o código
+(certo) cai no pré-preenchimento normal por último frete. Lacunas: rótulo
+do cabeçalho ainda dizia "Lançar frete" no modo edição (corrigido — "Editar
+frete"); as duas mensagens de erro do servidor também usam "estornar"
+(mesmo pedido ao Design, ampliado); `km` não-múltiplo-de-1000 na edição e
+arquivamento concorrente durante edição — os dois registrados como lacuna,
+hoje inalcançáveis/janela mais estreita que a do título, nenhum dos dois é
+dinheiro nem isolamento entre empresas.
+
+**Padrão nomeado em `CLAUDE.md` §2, a pedido do fundador:** a mesma classe
+de erro ("a regra vale para todos os itens de uma coleção, o código olha
+um só") já tinha aparecido no `/onde-paramos` (checava só o run mais
+recente) — a segunda vez, agora em `conferirEdicaoContraTitulo`
+(`findFirst` em vez de checar todos os títulos). Registrado por escrito
+para ser procurado de propósito da próxima vez, sempre que um código
+decidir "existe X"/"todos são Y" a partir de uma coleção.
+
+**Verificação — local:** `npm run lint`, `npx tsc --noEmit`, `npm run
+build` — três verdes, depois de cada passe. `npm test` **local** — 290/290
+(278 anteriores + 12 novos: quatro em `servicos.test.ts` sobre referência
+arquivada aceita na edição, seis em `titulos.test.ts` sobre
+`editarServicoComProtecaoDeTitulo` — incluindo o caso de dois títulos, um
+cancelado e um ativo, que prova a correção do achado 3 acima — mais dois
+de robustez). Fluxo completo testado no navegador: lançar frete → editar
+sem título (todos os campos livres) → "Já recebi" → editar com título
+ativo (Cliente e valor travados na tela, com o motivo explicado) → forçar
+valor por fora do campo disabled → recusado pelo servidor, com a
+mensagem certa, nenhum dado gravado → editar só a carga com título ativo
+→ aceito. Pré-seleção por `?cliente=` testada com id válido, malformado e
+inexistente — sem quebrar em nenhum dos três. Dados de verificação
+arquivados no banco de desenvolvimento ao final. Esteira deste commit
+ainda não disparada — ver `/onde-paramos`.
+
+Próximo: Tarefa 5 do item 4 — Ordenações nas listas de cadastro, e o chip
+aparece.
+
+---
+
 ## 22/08/2026 — plano da tarefa 4 do item 4, detalhado: edição e pré-seleção
 
 `editarServico` existe desde o item 3 mas nunca foi chamado por nenhuma

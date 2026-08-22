@@ -15,7 +15,7 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 |---|---|---|
 | Início (dashboard) ✅ | Abrir o app · barra · voltar de qualquer detalhe | Pastilha A receber → Cobranças · Pastilha Vencido → Cobranças filtrado · Pendência de faturar → Fretes filtrado · Pendência de cobrança → Cobranças · Pendência de relatório → Relatório preenchido · Atalho Gerar relatório → Relatório · Atalho Importar fretes → Importar · Marca da empresa → Conta |
 | Fretes ✅ | Barra · pendência da dashboard · "ver todos" do perfil do cliente | Linha → Detalhe do frete · ⚠️ Nome do cliente na linha → Perfil do cliente (não construído — medido e revertido na Tarefa 2 do item 4: o alvo de toque do nome ficava abaixo do mínimo de 48px do `CLAUDE.md` §8 dentro do cartão de 78px; ver "O que precisa chegar ao Design" em `docs/planos/item-4-lista-e-detalhe-do-frete.md`) · Deslizar → marca recebido na hora · Chips → folhas de filtro |
-| (+) Lançar frete ✅ | Barra, de qualquer tela | Salvar → Fretes com o aviso do sistema · Linha recolhida → folha de busca (cliente, caminhão, motorista, origem, destino, carga) |
+| (+) Lançar frete ✅ | Barra, de qualquer tela · pílulas **Lançar frete para/com este cliente/caminhão/motorista** dos três perfis (item 4, Tarefa 6), chegando com o campo correspondente já preenchido | Salvar → Fretes com o aviso do sistema · Linha recolhida → folha de busca (cliente, caminhão, motorista, origem, destino, carga) |
 | Cobranças ✅ | Barra · pastilhas e pendências da dashboard · perfil do cliente | Linha → Detalhe da cobrança · Nome do cliente → Perfil do cliente · Cobrar no WhatsApp → conversa + cartão de retorno · Deslizar → folha de recebimento · Estado vazio → Relatório |
 | Mais ✅ | Barra | Cartão de identidade → Conta · CADASTROS: Clientes · Caminhões · Motoristas · FERRAMENTAS: Relatório · Importar fretes · AJUSTES: Novidades · Configurações · Conta · Sair da conta |
 
@@ -24,7 +24,8 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 
 | Tela | Chega de | Leva para |
 |---|---|---|
-| Detalhe do frete ✅ | Linha em Fretes · histórico do perfil do cliente | Faturar frete · Marcar recebido · Editar frete → Lançar frete preenchido · Arquivar · Ver relatório → Documento |
+| Detalhe do frete ✅ | Linha em Fretes · histórico do perfil do cliente | Faturar frete · Marcar recebido · Editar frete → Editar frete · Arquivar · Ver relatório → Documento |
+| Editar frete ✅ | Editar frete no detalhe (item 4, Tarefa 4) | Salvar alterações → volta para o detalhe do frete · com título ativo, Cliente e valor ficam travados (sem aviso "Já recebi", que é só da criação) |
 | Detalhe da cobrança ✅ | Linha em Cobranças | Marcar recebido / Receber o resto → folha de recebimento · Cobrar no WhatsApp → conversa · Ver relatório → Documento |
 | Relatório — montagem ✅ | Atalho e pendência da dashboard · estado vazio de Cobranças · perfil do cliente | Gerar relatório → Documento A4 |
 | Documento A4 ✅ | Gerar relatório · Ver relatório (frete ou cobrança) | Compartilhar no WhatsApp · Baixar PDF · Imprimir |

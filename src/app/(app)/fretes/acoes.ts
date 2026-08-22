@@ -13,7 +13,7 @@ import {
   criarServico,
   listarDestinosDoCliente,
 } from "@/lib/servicos/servicos";
-import { criarTituloJaRecebi } from "@/lib/servicos/titulos";
+import { criarTituloJaRecebi, editarServicoComProtecaoDeTitulo } from "@/lib/servicos/titulos";
 import { buscarMunicipios, type Municipio } from "@/lib/servicos/municipios";
 import { nomeCaminhao, TIPOS_VEICULO } from "@/lib/utils/caminhao";
 import { instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
@@ -147,6 +147,47 @@ export const criarServicoAction = comoUsuario(async (
   // (`docs/planos/item-3-lancamento-frete.md`, Tarefa 3) — não é dado
   // sensível, é o id do próprio frete que a empresa acabou de criar.
   redirect(`/fretes?criado=${servico.id}`);
+});
+
+const schemaServicoId = z.string().uuid();
+
+/**
+ * Edição de frete (item 4, Tarefa 4) — mesmo padrão de `editarClienteAction`:
+ * `servicoId` chega por `.bind(null, servicoId)` na tela, antes dos dois
+ * argumentos do `useActionState`. Sem aviso "Já recebi" (é só de criação) e
+ * sem `?criado=` — volta para o detalhe do próprio frete.
+ *
+ * `editarServicoComProtecaoDeTitulo` (`src/lib/servicos/titulos.ts`) grava o
+ * frete e, se ele tem título ativo, trava `valor`/`cliente_id` como parte da
+ * mesma gravação — não numa checagem à parte (`docs/especificacao.md` §8,
+ * item 12). A tela já desabilita os dois campos, mas quem garante de
+ * verdade é esta chamada, não a tela.
+ */
+export const editarServicoAction = comoUsuario(async (
+  sessao,
+  servicoId: string,
+  _estadoAnterior: EstadoServico,
+  formData: FormData,
+): Promise<EstadoServico> => {
+  const idValidado = schemaServicoId.safeParse(servicoId);
+  if (!idValidado.success) return { erroGeral: "Frete inválido." };
+
+  const lido = lerFormulario(formData);
+  if ("erro" in lido) return lido.erro;
+
+  const tipoAtivo = await buscarTipoOperacaoAtivo(sessao.empresaId);
+  if (!tipoAtivo) return { erroGeral: "Nenhum tipo de operação ativo. Fale com o suporte." };
+
+  try {
+    await editarServicoComProtecaoDeTitulo(sessao.empresaId, idValidado.data, {
+      ...lido.dados,
+      tipo_operacao_id: tipoAtivo.id,
+    });
+  } catch (erro) {
+    return erroDoServico(erro);
+  }
+
+  redirect(`/fretes/${idValidado.data}`);
 });
 
 export type ResultadoRapido =

@@ -4,6 +4,9 @@ import {
   buscarServico,
   CAMPOS_SERVICO,
   CHIPS_DE_HISTORICO,
+  CondicaoDeGravacaoFalhouError,
+  editarServico,
+  type DadosServico,
   type Periodo,
 } from "@/lib/servicos/servicos";
 
@@ -113,6 +116,93 @@ export async function criarTituloJaRecebi(empresaId: string, servicoId: string) 
       throw new Error("Este frete já tem título lançado.");
     }
     throw erro;
+  }
+}
+
+/**
+ * Frete com título ativo trava `valor` e `cliente_id` na edição
+ * (`docs/especificacao.md` §8, item 12) — os dois campos que o título
+ * copiou do frete ao nascer (`criarTituloJaRecebi`, acima) e nunca mais
+ * sincroniza. Deixar os dois livres permitiria o frete mostrar um valor e
+ * o título registrar outro, sem nada acusar a diferença.
+ *
+ * **A trava é do `UPDATE`, não de uma consulta antes dele** — achado do
+ * `/revisar` na Tarefa 4: uma primeira versão fazia `buscarTituloPorServico`
+ * e só DEPOIS chamava `editarServico`; um "Já recebi" concorrente entre as
+ * duas chamadas criava o título com o valor antigo e a edição em andamento
+ * trocava o valor por cima, sem nada acusar — a mesma corrida que a trava
+ * existe para fechar, só que um nível abaixo. Agora a condição
+ * (`condicaoDeGravacao`, `editarServico`, `src/lib/servicos/servicos.ts`) vai
+ * dentro do próprio `UPDATE`: OU o frete não muda `cliente_id`/`valor`, OU
+ * não existe título ativo NO INSTANTE da gravação — o banco resolve as duas
+ * coisas na mesma instrução, sem janela entre "checar" e "gravar".
+ *
+ * **A janela que sobra, por escrito — para quem investigar um dia saber
+ * onde olhar, não como "risco aceito" genérico.** `criarTituloJaRecebi` lê
+ * `servico.valor` (`buscarServico`) ANTES de gravar o título. Sequência
+ * exata que produz a divergência: (1) "Já recebi" lê `servico.valor` = 100;
+ * (2) esta função grava `valor` = 200 nesta mesma janela — passa, porque
+ * ainda não existe título nenhum no banco; (3) o `INSERT` de
+ * `criarTituloJaRecebi` completa, gravando `valor: 100` — o que foi lido no
+ * passo 1, não o que está no banco agora. Fechar isso por completo exigiria
+ * travar a MESMA linha do frete também dentro de `criarTituloJaRecebi`
+ * (item 3, já em produção) — fora do escopo desta tarefa. Decisão do
+ * fundador, 22/08/2026 (`docs/planos/item-4-lista-e-detalhe-do-frete.md`,
+ * Tarefa 4): fecha só o lado da edição agora; item 3 fica para quando essa
+ * janela justificar o custo de mexer em código já em produção.
+ *
+ * **"Ativo" é o mesmo critério do §7 — verificado sobre TODOS os títulos do
+ * frete, não o primeiro que aparecer.** `titulos_receber: { none: {...} } }`
+ * é "nenhum título, na relação inteira, está ativo" — não arquivado e
+ * `status !== "cancelado"`. Achado do `/revisar`: a primeira versão usava
+ * `buscarTituloPorServico` (devolve só um título) para decidir "ativo", e um
+ * frete com dois títulos (um cancelado, um ativo) podia destravar por
+ * examinar o cancelado — a regra escrita já dizia "todos"; o código olhava
+ * um só. Mesma classe do achado que corrigiu o `/onde-paramos`
+ * (`.claude/commands/onde-paramos.md`, "Por que 20, e não 1." — checar só
+ * um item de uma coleção quando a regra vale para todos ela): recorrente o
+ * bastante, em dinheiro ou confiabilidade de operação, para valer nomear e
+ * procurar de propósito na próxima vez (`CLAUDE.md` §2).
+ *
+ * **Só os dois campos que o título copiou entram na condição.** Os outros
+ * sete (caminhão, motorista, data, origem, destino, carga, km) não têm
+ * reflexo em `TituloReceber` — a condição só se aplica quando `cliente_id`/
+ * `valor` estão mudando; os demais continuam livres mesmo com título ativo.
+ *
+ * **Não substitui a trava da tela.** A tela desabilita os dois campos
+ * quando há título ativo, mas essa é só a primeira camada — sem esta
+ * função, um pedido formado por fora do formulário passaria do mesmo jeito.
+ */
+export async function editarServicoComProtecaoDeTitulo(
+  empresaId: string,
+  servicoId: string,
+  dados: DadosServico,
+) {
+  const semTituloAtivo: Prisma.ServicoWhereInput = {
+    titulos_receber: { none: { arquivado_em: null, status: { not: "cancelado" } } },
+  };
+  const condicaoDeGravacao: Prisma.ServicoWhereInput = {
+    OR: [{ cliente_id: dados.cliente_id, valor: dados.valor }, semTituloAtivo],
+  };
+
+  try {
+    return await editarServico(empresaId, servicoId, dados, condicaoDeGravacao);
+  } catch (erro) {
+    if (!(erro instanceof CondicaoDeGravacaoFalhouError)) throw erro;
+
+    // A garantia já aconteceu no UPDATE, dentro de editarServico — esta
+    // leitura só escolhe a mensagem certa para mostrar, depois que a trava
+    // já bloqueou a gravação (nunca antes dela).
+    const atual = await buscarServico(empresaId, servicoId);
+    if (!atual) throw new Error("Frete não encontrado.");
+    if (dados.cliente_id !== atual.cliente_id) {
+      throw new Error(
+        "Frete já recebido: não é possível trocar o cliente. Estorne o título para corrigir.",
+      );
+    }
+    throw new Error(
+      "Frete já recebido: não é possível alterar o valor. Estorne o título para corrigir.",
+    );
   }
 }
 

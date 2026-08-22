@@ -35,11 +35,8 @@ import { BotaoArquivarFrete } from "../BotaoArquivarFrete";
  * extra" para os demais, não "adicionar".
  *
  * Editar frete e o "adicionar" de Telefone sem motorista levam a
- * `/fretes/[id]/editar`, que a Tarefa 4 ainda vai construir — 404 até lá.
- * O próprio plano já escreve esse destino para esta tarefa
- * (`docs/planos/item-4-lista-e-detalhe-do-frete.md`, Tarefa 3: "Editar
- * frete (secundária) → `/fretes/[id]/editar` (Tarefa 4)") — não é
- * suposição por analogia com a Tarefa 2, é o que o plano aprovado já pedia.
+ * `/fretes/[id]/editar`, construída na Tarefa 4
+ * (`docs/planos/item-4-lista-e-detalhe-do-frete.md`).
  */
 
 const MESES = [

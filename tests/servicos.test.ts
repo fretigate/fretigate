@@ -34,7 +34,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 28;
+const CONFERENCIAS_ESPERADAS = 33;
 
 /** Uma janela de 2 dias em volta de agora — cobre `data_servico: new Date()` de `dadosMinimos`. */
 function periodoAmplo(): Periodo {
@@ -286,6 +286,82 @@ describe("2b. arquivado é recusado em referência NOVA — decisão do fundador
     await expect(
       criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { tipo_operacao_id: tipoInativoId })),
     ).rejects.toThrow("Selecione um tipo de operação válido.");
+    conferencias++;
+  });
+});
+
+describe("2c. arquivado é aceito na EDIÇÃO quando o id não muda — item 4, tarefa 4", () => {
+  it("edita outro campo de um frete cujo cliente foi arquivado depois, sem tocar no cliente", async () => {
+    const e = await criarEmpresaDeTeste("r1");
+    const cliente = await criarCliente(e.empresaId, { nome: "Vai arquivar depois" });
+    const criado = await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { cliente_id: cliente.id, carga_texto: "Antes" }),
+    );
+    await arquivarCliente(e.empresaId, cliente.id);
+
+    const editado = await editarServico(
+      e.empresaId,
+      criado.id,
+      dadosMinimos(e, { cliente_id: cliente.id, carga_texto: "Depois" }),
+    );
+    expect(editado.cliente_id).toBe(cliente.id);
+    expect(editado.carga_texto).toBe("Depois");
+    conferencias++;
+  });
+
+  it("edita outro campo de um frete cujo caminhão e motorista foram arquivados depois, sem tocar neles", async () => {
+    const e = await criarEmpresaDeTeste("r2");
+    const caminhao = await criarCaminhao(e.empresaId, { apelido: "Vai arquivar" });
+    const motorista = await criarMotorista(e.empresaId, { nome: "Vai arquivar" });
+    const criado = await criarServico(
+      e.empresaId,
+      e.usuarioId,
+      dadosMinimos(e, { veiculo_id: caminhao.id, motorista_id: motorista.id }),
+    );
+    await arquivarCaminhao(e.empresaId, caminhao.id);
+    await arquivarMotorista(e.empresaId, motorista.id);
+
+    const editado = await editarServico(
+      e.empresaId,
+      criado.id,
+      dadosMinimos(e, { veiculo_id: caminhao.id, motorista_id: motorista.id, carga_texto: "Editado" }),
+    );
+    expect(editado.veiculo_id).toBe(caminhao.id);
+    expect(editado.motorista_id).toBe(motorista.id);
+    expect(editado.carga_texto).toBe("Editado");
+    conferencias++;
+  });
+
+  it("trocar para OUTRO cliente arquivado continua recusado, mesmo na edição", async () => {
+    const e = await criarEmpresaDeTeste("r3");
+    const original = await criarCliente(e.empresaId, { nome: "Original" });
+    const outroArquivado = await criarCliente(e.empresaId, { nome: "Outro, vai arquivar" });
+    await arquivarCliente(e.empresaId, outroArquivado.id);
+    const criado = await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { cliente_id: original.id }));
+
+    await expect(
+      editarServico(e.empresaId, criado.id, dadosMinimos(e, { cliente_id: outroArquivado.id })),
+    ).rejects.toThrow("Selecione um cliente válido.");
+    conferencias++;
+  });
+
+  it("recusa editar um frete que não existe", async () => {
+    const e = await criarEmpresaDeTeste("r5");
+    await expect(editarServico(e.empresaId, randomUUID(), dadosMinimos(e))).rejects.toThrow(
+      "Frete não encontrado.",
+    );
+    conferencias++;
+  });
+
+  it("recusa editar um frete arquivado — mesma mensagem de não encontrado", async () => {
+    const e = await criarEmpresaDeTeste("r6");
+    const criado = await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e));
+    await arquivarServico(e.empresaId, criado.id);
+    await expect(editarServico(e.empresaId, criado.id, dadosMinimos(e))).rejects.toThrow(
+      "Frete não encontrado.",
+    );
     conferencias++;
   });
 });

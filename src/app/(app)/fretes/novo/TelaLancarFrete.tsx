@@ -15,6 +15,7 @@ import {
   buscarMunicipiosAction,
   buscarSugestaoDeValorAction,
   criarServicoAction,
+  editarServicoAction,
   listarDestinosDoClienteAction,
   type EstadoServico,
 } from "../acoes";
@@ -47,6 +48,24 @@ type Props = {
     motoristaId: string | null;
     origemTexto: string;
   };
+  /**
+   * Presente = modo edição (item 4, Tarefa 4); ausente = criação, sem
+   * mudança de comportamento. Separado de `padrao` de propósito: `padrao`
+   * é só o pré-preenchimento por "último frete" (os dois modos usam),
+   * `edicao` é o frete que está sendo editado de verdade.
+   */
+  edicao?: {
+    servicoId: string;
+    /** Trava valor e cliente na tela — `docs/especificacao.md` §8, item 12. */
+    temTituloAtivo: boolean;
+    destinoTexto: string;
+    cargaTexto: string;
+    /** Dígitos em km (mesmo formato que o campo "Km" já usa), não metros. */
+    km: string;
+    valorCentavos: number;
+    /** "AAAA-MM-DD" no fuso de Fortaleza — mesmo formato de `hojeYMD`. */
+    dataServico: string;
+  };
 };
 
 const DIA_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -68,26 +87,44 @@ function rotuloData(dia: string, hoje: string): string {
   return corpo.charAt(0).toUpperCase() + corpo.slice(1) + sufixoAno;
 }
 
-function LinhaRecolhida({ rotulo, valor, onClick }: { rotulo: string; valor: string; onClick: () => void }) {
+function LinhaRecolhida({
+  rotulo,
+  valor,
+  onClick,
+  desabilitada,
+}: {
+  rotulo: string;
+  valor: string;
+  onClick: () => void;
+  /** Frete com título ativo — `docs/especificacao.md` §8, item 12. */
+  desabilitada?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-60 items-center gap-12 rounded-campo bg-separacao px-18 text-left active:bg-principal-desabilitado"
+      disabled={desabilitada}
+      className="flex min-h-60 items-center gap-12 rounded-campo bg-separacao px-18 text-left active:bg-principal-desabilitado disabled:bg-secundario-desabilitado disabled:active:bg-secundario-desabilitado"
     >
       <span className="w-82 flex-none text-[11px] font-bold uppercase leading-[1] tracking-[.16em] text-tinta-apoio">
         {rotulo}
       </span>
-      <span className="min-w-0 flex-1 truncate text-nome-recolhida font-bold text-tinta">{valor}</span>
-      <svg width={8} height={14} viewBox="0 0 8 14" fill="none" className="flex-none" aria-hidden="true">
-        <path
-          d="M1.4 1.4 6.6 7l-5.2 5.6"
-          stroke="#A8AFA9"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
+      <span
+        className={`min-w-0 flex-1 truncate text-nome-recolhida font-bold ${desabilitada ? "text-tinta-desabilitada" : "text-tinta"}`}
+      >
+        {valor}
+      </span>
+      {desabilitada ? null : (
+        <svg width={8} height={14} viewBox="0 0 8 14" fill="none" className="flex-none" aria-hidden="true">
+          <path
+            d="M1.4 1.4 6.6 7l-5.2 5.6"
+            stroke="#A8AFA9"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
     </button>
   );
 }
@@ -147,8 +184,10 @@ export function TelaLancarFrete({
   cargasRecentes,
   destinosIniciais,
   padrao,
+  edicao,
 }: Props) {
   const hoje = hojeYMD;
+  const travadoPeloTitulo = edicao?.temTituloAtivo ?? false;
 
   const [listaClientes, setListaClientes] = useState<ItemEntidade[]>(clientes);
   const [listaCaminhoes, setListaCaminhoes] = useState<ItemEntidade[]>(caminhoes);
@@ -158,11 +197,11 @@ export function TelaLancarFrete({
   const [veiculoId, setVeiculoId] = useState(padrao.veiculoId ?? "");
   const [motoristaId, setMotoristaId] = useState(padrao.motoristaId ?? "");
   const [origemTexto, setOrigemTexto] = useState(padrao.origemTexto);
-  const [destinoTexto, setDestinoTexto] = useState("");
-  const [cargaTexto, setCargaTexto] = useState("");
-  const [km, setKm] = useState("");
-  const [valorCentavos, setValorCentavos] = useState(0);
-  const [dataEscolhida, setDataEscolhida] = useState(hoje);
+  const [destinoTexto, setDestinoTexto] = useState(edicao?.destinoTexto ?? "");
+  const [cargaTexto, setCargaTexto] = useState(edicao?.cargaTexto ?? "");
+  const [km, setKm] = useState(edicao?.km ?? "");
+  const [valorCentavos, setValorCentavos] = useState(edicao?.valorCentavos ?? 0);
+  const [dataEscolhida, setDataEscolhida] = useState(edicao?.dataServico ?? hoje);
 
   const [destinosDoCliente, setDestinosDoCliente] = useState(destinosIniciais);
   const [municipiosSugeridos, setMunicipiosSugeridos] = useState<Municipio[]>([]);
@@ -174,7 +213,8 @@ export function TelaLancarFrete({
   const [tecladoAberto, setTecladoAberto] = useState(false);
   const [calendarioAberto, setCalendarioAberto] = useState(false);
 
-  const [estado, formAction, salvando] = useActionState(criarServicoAction, ESTADO_INICIAL);
+  const acaoEfetiva = edicao ? editarServicoAction.bind(null, edicao.servicoId) : criarServicoAction;
+  const [estado, formAction, salvando] = useActionState(acaoEfetiva, ESTADO_INICIAL);
 
   useEffect(() => {
     let cancelado = false;
@@ -302,7 +342,7 @@ export function TelaLancarFrete({
           {/* Cabeçalho escuro — data e valor, `docs/estilo.md`: "Lançar frete | valor 60px no cartão escuro". */}
           <div className="mb-14 flex flex-col rounded-cartao-escuro bg-tinta px-22 pt-18 pb-20">
             <span className="text-eyebrow font-bold uppercase tracking-[.16em] text-white/45">
-              Lançar frete
+              {edicao ? "Editar frete" : "Lançar frete"}
             </span>
             <button
               type="button"
@@ -327,7 +367,21 @@ export function TelaLancarFrete({
                 qualquer forma. O valor existe visível em um lugar só de cada
                 vez, por código, não por coincidência de tamanho de tela
                 (achado do fundador, `docs/diario.md`, 12–13/08/2026). */}
-            {!tecladoAberto ? (
+            {/* Frete com título ativo: o valor não abre o teclado — mesmo
+                motivo do Cliente abaixo (`docs/especificacao.md` §8, item
+                12). `<div>`, não `<button disabled>`: um botão desabilitado
+                dentro do cabeçalho escuro herdaria o estilo de "desabilitado"
+                do sistema (`disabled:bg-...`/`disabled:text-...`), pensado
+                para fundo claro — aqui o valor só deixa de ser tocável. */}
+            {!tecladoAberto && travadoPeloTitulo ? (
+              <div className="mt-18 flex items-baseline gap-10">
+                <span className="text-[24px] font-bold leading-[1] text-white/45">R$</span>
+                <span className="min-w-0 flex-1 text-heroi font-extrabold leading-[1] tracking-[-0.035em] text-white/70 [font-variant-numeric:tabular-nums]">
+                  {formatarCentavos(valorCentavos)}
+                </span>
+              </div>
+            ) : null}
+            {!tecladoAberto && !travadoPeloTitulo ? (
               <button
                 type="button"
                 onClick={() => {
@@ -351,9 +405,19 @@ export function TelaLancarFrete({
             ) : null}
           </div>
 
-          <LinhaRecolhida rotulo="Cliente" valor={nomeCliente} onClick={() => abrirFolha("cliente")} />
+          <LinhaRecolhida
+            rotulo="Cliente"
+            valor={nomeCliente}
+            onClick={() => abrirFolha("cliente")}
+            desabilitada={travadoPeloTitulo}
+          />
           {estado.erros?.clienteId ? (
             <span className="px-4 text-apoio font-medium text-vencido">{estado.erros.clienteId}</span>
+          ) : null}
+          {travadoPeloTitulo ? (
+            <span className="px-4 text-apoio font-medium text-tinta-apoio">
+              Frete já recebido — para alterar valor ou cliente, estorne o título.
+            </span>
           ) : null}
           <LinhaRecolhida rotulo="Caminhão" valor={nomeVeiculo} onClick={() => abrirFolha("caminhao")} />
           {estado.erros?.veiculoId ? (
@@ -445,7 +509,7 @@ export function TelaLancarFrete({
               disabled={!clienteId}
               distribuido
             >
-              <span className="flex-1 text-left">Salvar frete</span>
+              <span className="flex-1 text-left">{edicao ? "Salvar alterações" : "Salvar frete"}</span>
               <span className="text-[19px] font-extrabold leading-[1] text-white/75 [font-variant-numeric:tabular-nums]">
                 R$ {formatarCentavos(valorCentavos)}
               </span>

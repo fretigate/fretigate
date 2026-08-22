@@ -1,4 +1,5 @@
 import { db, emTransacao } from "@/lib/db";
+import type { Prisma } from "@/lib/generated/prisma/client";
 import { buscarCliente, listarClientes } from "@/lib/servicos/clientes";
 import { buscarCaminhao, listarCaminhoes } from "@/lib/servicos/caminhoes";
 import { buscarMotorista, listarMotoristas } from "@/lib/servicos/motoristas";
@@ -71,6 +72,13 @@ export const CAMPOS_SERVICO = {
   arquivado_em: true,
 } as const;
 
+/** O que `normalizarEntrada` precisa do frete atual, só na edição — ver o comentário abaixo. */
+type ServicoAtualParaEdicao = {
+  cliente_id: string;
+  veiculo_id: string | null;
+  motorista_id: string | null;
+};
+
 /**
  * Obrigatórios: `cliente_id`, `valor`, `data_servico`, `tipo_operacao_id`
  * (`docs/especificacao.md`, entidade Servico). Nada mais trava o
@@ -84,26 +92,50 @@ export const CAMPOS_SERVICO = {
  * `criarServico`, porque não faz parte de `DadosServico` — não é escolha do
  * usuário, vem sempre da sessão, e só existe no caminho de criação.
  *
- * **Diferente do precedente de `veiculo_habitual_id`
- * (`src/lib/servicos/motoristas.ts`), as quatro daqui TAMBÉM recusam
- * arquivado.** Aquele precedente existe para um vínculo que já existia
- * continuar aparecendo na edição; aqui é sempre a criação de uma referência
- * NOVA — decisão do fundador, 11/08/2026.
+ * **Arquivado é recusado só quando o identificador MUDOU em relação ao que
+ * já estava gravado** (`atual`, presente só na edição — item 4, tarefa 4).
+ * Na criação (`atual` ausente) toda referência é sempre nova — `dados.X_id
+ * !== atual?.X_id` já dá `true` sozinho, sem precisar de um `if` à parte —
+ * então toda referência exige uma ativa, comportamento de sempre, sem
+ * mudança. Na edição, manter o mesmo cliente/caminhão/motorista que o
+ * frete já tinha continua aceito mesmo arquivado depois — mesmo espírito
+ * do precedente de `veiculo_habitual_id` (`src/lib/servicos/
+ * motoristas.ts`): sem isso, arquivar um cliente travaria a edição de TODO
+ * frete antigo dele, mesmo para corrigir outro campo que não tem nada a
+ * ver com o cliente. Trocar para uma referência diferente continua
+ * exigindo uma ativa, igual à criação. Decisão do fundador, 22/08/2026
+ * (`docs/planos/item-4-lista-e-detalhe-do-frete.md`, Tarefa 4).
  *
- * **Tipo de operação inativo é recusado.** `ativo` é escopo de produto —
- * "quais ramos estão ligados" (`docs/especificacao.md`, entidade
- * TipoOperacao) — e aceitar um inativo criaria frete de um ramo que a
- * empresa não opera. Decisão do fundador, 11/08/2026.
+ * **Tipo de operação inativo é recusado, sempre — sem a exceção acima.**
+ * `tipo_operacao_id` nunca é escolha do usuário (vem de
+ * `buscarTipoOperacaoAtivo`, não de formulário), então nunca é "o mesmo que
+ * já estava gravado" por coincidência — é sempre "o ativo agora". `ativo` é
+ * escopo de produto — "quais ramos estão ligados" (`docs/especificacao.md`,
+ * entidade TipoOperacao) — e aceitar um inativo criaria frete de um ramo
+ * que a empresa não opera. Decisão do fundador, 11/08/2026.
  *
- * **Resolução de município** — `resolverMunicipio` roda para
- * `origem_texto`/`destino_texto` quando preenchidos, e só grava
- * `*_municipio_id` quando a situação é `"resolvido"`. Ambíguo ou não
- * encontrado **nunca bloqueia o salvar** (`docs/especificacao.md` §6) — o
- * texto digitado é gravado do mesmo jeito.
+ * **Resolução de município** — roda de novo em toda edição, mesmo que o
+ * texto não tenha mudado desde a última vez; decisão do fundador,
+ * 22/08/2026 (`docs/planos/item-4-lista-e-detalhe-do-frete.md`, Tarefa 4):
+ * `resolverMunicipio` é função pura contra uma tabela fixa (a base do
+ * IBGE), então texto igual sempre resolve igual — um desvio "só resolve se
+ * o texto mudou" não mudaria nenhum resultado, só acrescentaria
+ * complexidade. `resolverMunicipio` roda para `origem_texto`/
+ * `destino_texto` quando preenchidos, e só grava `*_municipio_id` quando a
+ * situação é `"resolvido"`. Ambíguo ou não encontrado **nunca bloqueia o
+ * salvar** (`docs/especificacao.md` §6) — o texto digitado é gravado do
+ * mesmo jeito.
  */
-async function normalizarEntrada(empresaId: string, dados: DadosServico) {
+async function normalizarEntrada(
+  empresaId: string,
+  dados: DadosServico,
+  atual?: ServicoAtualParaEdicao,
+) {
   const cliente = await buscarCliente(empresaId, dados.cliente_id);
-  if (!cliente || cliente.arquivado_em) throw new Error("Selecione um cliente válido.");
+  if (!cliente) throw new Error("Selecione um cliente válido.");
+  if (cliente.arquivado_em && dados.cliente_id !== atual?.cliente_id) {
+    throw new Error("Selecione um cliente válido.");
+  }
 
   const tipoOperacao = await buscarTipoOperacao(empresaId, dados.tipo_operacao_id);
   if (!tipoOperacao || tipoOperacao.arquivado_em || !tipoOperacao.ativo) {
@@ -113,14 +145,18 @@ async function normalizarEntrada(empresaId: string, dados: DadosServico) {
   let veiculoId: string | null = null;
   if (dados.veiculo_id?.trim()) {
     const caminhao = await buscarCaminhao(empresaId, dados.veiculo_id);
-    if (!caminhao || caminhao.arquivado_em) throw new Error("Selecione um caminhão válido.");
+    if (!caminhao) throw new Error("Selecione um caminhão válido.");
+    if (caminhao.arquivado_em && dados.veiculo_id !== atual?.veiculo_id) {
+      throw new Error("Selecione um caminhão válido.");
+    }
     veiculoId = caminhao.id;
   }
 
   let motoristaId: string | null = null;
   if (dados.motorista_id?.trim()) {
     const motorista = await buscarMotorista(empresaId, dados.motorista_id);
-    if (!motorista || motorista.arquivado_em) {
+    if (!motorista) throw new Error("Selecione um motorista válido.");
+    if (motorista.arquivado_em && dados.motorista_id !== atual?.motorista_id) {
       throw new Error("Selecione um motorista válido.");
     }
     motoristaId = motorista.id;
@@ -217,17 +253,67 @@ export async function criarServico(
   });
 }
 
+/**
+ * Lançada quando `condicaoDeGravacao` (abaixo) não bate no exato momento do
+ * `UPDATE` — nunca por uma checagem separada de antemão. Quem chama decide o
+ * que essa recusa significa (`src/lib/servicos/titulos.ts`,
+ * `editarServicoComProtecaoDeTitulo`); este arquivo não sabe.
+ */
+export class CondicaoDeGravacaoFalhouError extends Error {}
+
+/**
+ * `atual` (só `cliente_id`/`veiculo_id`/`motorista_id`, não o frete
+ * inteiro) é o que `normalizarEntrada` precisa para aceitar uma referência
+ * arquivada que o frete já tinha antes — ver o comentário lá em cima.
+ *
+ * **Frete arquivado é recusado, mesma mensagem de "não encontrado".**
+ * `docs/especificacao.md` §7: arquivar não apaga, mas também não é convite
+ * para continuar editando por fora da tela (que já dá 404 —
+ * `fretes/[id]/editar/page.tsx`) — achado do `/revisar` na Tarefa 4.
+ *
+ * **`condicaoDeGravacao` (opcional) é uma condição extra, escrita pelo
+ * CHAMADOR, que entra no MESMO `WHERE` do `UPDATE` — nunca numa consulta
+ * antes dele.** É a diferença entre travar de verdade e recriar a mesma
+ * corrida um nível abaixo: se a condição fosse um `SELECT` separado, algo
+ * concorrente entre o `SELECT` e o `UPDATE` passaria batido — dentro do
+ * próprio `UPDATE`, o banco resolve as duas coisas (a condição e a
+ * gravação) na mesma instrução, sem janela entre "checar" e "gravar".
+ * `editarServicoComProtecaoDeTitulo` (`src/lib/servicos/titulos.ts`) é quem
+ * usa isto — este arquivo continua sem saber o que é um título
+ * (`CLAUDE.md` §6, cada domínio no seu arquivo). Achado do `/revisar` na
+ * Tarefa 4, decisão do fundador, 22/08/2026.
+ */
 export async function editarServico(
   empresaId: string,
   id: string,
   dados: DadosServico,
+  condicaoDeGravacao?: Prisma.ServicoWhereInput,
 ) {
-  const entrada = await normalizarEntrada(empresaId, dados);
-  return db(empresaId).servico.update({
+  const atual = await db(empresaId).servico.findUnique({
     where: { id },
-    data: entrada,
-    select: CAMPOS_SERVICO,
+    select: { cliente_id: true, veiculo_id: true, motorista_id: true, arquivado_em: true },
   });
+  if (!atual || atual.arquivado_em) throw new Error("Frete não encontrado.");
+
+  const entrada = await normalizarEntrada(empresaId, dados, atual);
+
+  if (!condicaoDeGravacao) {
+    return db(empresaId).servico.update({
+      where: { id },
+      data: entrada,
+      select: CAMPOS_SERVICO,
+    });
+  }
+
+  const resultado = await db(empresaId).servico.updateMany({
+    where: { id, ...condicaoDeGravacao },
+    data: entrada,
+  });
+  if (resultado.count === 0) throw new CondicaoDeGravacaoFalhouError();
+
+  const atualizado = await buscarServico(empresaId, id);
+  if (!atualizado) throw new Error("Frete não encontrado.");
+  return atualizado;
 }
 
 /** §7 — nada é apagado. */
