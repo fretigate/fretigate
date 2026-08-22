@@ -112,10 +112,18 @@ padrão nos perfis de cliente/caminhão/motorista, e é o mesmo aqui.
    quanto o motorista **ganhou**, e não é isso: é o valor dos fretes que
    ele levou, que é dinheiro do dono, não do motorista. O rótulo escolhido
    é **"Valor transportado"** — descreve o que foi carregado, não uma
-   remuneração. `docs/especificacao.md` continua usando "maior valor
-   rodado" para o critério de ordenação (não é este plano quem decide o
-   texto daquele documento); só o rótulo exibido **no resumo do perfil**
-   muda para evitar a leitura de salário.
+   remuneração.
+
+   **Revisto em 22/08/2026, planejamento da Tarefa 5: o critério de
+   ordenação muda junto, não só o resumo do perfil.** A frase original aqui
+   dizia que `docs/especificacao.md` continuaria com "maior valor rodado"
+   para o critério de ordenação, por não ser este plano quem decide o texto
+   daquele documento. Ao planejar a Tarefa 5, o fundador decidiu o
+   contrário: o chip de ordenação mostra o critério escolhido como texto
+   visível na tela — diferente do resumo do perfil, que é só leitura —, e
+   ler "rodado" no chip enquanto o mesmo número aparece como "transportado"
+   no perfil é o mesmo dado com dois nomes. `docs/especificacao.md` §4.7 foi
+   corrigido para "maior valor transportado" nos dois lugares.
 
 3. **Cor da etiqueta "Faturado" — construir com a neutra por ora, é
    lacuna, não decisão final.** O fundador discorda da neutra: "Faturado"
@@ -638,10 +646,10 @@ Não interage com o modo edição — são rotas diferentes (`/fretes/novo` com
 
 ## Tarefa 5 — Ordenações nas listas de cadastro, e o chip aparece
 
-`docs/especificacao.md` §4.7: **Clientes** por mais recente · maior valor
-em aberto · maior valor total. **Caminhões e Motoristas** por mais
-recente · mais fretes · maior valor rodado. "A linha mostra o dado da
-ordenação escolhida."
+`docs/especificacao.md` §4.7 (já corrigido, 22/08/2026 — ver acima):
+**Clientes** por mais recente · maior valor em aberto · maior valor total.
+**Caminhões e Motoristas** por mais recente · mais fretes · maior valor
+transportado. "A linha mostra o dado da ordenação escolhida."
 
 **Clientes nasce com dois critérios, não três.** "Maior valor em aberto"
 depende de título em aberto — mesmo motivo do resumo do cliente (Tarefa 1
@@ -650,31 +658,203 @@ e ordenar por um número sempre igual não ordena nada
 (`docs/especificacao.md` §4.7, nota nova). Nesta fatia, Clientes ordena
 por **mais recente** · **maior valor total** — "maior valor em aberto"
 entra no item 6. Caminhões e Motoristas não têm esse problema: "mais
-fretes" e "maior valor rodado" vêm de `Servico`, não de título, e
+fretes" e "maior valor transportado" vêm de `Servico`, não de título, e
 funcionam desde já — os dois nascem com os três critérios completos.
 
-**Componente novo — chip de ordenação** (`docs/componentes.md`, "Chips de
-seleção › Ordenação": 40px · raio 999 · `13px/600` · largura máx. `148px`,
-uma linha com reticências; neutro mostra "Ordenar por", escolhido mostra
-o critério em `#E4E9E5`/`#1B6B3A` peso 700). Não existe hoje um chip
-nessa medida no código (`ChipEscolha.tsx` é a variante Escolha, 48px,
-outra medida) — nasce aqui, no primeiro uso real, não antes. Abre uma
-folha curta com os critérios de cada lista (reaproveita `FolhaInferior`,
-já existe).
+### O chip é reaproveitado, não é componente novo
 
-**Nas três listas** (`ListaClientes.tsx`/`ListaCaminhoes.tsx`/
-`ListaMotoristas.tsx`, que hoje ordenam só por `criado_em desc` do
-`listarClientes`/etc.): passam a receber os valores derivados de
-`Servico` (valor total, contagem de fretes, valor rodado — das leituras
-da Tarefa 1, adaptadas por entidade) e a reordenar no cliente ao trocar o
-critério — mesmo padrão da busca local já existente, mesmo motivo
-(`CLAUDE.md` §1). A linha (`apoio` de `LinhaDeLista`) troca a cidade/placa
-pelo valor do critério ativo quando ele não é "mais recente".
+`docs/componentes.md`, "Chips de seleção › Ordenação": 40px · raio 999 ·
+`13px/600` · largura máx. `148px`, uma linha com reticências; neutro
+mostra "Ordenar por", escolhido mostra o critério em `#E4E9E5`/`#1B6B3A`
+peso 700 — **medida idêntica, cor idêntica, comportamento idêntico ao
+`ChipFiltro.tsx`** que "Meus fretes" (Tarefa 2) já usa para Período/
+Cliente/Situação: um rótulo, um estado ativo/neutro, abre algo por baixo
+ao tocar. A redação original desta tarefa (sketch de 20/08/2026, acima)
+previa um componente novo — achado ao planejar em detalhe: seria a mesma
+pílula copiada, só com outro nome, o que `CLAUDE.md` §8 proíbe
+("componente existe uma vez"). Mesmo raciocínio que já corrigiu três
+cópias da linha de perfil no item 2. `ChipFiltro` é usado direto, sem
+alteração — só um quarto lugar que o usa, com `rotulo="Ordenar por"` no
+estado neutro.
 
-O chip só aparece quando há **mais de uma opção** — hoje ele não aparece
-porque só existe "mais recente"; com as outras, aparece nas três listas ao
-mesmo tempo, nesta tarefa (duas opções em Clientes, três em Caminhões e
-Motoristas).
+O que abre por baixo é novo: **`FolhaDeOrdenacao`**
+(`src/components/ui/FolhaDeOrdenacao.tsx`), genérico sobre a lista de
+critérios — mesmo padrão de linha de `FolhaDeSituacao.tsx` (`min-h-64`,
+`rounded-campo`, fundo `bg-pilula`/`text-acao` quando selecionado), mas
+sem hardcodar os quatro estados financeiros: recebe `criterios: {valor,
+rotulo}[]`, `atual`, `onEscolher`, `onFechar`. Um componente só, três usos
+— Clientes com dois critérios, Caminhões e Motoristas com os mesmos três.
+Não nasce em `FolhaDeSituacao.tsx` porque aquele já é específico de
+`SituacaoFinanceira`; generalizá-lo por cima misturaria dois domínios sem
+necessidade — mais barato um componente pequeno novo, genérico desde o
+nascimento porque já tem os três usos reais no mesmo commit (mesma régua
+de `FolhaInferior`, que só virou componente-base quando teve dois usos
+simultâneos).
+
+### Leitura em lote — e por que ela precisa bater com o resumo do perfil
+
+**O risco central desta tarefa, apontado pelo fundador ao aprovar:** o
+número que ordena a lista e o número que o perfil do cadastro mostra
+(Tarefa 1/6) são o **mesmo cálculo visto de dois lugares**. Se um dia
+divergirem — um contando frete cancelado, o outro não — ninguém percebe
+até comparar na mão, e a pessoa vê um valor na lista e outro no perfil
+para o mesmo cliente. A garantia não é só "os dois calculam certo" — é
+"os dois calculam **exatamente a mesma coisa**", e é isso que o teste
+prova (ver "Testes", abaixo), não só que cada função roda sem erro.
+
+Três funções novas, todas em `src/lib/servicos/servicos.ts` — mora ali,
+não em `clientes.ts`/`caminhoes.ts`/`motoristas.ts`, pelo mesmo motivo já
+registrado no arquivo para as leituras da Tarefa 2 do item 3: a fonte é
+`Servico`, não a entidade em si. Mesmo filtro-base das somas já existentes
+(`resumoFinanceiroDoCliente.jaRodado` em `titulos.ts`, `resumoDoMotorista`
+acima neste arquivo): `arquivado_em: null`, `status_operacional: { not:
+"cancelado" }` — frete cancelado fora, `em_andamento` dentro, sem período
+(é total da vida do cadastro, não do perfil — o perfil tem filtro de
+período, esta ordenação não tem, mesma leitura de `docs/especificacao.md`
+§4.7 que nunca menciona período para esta lista):
+
+```ts
+export async function valoresTotaisPorCliente(
+  empresaId: string,
+): Promise<Map<string, number>> {
+  const linhas = await db(empresaId).servico.groupBy({
+    by: ["cliente_id"],
+    where: { arquivado_em: null, status_operacional: { not: "cancelado" } },
+    _sum: { valor: true },
+  });
+  return new Map(linhas.map((l) => [l.cliente_id, l._sum.valor ?? 0]));
+}
+```
+
+`estatisticasPorCaminhao`/`estatisticasPorMotorista` (fretes · valor
+transportado) compartilham um helper privado, `estatisticasDeFretesPor`,
+diferindo só no campo de agrupamento (`veiculo_id`/`motorista_id`) — duas
+cópias quase idênticas do mesmo `groupBy` seriam a mesma duplicação que o
+chip evitou acima, só que em serviço em vez de componente:
+
+```ts
+async function estatisticasDeFretesPor(
+  empresaId: string,
+  campo: "veiculo_id" | "motorista_id",
+): Promise<Map<string, { fretes: number; valorTransportadoCentavos: number }>> {
+  const linhas = await db(empresaId).servico.groupBy({
+    by: [campo],
+    where: { arquivado_em: null, status_operacional: { not: "cancelado" } },
+    _count: true,
+    _sum: { valor: true },
+  });
+  const mapa = new Map<string, { fretes: number; valorTransportadoCentavos: number }>();
+  for (const linha of linhas) {
+    const id = linha[campo];
+    if (!id) continue; // frete sem caminhão/motorista definido
+    mapa.set(id, { fretes: linha._count, valorTransportadoCentavos: linha._sum.valor ?? 0 });
+  }
+  return mapa;
+}
+
+export function estatisticasPorCaminhao(empresaId: string) {
+  return estatisticasDeFretesPor(empresaId, "veiculo_id");
+}
+
+export function estatisticasPorMotorista(empresaId: string) {
+  return estatisticasDeFretesPor(empresaId, "motorista_id");
+}
+```
+
+**Cada uma é uma consulta só, para a empresa inteira** — nunca um `groupBy`
+ou resumo chamado por item da lista. Não precisa do mecanismo de contagem
+de consultas que a Tarefa 1 construiu para `listarServicosComSituacao`
+(interceptar `Client.prototype.query`): aquele existia porque o risco era
+uma função chamada **dentro de um laço**; aqui não há laço — a função em
+si já é a leitura completa, o N+1 é estruturalmente impossível, não
+apenas testado como ausente.
+
+**Cada `page.tsx` busca a lista e o mapa de valores em paralelo**
+(`Promise.all`), nunca em sequência — mesmo padrão de
+`resumoDoCaminhao`/`historicoPorEntidade` já usados no projeto — e junta
+os dois no servidor antes de passar para o componente de cliente. Cadastro
+sem frete algum não aparece no mapa (`Map.get` devolve `undefined`); a
+tela trata como zero.
+
+### Nas três telas
+
+`ListaClientes.tsx`/`ListaCaminhoes.tsx`/`ListaMotoristas.tsx` ganham
+estado local `criterio` (`useState`, default `"recente"` — mesmo padrão
+não persistido da busca já existente, reseta ao sair da tela) e um
+`useMemo` que reordena **depois** do filtro de busca (a busca continua
+cortando o texto digitado; a ordenação decide a sequência do que sobrou).
+`"recente"` preserva a ordem que já vem do servidor (`criado_em desc`) —
+sem reordenar; os outros critérios ordenam decrescente pelo número
+correspondente, `Array.prototype.sort` (estável — empate preserva a ordem
+de chegada, sem precisar de critério de desempate escrito à mão, mesmo
+raciocínio já usado em `listarClientesPorUsoRecente`).
+
+**Onde a linha mostra o dado — cada lista tem uma casca diferente hoje, e
+o encaixe muda por lista:**
+
+- **Clientes** (`LinhaDeLista`, variante clássica): `apoio` é a cidade por
+  padrão; com um critério de valor ativo, vira o valor formatado (`R$
+  {formatarCentavos(...)}`) — mesma troca de conteúdo que `ListaFretes.tsx`
+  já faz para o filtro de situação, aplicada aqui ao `apoio`.
+- **Motoristas** (`LinhaDeLista`, variante clássica): mesma troca, `apoio`
+  alterna entre o veículo habitual e "N fretes"/o valor transportado
+  formatado.
+- **Caminhões** (linha própria, não usa `LinhaDeLista` — decisão já
+  registrada no arquivo: círculo de iniciais não faz sentido para placa):
+  placa (`PlacaBadge`) continua sempre visível, como identificador; o
+  `tipo` — que hoje ocupa o lugar de "apoio" ao lado da placa — vira o
+  valor do critério ativo quando ele não é "mais recente"; com "mais
+  recente" escolhido, volta a mostrar `tipo`.
+
+Zero fretes é um valor válido e mostrado como tal ("0 fretes"/"R$ 0,00") —
+não é "número incompleto" no sentido do `CLAUDE.md` §8 (que fala de dado
+que falta), é um resultado correto para um cadastro que ainda não rodou
+frete nenhum.
+
+**O chip aparece nas três listas desde o primeiro commit desta tarefa** —
+sempre há duas opções (Clientes) ou três (Caminhões, Motoristas), nunca
+uma só; diferente do estado de hoje (só "mais recente"), não precisa de
+lógica para escondê-lo condicionalmente.
+
+### Testes — provar que os dois números batem, não só que cada um roda
+
+`tests/servicos.test.ts` (mesmo arquivo de `resumoDoCaminhao`/
+`resumoDoMotorista`, mesma fonte — `Servico`):
+
+- **`valoresTotaisPorCliente` contra `resumoFinanceiroDoCliente.jaRodado`
+  (`titulos.ts`), para o mesmo cliente.** Planta fretes com data espalhada
+  (alguns antigos, um cancelado, um recente) e chama as duas funções — a
+  nova com o cliente inteiro, a existente com um `Periodo` largo o
+  suficiente para cobrir todas as datas plantadas. **Os dois números
+  precisam ser idênticos.** Essa igualdade é o teste em si, não uma
+  conferência a mais: se alguém um dia alterar um dos dois filtros (por
+  exemplo, parar de excluir cancelado só num dos dois lugares), é este
+  teste que quebra, não um teste que só confere se `valoresTotaisPorCliente`
+  "roda sem erro" — esse tipo passaria mesmo com o filtro errado, contanto
+  que o número batesse com o que o próprio teste esperava calcular do
+  mesmo jeito errado.
+- **`estatisticasPorMotorista` contra `resumoDoMotorista`, mesma técnica** —
+  `valorTransportadoCentavos`/`fretes` do mapa batendo com
+  `valorTransportadoNoPeriodo`/`fretesNoPeriodo` do resumo, período largo
+  cobrindo os fretes plantados, mesmo motorista.
+- **`estatisticasPorCaminhao` não tem um par direto para comparar —
+  registrado aqui para não parecer esquecimento.** `resumoDoCaminhao`
+  (Tarefa 1) não expõe "valor total transportado": seu único número de
+  valor é o numerador de `rsPorKm`, deliberadamente restrito aos fretes
+  **com** `km` preenchido (`km: { gt: 0 }`) — um filtro a mais, para um
+  propósito diferente (razão R$/km), não o "valor transportado" que esta
+  ordenação precisa (todos os fretes do caminhão, com ou sem km). Testado
+  como as outras leituras de agregação do projeto: valor plantado
+  conhecido, conferido contra o esperado — sem par para comparação cruzada
+  porque, hoje, não existe outro lugar do produto mostrando esse mesmo
+  número.
+- **Frete cancelado não conta, em nenhuma das três** — teste dedicado por
+  entidade: um cliente/caminhão/motorista com um frete `em_andamento` e um
+  `cancelado` do mesmo valor só soma o primeiro.
+- **Isolamento entre empresas** nas três funções novas (`CLAUDE.md` §3) —
+  mesmo padrão de todo teste que lê por `db(empresaId)`.
+- **`FolhaDeOrdenacao`** — não precisa de teste de banco (componente puro,
+  sem I/O); a régua de qualidade é `/auditar-tela` nas três listas.
 
 ---
 

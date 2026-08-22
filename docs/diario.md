@@ -6,6 +6,49 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 22/08/2026 — plano da tarefa 5 do item 4, detalhado: ordenações e o chip
+
+Antes de construir, duas perguntas levadas ao fundador (`docs/planos/
+item-4-lista-e-detalhe-do-frete.md`, Tarefa 5, já tinha o esboço; faltava o
+desenho técnico):
+
+1. **"Maior valor em aberto" de Clientes continua zero, estruturalmente** —
+   confirmado no código (`criarTituloJaRecebi` é o único criador de título e
+   sempre nasce pago) e já decidido no esboço original: fica de fora até o
+   item 6. Sem mudança.
+2. **O rótulo "valor rodado" também estava na especificação para o
+   critério de ordenação, não só no resumo do perfil onde já tinha virado
+   "transportado".** Decisão do fundador: corrige os dois lugares, mesma
+   palavra — `docs/especificacao.md` §4.7 e a nota da Tarefa 4 no plano do
+   item 4 (que registrava a versão antiga da decisão) foram atualizados.
+
+**Achado ao desenhar em detalhe: o chip de ordenação não é componente
+novo.** O esboço original previa um — medido contra `docs/componentes.md`,
+é medida e cor **idênticas** ao `ChipFiltro.tsx` que "Meus fretes" já usa;
+reaproveitado direto, só a folha que abre por baixo (`FolhaDeOrdenacao`,
+genérica sobre a lista de critérios) é componente novo de fato. Mesma
+regra que já corrigiu três cópias da linha de perfil no item 2.
+
+**Pedido do fundador, incorporado ao plano: o teste central desta tarefa
+não é "cada função de soma roda sem erro" — é "o número da lista e o
+número do resumo do perfil (Tarefa 1/6) são o mesmo cálculo".** Cliente e
+Motorista já têm um resumo existente para comparar contra
+(`resumoFinanceiroDoCliente.jaRodado`, `resumoDoMotorista`); os testes
+plantam fretes (incluindo um cancelado) e conferem que os dois batem
+exatamente, com o mesmo filtro (cancelado fora, `em_andamento` dentro).
+Caminhão não tem par direto — `resumoDoCaminhao` só expõe o numerador de
+R$/km, restrito a fretes com km preenchido, filtro diferente do que a
+ordenação precisa — registrado no plano para não parecer esquecimento.
+
+Desenho completo (as três funções de leitura em lote, onde cada linha
+mostra o dado, os testes) em `docs/planos/item-4-lista-e-detalhe-do-frete.md`,
+Tarefa 5 — substitui o esboço anterior.
+
+Próximo: Tarefa 5 do item 4 — Ordenações nas listas de cadastro, e o chip
+aparece.
+
+---
+
 ## 22/08/2026 — tarefa 4 do item 4: lançar frete ganha edição e pré-seleção
 
 Rota nova `src/app/(app)/fretes/[id]/editar/page.tsx`; `TelaLancarFrete`

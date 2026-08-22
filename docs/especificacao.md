@@ -253,7 +253,16 @@ do cliente, tocando o nome em qualquer linha de frete ou cobrança.
 
 Ordenações: clientes por mais recente · maior valor em aberto · maior valor
 total. Caminhões e motoristas por mais recente · mais fretes · maior valor
-rodado. A linha mostra o dado da ordenação escolhida.
+transportado. A linha mostra o dado da ordenação escolhida.
+
+**"Maior valor transportado", não "maior valor rodado"** — corrigido em
+22/08/2026, planejamento da Tarefa 5 do item 4: mesma palavra que já valia
+para o resumo do perfil do motorista (`docs/planos/item-4-lista-e-detalhe-do-
+frete.md`, "Decisões do fundador"), por não ler como remuneração do
+motorista — é dinheiro do dono, não salário. "Rodado" sobrevivia só no
+critério de ordenação; ficar diferente do resumo do perfil, que já dizia
+"transportado" para o mesmo número, seria o chip e a linha do perfil
+nomeando o mesmo valor de dois jeitos.
 
 **No item 4, "maior valor em aberto" nasce sem servir para nada — registrado
 para não confundir quem for construir.** Depende de título em aberto, e até o
