@@ -1190,8 +1190,13 @@ Três exigências para quando os itens 5 e 6 chegarem:
    o `CLAUDE.md` §6 manda regra de negócio morar), já com
    as variáveis no formato final — `{cliente}` `{valor}` `{vencimento}`
    `{rota}` `{empresa}` `{motorista}` `{carga}` `{origem}` `{destino}`
-   `{data}`. Quando a tela de edição entrar, é **ligar o campo ao que já
-   existe**, não refazer.
+   `{data}` `{caminhao}`. Quando a tela de edição entrar, é **ligar o campo
+   ao que já existe**, não refazer.
+
+   `{caminhao}` entrou em 23/08/2026, planejamento do item 5: o texto da
+   ordem de serviço precisa identificar o caminhão para o motorista (nome +
+   placa, mesmo formato de `nomeCaminhao`), e não havia variável para isso
+   na lista original.
 3. **`telefone` é texto livre, sem máscara nem validação, nos dois cadastros
    que o alimentam (cliente e motorista) — hoje.** Confirmado no código: o
    schema de entrada (`z.string().trim()`, sem regra de formato) em

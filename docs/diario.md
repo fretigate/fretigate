@@ -6,6 +6,59 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 23/08/2026 — plano do item 5, aprovado: ordem de serviço, finalizar, comprovante
+
+Item 4 fechado (commit `6e74c03`, esteira confirmada verde via
+`/onde-paramos`). Planejamento do item 5 antes de qualquer código, conforme
+`CLAUDE.md` §2.
+
+**Cinco decisões levadas ao fundador antes de escrever o plano** (as opções
+foram trazidas, não escolhidas sozinhas — pedido explícito dele para
+telefone, estendido às outras por serem da mesma natureza):
+
+1. DDI do link do WhatsApp fixo em 55 — produto é só Brasil.
+2. Telefone salvo mas inválido reaproveita a folha do campo que falta
+   (`docs/componentes.md` §12), com título e estado inicial adaptados, em
+   vez de bloquear com erro seco.
+3. Confirmação de envio pelo padrão "Enviei"/"Ainda não" ao voltar do
+   WhatsApp, não o toque isolado gravando `ordem_enviada_em` na hora — sem
+   isso, desistir de enviar registraria como enviado. Nasce aqui, o item 6
+   ("Cobrar no WhatsApp") reaproveita.
+4. Sem motorista no frete, o botão principal vira "Escolher motorista" em
+   vez de manter o rótulo "Enviar ordem" apontando para uma tela que não
+   envia nada. A alternativa (a folha do campo que falta também cobrir
+   "falta motorista") foi avaliada por custo e recusada: viraria uma folha
+   de escolha com gravação própria, arriscando encadear com a folha de
+   telefone — três complicações por uma economia de rótulo.
+5. Texto padrão da mensagem de ordem de serviço, com a regra de montagem
+   (linhas condicionais, nunca linha em branco dupla) — o caso mínimo (só
+   origem e destino) virou verificação obrigatória da Tarefa 2, a pedido do
+   fundador.
+
+**`{caminhao}` entrou na lista de variáveis de mensagem**
+(`docs/especificacao.md` §9, exigência 2) — o rascunho do fundador citava o
+caminhão, e a lista original não tinha essa variável.
+
+**Achado ao escrever o plano: uma suposição solta no diário (20/08/2026,
+"item 5 (cancelar frete)") não é decisão — `docs/especificacao.md` §9 nomeia
+o item 5 só como "enviar ordem, finalizar, comprovante".** Cancelar frete
+não tem item definido ainda; registrado no plano para não ser reaberto por
+analogia.
+
+Plano completo em `docs/planos/item-5-ordem-de-servico.md`, cinco tarefas:
+telefone/folha do campo que falta · mensagens.ts + Enviar ordem · Marcar
+como finalizado · isolamento do Storage · upload do comprovante.
+
+**Verificação:** nenhum código de produto ainda — só os dois documentos.
+
+Próxima sessão confirma a esteira deste commit via `/onde-paramos` antes de
+começar a Tarefa 1.
+
+Próximo: Tarefa 1 do item 5 — Telefone: normalização, validação e a folha do
+campo que falta.
+
+---
+
 ## 22/08/2026 — tarefa 6 do item 4, terceiro de três commits: resumo e histórico do perfil do motorista — fecha o item 4
 
 Construído conforme o plano (`docs/planos/item-4-lista-e-detalhe-do-frete.md`,
