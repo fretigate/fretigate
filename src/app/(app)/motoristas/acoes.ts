@@ -5,10 +5,12 @@ import { z } from "zod";
 import { comoUsuario } from "@/lib/auth/acao";
 import {
   arquivarMotorista as arquivarMotoristaServico,
+  buscarMotorista,
   criarMotorista,
   editarMotorista,
   type DadosMotorista,
 } from "@/lib/servicos/motoristas";
+import { normalizarTelefone, type ResultadoSalvarTelefone } from "@/lib/utils/telefone";
 
 /**
  * Cadastro / edição de motorista — `docs/navegacao.md` linha 42: volta ao
@@ -124,4 +126,30 @@ export const editarMotoristaAction = comoUsuario(async (
 export const arquivarMotoristaAction = comoUsuario(async (sessao, id: string) => {
   await arquivarMotoristaServico(sessao.empresaId, id);
   redirect("/motoristas");
+});
+
+/** Mesmo raciocínio de `salvarTelefoneClienteAction` (`clientes/acoes.ts`). */
+export const salvarTelefoneMotoristaAction = comoUsuario(async (
+  sessao,
+  id: string,
+  telefone: string,
+): Promise<ResultadoSalvarTelefone> => {
+  const validado = normalizarTelefone(telefone);
+  if (!validado.ok) return { ok: false, erro: validado.erro };
+
+  const motorista = await buscarMotorista(sessao.empresaId, id);
+  if (!motorista) return { ok: false, erro: "Motorista não encontrado." };
+
+  try {
+    await editarMotorista(sessao.empresaId, id, {
+      nome: motorista.nome,
+      documento: motorista.documento,
+      telefone: telefone.trim(),
+      veiculo_habitual_id: motorista.veiculo_habitual_id,
+    });
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };
+  }
+
+  return { ok: true };
 });

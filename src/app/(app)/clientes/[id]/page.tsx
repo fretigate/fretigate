@@ -10,10 +10,12 @@ import { PilulaEmLinha } from "@/components/ui/PilulaEmLinha";
 import { ChipDePeriodoPerfil } from "@/components/ui/ChipDePeriodoPerfil";
 import { ResumoDoPerfil } from "@/components/ui/ResumoDoPerfil";
 import { HistoricoDoPerfil } from "@/components/ui/HistoricoDoPerfil";
+import { TelefonePerfil } from "@/components/ui/TelefonePerfil";
 import { formatarDocumento } from "@/lib/utils/documento";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { resolverPeriodoDoPerfil, rotuloDoPeriodo } from "@/lib/utils/periodo";
+import { salvarTelefoneClienteAction } from "../acoes";
 
 /**
  * Perfil do cliente — `docs/navegacao.md` linha 39. Ganha resumo financeiro
@@ -134,7 +136,17 @@ export default async function Pagina({
           Identificação
         </span>
         <div className="flex flex-col gap-4">
-          <LinhaDePerfil href={`/clientes/${id}/editar`} rotulo="Telefone" valor={cliente.telefone} />
+          <LinhaDePerfil
+            rotulo="Telefone"
+            valor={cliente.telefone}
+            valorNode={
+              <TelefonePerfil
+                nome={cliente.nome}
+                telefone={cliente.telefone}
+                salvar={salvarTelefoneClienteAction.bind(null, id)}
+              />
+            }
+          />
           <LinhaDePerfil
             href={`/clientes/${id}/editar`}
             rotulo="Documento"

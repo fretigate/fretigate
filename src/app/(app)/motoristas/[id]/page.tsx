@@ -10,11 +10,13 @@ import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
 import { ChipDePeriodoPerfil } from "@/components/ui/ChipDePeriodoPerfil";
 import { ResumoDoPerfil } from "@/components/ui/ResumoDoPerfil";
 import { HistoricoDoPerfil } from "@/components/ui/HistoricoDoPerfil";
+import { TelefonePerfil } from "@/components/ui/TelefonePerfil";
 import { formatarDocumento } from "@/lib/utils/documento";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { nomeCaminhao } from "@/lib/utils/caminhao";
 import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { resolverPeriodoDoPerfil, rotuloDoPeriodo } from "@/lib/utils/periodo";
+import { salvarTelefoneMotoristaAction } from "../acoes";
 
 /**
  * Perfil do motorista — `docs/navegacao.md` linha 43. Terceiro dos três
@@ -28,13 +30,11 @@ import { resolverPeriodoDoPerfil, rotuloDoPeriodo } from "@/lib/utils/periodo";
  * (`docs/componentes.md` linha 411, variante 01) — diferente da pílula em
  * linha usada nos outros dois perfis.
  *
- * Telefone tocável fica para depois — não é só a pendência de toque:
- * `telefone` é texto livre, sem máscara nem validação, e abrir a conversa
- * exige decidir formato do número e tratamento de telefone inválido, a
- * mesma decisão que "Enviar ordem no WhatsApp" (item 5) vai precisar.
- * Registrado com o custo em `docs/especificacao.md` §9 ("Três exigências
- * para quando os itens 5 e 6 chegarem", item 3) — decisão do fundador,
- * 22/08/2026: resolver uma vez lá, não decidir de novo aqui.
+ * Telefone tocável resolvido no item 5, Tarefa 1 (`docs/planos/
+ * item-5-ordem-de-servico.md`) — `TelefonePerfil` decide entre link de
+ * verdade para o WhatsApp (telefone válido) e a "Folha do campo que falta"
+ * (ausente ou inválido). Antes disso, a pendência estava registrada em
+ * `docs/especificacao.md` §9 ("Três exigências...", item 3).
  */
 export default async function Pagina({
   params,
@@ -122,7 +122,17 @@ export default async function Pagina({
           Identificação
         </span>
         <div className="flex flex-col gap-4">
-          <LinhaDePerfil href={`/motoristas/${id}/editar`} rotulo="Telefone" valor={motorista.telefone} />
+          <LinhaDePerfil
+            rotulo="Telefone"
+            valor={motorista.telefone}
+            valorNode={
+              <TelefonePerfil
+                nome={motorista.nome}
+                telefone={motorista.telefone}
+                salvar={salvarTelefoneMotoristaAction.bind(null, id)}
+              />
+            }
+          />
           <LinhaDePerfil
             href={`/motoristas/${id}/editar`}
             rotulo="Documento"

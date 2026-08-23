@@ -20,6 +20,10 @@ import { normalizarParaBusca } from "@/lib/utils/texto";
  * (03) — "é a neutra que fecha folha, nunca verde". `onNovo` é opcional: sem
  * ele (uso como filtro), a pílula de cabeçalho some — nenhum botão sem
  * destino (`CLAUDE.md` §8).
+ *
+ * **`fixed`, não `absolute`** — mesmo achado e mesmo conserto de
+ * `FolhaInferior.tsx` (Tarefa 1 do item 5, 23/08/2026): implementação
+ * própria, não este componente, então precisou do ajuste em separado.
  */
 
 export type ItemFolhaDeBusca = {
@@ -52,7 +56,7 @@ export function FolhaDeBusca({ titulo, placeholder, itens, onSelecionar, onNovo,
 
   return (
     <div
-      className="absolute inset-0 z-[70] flex flex-col bg-papel"
+      className="fixed inset-0 z-[70] flex flex-col bg-papel"
       style={{ paddingTop: "var(--area-segura-topo)" }}
     >
       <div className="flex flex-none items-center gap-8 px-16 pb-14">

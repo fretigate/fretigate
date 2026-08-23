@@ -331,10 +331,9 @@ sem isso, o resumo do dia 1º de manhã mostraria o mês anterior.
 exibidos só quando houver km preenchido; histórico. Ação: lançar frete com este
 caminhão.
 
-**Perfil do motorista:** telefone tocável (pendente — ver §9, "Três
-exigências para quando os itens 5 e 6 chegarem", item 3: fica para o item
-5, mesma decisão de "Enviar ordem no WhatsApp"), caminhão habitual, resumo
-e histórico. Ação: lançar frete com este motorista.
+**Perfil do motorista:** telefone tocável (resolvido na Tarefa 1 do item 5,
+23/08/2026 — ver §9, "Três exigências...", item 3), caminhão habitual,
+resumo e histórico. Ação: lançar frete com este motorista.
 
 **Prazo de pagamento** tem três níveis: configurações da empresa → cadastro do
 cliente → edição na hora de faturar. Vazio no cliente significa herdado, e a
@@ -1215,30 +1214,66 @@ Três exigências para quando os itens 5 e 6 chegarem:
    como "10 ou 11 dígitos com DDD; DDD ≥ 11", com as três mensagens de erro
    ("Faltam dígitos...", "Número comprido demais...", "Esse DDD não
    existe.") — desenhado para validar antes de "Cobrar no WhatsApp" e
-   "Enviar ordem", os dois gatilhos que a mesma folha já prevê. Nenhum dos
-   dois está construído (busca no `src/` não encontra a folha nem as
-   mensagens), então a regra não protege nada hoje — mas ela existe, e
-   corrigir isto aqui evita a próxima sessão decidir de novo o que já foi
-   decidido. **O que falta decidir é só o DDI**: a regra escrita valida o
-   formato nacional (DDD + número), não diz se um link de WhatsApp
-   (`wa.me`/similar) assume Brasil e prefixa 55, nem o que fazer com número
-   sem DDD depois de passar nessa validação.
+   "Enviar ordem", os dois gatilhos que a mesma folha já prevê. **Em
+   22/08/2026, quando este parágrafo foi escrito, nenhum dos dois estava
+   construído** (busca no `src/` não encontrava a folha nem as mensagens),
+   então a regra não protegia nada — mas ela existia, e corrigir isto aqui
+   evitou a próxima sessão decidir de novo o que já tinha sido decidido.
+   **Desde a Tarefa 1 do item 5 (23/08/2026) isso mudou parcialmente:** a
+   folha e a validação existem e protegem o gatilho de telefone tocável nos
+   perfis (ver abaixo); "Cobrar no WhatsApp" e "Enviar ordem" continuam sem
+   construir. ~~O que falta decidir é só o DDI~~ — também resolvido na
+   Tarefa 1: fixo em 55 (ver a lista logo abaixo).
 
-   Duas coisas ficam pendentes até o item 5 chegar, não construídas agora:
-   - **DDI do link de WhatsApp** — não coberto pela regra de `componentes.md`
-     §12, que só valida o formato nacional.
-   - **Ligar a validação já escrita ao "telefone tocável abre a conversa"**
-     nos perfis — hoje esses dois pontos de toque não passam por nenhuma
-     validação, porque a folha que a implementaria não existe.
+   Duas coisas ficavam pendentes até o item 5 chegar — **as duas resolvidas
+   na Tarefa 1 do item 5 (23/08/2026)**:
+   - ~~DDI do link de WhatsApp~~ — fixo em 55, nunca perguntado (produto é só
+     Brasil, `CLAUDE.md` §1/§12). `linkWhatsapp` em `src/lib/utils/telefone.ts`.
+   - ~~Ligar a validação já escrita ao "telefone tocável abre a conversa"~~
+     nos perfis — `normalizarTelefone` (mesmo arquivo) implementa a regra ao
+     pé da letra, e `FolhaDeTelefone`/`TelefonePerfil`
+     (`src/components/ui/`) são o primeiro consumidor real da "Folha do
+     campo que falta" descrita em `docs/componentes.md` §12.
 
-   A mesma decisão destrava "telefone tocável abre a conversa", pendente nos
-   perfis de Cliente (desde a tarefa 7 do item 2,
-   `docs/planos/item-2-cadastros.md:336`) e Motorista (desde a tarefa 6 do
-   item 4, terceiro commit) — os três pontos (ordem de serviço e os dois
-   "telefone tocável") resolvem com o mesmo mecanismo. Decisão do fundador,
-   22/08/2026: decidir agora nos perfis seria decidir de novo no item 5, ou
-   herdar uma escolha feita sem o caso principal (a ordem de serviço) na
-   frente — fica registrado aqui, não construído nos perfis.
+   "Telefone tocável abre a conversa", pendente nos perfis de Cliente (desde
+   a Tarefa 5 do item 2, que construiu o perfil sem tratamento especial de
+   telefone — sem bullet própria no plano; só nomeada quando a Tarefa 7 do
+   mesmo item disse "mesma lacuna do Cliente" sobre a versão do motorista,
+   `docs/planos/item-2-cadastros.md:336`, corrigindo aqui a citação errada
+   de linha para o perfil de Motorista) e Motorista (desde a tarefa 6 do
+   item 4, terceiro commit), **também resolvido na
+   mesma Tarefa** — telefone válido vira link de verdade para o WhatsApp;
+   ausente ou inválido abre `FolhaDeTelefone` em vez de navegar ao
+   formulário. Só o terceiro ponto que motivou este parágrafo — "Enviar
+   ordem no WhatsApp" no detalhe do frete, com a mensagem pronta — segue
+   pendente, para a Tarefa 2 do item 5
+   (`docs/planos/item-5-ordem-de-servico.md`).
+
+   **Onde a validação de formato do telefone se aplica — decisão do
+   fundador, 23/08/2026, na revisão da Tarefa 1.** A pergunta surgiu ao
+   decidir se `salvarTelefoneClienteAction`/`salvarTelefoneMotoristaAction`
+   (as ações novas que a Tarefa 1 construiu para a folha) deviam ser
+   substituídas pelas ações já existentes (`editarClienteAction`/
+   `editarMotoristaAction`, do formulário de edição normal) — o que exigiria
+   validar telefone ali também. A resposta:
+
+   - **No cadastro** (criar cliente/motorista) **e na edição do próprio
+     campo telefone**, o valor precisa sair válido — `normalizarTelefone`
+     recusa, com o erro no campo, igual à folha.
+   - **O que já está salvo aceita, mesmo inválido.** Abrir o cadastro para
+     corrigir o nome e o sistema recusar por causa de um telefone antigo que
+     a pessoa nem tocou seria punir por dado antigo — mesmo princípio já
+     aplicado no Cadastro rápido (`docs/componentes.md` §11): "a falta
+     aparece no momento em que atrapalha, não antes."
+   - **A cobrança de verdade continua sendo a Folha do campo que falta**, no
+     momento de usar (telefone tocável nos perfis, já construído; Enviar
+     ordem e Cobrar no WhatsApp, pendentes) — não o formulário de cadastro.
+
+   **Não construído nesta tarefa.** `criarClienteAction`/`editarClienteAction`
+   e os equivalentes de motorista continuam sem validar telefone hoje — a
+   regra acima é a decisão de produto para quando alguém construir essa
+   validação nos dois formulários, não construída na Tarefa 1 (que só
+   resolveu o gatilho da folha). Registrado aqui para não decidir de novo.
 
 **Ficam para depois do lançamento:** 12, 14, 15, 16, 17, e a tela de edição de
 modelo do item 9.

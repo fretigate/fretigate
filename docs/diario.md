@@ -6,6 +6,111 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 23/08/2026 — Tarefa 1 do item 5: telefone — normalização, validação, folha do campo que falta
+
+Construído conforme o plano (`docs/planos/item-5-ordem-de-servico.md`,
+Tarefa 1): `normalizarTelefone`/`linkWhatsapp` (`src/lib/utils/telefone.ts`,
+DDI fixo em 55) · `FolhaDeTelefone`/`TelefonePerfil`
+(`src/components/ui/`), primeiro consumidor real da "Folha do campo que
+falta" (`docs/componentes.md` §12) · ligada nos perfis de Cliente e
+Motorista, fechando as duas pendências de "telefone tocável" abertas desde
+o item 2 (tarefas 5 e 7). `tests/telefone.test.ts`, 16 verificações.
+
+**Dois passes de `/revisar` — o primeiro achou sete itens, o segundo mais
+sete** (nenhum de dinheiro/isolamento; todos corrigidos, exceto os três
+levados ao fundador):
+
+1. `observacao` do cliente sendo zerado ao salvar só o telefone (a ação
+   regravava o cadastro inteiro sem repassar esse campo) — corrigido.
+2. Rótulo do botão "Salvar" fora do inventário fechado do §12 — trocado
+   para "Salvar no cadastro" (um dos quatro já aprovados).
+3. Comentário de código afirmando que a folha "segue pro WhatsApp" ao
+   salvar — não é verdade nesta tarefa (é a Tarefa 2), corrigido.
+4. Alvo de toque medido em 21,6px, abaixo do mínimo de 48px do
+   `CLAUDE.md` §8 — corrigido com padding + margem negativa cancelando a
+   caixa de fluxo (o texto não se move, o alvo cresce até a borda da
+   linha); medido de novo em 49,6px.
+5. `docs/especificacao.md` ainda dizia "a regra não protege nada hoje" —
+   corrigido, com a data de quando isso deixou de ser verdade.
+6. Citação de tarefa/linha errada entre dois documentos (a pendência do
+   cliente estava atribuída à tarefa e à linha do motorista) — corrigido.
+7. Apagar o campo de volta a vazio continuava mostrando erro (só a
+   digitação inicial resetava o estado "tocado") — corrigido, removi
+   esse estado e passei a checar só se o campo está vazio agora.
+8. Depois de salvar, o servidor não era revalidado — `router.refresh()`
+   acrescentado.
+9. Faltava a mesma nota de "telefone tocável resolvido" no perfil do
+   cliente em `docs/navegacao.md` (só tinha entrado no do motorista) —
+   corrigido.
+
+**Três achados levados ao fundador, decisão registrada:**
+
+- **Onde a validação de telefone se aplica.** Registrado em
+  `docs/especificacao.md` §9: valida no cadastro e na edição do próprio
+  campo telefone; aceita o que já está salvo, mesmo inválido (não bloqueia
+  salvar outro campo por causa de telefone antigo não tocado); a cobrança
+  de verdade continua sendo a folha, no momento de usar. **Não construído
+  nesta tarefa** — `criarClienteAction`/`editarClienteAction` e
+  equivalentes de motorista continuam sem validar telefone; a decisão fica
+  registrada para quando alguém construir isso.
+- **Rótulo "Salvar no cadastro" é lacuna do inventário, não divergência
+  corrigida.** Nenhum dos quatro rótulos do §12 foi escrito pensando no
+  gatilho de telefone tocável no perfil — registrado como lacuna em
+  `docs/componentes.md` §12, para o Design confirmar.
+- **Bug de posicionamento em `FolhaInferior`/`FolhaDeBusca`, não desta
+  tarefa.** `absolute inset-0` sem ancestral posicionado ancora no topo do
+  documento, não da área visível — medido: página rolada 211px, folha
+  abria 211px acima do que estava visível, descobrindo o rodapé da tela.
+  Já existia no chip de Período dos perfis (`FolhaDePeriodo`) antes desta
+  tarefa tocar em qualquer coisa — não é regressão. Decisão do fundador:
+  trocar por `position: fixed` nos dois arquivos (`FolhaInferior.tsx`,
+  `FolhaDeBusca.tsx` — implementação própria, mesmo padrão), não embrulhar
+  tela por tela (o embrulho do Lançar frete resolve outro problema, o
+  teclado numérico sobrepondo sem comprimir — copiar o padrão seria
+  importar solução de problema errado). Conferido que não existe
+  `transform`/`filter`/`perspective`/`will-change` em nenhum ancestral
+  (recriaria o mesmo problema com `fixed`). Provado rolando e abrindo as
+  sete telas com folha (Telefone, Ordenação, Período, Calendário, Busca,
+  Cadastro rápido — as seis cobrindo 0 até a borda da viewport, medido no
+  DOM; Situação não testada ao vivo — não consegui montar um frete de
+  teste pela automação do teclado numérico —, mas é o mesmo componente
+  `FolhaInferior` sem nenhuma sobrescrita própria). Teclado do celular:
+  sem como simular o teclado nativo neste ambiente; aproximei encolhendo a
+  janela de 812 para 380px de altura com a folha de telefone aberta —
+  campo e botão continuaram visíveis. É evidência a favor, não prova
+  definitiva — vale conferir num celular de verdade.
+
+**Achado fora do código, registrado a pedido do fundador.** Ele respondeu a
+uma rodada de decisões numerando itens ("3, 4, 5 — corrige", "a do teto de
+8 caracteres...") que não existiam na minha mensagem — tinha suposto uma
+lista de achados que não estava ali. Eu parei antes de agir sobre o
+palpite e pedi para ele apontar o essencial; ele confirmou que o erro era
+dele e que conferir antes de agir foi o comportamento certo. Salvo como
+memória de sessão (`feedback_confirmar_antes_de_agir_sobre_lista_suposta`).
+
+**O que foi pedido ao Design** (correções de estado feitas pelo
+repositório, `CLAUDE.md` §13 — a fonte do Design ainda não tem essas
+mudanças): `docs/componentes.md` §12 ("Onde dispara hoje", separando
+construído de não construído; a lacuna do rótulo "Salvar no cadastro") e
+as linhas de Perfil do cliente/Perfil do motorista (409, 411);
+`docs/navegacao.md` — Perfil do motorista (linha 43) e Perfil do cliente
+(linha 40) com o caminho novo de telefone tocável; "Folha do campo que
+falta" (linha 51) marcada ✅; "Regras de navegação" (linha 87) com o novo
+gatilho.
+
+**Verificação:** `npm run lint`, `npx tsc --noEmit`, `npm run build`
+verdes; `npm test` **local** 322/322 (roda de novo depois de cada rodada
+de correção, última confirmação já com a troca `fixed`). Fluxo completo no
+navegador: telefone inválido→corrigido e telefone ausente→preenchido, nos
+dois perfis, persistindo de verdade (recarregado do banco); "Agora não"
+com o aviso; as sete telas com folha, rolagem + abertura, medidas no DOM.
+Esteira deste commit ainda não disparada — ver `/onde-paramos`.
+
+Próximo: Tarefa 2 do item 5 — `mensagens.ts` e "Enviar ordem no WhatsApp"
+no detalhe do frete (`docs/planos/item-5-ordem-de-servico.md`).
+
+---
+
 ## 23/08/2026 — plano do item 5, aprovado: ordem de serviço, finalizar, comprovante
 
 Item 4 fechado (commit `6e74c03`, esteira confirmada verde via

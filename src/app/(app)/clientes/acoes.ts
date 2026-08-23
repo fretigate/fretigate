@@ -5,10 +5,12 @@ import { z } from "zod";
 import { comoUsuario } from "@/lib/auth/acao";
 import {
   arquivarCliente as arquivarClienteServico,
+  buscarCliente,
   criarCliente,
   editarCliente,
   type DadosCliente,
 } from "@/lib/servicos/clientes";
+import { normalizarTelefone, type ResultadoSalvarTelefone } from "@/lib/utils/telefone";
 
 /**
  * Cadastro / edição de cliente — `docs/navegacao.md` linha 40: "Salvar →
@@ -126,4 +128,43 @@ export const editarClienteAction = comoUsuario(async (
 export const arquivarClienteAction = comoUsuario(async (sessao, id: string) => {
   await arquivarClienteServico(sessao.empresaId, id);
   redirect("/clientes");
+});
+
+/**
+ * `FolhaDeTelefone` (item 5, Tarefa 1) — grava só o telefone; a folha fecha
+ * depois de salvar (sem ação de continuação, `docs/planos/
+ * item-5-ordem-de-servico.md`, decisão 2). Reaproveita `editarCliente`, que
+ * já faz a checagem de posse por `db(empresaId)`; o resto do cliente vem de
+ * `buscarCliente` para não apagar os outros campos (`editarCliente` grava o
+ * registro inteiro, não só o campo que mudou — `observacao` incluído, ainda
+ * que nenhuma tela o preencha hoje). Servidor valida de novo com
+ * `normalizarTelefone` — nunca confia só na validação do campo no cliente
+ * (`CLAUDE.md` §4).
+ */
+export const salvarTelefoneClienteAction = comoUsuario(async (
+  sessao,
+  id: string,
+  telefone: string,
+): Promise<ResultadoSalvarTelefone> => {
+  const validado = normalizarTelefone(telefone);
+  if (!validado.ok) return { ok: false, erro: validado.erro };
+
+  const cliente = await buscarCliente(sessao.empresaId, id);
+  if (!cliente) return { ok: false, erro: "Cliente não encontrado." };
+
+  try {
+    await editarCliente(sessao.empresaId, id, {
+      nome: cliente.nome,
+      documento: cliente.documento,
+      telefone: telefone.trim(),
+      email: cliente.email,
+      endereco: cliente.endereco,
+      prazo_pagamento_dias: cliente.prazo_pagamento_dias,
+      observacao: cliente.observacao,
+    });
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };
+  }
+
+  return { ok: true };
 });

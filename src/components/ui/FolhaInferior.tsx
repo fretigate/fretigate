@@ -26,6 +26,20 @@ import type { ReactNode } from "react";
  *
  * Toque no overlay fecha, igual ao padrão do protótipo de referência
  * (`referencia/`, evidência corroborante — `CLAUDE.md` §13).
+ *
+ * **`fixed`, não `absolute`.** Achado do `/revisar` na Tarefa 1 do item 5
+ * (23/08/2026) — não é regressão desta tarefa, já valia para todo consumidor
+ * anterior (Cadastro rápido, Período, ordenação, situação, calendário):
+ * `absolute inset-0` se ancora no ancestral posicionado mais próximo, e
+ * nenhuma tela fora do Lançar frete tem um — sem ancestral, o navegador
+ * ancora no topo do **documento**, não da área visível. Medido: com a
+ * página rolada 211px, a folha abria 211px acima do que estava visível,
+ * descobrindo o rodapé da tela. `fixed` não depende de ancestral nenhum —
+ * conferido que não existe `transform`/`filter`/`perspective`/`will-change`
+ * em nenhum ancestral (layout raiz, layout do app, `globals.css`), que
+ * recriaria o mesmo problema com outro nome. `FolhaDeBusca.tsx` tem o
+ * mesmo padrão em implementação própria (não usa este componente) e levou
+ * o mesmo conserto em separado.
  */
 
 type Props = {
@@ -36,7 +50,7 @@ type Props = {
 
 export function FolhaInferior({ titulo, onFechar, children }: Props) {
   return (
-    <div className="absolute inset-0 z-[80] flex flex-col justify-end bg-tinta/[.42]">
+    <div className="fixed inset-0 z-[80] flex flex-col justify-end bg-tinta/[.42]">
       <button
         type="button"
         aria-label="Fechar"
