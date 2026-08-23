@@ -331,8 +331,10 @@ sem isso, o resumo do dia 1º de manhã mostraria o mês anterior.
 exibidos só quando houver km preenchido; histórico. Ação: lançar frete com este
 caminhão.
 
-**Perfil do motorista:** telefone tocável, caminhão habitual, resumo e
-histórico. Ação: lançar frete com este motorista.
+**Perfil do motorista:** telefone tocável (pendente — ver §9, "Três
+exigências para quando os itens 5 e 6 chegarem", item 3: fica para o item
+5, mesma decisão de "Enviar ordem no WhatsApp"), caminhão habitual, resumo
+e histórico. Ação: lançar frete com este motorista.
 
 **Prazo de pagamento** tem três níveis: configurações da empresa → cadastro do
 cliente → edição na hora de faturar. Vazio no cliente significa herdado, e a
@@ -1177,7 +1179,7 @@ Cobranças), as duas com **texto padrão fixo, não editável**. Sai só a **tel
 editar os dois modelos**. As duas ações são construídas dentro dos itens 5 e 6,
 onde as telas já as preveem — por isso a conta de 10 itens não muda.
 
-Duas exigências para quando os itens 5 e 6 chegarem:
+Três exigências para quando os itens 5 e 6 chegarem:
 
 1. **Os dois textos padrão passam pelo fundador antes de virar código.** Eles
    saem em nome da empresa do cliente e serão lidos por cliente e motorista de
@@ -1190,6 +1192,48 @@ Duas exigências para quando os itens 5 e 6 chegarem:
    `{rota}` `{empresa}` `{motorista}` `{carga}` `{origem}` `{destino}`
    `{data}`. Quando a tela de edição entrar, é **ligar o campo ao que já
    existe**, não refazer.
+3. **`telefone` é texto livre, sem máscara nem validação, nos dois cadastros
+   que o alimentam (cliente e motorista) — hoje.** Confirmado no código: o
+   schema de entrada (`z.string().trim()`, sem regra de formato) em
+   `src/app/(app)/clientes/acoes.ts:35,83` e
+   `src/app/(app)/motoristas/acoes.ts:36,69`, e a gravação
+   (`dados.telefone?.trim() || null`, sem checagem) em
+   `src/lib/servicos/clientes.ts:60` e `src/lib/servicos/motoristas.ts:66`.
+   Achado na Tarefa 6 do item 4, terceiro commit (22/08/2026), auditando a
+   lacuna "telefone tocável". **Isto é maior que o toque na tela: "Enviar
+   ordem no WhatsApp" só chega ao motorista de verdade se o número salvo for
+   um número de verdade, e hoje nada garante isso** — quem planejar o item 5
+   trata como parte do escopo, não como detalhe a resolver na hora.
+
+   **A regra de formato já existe por escrito — só não está implementada.**
+   `docs/componentes.md` §12 ("Folha do campo que falta") já define TELEFONE
+   como "10 ou 11 dígitos com DDD; DDD ≥ 11", com as três mensagens de erro
+   ("Faltam dígitos...", "Número comprido demais...", "Esse DDD não
+   existe.") — desenhado para validar antes de "Cobrar no WhatsApp" e
+   "Enviar ordem", os dois gatilhos que a mesma folha já prevê. Nenhum dos
+   dois está construído (busca no `src/` não encontra a folha nem as
+   mensagens), então a regra não protege nada hoje — mas ela existe, e
+   corrigir isto aqui evita a próxima sessão decidir de novo o que já foi
+   decidido. **O que falta decidir é só o DDI**: a regra escrita valida o
+   formato nacional (DDD + número), não diz se um link de WhatsApp
+   (`wa.me`/similar) assume Brasil e prefixa 55, nem o que fazer com número
+   sem DDD depois de passar nessa validação.
+
+   Duas coisas ficam pendentes até o item 5 chegar, não construídas agora:
+   - **DDI do link de WhatsApp** — não coberto pela regra de `componentes.md`
+     §12, que só valida o formato nacional.
+   - **Ligar a validação já escrita ao "telefone tocável abre a conversa"**
+     nos perfis — hoje esses dois pontos de toque não passam por nenhuma
+     validação, porque a folha que a implementaria não existe.
+
+   A mesma decisão destrava "telefone tocável abre a conversa", pendente nos
+   perfis de Cliente (desde a tarefa 7 do item 2,
+   `docs/planos/item-2-cadastros.md:336`) e Motorista (desde a tarefa 6 do
+   item 4, terceiro commit) — os três pontos (ordem de serviço e os dois
+   "telefone tocável") resolvem com o mesmo mecanismo. Decisão do fundador,
+   22/08/2026: decidir agora nos perfis seria decidir de novo no item 5, ou
+   herdar uma escolha feita sem o caso principal (a ordem de serviço) na
+   frente — fica registrado aqui, não construído nos perfis.
 
 **Ficam para depois do lançamento:** 12, 14, 15, 16, 17, e a tela de edição de
 modelo do item 9.

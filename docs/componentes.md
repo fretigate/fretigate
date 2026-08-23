@@ -355,7 +355,7 @@ Duas telas violavam a ordem interna (ações **antes** de listas) e foram corrig
 
 No detalhe da cobrança a regra tem um requisito somado: **a ação principal fica visível sem rolar.** A dobra útil é o topo do (+), em `774`. Medido com `scrollTop: 0`: principal em `688–748` no estado vencido e nos mesmos `688–748` no estado **parcial**, que é o pior caso (a linha SITUAÇÃO ganha saldo recebido e restante). O cap de 3 linhas em FRETES INCLUÍDOS existe para isso, mas não bastava — havia duas listas acima das ações, não uma.
 
-Corretas sem mudança: detalhe do frete (campos → comprovante → ações, sem lista depois), perfil do motorista, formulários de **cliente**, **motorista** e **despesa** (salvar no fim, arquivar em texto abaixo), listas (sem bloco de ação), estados vazios (ação dentro do conteúdo).
+Corretas sem mudança: detalhe do frete (campos → comprovante → ações, sem lista depois), formulários de **cliente**, **motorista** e **despesa** (salvar no fim, arquivar em texto abaixo), listas (sem bloco de ação), estados vazios (ação dentro do conteúdo).
 
 **Correção desta auditoria.** A versão anterior listava o formulário de **caminhão** entre os conferidos. Ele não existia quando a medição foi feita — a linha afirmava verificação de uma tela ausente, o que engana mais que uma lacuna, porque quem lê "conferido" para de conferir. O formulário existe agora e segue a regra (salvar no fim do conteúdo rolável, arquivar em texto abaixo), mas fica registrado **por que** o erro aconteceu: a auditoria foi escrita por analogia entre as três telas de cadastro, não por medição de cada uma. **Auditoria por analogia não é auditoria** — cada linha aqui vale só para a tela que foi de fato aberta e medida.
 
@@ -371,6 +371,21 @@ em vez de continuar afirmando o que já não é verdade. Medido no DOM
 mesma ordem da regra (resumo → campos → **ação** → histórico), igual ao
 perfil do cliente. Segue sem principal (nenhum botão verde sólido na
 tela).
+
+**Perfil do motorista, remedido na Tarefa 6 do item 4, terceiro commit
+(22/08/2026).** Até este commit a tela só tinha identificação (sem resumo,
+sem ação, sem histórico), e por isso constava na linha "Corretas sem
+mudança" acima, sem parêntese próprio — não havia lista nem ação para medir
+contra a regra de posição. Isso deixa de valer no mesmo commit que
+acrescentou o resumo de fretes/valor transportado e o botão principal
+"Lançar frete com este motorista": a tela ganha lista (Histórico) e ação
+pela primeira vez, então sai daquela linha e ganha medição própria aqui, em
+vez de continuar listada como se ainda não tivesse nenhuma das duas. Medido
+no DOM
+(`getBoundingClientRect`, viewport 1280×720, `scrollTop: 0`): Resumo em
+`197`, Identificação em `295`, o botão principal em `523–583`, Histórico em
+`609` — mesma ordem da regra (resumo → campos → **ação** → histórico),
+igual aos outros dois perfis.
 
 ## Onde cada tela usa o quê
 
@@ -393,7 +408,7 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Clientes / Caminhões / Motoristas — lista | sem principal · pílula de cabeçalho **+ Novo** · chip de ordenação **Ordenar por** |
 | Perfil do cliente | principal **Gerar relatório** · **Editar** como pílula de cabeçalho · pílula em linha **Cobrar no WhatsApp** (só com valor em aberto) · pílulas **Ver todos os 34** e **Lançar frete para este cliente** · os três primeiros números do resumo são tocáveis |
 | Perfil do caminhão | sem principal · **Editar** no cabeçalho · km e R$/km só aparecem com km preenchido; sem km, convite curto · pílula em linha **Lançar frete com este caminhão** |
-| Perfil do motorista | principal **Lançar frete com este motorista** · **Editar** no cabeçalho · telefone tocável abre a conversa |
+| Perfil do motorista | principal **Lançar frete com este motorista** · **Editar** no cabeçalho · telefone tocável abre a conversa (pendente — ver `docs/especificacao.md` §9, "Três exigências...", item 3) |
 | Cadastro / edição de cliente | principal **Salvar cliente** / **Salvar alterações**, desabilitada até ter nome · texto destrutiva **Arquivar cliente** no fim do formulário rolável |
 | Cadastro / edição de motorista | principal **Salvar motorista** / **Salvar alterações**, desabilitada até ter nome · texto destrutiva **Arquivar motorista** no fim |
 | Cadastro / edição de caminhão | principal **Salvar caminhão** / **Salvar alterações**, desabilitada até ter **apelido ou placa** — os dois identificam o caminhão, e quem só sabe a placa cadastra pela placa · chips de escolha para **TIPO** — **Toco · Truck · Bitruck · Carreta · Bitrem**, campo opcional, decisão do fundador em 10/08/2026 (`docs/especificacao.md`, entidade Veiculo) · texto destrutiva **Arquivar caminhão** no fim. **Sem campo de ano**: não alimenta cálculo, relatório, cobrança nem ordem |

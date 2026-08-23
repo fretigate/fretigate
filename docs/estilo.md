@@ -131,6 +131,22 @@ nenhuma linha desta tabela confirmar ou contradizer isso. Registrado para o
 Design decidir junto da lacuna irmã (ver "O que precisa chegar ao Design" em
 `docs/planos/item-4-lista-e-detalhe-do-frete.md`).
 
+**Lacuna — Perfil do motorista não tem linha nesta tabela.** Achado do
+`/revisar` na Tarefa 6 do item 4, terceiro commit (22/08/2026): Perfil do
+cliente e Perfil do caminhão têm linha própria (120–121), Perfil do
+motorista não, embora a tela agora mostre a mesma composição das outras
+duas — nome em destaque (26px) + os dois números do resumo do período —,
+construída por analogia com elas (`src/app/(app)/motoristas/[id]/page.tsx`).
+Registrado para o Design decidir junto das lacunas irmãs.
+
+**Lacuna — os rótulos do resumo do motorista não têm nome formal.** Mesmo
+achado: "Fretes no período" e "Valor transportado"
+(`ResumoDoPerfil`, `motoristas/[id]/page.tsx`) não estão em
+`docs/especificacao.md` nem em `docs/componentes.md` — §4.7 diz só "resumo
+e histórico", §7 (linha 1068) diz "fretes/valor transportado" ao falar de
+regra de cálculo, não de rótulo de tela. Mesma categoria do rótulo "Km e
+R$/km" do perfil do caminhão, registrado como lacuna no commit anterior.
+
 ---
 
 ## Espaçamento

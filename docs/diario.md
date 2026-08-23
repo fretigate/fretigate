@@ -6,6 +6,97 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 22/08/2026 — tarefa 6 do item 4, terceiro de três commits: resumo e histórico do perfil do motorista — fecha o item 4
+
+Construído conforme o plano (`docs/planos/item-4-lista-e-detalhe-do-frete.md`,
+Tarefa 6): resumo de fretes/valor transportado no período (`resumoDoMotorista`,
+já existente desde a Tarefa 1), botão principal "Lançar frete com este
+motorista" (`docs/componentes.md` linha 411, diferente da pílula em linha dos
+outros dois perfis) e histórico seguindo o mesmo período, reaproveitando os
+três componentes (`ChipDePeriodoPerfil`, `ResumoDoPerfil`, `HistoricoDoPerfil`)
+e `listarServicosDoMotorista` já construídos — nenhuma lógica nova de backend,
+só a tela. **Fecha a Tarefa 6 e o item 4 inteiro.**
+
+**`/auditar-tela` (antes do `/revisar`) achou duas divergências, as duas
+corrigidas no mesmo commit:** linha "Telefone" tocável só levando ao formulário
+(contradizia `docs/componentes.md` linha 396 da época) e a tabela de auditoria
+de posição ainda listando "perfil do motorista" entre as telas sem lista nem
+ação — mesma classe de desatualização já corrigida para o caminhão no commit
+anterior.
+
+**A correção do telefone virou investigação de custo, a pedido do fundador,
+antes de decidir construir.** Ele supunha que o produto já abria conversa de
+WhatsApp em algum lugar (reaproveitável) — busquei `wa.me`/`api.whatsapp.com`
+em todo o `src/` e não existe nenhum link construído; "Cobrar no WhatsApp" e
+"Enviar ordem no WhatsApp" são só nomes reservados no inventário, sem código.
+Achado maior: `telefone` é texto livre, sem máscara nem validação, nos dois
+cadastros (schema `z.string().trim()`, sem regra de formato, em
+`clientes/acoes.ts` e `motoristas/acoes.ts`). Decisão do fundador: registrar
+como pendência única para o item 5 (`docs/especificacao.md` §9, "Três
+exigências...", item 3) — "Enviar ordem no WhatsApp" vai enfrentar a mesma
+normalização e a mesma decisão de telefone inválido, então resolver lá evita
+decidir duas vezes ou herdar escolha feita sem o caso principal na frente.
+
+**Correção dentro da própria investigação, achada pelo primeiro `/revisar`:**
+minha primeira redação da pendência dizia que "formato do número" era decisão
+em aberto — não é mais exata: `docs/componentes.md` §12 ("Folha do campo que
+falta") já define TELEFONE como "10 ou 11 dígitos com DDD; DDD ≥ 11", com as
+mensagens de erro, para os mesmos dois gatilhos (Cobrar no WhatsApp, Enviar
+ordem). A regra existe por escrito, só não está implementada (busca no `src/`
+não encontra a folha nem as mensagens). O que continua em aberto é só o DDI
+(prefixar 55 para o link) e ligar essa validação ao "telefone tocável" dos
+perfis. Corrigido em `docs/especificacao.md` §9 antes do commit.
+
+**Dois passes de `/revisar` (o formal, via subagente) — achados só das
+categorias "corrige no passe, sem abrir outro" (`CLAUDE.md` §2, item 7):**
+
+1. Primeiro passe: citação errada (arquivo errado citado para o schema de
+   telefone, "tarefa 5" em vez de "tarefa 7", `docs/navegacao.md` linha 42
+   em vez de 43), contradição entre documentos (`docs/especificacao.md`
+   §4.7 ainda dizia "telefone tocável" como se estivesse construído;
+   `docs/navegacao.md` ainda descrevia as três ações como "pílulas",
+   inclusive a do motorista, que virou botão principal neste commit) e um
+   parágrafo meu que atribuía "sem lista depois" ao perfil do motorista
+   quando a linha antiga não dizia isso dele.
+2. Segundo passe: a correção do primeiro passe deslocou a linha "Perfil do
+   motorista" de `docs/componentes.md` para 411 (não 408, contagem errada
+   na primeira correção) — três citações dessa linha corrigidas em cascata
+   (`page.tsx`, `docs/navegacao.md`, esta entrada); e `docs/componentes.md`
+   linha 411 continuava sem marcar "telefone tocável" como pendente — é o
+   documento dono do conteúdo da tela (`CLAUDE.md` §13), a marcação só
+   tinha entrado em `especificacao.md`/`navegacao.md`, documentos de apoio
+   para este escopo. Também corrigido: a entrada do commit anterior
+   (`e9fafe8`, abaixo) ainda dizia "esteira não disparada" quando já foi
+   confirmada verde nesta sessão.
+
+Nenhum achado é dinheiro/isolamento; nenhum abriu um terceiro passe.**
+
+**Lacunas registradas, não corrigidas:** Perfil do motorista sem linha na
+tabela de níveis tipográficos de `docs/estilo.md` (Cliente e Caminhão têm);
+rótulos "Fretes no período"/"Valor transportado" sem nome formal em nenhum
+documento — mesma categoria do "Km e R$/km" do commit anterior.
+
+**O que foi pedido ao Design:** três correções de estado, feitas pelo
+repositório (`CLAUDE.md` §13) — `docs/navegacao.md` linhas 18 e 43 (motorista
+usa botão principal, não pílula; caminho novo "Lançar frete com este
+motorista → pré-selecionado"; telefone tocável marcado pendente) e
+`docs/especificacao.md` §4.7 (telefone tocável marcado pendente, com
+referência à §9). A fonte do Design ainda não tem essas mudanças.
+
+**Verificação:** `npm run lint`, `npx tsc --noEmit`, `npm run build` verdes;
+`npm test` **local** 306/306 (sem teste novo — nenhuma lógica de backend nova).
+Fluxo completo no navegador com dado plantado (motorista novo, frete de R$
+15,00 lançado hoje via a pré-seleção `?motorista=`): resumo mostra "1"/"R$
+15,00" no mês corrente, "0"/"R$ 0,00" com "Nenhum frete neste período." no mês
+passado (distinto de "Nenhum frete lançado ainda." no estado vazio geral).
+Esteira deste commit ainda não disparada — ver `/onde-paramos`.
+
+Próximo: item 5 da ordem de construção do produto (`docs/especificacao.md`
+§9) — **Ordem de serviço: enviar ordem, finalizar, comprovante**. Plano ainda
+não aprovado — antes de construir, escrever e aprovar o plano, incluindo a
+normalização de telefone e as duas decisões pendentes (DDI, tratamento de
+telefone inválido) registradas nesta entrada.
+
 ## 22/08/2026 — tarefa 6 do item 4, segundo de três commits: resumo e histórico do perfil do caminhão
 
 Construído conforme o plano (`docs/planos/item-4-lista-e-detalhe-do-frete.md`,
@@ -74,8 +165,8 @@ no navegador com dado plantado (caminhão com um frete com km neste mês, um
 sem km no mesmo mês, e mês anterior sem nenhum): convite quando não há km,
 os dois números quando há, nota de cobertura parcial "1 de 2 fretes com
 km", troca de período preservando o texto certo de vazio, pré-seleção do
-caminhão ao tocar a pílula. Esteira deste commit ainda não disparada — ver
-`/onde-paramos`.
+caminhão ao tocar a pílula. **Esteira confirmada verde** neste commit
+(`e9fafe8`) — checado via `/onde-paramos` na sessão seguinte.
 
 Próximo: Tarefa 6 do item 4, terceiro commit — resumo e histórico do perfil
 do motorista (fretes e valor transportado no período, ação principal
