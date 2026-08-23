@@ -355,9 +355,22 @@ Duas telas violavam a ordem interna (ações **antes** de listas) e foram corrig
 
 No detalhe da cobrança a regra tem um requisito somado: **a ação principal fica visível sem rolar.** A dobra útil é o topo do (+), em `774`. Medido com `scrollTop: 0`: principal em `688–748` no estado vencido e nos mesmos `688–748` no estado **parcial**, que é o pior caso (a linha SITUAÇÃO ganha saldo recebido e restante). O cap de 3 linhas em FRETES INCLUÍDOS existe para isso, mas não bastava — havia duas listas acima das ações, não uma.
 
-Corretas sem mudança: detalhe do frete (campos → comprovante → ações, sem lista depois), perfil do motorista, perfil do caminhão (sem principal, só Editar no cabeçalho), formulários de **cliente**, **motorista** e **despesa** (salvar no fim, arquivar em texto abaixo), listas (sem bloco de ação), estados vazios (ação dentro do conteúdo).
+Corretas sem mudança: detalhe do frete (campos → comprovante → ações, sem lista depois), perfil do motorista, formulários de **cliente**, **motorista** e **despesa** (salvar no fim, arquivar em texto abaixo), listas (sem bloco de ação), estados vazios (ação dentro do conteúdo).
 
 **Correção desta auditoria.** A versão anterior listava o formulário de **caminhão** entre os conferidos. Ele não existia quando a medição foi feita — a linha afirmava verificação de uma tela ausente, o que engana mais que uma lacuna, porque quem lê "conferido" para de conferir. O formulário existe agora e segue a regra (salvar no fim do conteúdo rolável, arquivar em texto abaixo), mas fica registrado **por que** o erro aconteceu: a auditoria foi escrita por analogia entre as três telas de cadastro, não por medição de cada uma. **Auditoria por analogia não é auditoria** — cada linha aqui vale só para a tela que foi de fato aberta e medida.
+
+**Perfil do caminhão, remedido na Tarefa 6 do item 4, segundo commit
+(22/08/2026).** Até este commit a tela só tinha identificação, e por isso
+constava na linha "Corretas sem mudança" acima como "sem principal, só
+Editar no cabeçalho". Essa descrição parou de valer no mesmo commit que
+acrescentou o resumo de km/R$ por km e a pílula em linha "Lançar frete com
+este caminhão" — por isso saiu daquela linha e ganha medição própria aqui,
+em vez de continuar afirmando o que já não é verdade. Medido no DOM
+(`getBoundingClientRect`, viewport 1280×720, `scrollTop: 0`): Resumo em
+`197`, Identificação em `313`, a pílula em `539–577`, Histórico em `603` —
+mesma ordem da regra (resumo → campos → **ação** → histórico), igual ao
+perfil do cliente. Segue sem principal (nenhum botão verde sólido na
+tela).
 
 ## Onde cada tela usa o quê
 
@@ -379,7 +392,7 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Documento A4 | principal **Compartilhar no WhatsApp** · secundárias **Baixar PDF** + **Imprimir** |
 | Clientes / Caminhões / Motoristas — lista | sem principal · pílula de cabeçalho **+ Novo** · chip de ordenação **Ordenar por** |
 | Perfil do cliente | principal **Gerar relatório** · **Editar** como pílula de cabeçalho · pílula em linha **Cobrar no WhatsApp** (só com valor em aberto) · pílulas **Ver todos os 34** e **Lançar frete para este cliente** · os três primeiros números do resumo são tocáveis |
-| Perfil do caminhão | sem principal · **Editar** no cabeçalho · km e R$/km só aparecem com km preenchido; sem km, convite curto |
+| Perfil do caminhão | sem principal · **Editar** no cabeçalho · km e R$/km só aparecem com km preenchido; sem km, convite curto · pílula em linha **Lançar frete com este caminhão** |
 | Perfil do motorista | principal **Lançar frete com este motorista** · **Editar** no cabeçalho · telefone tocável abre a conversa |
 | Cadastro / edição de cliente | principal **Salvar cliente** / **Salvar alterações**, desabilitada até ter nome · texto destrutiva **Arquivar cliente** no fim do formulário rolável |
 | Cadastro / edição de motorista | principal **Salvar motorista** / **Salvar alterações**, desabilitada até ter nome · texto destrutiva **Arquivar motorista** no fim |

@@ -6,6 +6,81 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 22/08/2026 — tarefa 6 do item 4, segundo de três commits: resumo e histórico do perfil do caminhão
+
+Construído conforme o plano (`docs/planos/item-4-lista-e-detalhe-do-frete.md`,
+Tarefa 6): resumo de km/R$ por km no período — convite único ("Preencha o km
+ao lançar para ver o R$/km") quando nenhum frete do período tem km, os dois
+números lado a lado quando tem —, nota de cobertura parcial ("N de M fretes
+com km"), pílula "Lançar frete com este caminhão" e histórico seguindo o
+período, reaproveitando os três componentes construídos no primeiro commit
+(`ChipDePeriodoPerfil`, `ResumoDoPerfil`, `HistoricoDoPerfil`) e as funções de
+serviço já existentes desde a Tarefa 1 (`resumoDoCaminhao`,
+`listarServicosDoCaminhao`) — nenhuma lógica nova de backend, só a tela.
+
+**O risco "mesmo rótulo, recortes diferentes" do plano se confirmou**: com
+dado plantado (dois fretes no mês, R$5+R$30), a lista de Caminhões ordenada
+por "Maior valor transportado" mostrava "R$ 35,00" cru (vida inteira), sem
+nada ao lado que distinguisse do resumo do perfil (período). Corrigido do
+mesmo jeito que o cliente: `ListaCaminhoes.tsx` ganhou "no total" no apoio
+do critério de valor.
+
+**Perguntei ao fundador se o mesmo valia para "mais fretes" (o outro
+critério sem qualificador), e a resposta foi sim, com uma regra nova
+registrada por escrito** (`docs/especificacao.md` §4.7): número na lista de
+cadastro é sempre da vida inteira e diz "no total"; número no perfil é do
+período e o chip ao lado já avisa disso, sem precisar do qualificador.
+Motivo do fundador: deixar só um dos dois qualificado ensina o hábito
+errado — quem aprende que "no total" significa vida inteira, ao ver um
+número sem ele ao lado, concluiria (errado) que é do período. `mais
+fretes` em `ListaCaminhoes.tsx` também ganhou "no total". A regra vale
+para as três listas de cadastro, inclusive Motoristas no terceiro commit —
+não precisa ser redescoberta lá.
+
+**Dois passes de `/revisar`:**
+
+1. Primeiro passe: tabela de auditoria de posição (`docs/componentes.md`)
+   ainda descrevia o perfil do caminhão como "sem principal, só Editar no
+   cabeçalho" — descrição que parou de valer no mesmo commit. Corrigido com
+   medição real no DOM (não por analogia): Resumo → Identificação → pílula
+   → Histórico, mesma ordem do perfil do cliente. Também corrigida uma
+   citação de linha errada no docstring da página (`docs/navegacao.md`
+   linha 41 → 42, o número certo).
+2. Segundo passe: a correção do primeiro passe criou uma referência cruzada
+   quebrada ("a linha acima descrevia..." apontando para um texto que a
+   mesma edição já tinha apagado) — corrigida.
+
+**Lacunas registradas, não corrigidas — nenhuma é dinheiro/isolamento:**
+- Casas decimais do km (`toLocaleString("pt-BR")` aqui vs `/1000` cru em
+  `fretes/[id]/page.tsx`) sem regra escrita — sem risco prático hoje, porque
+  km só nasce como inteiro×1000 (o campo do formulário só aceita dígitos).
+- Viewport da medição de DOM (1280×720) sem convenção documentada para
+  auditoria de posição — a ordem medida não depende da largura (o
+  contêiner da tela é fixo em 480px), mas o processo não define um padrão.
+- Rótulo "Km e R$/km" fundido numa célula só, no estado de convite — texto
+  que criei no código, sem lastro em `docs/especificacao.md` nem
+  `docs/componentes.md`.
+
+**O que foi pedido ao Design:** duas correções de estado, feitas pelo
+repositório (`CLAUDE.md` §13) — `docs/componentes.md` linha 382 (Perfil do
+caminhão ganha a pílula) e `docs/navegacao.md` linha 42 (Caminhões — lista e
+perfil, com o novo caminho "Lançar frete com este caminhão → Lançar frete
+pré-selecionado"). A fonte do Design ainda não tem essas duas mudanças.
+
+**Verificação:** `npm run lint`, `npx tsc --noEmit`, `npm run build`
+verdes; `npm test` **local** 306/306 (sem teste novo — nenhuma lógica de
+backend nova, só consumo de funções já testadas na Tarefa 1). Fluxo completo
+no navegador com dado plantado (caminhão com um frete com km neste mês, um
+sem km no mesmo mês, e mês anterior sem nenhum): convite quando não há km,
+os dois números quando há, nota de cobertura parcial "1 de 2 fretes com
+km", troca de período preservando o texto certo de vazio, pré-seleção do
+caminhão ao tocar a pílula. Esteira deste commit ainda não disparada — ver
+`/onde-paramos`.
+
+Próximo: Tarefa 6 do item 4, terceiro commit — resumo e histórico do perfil
+do motorista (fretes e valor transportado no período, ação principal
+"Lançar frete com este motorista").
+
 ## 22/08/2026 — tarefa 6 do item 4, primeiro de três commits: resumo e histórico do perfil do cliente
 
 Construído conforme o plano detalhado nesta mesma sessão

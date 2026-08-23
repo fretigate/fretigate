@@ -255,6 +255,19 @@ Ordenações: clientes por mais recente · maior valor em aberto · maior valor
 total. Caminhões e motoristas por mais recente · mais fretes · maior valor
 transportado. A linha mostra o dado da ordenação escolhida.
 
+**Regra geral, decisão do fundador em 22/08/2026 (Tarefa 6 do item 4, segundo
+commit): número na lista de cadastro é sempre da vida inteira do cadastro, e
+o apoio da linha diz isso — "R$ X no total", "N fretes no total". Número no
+resumo do perfil é sempre do período escolhido, e o chip de período ao lado
+já avisa disso — nunca precisa do qualificador "no total".** Motivo: as duas
+telas mostram o mesmo tipo de número (valor transportado, contagem de
+fretes) em recortes diferentes (vida inteira × período), e um dos dois sem
+qualificador nenhum ensina o hábito errado — a pessoa aprende que "no total"
+significa vida inteira, vê um número sem ele ao lado e conclui,
+incorretamente, que é do período. A regra vale para todo critério de
+ordenação que apareça daqui para frente, nas três listas de cadastro
+(Clientes, Caminhões, Motoristas) — não precisa ser redescoberta a cada uma.
+
 **"Maior valor transportado", não "maior valor rodado"** — corrigido em
 22/08/2026, planejamento da Tarefa 5 do item 4: mesma palavra que já valia
 para o resumo do perfil do motorista (`docs/planos/item-4-lista-e-detalhe-do-

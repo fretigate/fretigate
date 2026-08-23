@@ -1,27 +1,87 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { exigirSessao } from "@/lib/auth/sessao";
 import { buscarCaminhao } from "@/lib/servicos/caminhoes";
+import { resumoDoCaminhao } from "@/lib/servicos/servicos";
+import { listarServicosDoCaminhao } from "@/lib/servicos/titulos";
 import { PilulaCabecalho } from "@/components/ui/PilulaCabecalho";
 import { PlacaBadge } from "@/components/ui/PlacaBadge";
 import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
+import { PilulaEmLinha } from "@/components/ui/PilulaEmLinha";
+import { ChipDePeriodoPerfil } from "@/components/ui/ChipDePeriodoPerfil";
+import { ResumoDoPerfil } from "@/components/ui/ResumoDoPerfil";
+import { HistoricoDoPerfil } from "@/components/ui/HistoricoDoPerfil";
 import { TIPOS_VEICULO } from "@/lib/utils/caminhao";
-import { exigirSessao } from "@/lib/auth/sessao";
+import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { resolverPeriodoDoPerfil, rotuloDoPeriodo } from "@/lib/utils/periodo";
 
 /**
- * Perfil do caminhão — `docs/navegacao.md` linha 41. Nasce só com
- * identificação e Editar: km no período, R$/km, motorista habitual e
- * histórico dependem de `Servico`/`Motorista` (itens 3/4/7) — mesmo motivo
- * que adiou o resumo financeiro do perfil do cliente na tarefa 5.
+ * Perfil do caminhão — `docs/navegacao.md` linha 42. Segundo dos três
+ * commits da Tarefa 6 do item 4
+ * (`docs/planos/item-4-lista-e-detalhe-do-frete.md`): ganha resumo de km/R$
+ * por km no período e histórico, reaproveitando o mesmo mecanismo de período
+ * e os mesmos componentes (`ChipDePeriodoPerfil`, `ResumoDoPerfil`,
+ * `HistoricoDoPerfil`) do perfil do cliente, primeiro commit desta tarefa.
+ *
+ * **Km e R$/km só aparecem com km preenchido no período** —
+ * `docs/especificacao.md` §4.7. Sem isso, um único convite substitui os
+ * dois números (`resumo.kmPeriodoMetros === null`), em vez de cada um
+ * mostrar seu próprio convite lado a lado — os dois nascem juntos e morrem
+ * juntos em `resumoDoCaminhao`, então duplicar o mesmo aviso em duas células
+ * seria redundante.
  */
-export default async function Pagina({ params }: { params: Promise<{ id: string }> }) {
+export default async function Pagina({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ periodo?: string; de?: string; ate?: string }>;
+}) {
   const sessao = await exigirSessao();
   const { id } = await params;
+  const { periodo: janelaParam, de, ate } = await searchParams;
 
   const caminhao = await buscarCaminhao(sessao.empresaId, id);
   if (!caminhao) notFound();
 
+  const { periodo, janelaEfetiva } = resolverPeriodoDoPerfil(janelaParam, de, ate);
+  const [resumo, historico] = await Promise.all([
+    resumoDoCaminhao(sessao.empresaId, id, periodo),
+    listarServicosDoCaminhao(sessao.empresaId, id, periodo),
+  ]);
+
   const rotuloPorTipo = Object.fromEntries(TIPOS_VEICULO.map((t) => [t.valor, t.rotulo]));
   const tipoRotulo = caminhao.tipo ? rotuloPorTipo[caminhao.tipo] : null;
+
+  const numeros =
+    resumo.kmPeriodoMetros === null
+      ? [
+          {
+            rotulo: "Km e R$/km",
+            convite: "Preencha o km ao lançar para ver o R$/km",
+          },
+        ]
+      : [
+          {
+            rotulo: "Km no período",
+            valor: `${(resumo.kmPeriodoMetros / 1000).toLocaleString("pt-BR")} km`,
+          },
+          {
+            rotulo: "R$/km",
+            valor: `R$ ${resumo.rsPorKm!.toLocaleString("pt-BR", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`,
+          },
+        ];
+
+  // Cobertura parcial só quando já existe km para mostrar — no estado de
+  // convite, o próprio convite já diz "preencha o km", e repetir "0 de N
+  // fretes com km" ao lado seria o mesmo aviso duas vezes.
+  const notaCobertura =
+    resumo.kmPeriodoMetros !== null && resumo.fretesComKm < resumo.fretesNoPeriodo
+      ? `${resumo.fretesComKm} de ${resumo.fretesNoPeriodo} fretes com km`
+      : undefined;
 
   return (
     <main
@@ -76,6 +136,19 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           </div>
         ) : null}
 
+        <ResumoDoPerfil
+          chipPeriodo={
+            <ChipDePeriodoPerfil
+              caminhoBase={`/caminhoes/${id}`}
+              hoje={diaEmFortaleza(new Date())}
+              janelaAtual={janelaEfetiva}
+              rotuloPeriodo={rotuloDoPeriodo(janelaEfetiva, de, ate) ?? "Este mês"}
+            />
+          }
+          numeros={numeros}
+          nota={notaCobertura}
+        />
+
         <span className="px-4 pt-26 pb-6 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
           Identificação
         </span>
@@ -84,6 +157,18 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           <LinhaDePerfil href={`/caminhoes/${id}/editar`} rotulo="Placa" valor={caminhao.placa} mono />
           <LinhaDePerfil href={`/caminhoes/${id}/editar`} rotulo="Tipo" valor={tipoRotulo} />
         </div>
+
+        <div className="pt-26">
+          <PilulaEmLinha href={`/fretes/novo?caminhao=${id}`}>
+            Lançar frete com este caminhão
+          </PilulaEmLinha>
+        </div>
+
+        <HistoricoDoPerfil
+          servicos={historico.servicos}
+          total={historico.total}
+          totalGeral={historico.totalGeral}
+        />
       </div>
     </main>
   );

@@ -119,9 +119,9 @@ export function ListaCaminhoes({ caminhoes }: { caminhoes: Caminhao[] }) {
           // ordenação, mesma troca que Clientes já faz no `apoio`.
           const dadoDoCriterio =
             criterio === "fretes"
-              ? `${caminhao.fretes} ${caminhao.fretes === 1 ? "frete" : "fretes"}`
+              ? `${caminhao.fretes} ${caminhao.fretes === 1 ? "frete" : "fretes"} no total`
               : criterio === "valor"
-                ? `R$ ${formatarCentavos(caminhao.valorTransportadoCentavos)}`
+                ? `R$ ${formatarCentavos(caminhao.valorTransportadoCentavos)} no total`
                 : caminhao.tipo;
 
           return (
