@@ -5,6 +5,7 @@ import { buscarCaminhoesPorIds } from "@/lib/servicos/caminhoes";
 import { buscarMotoristasPorIds } from "@/lib/servicos/motoristas";
 import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { normalizarParaBusca } from "@/lib/utils/texto";
+import { formatarRota } from "@/lib/utils/rota";
 import { resolverLimiteDaLista, resolverPeriodoDaUrl, rotuloDoPeriodo } from "@/lib/utils/periodo";
 import { AvisoFreteSalvo } from "./AvisoFreteSalvo";
 import { ListaFretes, type FreteParaLista } from "./ListaFretes";
@@ -21,14 +22,33 @@ import { ListaFretes, type FreteParaLista } from "./ListaFretes";
  * consulta ao servidor", e o item 8 (dashboard) vai linkar direto para uma
  * janela específica. Cliente e situação são filtrados no cliente
  * (`ListaFretes`), sobre o que já veio.
+ *
+ * `cliente` (Tarefa 6, item 4) semeia o chip Cliente já existente — não é
+ * filtro novo, só um jeito de chegar aqui com ele pré-aplicado: o número
+ * "já rodado" tocável do perfil do cliente usa isso para levar direto à
+ * lista já filtrada por aquele cliente e pelo mesmo período do resumo.
+ *
+ * **O nome do cliente não viaja pela URL** — achado do segundo `/revisar`
+ * da Tarefa 6: uma primeira versão mandava `clienteNome` como parâmetro,
+ * dado de terceiro (`CLAUDE.md` §11) entrando em query string, que a
+ * hospedagem (Vercel) registra em log de acesso. Em vez disso, `cliente`
+ * (o `id`, mesma exposição de qualquer link para o perfil) entra no lote
+ * de `buscarClientesPorIds` mesmo quando esse cliente não tiver frete
+ * nenhum no período carregado — o nome sai sempre do banco, nunca da URL.
  */
 export default async function Pagina({
   searchParams,
 }: {
-  searchParams: Promise<{ criado?: string; periodo?: string; de?: string; ate?: string }>;
+  searchParams: Promise<{
+    criado?: string;
+    periodo?: string;
+    de?: string;
+    ate?: string;
+    cliente?: string;
+  }>;
 }) {
   const sessao = await exigirSessao();
-  const { criado, periodo: janela, de, ate } = await searchParams;
+  const { criado, periodo: janela, de, ate, cliente: clienteInicial } = await searchParams;
 
   const periodo = resolverPeriodoDaUrl(janela, de, ate);
   const limite = resolverLimiteDaLista(janela, periodo);
@@ -42,7 +62,12 @@ export default async function Pagina({
     limite,
   });
 
-  const idsClientes = [...new Set(servicos.map((s) => s.cliente_id))];
+  // `clienteInicial` entra no lote mesmo que nenhum frete carregado seja
+  // dele — é o que permite resolver o nome dele para o chip mesmo com zero
+  // fretes no período (achado do segundo /revisar da Tarefa 6).
+  const idsClientes = [
+    ...new Set([...servicos.map((s) => s.cliente_id), ...(clienteInicial ? [clienteInicial] : [])]),
+  ];
   const idsCaminhoes = [...new Set(servicos.flatMap((s) => (s.veiculo_id ? [s.veiculo_id] : [])))];
   const idsMotoristas = [
     ...new Set(servicos.flatMap((s) => (s.motorista_id ? [s.motorista_id] : []))),
@@ -55,6 +80,7 @@ export default async function Pagina({
   ]);
 
   const nomeDoCliente = new Map(clientes.map((c) => [c.id, c.nome]));
+  const nomeClienteInicial = clienteInicial ? nomeDoCliente.get(clienteInicial) : undefined;
   const caminhaoPorId = new Map(caminhoes.map((c) => [c.id, c]));
   const nomeDoMotorista = new Map(motoristas.map((m) => [m.id, m.nome]));
 
@@ -115,16 +141,12 @@ export default async function Pagina({
           filtroDePeriodoAtivo={periodo !== null}
           limitadoA50={limite === 50 && servicos.length === 50}
           rotuloPeriodo={rotuloDoPeriodo(janela, de, ate)}
+          clienteInicial={clienteInicial}
+          nomeClienteInicial={nomeClienteInicial}
         />
       </div>
 
       {criado ? <AvisoFreteSalvo servicoId={criado} /> : null}
     </main>
   );
-}
-
-/** "Origem → Destino" — só o que existir; nenhum dos dois é obrigatório no Lançamento. */
-function formatarRota(origem: string | null, destino: string | null): string | null {
-  if (origem && destino) return `${origem} → ${destino}`;
-  return origem || destino || null;
 }

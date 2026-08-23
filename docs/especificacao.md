@@ -277,7 +277,14 @@ vencido · recebido no período**, com filtro de período que recalcula os
 quatro, e os três primeiros tocáveis para as listas filtradas; dados
 cadastrais; histórico de fretes. Ações: **Gerar relatório** (principal),
 **Editar** (cabeçalho), **Cobrar no WhatsApp** (só com valor em aberto), e
-**Lançar frete para este cliente** no fim do histórico.
+**Lançar frete para este cliente**, entre os campos cadastrais e o
+histórico — corrigido em 22/08/2026 (planejamento da Tarefa 6, achado do
+segundo `/revisar`): a frase dizia "no fim do histórico", texto anterior à
+auditoria de posição que corrigiu esta mesma tela (`docs/componentes.md`,
+"Auditoria da regra de posição" — "Perfil do cliente | ações no fim,
+depois do histórico → resumo → campos → **ações** → histórico") e nunca
+foi atualizado depois. O texto estava desatualizado; a posição vigente é a
+da auditoria.
 
 **No item 4, o resumo nasce com só dois dos quatro números.** "A receber" e
 "Vencido" dependem de título em aberto — pelo mesmo motivo do parágrafo

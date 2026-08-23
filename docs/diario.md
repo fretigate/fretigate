@@ -6,6 +6,75 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 22/08/2026 — tarefa 6 do item 4, primeiro de três commits: resumo e histórico do perfil do cliente
+
+Construído conforme o plano detalhado nesta mesma sessão
+(`docs/planos/item-4-lista-e-detalhe-do-frete.md`, Tarefa 6): resumo
+financeiro (já rodado · recebido no período) com chip de período — padrão
+mês corrente, decisão do fundador registrada em `docs/especificacao.md`
+§4.7 —, pílula "Lançar frete para este cliente", e histórico de fretes com
+teto de 5 linhas. Três componentes novos, reaproveitados pelos próximos
+dois commits da mesma tarefa: `ChipDePeriodoPerfil`, `ResumoDoPerfil`,
+`HistoricoDoPerfil`.
+
+**Dois passes de `/revisar`, o segundo com achados que mudaram
+comportamento — os dois valem registro além do resultado:**
+
+1. **O remendo do primeiro passe criou o problema que o segundo achou.**
+   O primeiro `/revisar` achou que, sem frete no período pedido, o chip
+   Cliente de "Meus fretes" mostrava o rótulo genérico em vez do nome — a
+   correção óbvia (mandar o nome pela URL) resolvia o rótulo e abria um
+   problema novo: nome de terceiro em query string, que a hospedagem
+   (Vercel) registra em log de acesso. O segundo passe achou os dois de
+   uma vez porque o remendo também não sobrevivia a trocar o período de
+   dentro da tela (o estado local do cliente sobrevive, a URL não). O
+   redesenho — "Meus fretes" sempre resolve o nome pelo `id`, buscando no
+   banco, nunca da URL — fechou o rótulo e a privacidade juntos, e
+   sobrevive à troca de período. Lição: quando a correção de um achado
+   introduz dado novo trafegando por um canal (URL, neste caso), vale
+   perguntar onde mais esse canal é lido antes de dar o achado por
+   fechado.
+2. **`totalGeral` — uma consulta a mais, decisão certa.** O histórico
+   passou a seguir o período do resumo (achado do segundo passe: chip
+   dizendo "Mês passado" com o histórico mostrando frete de hoje era
+   contradição dentro da mesma tela). Isso abre um vazio novo — período
+   sem frete, mesmo com histórico em outros meses — que pede texto
+   diferente de "nunca lançou frete nenhum": "Nenhum frete neste período."
+   contra "Nenhum frete lançado ainda." Sem a segunda contagem (sem filtro
+   de período) para distinguir os dois casos, a pessoa acharia que o
+   histórico sumiu, não que o período está vazio. Uma consulta O(1) a
+   mais por essa distinção — o custo certo, não economia que valha a pena.
+
+Outros achados corrigidos no processo: "Todos os fretes" podia somar
+**menos** que "Este mês" para o mesmo cliente (um frete lançado para o dia
+seguinte tem `data_servico` no futuro — a tese do produto, `CLAUDE.md` §1
+— e "todos" usava a hora da requisição como fim; corrigido para
+31/12/9999, depois de a primeira tentativa com a data máxima do JavaScript
+quebrar a consulta em produção); alvo de toque do número "Já rodado"
+abaixo de 48px; mesmo rótulo ("R$ X"), recortes diferentes entre a lista
+de Clientes (total da vida) e o resumo do perfil (por período) —
+`ListaClientes.tsx` ganhou "no total" no apoio; rota trocou de posição com
+a data na linha do histórico (rota é Secundário, não Primário,
+`docs/estilo.md`); `docs/especificacao.md` §4.7 tinha texto desatualizado
+sobre a posição da pílula "Lançar frete para este cliente" (de antes da
+auditoria de posição que já tinha corrigido essa tela).
+
+**Verificação:** `npm run lint`, `npx tsc --noEmit`, `npm run build`
+verdes; `npm test` **local** 306/306 (dois testes novos, um por achado de
+dinheiro — o de "todos" e o de `totalGeral`). Fluxo completo no navegador,
+com dado plantado (cliente com frete este mês, mês passado, e um cliente
+sem frete nenhum): resumo recalculando por período, histórico seguindo o
+período com os dois textos de vazio, chip do "Meus fretes" resolvendo o
+nome certo mesmo com zero fretes e depois de trocar o período de dentro da
+tela, alvo de toque medido em ~62,5px. Esteira deste commit ainda não
+disparada — ver `/onde-paramos`.
+
+Próximo: Tarefa 6 do item 4, segundo commit — resumo e histórico do
+perfil do caminhão (km/R$/km com convite e cobertura parcial, sincronizar
+`docs/componentes.md` linha 373).
+
+---
+
 ## 22/08/2026 — tarefa 5 do item 4: ordenações nas listas de cadastro, e o chip
 
 Construída conforme o plano (`docs/planos/item-4-lista-e-detalhe-do-frete.md`,

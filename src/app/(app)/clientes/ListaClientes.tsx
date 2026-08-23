@@ -23,6 +23,16 @@ import { normalizarParaBusca } from "@/lib/utils/texto";
  * `docs/especificacao.md` §4.7, "no item 4, maior valor em aberto nasce sem
  * servir": depende de título em aberto, que só existe pago (item 6). Nesta
  * fatia, Clientes ordena por mais recente · maior valor total.
+ *
+ * **"no total" no apoio, não só "R$ X"** — achado na verificação da Tarefa
+ * 6 (planejamento, 22/08/2026): o mesmo cliente mostra `valorTotalCentavos`
+ * aqui (vida inteira) e "Já rodado" no perfil (por período, mês corrente
+ * por padrão) — dois recortes diferentes do mesmo conceito, mesmo formato
+ * `R$ X`. Testado com dado plantado (R$ 1.000 este mês + R$ 5.000 no mês
+ * passado): a lista mostrava "R$ 6.000,00" sem nada dizendo "total", o
+ * perfil mostrava "R$ 1.000,00" ao lado do chip "Este mês" — o chip sozinho
+ * não bastava para quem olhasse só a lista primeiro. O qualificador aqui
+ * resolve sem precisar que o perfil carregue o peso todo da explicação.
  */
 
 type Cliente = {
@@ -101,7 +111,11 @@ export function ListaClientes({ clientes }: { clientes: Cliente[] }) {
             href={`/clientes/${cliente.id}`}
             iniciais={iniciais(cliente.nome)}
             nome={cliente.nome}
-            apoio={criterio === "valor" ? `R$ ${formatarCentavos(cliente.valorTotalCentavos)}` : (cliente.cidade ?? undefined)}
+            apoio={
+              criterio === "valor"
+                ? `R$ ${formatarCentavos(cliente.valorTotalCentavos)} no total`
+                : (cliente.cidade ?? undefined)
+            }
           />
         ))}
       </div>

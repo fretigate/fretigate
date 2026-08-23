@@ -158,6 +158,17 @@ Escala: **4 · 6 · 7 · 8 · 9 · 10 · 12 · 14 · 16 · 18 · 20 · 22 · 24 
 | `12px` | Etiqueta "Parcial" |
 | `999px` (pílula) | Todo botão/chip/pílula — principal, secundário, pílula em linha, pílula de cabeçalho, chip de filtro/escolha |
 
+**Lacuna — o cartão de resumo dos perfis (Tarefa 6 do item 4, 22/08/2026) não
+tem raio nem cor próprios nesta folha.** `ResumoDoPerfil.tsx` reaproveita
+`18px` (`rounded-campo`) e o fundo `#F0EDE6` (separação), o mesmo tratamento
+já usado no cartão "Condição comercial" da mesma tela — precedente mais
+próximo, não um valor novo inventado — mas nenhuma linha aqui confirma ou
+contradiz que "cartão de resumo" deva usar esse raio, e a coluna "Uso" da
+tabela de Cores acima não lista "cartão de resumo" entre os usos de
+`#F0EDE6` (campo, chip não escolhido, linha de lista, cartão de pendência,
+teclado numérico). Registrado para o Design decidir, mesma categoria da
+lacuna irmã acima (Caminhões/Motoristas, lista).
+
 **Sombra** — só existe em um lugar: o aviso do sistema.
 `box-shadow: 0 14px 34px rgba(20,26,23,.30), 0 3px 10px rgba(20,26,23,.16)`.
 Nenhum outro elemento tem sombra.

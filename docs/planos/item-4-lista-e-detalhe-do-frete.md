@@ -253,6 +253,21 @@ padrão nos perfis de cliente/caminhão/motorista, e é o mesmo aqui.
   propósito deveria mostrar o próprio rótulo no chip (estado ativo) ou se
   o neutro genérico é o comportamento pretendido.
 
+- **"Meus fretes" precisa de filtro por caminhão e por motorista, além do
+  de cliente que já existe.** Decisão do fundador, 22/08/2026, planejamento
+  da Tarefa 6: a pílula "Ver todos os N" do histórico do perfil só funciona
+  de verdade levando à lista de fretes já filtrada pelo cadastro certo — o
+  chip Cliente de "Meus fretes" já existe (`docs/componentes.md` linha
+  360), mas não há equivalente para Caminhão nem Motorista, e o inventário
+  fechado de chips daquela tela é só Período · Cliente · Situação. Em vez
+  de fazer a pílula funcionar só no perfil do cliente (o único com filtro
+  pronto), o fundador decidiu que ela **não aparece em nenhum dos três
+  nesta fatia** — motivo dele: "se funciona em um e não nos outros dois, a
+  pessoa aprende que existe e depois não acha. Pior que não ter." Pedido ao
+  Design: os dois chips novos, mesmo padrão do de Cliente. Quando
+  responder, a pílula nasce nos três de uma vez, e "Ver todos os N" passa a
+  levar à lista filtrada pelo cadastro certo nos três perfis.
+
 ---
 
 ## Tarefa 1 — Backend: situação financeira derivada e leituras em lote
@@ -349,11 +364,18 @@ em `docs/estilo.md`.
 **Teto de exibição do histórico (Tarefa 6): 5 linhas.** Mesma conta de
 `CHIPS_DE_HISTORICO` em `src/lib/servicos/servicos.ts` — é o que cabe acima
 do teclado sem rolar, mesmo motivo das cinco sugestões de município.
-Confirmado pelo fundador, 20/08/2026. **Não é o número do rótulo da
-pílula** — "Ver todos os N" mostra o **total real** do histórico daquele
-perfil (`docs/componentes.md`, "Ver todos os 34"/"ver todos os 9" são
-exemplos de conteúdo, não um teto fixo); 5 é só quantas linhas aparecem
-antes da pílula substituir o resto.
+Confirmado pelo fundador, 20/08/2026.
+
+**Sem pílula "Ver todos os N" nesta fatia, nos três perfis — decisão do
+fundador, planejamento da Tarefa 6, 22/08/2026** (ver "O que precisa
+chegar ao Design"): a pílula só levaria a algo de verdade no perfil do
+cliente ("Meus fretes" filtrado por cliente já é possível); caminhão e
+motorista não têm filtro equivalente ainda. Em vez de nascer assimétrica,
+não nasce em nenhum dos três — fica para quando "Meus fretes" tiver os
+dois filtros que faltam. `total` (devolvido por `historicoPorEntidade`)
+continua usado nesta fatia, só que sem virar link: quando `total > 5`, uma
+nota de texto sem toque ("Mostrando os 5 mais recentes de N.") evita que a
+tela pareça mostrar o histórico completo quando não mostra.
 
 **Testes** (`tests/situacao-financeira.test.ts` para a função pura, mais
 extensão de `tests/servicos.test.ts`/`tests/titulos.test.ts` para as
@@ -934,12 +956,15 @@ Reaproveitado, não reconstruído — fecha a lacuna registrada no quinto
 
 **Perfil do cliente** (`clientes/[id]/page.tsx`): dois números — **já
 rodado** (tocável, leva a `/fretes` filtrado pelo cliente e pelo mesmo
-período — não um histórico interno) e **recebido no período** (não
-tocável) — `resumoFinanceiroDoCliente`. Histórico via
-`listarServicosDoCliente` (`LinhaDeLista` por frete, teto 5, pílula "Ver
-todos os N" com o total real). Pílula em linha **Lançar frete para este
-cliente** no fim do histórico → `/fretes/novo?cliente=<id>`. Sem "Gerar
-relatório"/"Cobrar no WhatsApp" (dependem do item 6/7).
+período — não um histórico interno; `fretes/page.tsx` ganha `?cliente=`
+como novo `searchParam`, só para semear o chip Cliente que já existe em
+`ListaFretes.tsx`, sem criar filtro novo nem tocar no inventário) e
+**recebido no período** (não tocável) — `resumoFinanceiroDoCliente`.
+Histórico via `listarServicosDoCliente` (`LinhaDeLista` por frete, teto 5;
+sem pílula "Ver todos" nesta fatia — ver "O que precisa chegar ao
+Design"). Pílula em linha **Lançar frete para este cliente** no fim do
+histórico → `/fretes/novo?cliente=<id>`. Sem "Gerar relatório"/"Cobrar no
+WhatsApp" (dependem do item 6/7).
 
 **Perfil do caminhão** (`caminhoes/[id]/page.tsx`): km (convertido para km
 só na exibição) e R$/km com **duas casas decimais** (confirmado pelo
@@ -968,6 +993,23 @@ mesma classe da já registrada para Caminhões/Motoristas (lista) na Tarefa
 Os três continuam **sem** "Gerar relatório"/"Cobrar no WhatsApp" (cliente)
 e sem qualquer coisa que dependa dos itens 5/6/7 — mesma régua desta
 fatia inteira.
+
+**O histórico segue o período do resumo — decisão do fundador, achado do
+segundo `/revisar` (22/08/2026), correção da primeira versão desta
+tarefa.** A primeira versão do histórico ignorava o período (sempre os 5
+mais recentes da vida inteira do cadastro), o que criava a mesma
+contradição que a nota acima resolve entre lista e perfil — só que agora
+dentro da MESMA tela: chip dizendo "Mês passado" com o histórico mostrando
+frete de hoje. Motivo do fundador: "é o que a pessoa espera: filtrou, a
+tela responde." `listarServicosDoCliente/DoCaminhao/DoMotorista`
+(`titulos.ts`) passam a exigir `periodo`, igual aos resumos; `total`
+(usado por "Mostrando N de M") também passa a ser o total **do período**,
+não da vida inteira. Uma consequência somada: com período aplicado, o
+histórico pode ficar vazio mesmo para um cadastro com fretes — texto
+próprio, "Nenhum frete neste período.", diferente de "Nenhum frete
+lançado ainda." (cadastro sem frete nenhum, em qualquer período).
+Distinguidos por `totalGeral` (contagem sem filtro de período, uma
+consulta a mais, sempre O(1)).
 
 **Risco levado pelo fundador ao aprovar este plano — mesmo rótulo, recortes
 diferentes — verificação obrigatória antes de fechar cada um dos três

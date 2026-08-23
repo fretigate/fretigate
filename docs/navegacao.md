@@ -37,7 +37,7 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 | Tela | Chega de | Leva para |
 |---|---|---|
 | Clientes — lista ✅ | Mais · folha de busca de cliente ("ver todos") | Linha → Perfil do cliente · + Novo → Cadastro |
-| Perfil do cliente ✅ | Lista de clientes · **nome do cliente em qualquer linha de frete ou de cobrança** | Gerar relatório → Relatório preenchido · Editar cliente → Edição · Cobrar no WhatsApp → conversa · Frete do histórico → Detalhe do frete · Ver todos → Fretes filtrado |
+| Perfil do cliente ✅ | Lista de clientes · **nome do cliente em qualquer linha de frete ou de cobrança** | Gerar relatório → Relatório preenchido · Editar cliente → Edição · Cobrar no WhatsApp → conversa · Frete do histórico → Detalhe do frete · Ver todos → Fretes filtrado · **Já rodado (número do resumo) → Fretes filtrado por este cliente e pelo mesmo período — caminho novo da Tarefa 6 do item 4, 22/08/2026** |
 | Cadastro / edição de cliente ✅ | + Novo na lista · Editar no perfil · "+ Cadastrar" na folha de busca do lançamento | Salvar → volta para a lista (ou para o perfil, na edição) · Arquivar cliente |
 | Caminhões — lista e perfil ✅ | Mais · folha de busca de caminhão | Mesmo padrão de Clientes: perfil com placa, apelido, tipo, histórico de fretes |
 | Motoristas — lista, perfil, cadastro ✅ | Mais · folha de busca de motorista | Linha → Perfil · Editar no cabeçalho → Formulário · Telefone tocável → conversa · Lançar frete com ele → Lançar frete · Estado vazio com convite |

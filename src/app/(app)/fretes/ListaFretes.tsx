@@ -63,6 +63,23 @@ type Props = {
    */
   limitadoA50: boolean;
   rotuloPeriodo: string | null;
+  /**
+   * Semeia o chip Cliente já aberto — o número "já rodado" tocável do
+   * perfil do cliente (Tarefa 6) chega aqui com `?cliente=<id>`. Não é
+   * filtro novo, só o estado inicial do que já existe.
+   */
+  clienteInicial?: string;
+  /**
+   * Reforço do rótulo do chip para `clienteInicial` — o servidor resolve
+   * (`fretes/page.tsx`, `buscarClientesPorIds`), nunca a URL. Achado do
+   * primeiro `/revisar`: `clientesUnicos` só existe a partir dos fretes já
+   * carregados aqui, e um cliente sem nenhum frete no período (ex.: "já
+   * rodado" mostrando R$ 0,00 de propósito) nunca aparece nela. Sem isso, o
+   * chip ficava com a cor de "selecionado" mostrando o rótulo genérico
+   * "Cliente", em vez do nome — parecia filtro quebrado, não filtro
+   * aplicado a um cliente sem resultado.
+   */
+  nomeClienteInicial?: string;
 };
 
 const MESES = [
@@ -86,10 +103,12 @@ export function ListaFretes({
   filtroDePeriodoAtivo,
   limitadoA50,
   rotuloPeriodo,
+  clienteInicial,
+  nomeClienteInicial,
 }: Props) {
   const router = useRouter();
   const [busca, setBusca] = useState("");
-  const [clienteFiltro, setClienteFiltro] = useState<string | undefined>();
+  const [clienteFiltro, setClienteFiltro] = useState<string | undefined>(clienteInicial);
   const [situacaoFiltro, setSituacaoFiltro] = useState<SituacaoFinanceira | undefined>();
   const [folhaAberta, setFolhaAberta] = useState<"periodo" | "cliente" | "situacao" | null>(null);
 
@@ -143,6 +162,13 @@ export function ListaFretes({
     } else {
       parametros.set("periodo", janela.tipo);
     }
+    // Carrega o filtro de cliente adiante — achado do segundo `/revisar` da
+    // Tarefa 6: sem isso, `clienteFiltro` sobrevive como estado local (o
+    // componente não remonta), mas a URL perde `cliente`, e o servidor não
+    // tem mais como resolver o nome se este cliente não tiver frete no novo
+    // período — o chip volta ao rótulo genérico "Cliente" mesmo com o
+    // filtro de verdade ainda aplicado.
+    if (clienteFiltro) parametros.set("cliente", clienteFiltro);
     setFolhaAberta(null);
     router.push(`/fretes?${parametros.toString()}`);
   }
@@ -194,7 +220,13 @@ export function ListaFretes({
           onClick={() => setFolhaAberta("periodo")}
         />
         <ChipFiltro
-          rotulo={clienteFiltro ? (clientesUnicos.find((c) => c.id === clienteFiltro)?.nome ?? "Cliente") : "Cliente"}
+          rotulo={
+            clienteFiltro
+              ? (clientesUnicos.find((c) => c.id === clienteFiltro)?.nome ??
+                (clienteFiltro === clienteInicial ? nomeClienteInicial : undefined) ??
+                "Cliente")
+              : "Cliente"
+          }
           ativo={clienteFiltro !== undefined}
           onClick={() => setFolhaAberta("cliente")}
         />

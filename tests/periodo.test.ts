@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { resolverPeriodoDaUrl, resolverLimiteDaLista, rotuloDoPeriodo } from "@/lib/utils/periodo";
+import {
+  resolverPeriodoDaUrl,
+  resolverLimiteDaLista,
+  resolverPeriodoDoPerfil,
+  rotuloDoPeriodo,
+} from "@/lib/utils/periodo";
 import { diaEmFortaleza, instanteDoDiaEmFortaleza, deslocarMes } from "@/lib/utils/data-fortaleza";
 
 /**
@@ -11,7 +16,7 @@ import { diaEmFortaleza, instanteDoDiaEmFortaleza, deslocarMes } from "@/lib/uti
  */
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 21;
+const CONFERENCIAS_ESPERADAS = 27;
 
 describe("resolverPeriodoDaUrl", () => {
   it("sem janela nenhuma → sem filtro (null)", () => {
@@ -168,6 +173,74 @@ describe("rotuloDoPeriodo", () => {
 
   it("personalizado com de/ate em formato inválido → null, não 'NaN de undefined'", () => {
     expect(rotuloDoPeriodo("personalizado", "10/01/2026", "15/01/2026")).toBeNull();
+    conferencias++;
+  });
+});
+
+describe("resolverPeriodoDoPerfil", () => {
+  it("sem janela → mes-atual, mesmo período de resolverPeriodoDaUrl('mes-atual')", () => {
+    const esperado = resolverPeriodoDaUrl("mes-atual", undefined, undefined)!;
+    const { periodo, janelaEfetiva } = resolverPeriodoDoPerfil(undefined, undefined, undefined);
+    expect(janelaEfetiva).toBe("mes-atual");
+    expect(periodo.inicio.getTime()).toBe(esperado.inicio.getTime());
+    expect(periodo.fim.getTime()).toBe(esperado.fim.getTime());
+    conferencias++;
+  });
+
+  it("mes-passado → passa direto, mesmo período de resolverPeriodoDaUrl", () => {
+    const esperado = resolverPeriodoDaUrl("mes-passado", undefined, undefined)!;
+    const { periodo, janelaEfetiva } = resolverPeriodoDoPerfil("mes-passado", undefined, undefined);
+    expect(janelaEfetiva).toBe("mes-passado");
+    expect(periodo.inicio.getTime()).toBe(esperado.inicio.getTime());
+    expect(periodo.fim.getTime()).toBe(esperado.fim.getTime());
+    conferencias++;
+  });
+
+  it("personalizado com de/ate válidos → passa direto", () => {
+    const esperado = resolverPeriodoDaUrl("personalizado", "2026-01-10", "2026-01-15")!;
+    const { periodo, janelaEfetiva } = resolverPeriodoDoPerfil(
+      "personalizado",
+      "2026-01-10",
+      "2026-01-15",
+    );
+    expect(janelaEfetiva).toBe("personalizado");
+    expect(periodo.inicio.getTime()).toBe(esperado.inicio.getTime());
+    expect(periodo.fim.getTime()).toBe(esperado.fim.getTime());
+    conferencias++;
+  });
+
+  it("personalizado sem de/ate válidos → cai para mes-atual, não personalizado sem período", () => {
+    const esperado = resolverPeriodoDaUrl("mes-atual", undefined, undefined)!;
+    const { periodo, janelaEfetiva } = resolverPeriodoDoPerfil("personalizado", undefined, undefined);
+    expect(janelaEfetiva).toBe("mes-atual");
+    expect(periodo.inicio.getTime()).toBe(esperado.inicio.getTime());
+    expect(periodo.fim.getTime()).toBe(esperado.fim.getTime());
+    conferencias++;
+  });
+
+  it("valor de janela desconhecido → cai para mes-atual", () => {
+    const esperado = resolverPeriodoDaUrl("mes-atual", undefined, undefined)!;
+    const { periodo, janelaEfetiva } = resolverPeriodoDoPerfil("qualquer-coisa", undefined, undefined);
+    expect(janelaEfetiva).toBe("mes-atual");
+    expect(periodo.inicio.getTime()).toBe(esperado.inicio.getTime());
+    expect(periodo.fim.getTime()).toBe(esperado.fim.getTime());
+    conferencias++;
+  });
+
+  /**
+   * Achado do `/revisar` (planejamento da Tarefa 6, 22/08/2026): "todos" não
+   * pode usar a hora da requisição como fim — um frete lançado hoje para
+   * amanhã (a tese do produto, `CLAUDE.md` §1: "o frete nasce no momento da
+   * ordem") tem `data_servico` no futuro, e "Todos os fretes" contando MENOS
+   * que "Este mês" para o mesmo cliente é o defeito que motivou este teste.
+   */
+  it("todos → sem fim de verdade, cobre até data futura (frete lançado para amanhã)", () => {
+    const { periodo, janelaEfetiva } = resolverPeriodoDoPerfil("todos", undefined, undefined);
+    expect(janelaEfetiva).toBe("todos");
+    expect(periodo.inicio.getTime()).toBe(0);
+    const dezAnosNoFuturo = new Date();
+    dezAnosNoFuturo.setFullYear(dezAnosNoFuturo.getFullYear() + 10);
+    expect(periodo.fim.getTime()).toBeGreaterThan(dezAnosNoFuturo.getTime());
     conferencias++;
   });
 });

@@ -46,7 +46,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 33;
+const CONFERENCIAS_ESPERADAS = 34;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -787,9 +787,18 @@ describe("7. históricos dos perfis — teto de 5, total real, situação em cad
       // Frete de outro cliente não deve contar nem aparecer.
       await criarServico(e.empresaId, e.usuarioId, { ...dadosServicoBase, cliente_id: outroCliente.id, data_servico: agora });
 
-      const historico = await listarServicosDoCliente(e.empresaId, e.clienteId);
+      // Período largo o bastante pra cobrir os 7 fretes plantados até 7 dias
+      // no futuro, mais o auto-criado por criarEmpresaDeTeste (~agora) — o
+      // histórico agora segue o período (Tarefa 6, achado do segundo
+      // /revisar), então `periodoAmplo()` (±1 dia) não bastaria aqui.
+      const periodoDoTeste: Periodo = {
+        inicio: new Date(agora.getTime() - 24 * 60 * 60 * 1000),
+        fim: new Date(agora.getTime() + 8 * 24 * 60 * 60 * 1000),
+      };
+      const historico = await listarServicosDoCliente(e.empresaId, e.clienteId, periodoDoTeste);
       expect(historico.servicos).toHaveLength(5);
       expect(historico.total).toBe(8); // e.servicoId (auto-criado) + os 7 em paralelo
+      expect(historico.totalGeral).toBe(8); // mesmo total, sem filtro de período
       const porId = new Map(historico.servicos.map((s) => [s.id, s.situacao_financeira]));
       expect(porId.get(ultimo.id)).toBe("quitado");
       conferencias++;
@@ -812,8 +821,12 @@ describe("7. históricos dos perfis — teto de 5, total real, situação em cad
     await criarServico(e.empresaId, e.usuarioId, { ...dadosServico, veiculo_id: caminhaoB.id });
     await criarServico(e.empresaId, e.usuarioId, { ...dadosServico, motorista_id: motorista.id });
 
-    const historicoA = await listarServicosDoCaminhao(e.empresaId, caminhaoA.id);
-    const historicoMotorista = await listarServicosDoMotorista(e.empresaId, motorista.id);
+    const historicoA = await listarServicosDoCaminhao(e.empresaId, caminhaoA.id, periodoAmplo());
+    const historicoMotorista = await listarServicosDoMotorista(
+      e.empresaId,
+      motorista.id,
+      periodoAmplo(),
+    );
     expect(historicoA.total).toBe(1);
     expect(historicoMotorista.total).toBe(1);
     conferencias++;
@@ -827,7 +840,7 @@ describe("7. históricos dos perfis — teto de 5, total real, situação em cad
     const a = await criarEmpresaDeTeste("v3a");
     const b = await criarEmpresaDeTeste("v3b");
 
-    const historicoVistoPorA = await listarServicosDoCliente(a.empresaId, b.clienteId);
+    const historicoVistoPorA = await listarServicosDoCliente(a.empresaId, b.clienteId, periodoAmplo());
     expect(historicoVistoPorA.total).toBe(0);
     expect(historicoVistoPorA.servicos).toEqual([]);
     conferencias++;
@@ -866,8 +879,16 @@ describe("7. históricos dos perfis — teto de 5, total real, situação em cad
       valor: 50000,
     });
 
-    const historicoCaminhaoVistoPorA = await listarServicosDoCaminhao(a.empresaId, caminhaoDeB.id);
-    const historicoMotoristaVistoPorA = await listarServicosDoMotorista(a.empresaId, motoristaDeB.id);
+    const historicoCaminhaoVistoPorA = await listarServicosDoCaminhao(
+      a.empresaId,
+      caminhaoDeB.id,
+      periodoAmplo(),
+    );
+    const historicoMotoristaVistoPorA = await listarServicosDoMotorista(
+      a.empresaId,
+      motoristaDeB.id,
+      periodoAmplo(),
+    );
     expect(historicoCaminhaoVistoPorA.total).toBe(0);
     expect(historicoMotoristaVistoPorA.total).toBe(0);
     conferencias++;
@@ -917,7 +938,14 @@ describe("7. históricos dos perfis — teto de 5, total real, situação em cad
       data_servico: ontem,
     });
 
-    const historico = await listarServicosDoCliente(e.empresaId, e.clienteId);
+    // Período largo o bastante pra cobrir o frete de 7 dias atrás — o
+    // histórico segue o período (Tarefa 6), `periodoAmplo()` (±1 dia) não
+    // alcançaria `semanaQuePassou`.
+    const periodoDoTeste: Periodo = {
+      inicio: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+      fim: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    };
+    const historico = await listarServicosDoCliente(e.empresaId, e.clienteId, periodoDoTeste);
     const ids = historico.servicos.map((s) => s.id);
     // e.servicoId (auto-criado, data_servico = agora) vem primeiro; depois
     // o "recente" (ontem); depois o "antigo" (semana passada) — mesmo tendo
@@ -943,9 +971,44 @@ describe("7. históricos dos perfis — teto de 5, total real, situação em cad
     const lista = await listarServicosComSituacao(e.empresaId);
     expect(lista.map((s) => s.id)).toContain(cancelado.id);
 
-    const historico = await listarServicosDoCliente(e.empresaId, e.clienteId);
+    const historico = await listarServicosDoCliente(e.empresaId, e.clienteId, periodoAmplo());
     expect(historico.servicos.map((s) => s.id)).toContain(cancelado.id);
     expect(historico.total).toBe(2); // e.servicoId + o cancelado
+    conferencias++;
+  });
+
+  it("totalGeral distingue 'nenhum frete lançado' de 'nenhum frete neste período' — mesmo cliente, dois vazios diferentes", async () => {
+    // Decisão do fundador, segundo /revisar da Tarefa 6: são textos
+    // diferentes na tela ("Nenhum frete lançado ainda." vs "Nenhum frete
+    // neste período."), e totalGeral (sem filtro de período) é o que os
+    // distingue.
+    const e = await criarEmpresaDeTeste("v9");
+    // e.servicoId (auto-criado por criarEmpresaDeTeste) já data de ~agora —
+    // mais este, uma semana atrás, para o cliente ter dois fretes reais,
+    // nenhum dentro do período estreito que o teste pede abaixo.
+    const semanaQuePassou = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: semanaQuePassou,
+      valor: 30000,
+    });
+    // Janela de um dia, duas semanas atrás — não toca nem o auto-criado
+    // (~agora) nem o de `semanaQuePassou` (-7 dias).
+    const periodoEstreito: Periodo = {
+      inicio: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+      fim: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+    };
+
+    const historicoNoPeriodo = await listarServicosDoCliente(
+      e.empresaId,
+      e.clienteId,
+      periodoEstreito,
+    );
+    expect(historicoNoPeriodo.servicos).toEqual([]);
+    expect(historicoNoPeriodo.total).toBe(0);
+    // e.servicoId (auto-criado, ~agora) + o de semanaQuePassou, sem filtro.
+    expect(historicoNoPeriodo.totalGeral).toBe(2);
     conferencias++;
   });
 });

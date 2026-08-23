@@ -333,6 +333,15 @@ Controles de estado, não ações. Não entram na regra de hierarquia e nunca fi
 | Ordenação | mesma medida do filtro — **48px** (não 40 — é sempre um chip sozinho na fileira, sem vizinho para absorver o erro de toque; `CLAUDE.md` §8) · raio 999 · `13px/600`, largura máx. `148px`. Neutro mostra **Ordenar por**; escolhido mostra o critério (`Maior valor em aberto`) em `#E4E9E5`/`#1B6B3A` peso 700. Só nas listas de cadastro: Clientes, Caminhões, Motoristas |
 | Variável | 44px · raio 999 · `13.5px/700` · `#E4E9E5`/`#1B6B3A` |
 
+**Lacuna — chip de Período sozinho fora de "Meus fretes" (Tarefa 6 do item
+4, 22/08/2026) não tem linha própria aqui.** Os três perfis usam o chip
+Filtro (`ChipFiltro`) para Período, sozinho na fileira — mesma regra geral
+do `CLAUDE.md` §8 ("chip sozinho segue os 48px", corrigida na Tarefa 5),
+aplicada com `altura={48}`. Esta tabela só nomeia "Ordenação" para o caso
+de chip sozinho a 48px; "Filtro" continua descrito só em 40px. Registrado
+para o Design decidir, mesma categoria da lacuna irmã de `docs/estilo.md`
+("Onde cada nível cai", Caminhões/Motoristas).
+
 ## Auditoria da regra de posição
 
 Conferido no DOM em todas as telas, contra a regra vigente. **Nenhuma tela tem barra de ação fixa.** Os únicos dois elementos em posição absoluta ao pé da tela são o teclado numérico de **Lançar frete** e o de **vencimento** no relatório — a exceção prevista; medi o salvar em `774–834` contra o teclado terminando em `758`, sem sobreposição.

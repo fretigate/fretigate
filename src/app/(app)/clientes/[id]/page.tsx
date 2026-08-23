@@ -3,21 +3,35 @@ import { notFound } from "next/navigation";
 import { exigirSessao } from "@/lib/auth/sessao";
 import { db } from "@/lib/db";
 import { buscarCliente } from "@/lib/servicos/clientes";
+import { resumoFinanceiroDoCliente, listarServicosDoCliente } from "@/lib/servicos/titulos";
 import { PilulaCabecalho } from "@/components/ui/PilulaCabecalho";
 import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
+import { PilulaEmLinha } from "@/components/ui/PilulaEmLinha";
+import { ChipDePeriodoPerfil } from "@/components/ui/ChipDePeriodoPerfil";
+import { ResumoDoPerfil } from "@/components/ui/ResumoDoPerfil";
+import { HistoricoDoPerfil } from "@/components/ui/HistoricoDoPerfil";
 import { formatarDocumento } from "@/lib/utils/documento";
+import { formatarCentavos } from "@/lib/utils/dinheiro";
+import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { resolverPeriodoDoPerfil, rotuloDoPeriodo } from "@/lib/utils/periodo";
 
 /**
- * Perfil do cliente — `docs/navegacao.md` linha 39. Nasce só com
- * identificação, dados cadastrais e Editar: o resumo financeiro (já rodado ·
- * a receber · vencido · recebido) e o histórico de fretes dependem de
- * `Servico`/`TituloReceber` (item 4) — combinado com o fundador, 10/08/2026.
- * Pelo mesmo motivo não há "Gerar relatório" nem "Cobrar no WhatsApp" ainda:
- * as duas dependem de dado que não existe (relatório, valor em aberto).
+ * Perfil do cliente — `docs/navegacao.md` linha 39. Ganha resumo financeiro
+ * e histórico de fretes na Tarefa 6 do item 4
+ * (`docs/planos/item-4-lista-e-detalhe-do-frete.md`). Continua **sem**
+ * "Gerar relatório" nem "Cobrar no WhatsApp" — as duas dependem de dado que
+ * só existe a partir do item 6/7 (relatório, valor em aberto).
  */
-export default async function Pagina({ params }: { params: Promise<{ id: string }> }) {
+export default async function Pagina({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ periodo?: string; de?: string; ate?: string }>;
+}) {
   const sessao = await exigirSessao();
   const { id } = await params;
+  const { periodo: janelaParam, de, ate } = await searchParams;
 
   const [cliente, empresa] = await Promise.all([
     buscarCliente(sessao.empresaId, id),
@@ -28,12 +42,28 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
   ]);
   if (!cliente) notFound();
 
+  const { periodo, janelaEfetiva } = resolverPeriodoDoPerfil(janelaParam, de, ate);
+  const [resumo, historico] = await Promise.all([
+    resumoFinanceiroDoCliente(sessao.empresaId, id, periodo),
+    listarServicosDoCliente(sessao.empresaId, id, periodo),
+  ]);
+
   const cidade = cliente.municipio ? `${cliente.municipio.nome}/${cliente.municipio.uf}` : null;
   const prazoDias = cliente.prazo_pagamento_dias ?? empresa!.prazo_padrao_dias;
   const prazoOrigem =
     cliente.prazo_pagamento_dias != null
       ? "Acordo próprio deste cliente."
       : "Herdado da configuração padrão da empresa.";
+
+  // `?cliente=` semeia o chip Cliente que "Meus fretes" já tem (Tarefa 6) —
+  // sem esse parâmetro, período nenhum viajaria junto, e "já rodado" levaria
+  // a um período diferente do que ele soma. O nome do cliente NÃO viaja pela
+  // URL (achado do segundo /revisar: dado de terceiro em query string entra
+  // em log de acesso da hospedagem) — "Meus fretes" resolve o nome sozinho,
+  // buscando esse cliente no banco quando `cliente` estiver presente.
+  const parametrosDeFretes = new URLSearchParams({ cliente: id, periodo: janelaEfetiva });
+  if (de) parametrosDeFretes.set("de", de);
+  if (ate) parametrosDeFretes.set("ate", ate);
 
   return (
     <main
@@ -78,6 +108,28 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           <span className="mt-8 text-apoio font-medium text-tinta-apoio">{cidade}</span>
         ) : null}
 
+        <ResumoDoPerfil
+          chipPeriodo={
+            <ChipDePeriodoPerfil
+              caminhoBase={`/clientes/${id}`}
+              hoje={diaEmFortaleza(new Date())}
+              janelaAtual={janelaEfetiva}
+              rotuloPeriodo={rotuloDoPeriodo(janelaEfetiva, de, ate) ?? "Este mês"}
+            />
+          }
+          numeros={[
+            {
+              rotulo: "Já rodado",
+              valor: `R$ ${formatarCentavos(resumo.jaRodado)}`,
+              href: `/fretes?${parametrosDeFretes.toString()}`,
+            },
+            {
+              rotulo: "Recebido no período",
+              valor: `R$ ${formatarCentavos(resumo.recebidoNoPeriodo)}`,
+            },
+          ]}
+        />
+
         <span className="px-4 pt-26 pb-6 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
           Identificação
         </span>
@@ -106,6 +158,18 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           </div>
           <span className="pl-108 text-apoio font-medium text-tinta-apoio">{prazoOrigem}</span>
         </div>
+
+        <div className="pt-26">
+          <PilulaEmLinha href={`/fretes/novo?cliente=${id}`}>
+            Lançar frete para este cliente
+          </PilulaEmLinha>
+        </div>
+
+        <HistoricoDoPerfil
+          servicos={historico.servicos}
+          total={historico.total}
+          totalGeral={historico.totalGeral}
+        />
       </div>
     </main>
   );

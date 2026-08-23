@@ -93,12 +93,76 @@ export function resolverLimiteDaLista(
   return periodoResolvido ? undefined : 50;
 }
 
+/**
+ * Resolve o período de um resumo de perfil (Tarefa 6) — sempre devolve um
+ * `Periodo` completo, nunca `null`: `resumoFinanceiroDoCliente`,
+ * `resumoDoCaminhao` e `resumoDoMotorista` exigem `Periodo`, diferente de
+ * "Meus fretes" (Tarefa 2), onde ausência de filtro é "sem filtro de data"
+ * (`null`).
+ *
+ * Ausência de `janela` na URL vira `"mes-atual"` — decisão do fundador,
+ * planejamento da Tarefa 6: o período padrão dos três resumos é o mês
+ * corrente, não "todos". `"todos"` continua uma opção da mesma
+ * `FolhaDePeriodo` (Tarefa 2), mas aqui vira um intervalo largo — os
+ * resumos não têm modo "sem filtro". Uma janela inválida (ex.:
+ * "personalizado" sem `de`/`ate` válidos) cai de volta no mês corrente, pelo
+ * mesmo motivo: o resumo do perfil nunca fica sem período nenhum.
+ *
+ * `janelaEfetiva` no retorno é a janela que **realmente** gerou o `Periodo`
+ * — nunca a pedida na URL quando essa falhou. Sem isso, uma "personalizado"
+ * com `de`/`ate` inválidos cairia no mês corrente para o número, mas o chip
+ * (que usa `janelaEfetiva` para o rótulo) continuaria lendo "personalizado"
+ * sem `de`/`ate` válidos — `rotuloDoPeriodo` devolveria `null` para um
+ * período que, na verdade, é o mês corrente: o chip e o número
+ * discordariam entre si.
+ *
+ * **`"todos"` não pode usar `new Date()` como `fim`.** Achado do `/revisar`
+ * (planejamento da Tarefa 6, 22/08/2026): um frete nasce no momento da
+ * ordem (`CLAUDE.md` §1), inclusive para uma data futura — `data_servico`
+ * no futuro é o caso normal, não a exceção. `fim: new Date()` cortaria
+ * esse frete fora de "Todos os fretes" enquanto "Este mês" (`fim` = fim do
+ * mês corrente) o contaria, e o número tocável leva a `/fretes?
+ * periodo=todos`, que não filtra data nenhuma — o número somaria menos do
+ * que a lista que ele mesmo abre mostra. `PERIODO_SEM_FIM` usa 31/12/9999
+ * — sem filtro de verdade, não "até agora".
+ *
+ * **Não é a data máxima do `Date` do JavaScript.** Primeira tentativa
+ * (`new Date(8640000000000000)`, ano 275760) quebrava a consulta em
+ * produção: `PrismaClientUnknownRequestError`, "Could not convert argument
+ * value... to ArgumentValue" — o driver não aceita o ano de 6 dígitos que
+ * essa data produz (`+275760-...`). Achado rodando no navegador, não só
+ * lendo o código — o `npm test` local não pega isso, porque nenhum teste
+ * de `periodo.ts` chama o banco. `9999-12-31` é bem além de qualquer frete
+ * real e permanece um ano de 4 dígitos, que o driver aceita.
+ */
+const PERIODO_SEM_FIM: Periodo = {
+  inicio: new Date(0),
+  fim: new Date("9999-12-31T23:59:59.999Z"),
+};
+
+export function resolverPeriodoDoPerfil(
+  janela: string | undefined,
+  de: string | undefined,
+  ate: string | undefined,
+): { periodo: Periodo; janelaEfetiva: string } {
+  const janelaPedida = janela ?? "mes-atual";
+  if (janelaPedida === "todos") {
+    return { periodo: PERIODO_SEM_FIM, janelaEfetiva: "todos" };
+  }
+  const periodo = resolverPeriodoDaUrl(janelaPedida, de, ate);
+  if (periodo) return { periodo, janelaEfetiva: janelaPedida };
+  return {
+    periodo: resolverPeriodoDaUrl("mes-atual", undefined, undefined)!,
+    janelaEfetiva: "mes-atual",
+  };
+}
+
 const MESES_ABREV = [
   "jan", "fev", "mar", "abr", "mai", "jun",
   "jul", "ago", "set", "out", "nov", "dez",
 ];
 
-function formatarDataCurta(dia: string): string {
+export function formatarDataCurta(dia: string): string {
   const [, mes, diaDoMes] = dia.split("-").map(Number);
   return `${diaDoMes} ${MESES_ABREV[mes - 1]}`;
 }

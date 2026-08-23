@@ -392,26 +392,46 @@ export async function resumoFinanceiroDoCliente(
 
 /**
  * Histórico de um perfil (Tarefa 6): os `CHIPS_DE_HISTORICO` (5) mais
- * recentes, com a situação financeira de cada um, mais o total real — o
- * rótulo "Ver todos os N" usa o total, não o teto de exibição
- * (`docs/planos/item-4-lista-e-detalhe-do-frete.md`, Tarefa 1). Toda linha de
- * frete no produto mostra a etiqueta de situação (lista, detalhe); o
- * histórico do perfil não seria exceção — decisão do fundador, 20/08/2026,
- * registrada em `docs/planos/item-4-lista-e-detalhe-do-frete.md`, Tarefa 1.
+ * recentes **dentro do período** do resumo, com a situação financeira de
+ * cada um. Toda linha de frete no produto mostra a etiqueta de situação
+ * (lista, detalhe); o histórico do perfil não seria exceção — decisão do
+ * fundador, 20/08/2026, registrada em
+ * `docs/planos/item-4-lista-e-detalhe-do-frete.md`, Tarefa 1.
+ *
+ * **Segue o período do resumo** — decisão do fundador, achado do segundo
+ * `/revisar` da Tarefa 6 (22/08/2026): chip dizendo "Mês passado" com o
+ * histórico mostrando frete de hoje é contradição dentro da MESMA tela
+ * (diferente do risco lista-contra-perfil, que são duas telas — mitigado
+ * com um qualificador no `apoio` da lista). "Filtrou, a tela responde." O
+ * rótulo "Ver todos os N" (ainda não construído nesta fatia) também passa
+ * a valer sobre o período, não a vida inteira do cadastro.
+ *
+ * **`totalGeral`** — contagem **sem** o filtro de período, só para os dois
+ * estados vazios distinguirem "nunca lançou frete nenhum" de "não tem frete
+ * neste período" (decisão do fundador: são textos diferentes). Uma
+ * consulta a mais, sempre O(1), nunca por linha.
  *
  * **Ordena por `data_servico`, não por `criado_em`** — achado do segundo
- * `/revisar`: a lista "Meus fretes" (Tarefa 2) agrupa por `data_servico`, e
+ * `/revisar` da Tarefa 2: a lista "Meus fretes" agrupa por `data_servico`, e
  * um histórico ordenado por outro critério divergiria dela para qualquer
  * frete lançado como ordem futura ou dias depois de acontecer. Decisão do
  * fundador, 20/08/2026: "o que interessa é quando o frete aconteceu, não
  * quando foi digitado". `criado_em desc` desempata no mesmo dia, para ordem
  * estável.
  *
- * Três consultas (serviços · contagem · títulos em lote), nunca uma por
- * linha.
+ * Três consultas fixas (serviços · contagem no período · contagem geral),
+ * nunca uma por linha.
  */
-async function historicoPorEntidade(empresaId: string, where: Prisma.ServicoWhereInput) {
-  const [servicos, total] = await Promise.all([
+async function historicoPorEntidade(
+  empresaId: string,
+  whereBase: Prisma.ServicoWhereInput,
+  periodo: Periodo,
+) {
+  const where: Prisma.ServicoWhereInput = {
+    ...whereBase,
+    data_servico: { gte: periodo.inicio, lte: periodo.fim },
+  };
+  const [servicos, total, totalGeral] = await Promise.all([
     db(empresaId).servico.findMany({
       where,
       select: CAMPOS_SERVICO,
@@ -419,18 +439,27 @@ async function historicoPorEntidade(empresaId: string, where: Prisma.ServicoWher
       take: CHIPS_DE_HISTORICO,
     }),
     db(empresaId).servico.count({ where }),
+    db(empresaId).servico.count({ where: whereBase }),
   ]);
-  return { servicos: await comSituacaoEmLote(empresaId, servicos), total };
+  return { servicos: await comSituacaoEmLote(empresaId, servicos), total, totalGeral };
 }
 
-export function listarServicosDoCliente(empresaId: string, clienteId: string) {
-  return historicoPorEntidade(empresaId, { cliente_id: clienteId, arquivado_em: null });
+export function listarServicosDoCliente(empresaId: string, clienteId: string, periodo: Periodo) {
+  return historicoPorEntidade(empresaId, { cliente_id: clienteId, arquivado_em: null }, periodo);
 }
 
-export function listarServicosDoCaminhao(empresaId: string, veiculoId: string) {
-  return historicoPorEntidade(empresaId, { veiculo_id: veiculoId, arquivado_em: null });
+export function listarServicosDoCaminhao(empresaId: string, veiculoId: string, periodo: Periodo) {
+  return historicoPorEntidade(empresaId, { veiculo_id: veiculoId, arquivado_em: null }, periodo);
 }
 
-export function listarServicosDoMotorista(empresaId: string, motoristaId: string) {
-  return historicoPorEntidade(empresaId, { motorista_id: motoristaId, arquivado_em: null });
+export function listarServicosDoMotorista(
+  empresaId: string,
+  motoristaId: string,
+  periodo: Periodo,
+) {
+  return historicoPorEntidade(
+    empresaId,
+    { motorista_id: motoristaId, arquivado_em: null },
+    periodo,
+  );
 }
