@@ -66,8 +66,8 @@ com dado plantado (cliente com frete este mês, mês passado, e um cliente
 sem frete nenhum): resumo recalculando por período, histórico seguindo o
 período com os dois textos de vazio, chip do "Meus fretes" resolvendo o
 nome certo mesmo com zero fretes e depois de trocar o período de dentro da
-tela, alvo de toque medido em ~62,5px. Esteira deste commit ainda não
-disparada — ver `/onde-paramos`.
+tela, alvo de toque medido em ~62,5px. Esteira deste commit confirmada
+verde (`gh run list`, run 32608217330).
 
 Próximo: Tarefa 6 do item 4, segundo commit — resumo e histórico do
 perfil do caminhão (km/R$/km com convite e cobertura parcial, sincronizar
