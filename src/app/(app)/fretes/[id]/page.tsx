@@ -16,6 +16,7 @@ import { diaEmFortaleza, formatarDiaDaSemanaEData } from "@/lib/utils/data-forta
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { BotaoArquivarFrete } from "../BotaoArquivarFrete";
 import { AcaoOrdemDeServico } from "./AcaoOrdemDeServico";
+import { BotaoMarcarFinalizado } from "./BotaoMarcarFinalizado";
 
 /**
  * Detalhe do frete (item 4, Tarefa 3; principal da fatia "em andamento" no
@@ -28,18 +29,22 @@ import { AcaoOrdemDeServico } from "./AcaoOrdemDeServico";
  * (`AcaoOrdemDeServico.tsx`): sem motorista → "Escolher motorista"; com
  * motorista, telefone ausente/inválido → abre a folha de telefone; telefone
  * válido → link real do WhatsApp com a ordem pronta. **"Marcar como
- * finalizado" ainda não aparece** — achado antes de codar esta tarefa: o
- * plano tinha essa secundária como "sempre visível" e, na mesma frase, dizia
- * que a ação de fundo só nasce na Tarefa 3 — contradiz a regra abaixo.
- * Corrigido em `docs/planos/item-5-ordem-de-servico.md`: a regra vence, o
- * botão nasce junto da ação, na Tarefa 3. Finalizado sem cobrança/já
- * faturado (itens 6/7) continuam sem principal — mesmo precedente já
- * registrado para o perfil do caminhão, "sem principal"
- * (`docs/componentes.md` linhas 374 e 412): **botão cuja ação de fundo não
- * existe não entra, nem desabilitado.**
- * **Editar frete** (secundária) e **Arquivar frete** (texto destrutiva)
- * ficam no bloco de ações, no fim, em todo estado — nunca um botão que não
- * leva a lugar nenhum.
+ * finalizado"** (`BotaoMarcarFinalizado.tsx`, item 5, Tarefa 3) acompanha
+ * sempre que o frete estiver "em andamento", qualquer que seja o estado da
+ * principal — são ações independentes (dá para finalizar um frete que nunca
+ * teve ordem enviada). Finalizado sem cobrança/já faturado (itens 6/7)
+ * continuam sem principal, e sem "Marcar como finalizado" — mesmo
+ * precedente já registrado para o perfil do caminhão, "sem principal"
+ * (`docs/componentes.md` linhas 379–390 e 427): **botão cuja ação de fundo
+ * não existe não entra, nem desabilitado.** Isso não vale para **Editar
+ * frete** (secundária) nem **Arquivar frete** (texto destrutiva) — os dois
+ * ficam no bloco de ações, no fim, em todo estado, sempre com ação de fundo
+ * válida — nunca um botão que não leva a lugar nenhum.
+ *
+ * `BotaoMarcarFinalizado` é renderizado **incondicionalmente** (fora do
+ * `if` de "em andamento"), e é ele mesmo quem decide se o botão aparece —
+ * ver o comentário no próprio arquivo para o motivo (o aviso de sucesso não
+ * pode desmontar junto do bloco de ações quando a tela atualiza).
  *
  * Campos sem regra própria escrita (tudo exceto Telefone, que
  * `docs/componentes.md` linha 177 exige "adicionar" quando vazio) usam
@@ -232,6 +237,10 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
               mensagem={mensagemOrdem}
             />
           ) : null}
+          <BotaoMarcarFinalizado
+            servicoId={id}
+            emAndamento={servico.status_operacional === "em_andamento"}
+          />
           <Botao variante="secundaria" href={`/fretes/${id}/editar`}>
             Editar frete
           </Botao>

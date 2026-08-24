@@ -8,6 +8,7 @@ import {
   editarServico,
   arquivarServico,
   marcarOrdemEnviada,
+  marcarServicoFinalizado,
   resumoDoCaminhao,
   resumoDoMotorista,
   valoresTotaisPorCliente,
@@ -39,7 +40,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 45;
+const CONFERENCIAS_ESPERADAS = 49;
 
 /** Uma janela de 2 dias em volta de agora — cobre `data_servico: new Date()` de `dadosMinimos`. */
 function periodoAmplo(): Periodo {
@@ -877,6 +878,56 @@ describe("12. marcarOrdemEnviada — item 5, Tarefa 2", () => {
     );
     const aindaNulo = await buscarServico(a.empresaId, servicoDeA.id);
     expect(aindaNulo?.ordem_enviada_em).toBeNull();
+    conferencias++;
+  });
+});
+
+describe("13. marcarServicoFinalizado — item 5, Tarefa 3", () => {
+  it("transição válida: em_andamento → finalizado", async () => {
+    const e = await criarEmpresaDeTeste("s11a");
+    const criado = await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e));
+    expect(criado.status_operacional).toBe("em_andamento");
+
+    const atualizado = await marcarServicoFinalizado(e.empresaId, criado.id);
+    expect(atualizado.status_operacional).toBe("finalizado");
+    conferencias++;
+  });
+
+  it("recusa a partir de finalizado", async () => {
+    const e = await criarEmpresaDeTeste("s11b");
+    const criado = await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e));
+    await marcarServicoFinalizado(e.empresaId, criado.id);
+
+    await expect(marcarServicoFinalizado(e.empresaId, criado.id)).rejects.toThrow(
+      "Este frete já não está em andamento.",
+    );
+    conferencias++;
+  });
+
+  it("recusa a partir de cancelado", async () => {
+    const e = await criarEmpresaDeTeste("s11c");
+    const criado = await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e));
+    await raiz.query(
+      `UPDATE "servico" SET status_operacional = 'cancelado' WHERE id = $1`,
+      [criado.id],
+    );
+
+    await expect(marcarServicoFinalizado(e.empresaId, criado.id)).rejects.toThrow(
+      "Este frete já não está em andamento.",
+    );
+    conferencias++;
+  });
+
+  it("isolamento — recusa gravar em serviço de outra empresa", async () => {
+    const a = await criarEmpresaDeTeste("s11d");
+    const b = await criarEmpresaDeTeste("s11e");
+    const servicoDeA = await criarServico(a.empresaId, a.usuarioId, dadosMinimos(a));
+
+    await expect(marcarServicoFinalizado(b.empresaId, servicoDeA.id)).rejects.toThrow(
+      "Frete não encontrado.",
+    );
+    const aindaEmAndamento = await buscarServico(a.empresaId, servicoDeA.id);
+    expect(aindaEmAndamento?.status_operacional).toBe("em_andamento");
     conferencias++;
   });
 });

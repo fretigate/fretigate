@@ -6,6 +6,100 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 24/08/2026 — Tarefa 3 do item 5: Marcar como finalizado
+
+`marcarServicoFinalizado` (`src/lib/servicos/servicos.ts`): única transição
+válida `em_andamento → finalizado`, recusa com mensagem própria a partir de
+`finalizado` ou `cancelado`. `marcarServicoFinalizadoAction`
+(`src/app/(app)/fretes/acoes.ts`) e `BotaoMarcarFinalizado.tsx` (novo,
+`fretes/[id]/`) — secundária que acompanha sempre que o frete estiver
+`em_andamento`, qualquer que seja o estado da principal (decisão já
+registrada no plano: enviar ordem e finalizar são ações independentes).
+Ligado em `fretes/[id]/page.tsx`, ao lado de `AcaoOrdemDeServico`.
+`docs/componentes.md` linha 415 corrigida (a secundária não "ainda não
+acompanha" — agora acompanha).
+
+`tests/servicos.test.ts`, describe 13 (+4: transição válida, recusa a
+partir de finalizado, recusa a partir de cancelado, isolamento) —
+`CONFERENCIAS_ESPERADAS` 45 → 49.
+
+**`/revisar` — nove tentativas até rodar, oito derrubadas pelo mesmo `529
+Overloaded` da API (sobrecarga do servidor da Anthropic, confirmado pela
+mensagem do próprio erro, não sintoma do projeto).** Decisão do fundador ao
+ser avisado, mantida até a nona tentativa: esperar a instabilidade passar e
+tentar de novo, **sem commitar sem o passe** — a tarefa é curta e de baixo
+risco, mas abrir exceção por indisponibilidade de ferramenta cria o
+precedente errado (`CLAUDE.md` §2, item 7).
+
+**Um passe, três divergências, duas lacunas — as cinco resolvidas antes do
+commit.**
+
+Divergências, todas corrigidas em `fretes/[id]/page.tsx`:
+1. Comentário se contradizia: dizia que o frete finalizado/faturado "continua
+   sem principal nem secundária", e a frase seguinte, no mesmo comentário,
+   afirmava que **Editar frete** (secundária) "fica no bloco de ações, em
+   todo estado" — o código já fazia isso certo (Editar frete fora do `if` de
+   "em andamento"), só o texto lia como se sumisse também. Reescrito para
+   nomear que só "Marcar como finalizado" some, nunca Editar/Arquivar.
+2. Citação `docs/componentes.md` "linhas 374 e 412" apontava para uma linha
+   em branco e para o separador da tabela — herdada da Tarefa 2 sem
+   conferir. Corrigida para 379–390 (medição) e 427 (a linha da tabela).
+3. Esta mesma entrada do diário não trazia a lista "O que foi pedido ao
+   Design" para a correção de `docs/componentes.md:415` — `CLAUDE.md` §13
+   exige isso a cada correção de estado feita pelo repositório. Ver abaixo.
+
+Lacunas, resolvidas por decisão do fundador (não deixadas para os itens 6/7
+— "lá a tela ganha mais botões, cada um nasceria escolhendo um dos dois
+padrões; melhor o padrão existir antes"):
+4. Erro de "Marcar como finalizado" aparecia como texto vermelho ao lado do
+   botão, enquanto o vizinho (`AcaoOrdemDeServico`) já resolve a mesma
+   classe de falha com `AvisoDoSistema` (superfície escura) — dois
+   tratamentos para o mesmo tipo de mensagem na mesma tela.
+5. Depois de finalizar com sucesso, nada na tela confirmava — os dois
+   botões só somiam. Mesma classe do "Agora não" fechando em silêncio,
+   corrigido na Tarefa 2.
+
+Resolvidas juntas: sucesso e erro agora passam pelo mesmo `AvisoDoSistema`
+("Frete finalizado" no sucesso, sem botões, some sozinho; a mensagem de
+erro no lugar dele quando falha, também sem botões — o botão continua
+disponível para tentar de novo). **A tela atualiza (`router.refresh()`) na
+hora do sucesso, não depois do aviso sumir** — esperar deixaria "Marcar
+como finalizado" visível sobre um frete já finalizado, convidando a tocar
+de novo sobre estado que já mudou. Isso exigiu mudar onde
+`BotaoMarcarFinalizado` monta: antes só existia dentro do `if` de "em
+andamento", então o refresh o desmontaria (e o aviso morreria junto, antes
+de dar tempo de ler); agora `page.tsx` o renderiza incondicionalmente, e é
+o próprio componente (via a prop `emAndamento`) quem decide se o botão
+aparece — o aviso é estado próprio, que sobrevive ao refresh porque o
+componente nunca desmonta.
+
+**O que foi pedido ao Design** (correção de estado feita pelo repositório,
+`CLAUDE.md` §13 — a fonte do Design ainda não tem esta mudança):
+`docs/componentes.md` linha 415 (Detalhe do frete: a secundária "Marcar
+como finalizado" agora acompanha a principal, em vez de "ainda não
+acompanha").
+
+**Verificação:** `npm run lint`, `npx tsc --noEmit`, `npm run build`
+verdes; `npm test` **local** 339/339 antes das correções do `/revisar`.
+Fluxo completo no navegador depois das correções (conta nova, frete
+lançado, "Marcar como finalizado" tocado): botão principal e secundária
+somem na hora, aviso "Frete finalizado" sobrevive ao refresh e some
+sozinho ~6s depois, sem erro no console — confirma o comportamento pedido
+(tela atualiza na hora, aviso não desmonta junto do bloco de ações).
+`npm test` **local** rodado de novo depois: uma reprovação em
+`tests/servicos.test.ts` ("CRUD básico", teste que não toquei nesta
+tarefa) na suíte inteira — isolado (`vitest run tests/servicos.test.ts`),
+50/50, sem reproduzir; suíte inteira rodada uma terceira vez, 339/339
+limpa. Instabilidade pontual de pool sob carga dos 21 arquivos juntos
+(mesma classe já documentada no `CLAUDE.md` §2), não regressão desta
+tarefa — nenhum teste novo tocado. Esteira deste commit ainda não
+disparada — ver `/onde-paramos`.
+
+Próximo: Tarefa 4 do item 5 — Isolamento do Storage
+(`docs/planos/item-5-ordem-de-servico.md`).
+
+---
+
 ## 24/08/2026 — Tarefa 2 do item 5: mensagens.ts e "Enviar ordem no WhatsApp"
 
 Construído conforme o plano (`docs/planos/item-5-ordem-de-servico.md`,

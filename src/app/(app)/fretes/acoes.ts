@@ -13,6 +13,7 @@ import {
   criarServico,
   listarDestinosDoCliente,
   marcarOrdemEnviada,
+  marcarServicoFinalizado,
 } from "@/lib/servicos/servicos";
 import { criarTituloJaRecebi, editarServicoComProtecaoDeTitulo } from "@/lib/servicos/titulos";
 import { buscarMunicipios, type Municipio } from "@/lib/servicos/municipios";
@@ -375,6 +376,28 @@ export const marcarOrdemEnviadaAction = comoUsuario(async (
 
   try {
     await marcarOrdemEnviada(sessao.empresaId, validado.data.servicoId);
+    return { ok: true };
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };
+  }
+});
+
+const schemaMarcarFinalizado = z.object({ servicoId: z.string().uuid() });
+
+/**
+ * "Marcar como finalizado", no detalhe do frete (item 5, Tarefa 3) —
+ * `marcarServicoFinalizado` (`src/lib/servicos/servicos.ts`) recusa fora de
+ * `em_andamento`.
+ */
+export const marcarServicoFinalizadoAction = comoUsuario(async (
+  sessao,
+  servicoId: string,
+): Promise<ResultadoSimples> => {
+  const validado = schemaMarcarFinalizado.safeParse({ servicoId });
+  if (!validado.success) return { ok: false, erro: "Frete inválido." };
+
+  try {
+    await marcarServicoFinalizado(sessao.empresaId, validado.data.servicoId);
     return { ok: true };
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };

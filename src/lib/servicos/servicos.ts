@@ -344,6 +344,28 @@ export async function marcarOrdemEnviada(empresaId: string, id: string) {
 }
 
 /**
+ * "Marcar como finalizado", no detalhe do frete (item 5, Tarefa 3 —
+ * `docs/planos/item-5-ordem-de-servico.md`). Única transição válida:
+ * `em_andamento → finalizado`. Recusa com mensagem própria a partir de
+ * `finalizado` ou `cancelado` — nunca a mensagem genérica de "não
+ * encontrado", porque o frete existe; é o estado que não permite. Confere
+ * posse via `buscarServico`, mesmo padrão de `marcarOrdemEnviada`.
+ */
+export async function marcarServicoFinalizado(empresaId: string, id: string) {
+  const servico = await buscarServico(empresaId, id);
+  if (!servico || servico.arquivado_em) throw new Error("Frete não encontrado.");
+  if (servico.status_operacional !== "em_andamento") {
+    throw new Error("Este frete já não está em andamento.");
+  }
+
+  return db(empresaId).servico.update({
+    where: { id },
+    data: { status_operacional: "finalizado" },
+    select: CAMPOS_SERVICO,
+  });
+}
+
+/**
  * Leituras para a tela de lançamento (Tarefa 2) — `docs/especificacao.md`
  * §4.1. Ficam aqui, não em `clientes.ts`/`caminhoes.ts`/`motoristas.ts`,
  * porque a fonte é `Servico`, não a entidade em si.
