@@ -79,3 +79,24 @@ export function diasNoMes(dia: string): number {
   const [ano, mes] = dia.split("-").map(Number);
   return new Date(Date.UTC(ano, mes, 0)).getUTCDate();
 }
+
+const DIAS_SEMANA = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+const MESES = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
+/**
+ * "segunda, 25 de agosto" — dia da semana + dia do mês, sem ano. Para a
+ * mensagem da ordem de serviço (`src/lib/servicos/mensagens.ts`, item 5
+ * Tarefa 2), lida pelo motorista — não é o mesmo formatador de
+ * `formatarDataPorExtenso` (local em `fretes/[id]/page.tsx`, sem dia da
+ * semana e com ano, lido pelo dono na tela): leitores diferentes, formatos
+ * diferentes (`docs/planos/item-5-ordem-de-servico.md`, Tarefa 2).
+ */
+export function formatarDiaDaSemanaEData(instante: Date): string {
+  const dia = diaEmFortaleza(instante);
+  const [, mes, diaDoMes] = dia.split("-").map(Number);
+  return `${DIAS_SEMANA[diaDaSemana(dia)]}, ${diaDoMes} de ${MESES[mes - 1]}`;
+}

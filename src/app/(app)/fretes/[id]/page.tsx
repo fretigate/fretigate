@@ -1,32 +1,45 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { exigirSessao } from "@/lib/auth/sessao";
+import { db } from "@/lib/db";
 import { buscarServicoComTitulos } from "@/lib/servicos/titulos";
 import { buscarCliente } from "@/lib/servicos/clientes";
 import { buscarCaminhao } from "@/lib/servicos/caminhoes";
 import { buscarMotorista } from "@/lib/servicos/motoristas";
 import { buscarTipoOperacao } from "@/lib/servicos/tipos-de-operacao";
+import { montarMensagemOrdem } from "@/lib/servicos/mensagens";
 import { Botao } from "@/components/ui/Botao";
 import { EtiquetaSituacao } from "@/components/ui/EtiquetaSituacao";
 import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
 import { nomeCaminhao } from "@/lib/utils/caminhao";
-import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { diaEmFortaleza, formatarDiaDaSemanaEData } from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { BotaoArquivarFrete } from "../BotaoArquivarFrete";
+import { AcaoOrdemDeServico } from "./AcaoOrdemDeServico";
 
 /**
- * Detalhe do frete (item 4, Tarefa 3) —
- * `docs/planos/item-4-lista-e-detalhe-do-frete.md`. Fecha o link provisório
- * de "Meus fretes" (`ListaFretes.tsx`) e o "Ver o frete" do aviso pós-lançamento
- * (`AvisoFreteSalvo.tsx`), os dois cortados por depender desta tela.
+ * Detalhe do frete (item 4, Tarefa 3; principal da fatia "em andamento" no
+ * item 5, Tarefa 2 — `docs/planos/item-5-ordem-de-servico.md`). Fecha o link
+ * provisório de "Meus fretes" (`ListaFretes.tsx`) e o "Ver o frete" do aviso
+ * pós-lançamento (`AvisoFreteSalvo.tsx`), os dois cortados por depender desta
+ * tela.
  *
- * **Sem principal nesta fatia** — Enviar ordem, Marcar como finalizado
- * (item 5), Faturar frete, Marcar recebido, Ver relatório (itens 6/7)
- * dependem de backend que ainda não existe (`docs/componentes.md` linha
- * 349: precedente já registrado para o perfil do caminhão, "sem principal").
+ * **Principal só na fatia "em andamento"**, e muda com o estado do frete
+ * (`AcaoOrdemDeServico.tsx`): sem motorista → "Escolher motorista"; com
+ * motorista, telefone ausente/inválido → abre a folha de telefone; telefone
+ * válido → link real do WhatsApp com a ordem pronta. **"Marcar como
+ * finalizado" ainda não aparece** — achado antes de codar esta tarefa: o
+ * plano tinha essa secundária como "sempre visível" e, na mesma frase, dizia
+ * que a ação de fundo só nasce na Tarefa 3 — contradiz a regra abaixo.
+ * Corrigido em `docs/planos/item-5-ordem-de-servico.md`: a regra vence, o
+ * botão nasce junto da ação, na Tarefa 3. Finalizado sem cobrança/já
+ * faturado (itens 6/7) continuam sem principal — mesmo precedente já
+ * registrado para o perfil do caminhão, "sem principal"
+ * (`docs/componentes.md` linhas 374 e 412): **botão cuja ação de fundo não
+ * existe não entra, nem desabilitado.**
  * **Editar frete** (secundária) e **Arquivar frete** (texto destrutiva)
- * ficam no bloco de ações, no fim — nunca um botão que não leva a lugar
- * nenhum.
+ * ficam no bloco de ações, no fim, em todo estado — nunca um botão que não
+ * leva a lugar nenhum.
  *
  * Campos sem regra própria escrita (tudo exceto Telefone, que
  * `docs/componentes.md` linha 177 exige "adicionar" quando vazio) usam
@@ -62,16 +75,29 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
   const servico = await buscarServicoComTitulos(sessao.empresaId, id);
   if (!servico) notFound();
 
-  const [cliente, tipoOperacao, caminhao, motorista] = await Promise.all([
+  const [cliente, tipoOperacao, caminhao, motorista, empresa] = await Promise.all([
     buscarCliente(sessao.empresaId, servico.cliente_id),
     buscarTipoOperacao(sessao.empresaId, servico.tipo_operacao_id),
     servico.veiculo_id ? buscarCaminhao(sessao.empresaId, servico.veiculo_id) : null,
     servico.motorista_id ? buscarMotorista(sessao.empresaId, servico.motorista_id) : null,
+    db(sessao.empresaId).empresa.findUnique({
+      where: { id: sessao.empresaId },
+      select: { nome_fantasia: true },
+    }),
   ]);
 
   const rota = formatarRota(servico.origem_texto, servico.destino_texto);
   const data = formatarDataPorExtenso(diaEmFortaleza(servico.data_servico));
   const tipoNome = tipoOperacao?.nome ?? "Frete";
+
+  const mensagemOrdem = montarMensagemOrdem({
+    empresa: empresa!.nome_fantasia,
+    diaEData: formatarDiaDaSemanaEData(servico.data_servico),
+    origem: servico.origem_texto,
+    destino: servico.destino_texto,
+    carga: servico.carga_texto,
+    caminhao: caminhao ? nomeCaminhao(caminhao) : null,
+  });
 
   return (
     <main
@@ -197,6 +223,15 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
         </div>
 
         <div className="mt-26 flex flex-col gap-10">
+          {servico.status_operacional === "em_andamento" ? (
+            <AcaoOrdemDeServico
+              servicoId={id}
+              motorista={
+                motorista ? { id: motorista.id, nome: motorista.nome, telefone: motorista.telefone } : null
+              }
+              mensagem={mensagemOrdem}
+            />
+          ) : null}
           <Botao variante="secundaria" href={`/fretes/${id}/editar`}>
             Editar frete
           </Botao>

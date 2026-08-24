@@ -24,7 +24,7 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 
 | Tela | Chega de | Leva para |
 |---|---|---|
-| Detalhe do frete ✅ | Linha em Fretes · histórico do perfil do cliente | Faturar frete · Marcar recebido · Editar frete → Editar frete · Arquivar · Ver relatório → Documento |
+| Detalhe do frete ✅ | Linha em Fretes · histórico do perfil do cliente | Sem motorista → Escolher motorista → Editar frete · Com motorista, telefone ausente/inválido → Enviar ordem no WhatsApp abre a Folha do campo que falta → conversa · Com motorista e telefone válido → Enviar ordem no WhatsApp → conversa direto, com aviso Enviei/Ainda não ao voltar (resolvido na Tarefa 2 do item 5, 23/08/2026) · Faturar frete · Marcar recebido · Editar frete → Editar frete · Arquivar · Ver relatório → Documento |
 | Editar frete ✅ | Editar frete no detalhe (item 4, Tarefa 4) | Salvar alterações → volta para o detalhe do frete · com título ativo, Cliente e valor ficam travados (sem aviso "Já recebi", que é só da criação) |
 | Detalhe da cobrança ✅ | Linha em Cobranças | Marcar recebido / Receber o resto → folha de recebimento · Cobrar no WhatsApp → conversa · Ver relatório → Documento |
 | Relatório — montagem ✅ | Atalho e pendência da dashboard · estado vazio de Cobranças · perfil do cliente | Gerar relatório → Documento A4 |
@@ -48,9 +48,9 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 | Cadastro rápido — cliente ⬜ | Lançar frete › folha de busca › + Novo | Nome (obrigatório) + telefone + prazo → volta ao lançamento com o cliente já escolhido |
 | Cadastro rápido — caminhão ⬜ | Lançar frete › folha de busca › + Novo | Apelido (obrigatório) + placa + tipo → volta ao lançamento |
 | Cadastro rápido — motorista ⬜ | Lançar frete › folha de busca › + Novo | Nome (obrigatório) + telefone + CNH → volta ao lançamento |
-| Folha do campo que falta ✅ (telefone tocável no perfil, Tarefa 1 do item 5, 23/08/2026 — os outros gatilhos ainda não) | Qualquer ação que precise de campo não preenchido | Um campo só → salva e **continua a ação** quando existe ação para continuar; no gatilho de perfil (Tarefa 1) só salva, não há ação de continuação · Agora não cancela |
+| Folha do campo que falta ✅ (telefone tocável no perfil, Tarefa 1 do item 5 · telefone ausente/inválido ao Enviar ordem no detalhe do frete, Tarefa 2 do item 5, 23/08/2026 — Cobrar no WhatsApp e a chave Pix do relatório ainda não) | Qualquer ação que precise de campo não preenchido | Um campo só → salva e **continua a ação** quando existe ação para continuar; no gatilho de perfil (Tarefa 1) só salva, sem ação de continuação; no gatilho de Enviar ordem (Tarefa 2) salva e segue para a conversa · Agora não cancela, com aviso do sistema dizendo o porquê |
 | Formulário de caminhão ✅ | Caminhões › + Novo · perfil › Editar | Apelido + placa + tipo (chip) → volta ao perfil · Arquivar em texto no fim. Sem campo de ano |
-| Modelo de ordem de serviço ✅ | Configurações › Mensagens | Chips {motorista} {cliente} {carga} {origem} {destino} {data} — sem {valor} |
+| Modelo de ordem de serviço ✅ (tela de edição ainda não construída — item 9 é MVP parcial, `docs/especificacao.md` §9) | Configurações › Mensagens | Chips {empresa} {origem} {destino} {carga} {caminhao} {data} — sem {valor}, sem {cliente} (decisão do fundador, Tarefa 2 do item 5, 23/08/2026: "o motorista não precisa saber para quem é"). Lista corrigida no segundo `/revisar` da mesma tarefa — a anterior citava {motorista} e {cliente}, que o texto de verdade (`src/lib/servicos/mensagens.ts`) nunca usa |
 | Novidades — lista e detalhe ✅ | Mais › Ajustes · cartão FRETINEWS dispensado na dashboard | Linha → Detalhe da mensagem · no máximo uma ação por mensagem |
 | Entrar ✅ | Abrir o app sem sessão · Sair da conta | **E-mail e senha** → Primeiro acesso · Criar conta · Esqueci a senha. O app nunca envia mensagem sozinho, então não há código por WhatsApp |
 | Criar conta ✅ | Entrar | Nome da empresa + **e-mail** + **senha** + **seu nome** (obrigatório, distingue os dois usuários) + telefone (contato, não login) + a única pergunta de pesquisa do produto → Primeiro acesso |

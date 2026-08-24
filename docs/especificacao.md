@@ -1196,6 +1196,18 @@ Três exigências para quando os itens 5 e 6 chegarem:
    ordem de serviço precisa identificar o caminhão para o motorista (nome +
    placa, mesmo formato de `nomeCaminhao`), e não havia variável para isso
    na lista original.
+
+   **Lacuna, achada no `/revisar` da Tarefa 2 do item 5 (23/08/2026):**
+   `montarMensagemOrdem` (a primeira função de `mensagens.ts` a existir de
+   verdade) recebe parâmetros tipados (`origem`, `destino`, `carga`,
+   `caminhao`, `diaEData`), nunca o marcador literal `{origem}` dentro do
+   texto — a montagem já resolve o valor antes de chamar a função (`CLAUDE.md`
+   §6: nunca formata dentro da função de montagem). Não está escrito se
+   "formato final" acima exige o marcador `{}` sobrevivendo no texto (para o
+   editor do item 9 fazer busca-e-substituição em cima dele) ou só o
+   **conjunto de variáveis aceitas** — o que `montarMensagemOrdem` já cumpre.
+   Registrado para decidir quando o item 9 (tela de editar o modelo) for
+   planejado; não bloqueia a construção deste item.
 3. **`telefone` é texto livre, sem máscara nem validação, nos dois cadastros
    que o alimentam (cliente e motorista) — hoje.** Confirmado no código: o
    schema de entrada (`z.string().trim()`, sem regra de formato) em
@@ -1219,11 +1231,13 @@ Três exigências para quando os itens 5 e 6 chegarem:
    construído** (busca no `src/` não encontrava a folha nem as mensagens),
    então a regra não protegia nada — mas ela existia, e corrigir isto aqui
    evitou a próxima sessão decidir de novo o que já tinha sido decidido.
-   **Desde a Tarefa 1 do item 5 (23/08/2026) isso mudou parcialmente:** a
-   folha e a validação existem e protegem o gatilho de telefone tocável nos
-   perfis (ver abaixo); "Cobrar no WhatsApp" e "Enviar ordem" continuam sem
-   construir. ~~O que falta decidir é só o DDI~~ — também resolvido na
-   Tarefa 1: fixo em 55 (ver a lista logo abaixo).
+   **Desde a Tarefa 1 do item 5 (23/08/2026) isso mudou, e mudou de novo na
+   Tarefa 2 (23/08/2026):** a folha e a validação existem e protegem o
+   gatilho de telefone tocável nos perfis (Tarefa 1) **e** o gatilho "Enviar
+   ordem" no detalhe do frete (Tarefa 2, `AcaoOrdemDeServico.tsx`) — dos dois
+   gatilhos que este parágrafo previa, só "Cobrar no WhatsApp" (item 6)
+   continua sem construir. ~~O que falta decidir é só o DDI~~ — também
+   resolvido na Tarefa 1: fixo em 55 (ver a lista logo abaixo).
 
    Duas coisas ficavam pendentes até o item 5 chegar — **as duas resolvidas
    na Tarefa 1 do item 5 (23/08/2026)**:

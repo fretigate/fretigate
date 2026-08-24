@@ -6,6 +6,133 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 24/08/2026 — Tarefa 2 do item 5: mensagens.ts e "Enviar ordem no WhatsApp"
+
+Construído conforme o plano (`docs/planos/item-5-ordem-de-servico.md`,
+Tarefa 2): `montarMensagemOrdem` (`src/lib/servicos/mensagens.ts`) monta o
+texto da ordem a partir de campos já resolvidos, nunca formata data dentro
+da função · `formatarDiaDaSemanaEData` (`src/lib/utils/data-fortaleza.ts`) ·
+`marcarOrdemEnviada` (`src/lib/servicos/servicos.ts`), idempotente · a
+principal do detalhe do frete muda com o estado
+(`AcaoOrdemDeServico.tsx`, novo): sem motorista → "Escolher motorista";
+telefone ausente/inválido → folha do campo que falta, salva e segue
+automaticamente para o WhatsApp; telefone válido → link direto. Confirmação
+"Enviei"/"Ainda não" ao voltar da conversa, só depois de o link ter sido
+tocado. `tests/mensagens.test.ts` (7 verificações, caso mínimo nomeado) ·
+`tests/servicos.test.ts` (+3, isolamento de `marcarOrdemEnviada`) ·
+`tests/data-fortaleza.test.ts` (+2).
+
+**Antes de codar, achei uma contradição no próprio plano aprovado — trazida
+ao fundador, não resolvida sozinho.** A Tarefa 2 mandava a secundária
+"Marcar como finalizado" aparecer "sempre visível", e a mesma frase dizia
+que a ação de fundo só nasce na Tarefa 3 — contra a regra já registrada
+nesta tela ("botão cuja ação de fundo não existe não entra, nem
+desabilitado"). Decisão do fundador: a regra vence, a secundária fica para
+a Tarefa 3. Registrado que "sempre visível" descrevia **comportamento**
+(a secundária não depende de `ordem_enviada_em` — dá para finalizar um
+frete que nunca teve ordem enviada), não **momento de construir**. Plano
+corrigido com a distinção antes do commit.
+
+**Dois passes de `/revisar`.**
+
+Primeiro passe, sete divergências — todas corrigidas: rótulo "Escolher
+motorista" e o aviso "Enviei"/"Ainda não" do detalhe do frete fora do
+inventário fechado (`docs/componentes.md`, sincronizado); "Agora não" na
+folha de telefone fechando sem o aviso que a própria regra do §12 já exige
+("Sem o telefone não dá para mandar a ordem por aqui.", corrigido);
+`componentes.md` ainda listando "Enviar ordem" como não construído
+(corrigido); `docs/navegacao.md` sem os dois caminhos novos (acrescentado);
+citação de linha errada no comentário do `page.tsx` (349 → 374/412,
+corrigida — o revisor notou que já vinha errada de antes); e
+`salvarTelefoneParaOrdemAction` duplicando quase linha a linha
+`salvarTelefoneMotoristaAction` de `motoristas/acoes.ts` — trocado para
+reaproveitar a ação existente em vez de manter as duas.
+
+Um dos três achados levados ao fundador nesse meio-tempo: o que a tela faz
+quando `marcarOrdemEnviadaAction` falha ao gravar "Enviei". Decisão: o
+aviso **não fecha sozinho** enquanto mostrar erro — troca a pergunta pelo
+texto do erro, mantém os dois botões, deixa tentar de novo (a ação é
+idempotente). Motivo do fundador, registrado porque é o motivo certo para
+não esquecer depois: `ordem_enviada_em` é o dado que a pendência "fretes
+sem ordem enviada" da dashboard vai contar (§4.6) — fechar em silêncio
+faria o registro dizer o contrário do que aconteceu, e só apareceria dias
+depois, sem ninguém entender por quê.
+
+Segundo passe, sete divergências e seis lacunas. Duas correções de código,
+as outras cinco de documento:
+
+1. **O achado mais importante da tarefa.** No fluxo de telefone
+   ausente/inválido, `window.open` rodava **depois** do `await` que salva o
+   telefone no servidor. Em navegador de celular — o único aparelho onde
+   este item existe (`CLAUDE.md` §1) — isso é bloqueado como pop-up, porque
+   a pausa assíncrona quebra a cadeia de gesto confiável do toque original:
+   a pessoa tocaria "Salvar e enviar ordem", o telefone salvaria, e o
+   WhatsApp nunca abriria — sem erro nenhum na tela, lendo como o produto
+   quebrado. **No navegador de computador isso nunca reproduz**, porque
+   desktop não bloqueia `window.open` por atraso — é a segunda vez que o
+   celular pega um defeito que o navegador de computador esconde (a
+   primeira foi o teclado numérico cobrindo o valor, 12-13/08/2026).
+   Corrigido: os dígitos do telefone já estão disponíveis sem esperar o
+   servidor, então `window.open` roda primeiro (dentro do mesmo gesto de
+   toque), o salvamento roda depois — **ordem é regra, não detalhe**,
+   registrada em comentário no próprio código
+   (`AcaoOrdemDeServico.tsx:161`) para não voltar se alguém "otimizar" a
+   função movendo o `await` para cima. Testado ao vivo: `window.open`
+   agora dispara antes do `await` completar.
+2. **Um teste que não provava o que dizia — removido, não ajustado até
+   passar.** "Nunca traz o valor do frete nem o nome do cliente" só
+   verificava que o texto de `origem` saía intacto; passaria igual se a
+   função inserisse valor ou cliente por conta própria. A garantia real é
+   estrutural — `DadosMensagemOrdem` não tem esses campos, e isso já é
+   coberto por `tsc --noEmit` a cada tarefa. Teste que confirma o que outro
+   mecanismo já garante só dá falsa sensação de cobertura — removido em vez
+   de reescrito para "passar de qualquer jeito", que é exatamente o defeito
+   nomeado no `CLAUDE.md` §2, item 7 (rigor total).
+3. Citação errada — meu comentário atribuía "nunca traz o nome do cliente"
+   à §4.2, que só fala do valor; o nome do cliente é decisão do fundador
+   registrada no plano. Corrigido em `mensagens.ts`.
+4. `docs/especificacao.md` §9 ainda dizia "'Enviar ordem' continua sem
+   construir" — corrigido.
+5. `docs/navegacao.md`, linha "Modelo de ordem de serviço", listava chips
+   `{motorista}` `{cliente}` que o texto real nunca usa — corrigido para o
+   conjunto de verdade.
+6. Aviso que não fecha sozinho com erro (decisão do fundador, acima) não
+   estava registrado como exceção à regra geral "some sozinho em 6-8s" —
+   registrado em `docs/componentes.md` §07, ao lado da exceção irmã do
+   relatório com Pix.
+
+Seis lacunas registradas nos documentos certos, sem bloqueio: texto do
+aviso "Mandou a ordem pro motorista?" sem confirmação escrita; parâmetros
+tipados de `mensagens.ts` em vez de marcadores `{}` literais (decisão do
+item 9, ainda não planejado); as demais são pontos de estilo sem risco
+(ícone no botão principal, non-null assertion já com precedente igual em
+`clientes/[id]/page.tsx`).
+
+**O que foi pedido ao Design** (correções de estado feitas pelo
+repositório, `CLAUDE.md` §13 — a fonte do Design ainda não tem estas
+mudanças): `docs/componentes.md` — linha 129/305 (onde "Enviar ordem"
+dispara hoje), linha 400 (principal "Escolher motorista" e o aviso
+Enviei/Ainda não no detalhe do frete), a exceção do aviso que não fecha
+sozinho com erro (§07); `docs/navegacao.md` — linha 27 (Detalhe do frete,
+os dois caminhos novos), linha 51 (Folha do campo que falta, novo gatilho),
+linha 53 (Modelo de ordem de serviço, conjunto de variáveis corrigido).
+
+**Verificação:** `npm run lint`, `npx tsc --noEmit`, `npm run build`
+verdes; `npm test` **local** 335/335 (caiu de 336 por causa do teste
+removido no achado 2 do segundo passe). Fluxo completo no navegador, duas
+rodadas (antes e depois das correções do segundo passe): os três estados
+da principal (Escolher motorista · folha de telefone com salvar-e-seguir ·
+link direto), a mensagem montada batendo caractere a caractere com o
+exemplo do plano, a confirmação Enviei/Ainda não, e — depois da correção —
+falha de rede simulada em "Enviei" mantendo o aviso aberto com erro e
+recuperando no toque seguinte. Esteira deste commit ainda não disparada —
+ver `/onde-paramos`.
+
+Próximo: Tarefa 3 do item 5 — Marcar como finalizado
+(`docs/planos/item-5-ordem-de-servico.md`).
+
+---
+
 ## 23/08/2026 — Tarefa 1 do item 5: telefone — normalização, validação, folha do campo que falta
 
 Construído conforme o plano (`docs/planos/item-5-ordem-de-servico.md`,

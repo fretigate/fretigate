@@ -7,6 +7,7 @@ import {
   criarServico,
   editarServico,
   arquivarServico,
+  marcarOrdemEnviada,
   resumoDoCaminhao,
   resumoDoMotorista,
   valoresTotaisPorCliente,
@@ -38,7 +39,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 42;
+const CONFERENCIAS_ESPERADAS = 45;
 
 /** Uma janela de 2 dias em volta de agora — cobre `data_servico: new Date()` de `dadosMinimos`. */
 function periodoAmplo(): Periodo {
@@ -839,6 +840,43 @@ describe("11. isolamento entre empresas — as três leituras novas (CLAUDE.md �
     const mapaA = await estatisticasPorMotorista(a.empresaId);
     expect(mapaA.get(motoristaA.id)).toEqual({ fretes: 1, valorTransportadoCentavos: 70000 });
     expect(mapaA.has(motoristaB.id)).toBe(false);
+    conferencias++;
+  });
+});
+
+describe("12. marcarOrdemEnviada — item 5, Tarefa 2", () => {
+  it("grava ordem_enviada_em, nulo antes", async () => {
+    const e = await criarEmpresaDeTeste("s10a");
+    const criado = await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e));
+    expect(criado.ordem_enviada_em).toBeNull();
+
+    const atualizado = await marcarOrdemEnviada(e.empresaId, criado.id);
+    expect(atualizado.ordem_enviada_em).not.toBeNull();
+    conferencias++;
+  });
+
+  it("idempotente — tocar de novo só atualiza o mesmo timestamp, não é erro", async () => {
+    const e = await criarEmpresaDeTeste("s10b");
+    const criado = await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e));
+
+    const primeira = await marcarOrdemEnviada(e.empresaId, criado.id);
+    const segunda = await marcarOrdemEnviada(e.empresaId, criado.id);
+    expect(segunda.ordem_enviada_em!.getTime()).toBeGreaterThanOrEqual(
+      primeira.ordem_enviada_em!.getTime(),
+    );
+    conferencias++;
+  });
+
+  it("isolamento — recusa gravar em serviço de outra empresa", async () => {
+    const a = await criarEmpresaDeTeste("s10c");
+    const b = await criarEmpresaDeTeste("s10d");
+    const servicoDeA = await criarServico(a.empresaId, a.usuarioId, dadosMinimos(a));
+
+    await expect(marcarOrdemEnviada(b.empresaId, servicoDeA.id)).rejects.toThrow(
+      "Frete não encontrado.",
+    );
+    const aindaNulo = await buscarServico(a.empresaId, servicoDeA.id);
+    expect(aindaNulo?.ordem_enviada_em).toBeNull();
     conferencias++;
   });
 });

@@ -12,6 +12,7 @@ import {
   buscarUltimoValorDoTrecho,
   criarServico,
   listarDestinosDoCliente,
+  marcarOrdemEnviada,
 } from "@/lib/servicos/servicos";
 import { criarTituloJaRecebi, editarServicoComProtecaoDeTitulo } from "@/lib/servicos/titulos";
 import { buscarMunicipios, type Municipio } from "@/lib/servicos/municipios";
@@ -356,4 +357,26 @@ export const arquivarServicoAction = comoUsuario(async (sessao, id: string) => {
 
   await arquivarServico(sessao.empresaId, validado.data.id);
   redirect("/fretes");
+});
+
+const schemaMarcarOrdemEnviada = z.object({ servicoId: z.string().uuid() });
+
+/**
+ * "Enviei", no aviso de confirmação que aparece ao voltar do WhatsApp
+ * (decisão 3) — grava `ordem_enviada_em` (`src/lib/servicos/servicos.ts`,
+ * `marcarOrdemEnviada`, idempotente).
+ */
+export const marcarOrdemEnviadaAction = comoUsuario(async (
+  sessao,
+  servicoId: string,
+): Promise<ResultadoSimples> => {
+  const validado = schemaMarcarOrdemEnviada.safeParse({ servicoId });
+  if (!validado.success) return { ok: false, erro: "Frete inválido." };
+
+  try {
+    await marcarOrdemEnviada(sessao.empresaId, validado.data.servicoId);
+    return { ok: true };
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };
+  }
 });

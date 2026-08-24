@@ -326,6 +326,24 @@ export function arquivarServico(empresaId: string, id: string) {
 }
 
 /**
+ * "Enviei", no aviso de confirmação de envio da ordem (item 5, Tarefa 2) —
+ * grava `ordem_enviada_em = now()`. Confere posse via `buscarServico`, mesmo
+ * padrão do resto do arquivo. **Idempotente**: tocar "Enviei" de novo
+ * (reabrindo o aviso por engano) só atualiza o mesmo timestamp, não é erro —
+ * decisão do fundador (`docs/planos/item-5-ordem-de-servico.md`, Tarefa 2).
+ */
+export async function marcarOrdemEnviada(empresaId: string, id: string) {
+  const servico = await buscarServico(empresaId, id);
+  if (!servico || servico.arquivado_em) throw new Error("Frete não encontrado.");
+
+  return db(empresaId).servico.update({
+    where: { id },
+    data: { ordem_enviada_em: new Date() },
+    select: CAMPOS_SERVICO,
+  });
+}
+
+/**
  * Leituras para a tela de lançamento (Tarefa 2) — `docs/especificacao.md`
  * §4.1. Ficam aqui, não em `clientes.ts`/`caminhoes.ts`/`motoristas.ts`,
  * porque a fonte é `Servico`, não a entidade em si.

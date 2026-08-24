@@ -218,9 +218,21 @@ passa a mudar com o estado do frete (só a fatia "em andamento" deste item —
   automaticamente para o link do WhatsApp.
 - Com motorista e telefone válido → **"Enviar ordem no WhatsApp"** é o link
   de verdade (`linkWhatsapp` com o texto de `montarMensagemOrdem`).
-- Secundária **"Marcar como finalizado"** sempre visível junto da
-  principal, nesta fatia (a ação em si nasce na Tarefa 3 — aqui só o
-  encaixe do botão, já ligado).
+
+**Correção de contradição, achada antes de codar (23/08/2026).** A versão
+anterior deste plano também mandava a secundária "Marcar como finalizado"
+aparecer "sempre visível junto da principal, nesta fatia" — mas a ação de
+fundo (`marcarServicoFinalizado`) só nasce na Tarefa 3, e esta mesma tela já
+registra a regra geral: botão cuja ação de fundo não existe não entra, nem
+desabilitado (`src/app/(app)/fretes/[id]/page.tsx`, mesmo precedente do
+perfil do caminhão). As duas frases juntas eram contraditórias — a
+contradição passou pelo fundador ao aprovar o plano. Decisão do fundador, ao
+ser achada: **a regra vence.** A secundária não entra na Tarefa 2; nasce na
+Tarefa 3,
+junto da ação que a sustenta. Motivo, não só processo: botão que não faz
+nada é pior que botão ausente — a pessoa toca, nada acontece, conclui que
+quebrou. Foi o mesmo raciocínio que já tinha tirado "Faturar frete" e
+"Cobrar no WhatsApp" desta tela.
 
 **Confirmação de envio** (decisão 3): ao voltar de um link externo, o
 navegador dispara `visibilitychange`. Um componente novo (estende
@@ -253,6 +265,15 @@ mensagem de erro própria, não genérica) e grava `status_operacional =
 'finalizado'`. Sem confirmação extra na tela — nenhum documento pede uma, e
 o botão já segue a regra geral de estado carregando + toque repetido
 ignorado (`CLAUDE.md` §8).
+
+**A secundária aparece sempre que o frete estiver `em_andamento` — não
+depende de `ordem_enviada_em`.** Decisão do fundador, ao corrigir a
+contradição da Tarefa 2 (acima): "sempre visível" descrevia comportamento,
+não momento de construir. Marcar como finalizado e enviar a ordem são ações
+independentes — dá para finalizar um frete que nunca teve ordem enviada
+(motorista combinado por telefone, por exemplo). A secundária nasce nesta
+Tarefa 3, ao lado da principal (Escolher motorista / Enviar ordem no
+WhatsApp) qualquer que seja o estado dela.
 
 Ao finalizar, o detalhe perde a secundária e a tela volta a ficar sem
 principal (finalizado sem cobrança é item 6) — mesmo padrão "botão sem ação

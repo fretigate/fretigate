@@ -5,6 +5,7 @@ import {
   diaDaSemana,
   diaEmFortaleza,
   diasNoMes,
+  formatarDiaDaSemanaEData,
   instanteDoDiaEmFortaleza,
 } from "@/lib/utils/data-fortaleza";
 
@@ -27,7 +28,7 @@ import {
  */
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 14;
+const CONFERENCIAS_ESPERADAS = 16;
 
 beforeAll(() => {
   vi.stubEnv("TZ", "UTC");
@@ -94,6 +95,20 @@ describe("diaDaSemana, deslocarMes e diasNoMes", () => {
     expect(diasNoMes("2026-02-01")).toBe(28);
     conferencias++;
     expect(diasNoMes("2024-02-01")).toBe(29); // 2024 é bissexto
+    conferencias++;
+  });
+});
+
+describe("formatarDiaDaSemanaEData", () => {
+  it("dia da semana + dia do mês, sem ano — para a mensagem da ordem (item 5, Tarefa 2)", () => {
+    // 11/08/2026 é terça-feira (mesma data do teste de diaDaSemana acima).
+    expect(formatarDiaDaSemanaEData(new Date("2026-08-11T12:00:00.000Z"))).toBe("terça, 11 de agosto");
+    conferencias++;
+  });
+
+  it("usa o dia de Fortaleza, não o de UTC — mesma virada de diaEmFortaleza", () => {
+    // 2026-08-12T02:30Z ainda é 23h30 do dia 11 em Fortaleza.
+    expect(formatarDiaDaSemanaEData(new Date("2026-08-12T02:30:00.000Z"))).toBe("terça, 11 de agosto");
     conferencias++;
   });
 });

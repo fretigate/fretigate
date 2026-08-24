@@ -126,6 +126,21 @@ Um componente só, usado pelo “Frete salvo” e pelo “Cobrou o Frigorífico 
 - some sozinho em `6s` (sem botões) ou `8s` (com botões)
 - botões: variante **05**, `flex:1`, gap `10`
 
+**Lacuna — texto do aviso de confirmação ao voltar do WhatsApp, gatilho "Enviar ordem".** O único exemplo documentado desta família com pergunta + Enviei/Ainda não é "Cobrou o Frigorífico São Luiz?" (Cobranças, item 6, ainda não construído). "Enviar ordem" (detalhe do frete, Tarefa 2 do item 5, 23/08/2026) é o primeiro uso real construído, e usa "Mandou a ordem pro motorista?" por inferência do mesmo padrão — nomear o destinatário, terminar em interrogação —, sem confirmação escrita para este texto específico. Registrado para o Design confirmar, mesmo padrão da lacuna do rótulo "Salvar no cadastro" (§12).
+
+**Exceção — "Enviei" que falha ao gravar não some sozinho.** Decisão do
+fundador, Tarefa 2 do item 5 (23/08/2026), achado do primeiro `/revisar`
+desta tarefa: `ordem_enviada_em` é o dado que a pendência "fretes sem ordem
+enviada" da dashboard vai usar (§4.6) — se a gravação falhar e o aviso
+sumir pelo temporizador normal (regra acima, "some sozinho em 6s/8s"), a
+pessoa acredita que registrou quando não registrou, e só descobre quando a
+dashboard acusar de novo, sem entender por quê. Por isso, só neste gatilho,
+enquanto o toque em "Enviei" estiver mostrando erro no lugar da pergunta, o
+temporizador não fecha o aviso — a mensagem some só por "Ainda não" ou por
+um "Enviei" que finalmente funcione. Mesma classe de exceção já registrada
+para o relatório com Pix (abaixo), por motivo diferente: lá o bloqueio seria
+pior que seguir; aqui, o fechamento silencioso seria pior que insistir.
+
 
 ## 08 — Família FretiNews
 
@@ -302,7 +317,7 @@ Folha curta que abre pelo **"+ Novo"** dentro da folha de busca, durante o lanç
 | Principal | 60px, e o rótulo **diz para onde a ação segue**: "Salvar e cobrar", "Salvar e enviar ordem", "Salvar e gerar relatório", "Salvar no cadastro" — repetir o nome da ação original faz parecer que a primeira tentativa falhou |
 | Escape | "Agora não" em texto neutro `#6E7770`, 44px — fecha sem salvar e **sem executar a ação**, exceto no relatório com Pix (ver abaixo) |
 
-**Onde dispara hoje:** telefone tocável, ausente ou inválido, no perfil do cliente e no perfil do motorista (`FolhaDeTelefone`, Tarefa 1 do item 5, 23/08/2026 — primeiro gatilho de verdade construído). **Ainda não construídos:** "Cobrar no WhatsApp" sem telefone do cliente (Cobranças, lista e detalhe) · "Enviar ordem" sem telefone do motorista (detalhe do frete, Tarefa 2 do item 5) · "Gerar relatório" **com a opção "gerar cobrança" marcada** e sem chave Pix da empresa — relatório sem cobrança não pede Pix · qualquer campo vazio tocado no perfil do cliente além de telefone (Documento, Endereço, E-mail continuam levando ao formulário de edição, `LinhaDePerfil` com `href`, não abrem esta folha).
+**Onde dispara hoje:** telefone tocável, ausente ou inválido, no perfil do cliente e no perfil do motorista (`FolhaDeTelefone`, Tarefa 1 do item 5, 23/08/2026) · "Enviar ordem no WhatsApp" sem telefone do motorista, no detalhe do frete (Tarefa 2 do item 5, 23/08/2026 — ao salvar, segue automaticamente para a conversa). **Ainda não construídos:** "Cobrar no WhatsApp" sem telefone do cliente (Cobranças, lista e detalhe) · "Gerar relatório" **com a opção "gerar cobrança" marcada** e sem chave Pix da empresa — relatório sem cobrança não pede Pix · qualquer campo vazio tocado no perfil do cliente além de telefone (Documento, Endereço, E-mail continuam levando ao formulário de edição, `LinhaDePerfil` com `href`, não abrem esta folha).
 
 **Lacuna — rótulo do principal para o gatilho de telefone tocável no perfil, sem ação de continuação.** A linha "Principal" acima já lista "Salvar no cadastro" entre os quatro rótulos aprovados, mas nenhum dos quatro foi escrito pensando neste gatilho especificamente — a lista original nomeava só Cobrar no WhatsApp, Enviar ordem e Gerar relatório. `TelefonePerfil` (Tarefa 1) usa "Salvar no cadastro" por ser o mais próximo (salva e fecha, sem "seguir" para lugar nenhum), mas é inferência, não confirmação escrita para este caso — registrado para o Design confirmar.
 
@@ -397,7 +412,7 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 |---|---|
 | Dashboard | sem principal · 2× pílula sobre escuro (**Gerar relatório** · **Importar fretes**) · pastilhas, pendências, barras do gráfico e cartão FretiNews são superfícies tocáveis, não botões · × discreto para dispensar o FretiNews · aviso do sistema com **Desfazer** |
 | Meus fretes | sem principal · chip de filtro (Período · Cliente · Situação) · deslizar revela **Marcar recebido** · aviso do sistema depois de salvar |
-| Detalhe do frete | principal **muda com a situação**: em andamento → **Enviar ordem no WhatsApp** (com secundária **Marcar como finalizado**); finalizado e sem cobrança → **Faturar frete**; já faturado → **Ver relatório** · secundárias **Marcar recebido** + **Editar frete** · texto destrutiva **Arquivar frete** · pílula em linha para anexar comprovante |
+| Detalhe do frete | principal **muda com a situação**: em andamento, sem motorista → **Escolher motorista** (leva a Editar frete); em andamento, com motorista → **Enviar ordem no WhatsApp**, com aviso do sistema **Enviei** / **Ainda não** ao voltar da conversa (Tarefa 2 do item 5, 23/08/2026 — a secundária **Marcar como finalizado** ainda não acompanha, nasce na Tarefa 3 junto da ação que a sustenta); finalizado e sem cobrança → **Faturar frete**; já faturado → **Ver relatório** · secundárias **Marcar recebido** + **Editar frete** · texto destrutiva **Arquivar frete** · pílula em linha para anexar comprovante |
 | Lançar frete | principal **Salvar frete** — na edição, **Salvar alterações** (com o valor no próprio botão nos dois casos) · linhas recolhidas abrem folha de busca · teclado numérico próprio sobreposto · aviso do sistema depois de salvar (só na criação), com **Já recebi** / **Ver o frete** · com título ativo, Cliente e o valor ficam travados, sem abrir folha/teclado |
 | Folha de busca | pílula de cabeçalho **+ Novo** / **+ Cadastrar** · texto neutra **Fechar** · chips de escolha |
 | Folha de calendário | chips de atalho **Hoje** · **Ontem** · **Amanhã** · células de dia 48px · duas setas de mês de 44px |
