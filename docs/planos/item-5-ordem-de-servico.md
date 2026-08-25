@@ -391,6 +391,42 @@ serviço de outra empresa).
 
 ---
 
+## Tarefa 6 — `server-only` em `src/lib/db/index.ts` e `src/lib/auth/index.ts`
+
+Acrescentada em 25/08/2026, decisão do fundador, ao aprovar a Tarefa 4: achado
+durante aquela tarefa, fora do escopo dela, registrado para não se perder.
+
+**O achado.** A Tarefa 4 adicionou `import "server-only"` a
+`src/lib/servicos/comprovantes.ts` — se esse arquivo (ou algo que o importe)
+for arrastado para o pacote que roda no navegador, o build do Next.js quebra
+antes de publicar, em vez da chave `service_role` (que ignora RLS) ou o erro
+de variável faltando aparecerem em produção. `src/lib/db/index.ts` (a conexão
+com o banco) e `src/lib/auth/index.ts` (o segredo que assina sessão) não têm
+essa mesma proteção. Hoje, se um deles fosse puxado por engano para o
+navegador, o build ainda quebraria — mas por acidente, porque a biblioteca de
+terceiro `pg` não roda em navegador, não porque existe uma trava pensada para
+isso. Palavras do fundador, ao aprovar: "isso não é proteção, é sorte de
+dependência: se ela mudar, ou se algum caminho não passar por ela, a trava
+some sem ninguém notar." São os dois arquivos mais sensíveis do projeto.
+
+**O que fazer.** `import "server-only"` no topo dos dois arquivos — mesma
+linha, mesmo lugar de `comprovantes.ts`. Confirmar que `server-only` já
+resolve no Vitest sem esforço extra: o alias em `vitest.config.mts` (Tarefa
+4) aponta o pacote inteiro para `tests/stubs/server-only.ts`, então cobre
+qualquer arquivo que o importe, não só `comprovantes.ts`.
+
+**A prova, mesma técnica da Tarefa 4, para os dois arquivos**: criar
+Client Component + rota temporários importando o arquivo do lado errado,
+`npm run build`, confirmar que quebra apontando para o arquivo certo, apagar
+os arquivos de teste depois. Não há teste automatizado permanente para isso
+no projeto ainda — é verificação manual, feita e descartada, como foi na
+Tarefa 4.
+
+**Quando.** Depois da Tarefa 5, antes de o item 5 fechar — decisão do
+fundador, "para não interromper o item 5 no meio".
+
+---
+
 ## O que precisa chegar ao Design
 
 - **Seletor de foto (câmera/galeria) e miniatura do comprovante anexado**
