@@ -979,6 +979,14 @@ Na interface do MVP aparece como "Frete".
 `origem_lancamento` (`manual` | `importacao`) · `ordem_enviada_em` ·
 `comprovante_url` · `criado_por_usuario_id`
 
+`comprovante_url` guarda o **caminho** dentro do balde privado `comprovantes`
+(item 5, Tarefa 4), nunca uma URL — quem lê pede uma URL assinada nova a cada
+vez (`gerarUrlComprovante`, `src/lib/servicos/comprovantes.ts`), com
+**60 segundos de validade**. O número é curto de propósito e por um motivo
+só: a URL existe para a tela carregar a imagem na hora, nunca para ficar
+guardada ou compartilhada — 60s é tempo de sobra para isso e pouco tempo de
+sobra para qualquer outro uso. Decisão do fundador, 25/08/2026.
+
 **Obrigatórios:** `cliente_id`, `valor`, `data_servico`, `tipo_operacao_id`.
 
 `origem_texto` e `destino_texto` guardam sempre o que o usuário digitou. O

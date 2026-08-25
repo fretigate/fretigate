@@ -511,6 +511,36 @@ Para função não existe equivalente: função futura nasce sempre aberta, medi
 (§3), então o teste confere `anon`, `authenticated` e `PUBLIC` em **toda
 função que existe** — é aí que uma função esquecida aparece.
 
+**Tabela do schema `storage` é um terceiro caso, e o teste acima não a
+alcança.** `storage.objects`/`storage.buckets` (item 5, Tarefa 4, o balde
+`comprovantes`) são donas de `supabase_storage_admin`, não de `postgres` — o
+mesmo papel que roda as migrations deste produto. Medido, não suposto (item 5,
+Tarefa 4): `REVOKE ALL ... FROM anon, authenticated` como `postgres` roda sem
+erro e não muda nada (`has_table_privilege` continuou `true` antes e depois),
+porque revogar exige autoridade sobre aquela concessão específica, e
+`postgres` não tem — mesma classe de comando-que-parece-proteger-e-não-protege
+do parágrafo do `PUBLIC` acima. `ALTER TABLE ... DISABLE ROW LEVEL SECURITY` e
+`... FORCE ROW LEVEL SECURITY` também falham ("must be owner of table") — e a
+falta de `FORCE` (diferente do padrão do resto do projeto, ENABLE + FORCE
+juntos) não enfraquece nada aqui: `FORCE` só muda se o DONO da tabela
+(`supabase_storage_admin`, nunca `anon`/`authenticated`) respeita a própria
+política — sem `FORCE`, o dono já é isento por padrão, o que ele seria de
+qualquer jeito por ter concessão própria e nomeada. O que `postgres` CONSEGUE, medido: `SET
+ROLE anon`/`authenticated` dentro da própria sessão, e criar/derrubar política
+de RLS nessas duas tabelas — o Supabase concede isso à parte, sem exigir
+posse. Por isso a proteção de tabela do schema `storage` é só RLS (política
+explícita `USING (false) WITH CHECK (false)` para `anon`/`authenticated`,
+migration `20260825060000_balde_comprovantes_storage`), nunca privilégio —
+diferente de `public`, onde as duas camadas valem. Medido também: RLS ligado
+sem NENHUMA política já nega por padrão (é por isso que as duas tabelas já
+nascem seguras antes mesmo desta migration existir); a política explícita é
+uma camada a mais, conferível, não a única coisa entre a API pública e a
+linha. Quem confere é `tests/isolamento/storage.test.ts`, com o contraste
+adaptado à mesma restrição: como `DISABLE ROW LEVEL SECURITY` não roda,
+prova o vazamento com uma política permissiva temporária — a mesma técnica
+de conceder-medir-revogar de `PROBE_TABELA`, em
+`tests/isolamento/privilegios.test.ts`, não a de desligar RLS.
+
 ### Upload de imagem (comprovante e logo)
 
 O risco não é vírus — é arquivo que o navegador executa.
@@ -600,21 +630,32 @@ todo pedido, mas é falha **no ar**, não falha **ao publicar**. Ver a pendênci
 | `DATABASE_URL`, `AUTH_DATABASE_URL`, `DIRECT_URL` | projeto de desenvolvimento | **secret do GitHub** — projeto de teste (configurado, tarefa 9) | **variável de ambiente da Vercel** — projeto de produção, ainda não existe |
 | `RESEND_API_KEY` | chave real do Resend | **valor fixo, escrito direto em `ci.yml`, não é segredo** — nenhum teste manda e-mail de verdade, só o módulo precisa carregar | **variável de ambiente da Vercel** — chave real, senão recuperação de senha não sai |
 | `EMAIL_REMETENTE`, `EMAIL_RESPOSTA` | endereços reais (`envio.fretigate.com` / `fretigate.com`) | **valor fixo em `ci.yml`, não é segredo** — endereços diferentes, mesmo padrão do valor real, só fake | **variável de ambiente da Vercel** — endereços reais |
-| `BETTER_AUTH_SECRET` | gerado uma vez, só desta máquina | **secret do GitHub** (`BETTER_AUTH_SECRET_CI`) — não protege sessão real (o projeto de teste não tem cliente nenhum), mas é a **única** das cinco com forma de segredo, e forma de segredo versionada aciona scanner mesmo sem risco funcional (`docs/diario.md`, 08/08/2026) | **variável de ambiente da Vercel**, gerada **uma vez, só para produção** — nunca a mesma de desenvolvimento (`.env.example`, bloco "Autenticação (Better Auth)": "UM POR AMBIENTE... se fossem o mesmo, um cookie assinado na máquina de quem programa valeria em produção") |
+| `BETTER_AUTH_SECRET` | gerado uma vez, só desta máquina | **secret do GitHub** (`BETTER_AUTH_SECRET_CI`) — não protege sessão real (o projeto de teste não tem cliente nenhum), mas tem forma de segredo, e forma de segredo versionada aciona scanner mesmo sem risco funcional (`docs/diario.md`, 08/08/2026) | **variável de ambiente da Vercel**, gerada **uma vez, só para produção** — nunca a mesma de desenvolvimento (`.env.example`, bloco "Autenticação (Better Auth)": "UM POR AMBIENTE... se fossem o mesmo, um cookie assinado na máquina de quem programa valeria em produção") |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | **valor fixo em `ci.yml`** (`http://localhost:3000`) — não é segredo, e nenhum e-mail sai de verdade para usar esse endereço | **variável de ambiente da Vercel** — domínio real de produção |
+| `SUPABASE_URL` | URL do projeto de desenvolvimento | **valor fixo em `ci.yml`** — URL do projeto de teste (`https://qutzsvrkaqvpluqxbhmp.supabase.co`), não é segredo por si só (o mesmo identificador de projeto já aparece no host de `DATABASE_URL`, que esse sim é secret) | **variável de ambiente da Vercel** — URL do projeto de produção, ainda não existe |
+| `SUPABASE_SERVICE_ROLE_KEY` | chave `service_role` do projeto de desenvolvimento (painel do Supabase → Project Settings → API) | **secret do GitHub** (`SUPABASE_SERVICE_ROLE_KEY_CI`) — chave `service_role` do projeto de teste | **variável de ambiente da Vercel** — chave `service_role` do projeto de produção, ainda não existe |
 
-**Por que quatro das cinco de e-mail/autenticação podem ser valor fixo na
-esteira, e as três do banco não:** as três do banco apontam para um banco de
-verdade — errar o projeto ali significa rodar `DELETE` ou `migrate deploy` no
-lugar errado (`tests/guarda-de-banco.ts`, `CLAUDE.md` §3). As quatro fixas só
-precisam existir para o módulo carregar sem lançar: nenhum teste da suíte
-chama `enviarEmail` (`tests/cadastro.test.ts` usa o adaptador interno do
-Better Auth direto, sem passar pelas rotas que mandam e-mail). Colocar uma
-chave de verdade do Resend no GitHub para isso seria segredo sem necessidade
-— e-mail saindo a cada execução da esteira, sem nenhum teste que precise
-disso. `BETTER_AUTH_SECRET` é a exceção nesse grupo: mesmo sem risco
-funcional, é secret do GitHub, não valor fixo — o motivo é a forma do valor,
-não o que ele protege.
+**Por que a maioria de e-mail/autenticação pode ser valor fixo na esteira, e
+as três do banco (mais `SUPABASE_SERVICE_ROLE_KEY`) não:** as três do banco
+apontam para um banco de verdade — errar o projeto ali significa rodar
+`DELETE` ou `migrate deploy` no lugar errado (`tests/guarda-de-banco.ts`,
+`CLAUDE.md` §3). As fixas (`RESEND_API_KEY`, `EMAIL_REMETENTE`,
+`EMAIL_RESPOSTA`, `NEXT_PUBLIC_APP_URL`, `SUPABASE_URL`) só precisam existir
+para o módulo carregar sem lançar: nenhum teste da suíte chama `enviarEmail`
+(`tests/cadastro.test.ts` usa o adaptador interno do Better Auth direto, sem
+passar pelas rotas que mandam e-mail), e a URL de um projeto Supabase, sozinha,
+não abre porta nenhuma sem a chave que vai com ela. Colocar uma chave de
+verdade do Resend no GitHub para isso seria segredo sem necessidade — e-mail
+saindo a cada execução da esteira, sem nenhum teste que precise disso.
+
+`BETTER_AUTH_SECRET` e `SUPABASE_SERVICE_ROLE_KEY` são secret do GitHub pelo
+mesmo lugar na tabela, mas por motivos DIFERENTES, e vale distinguir: o
+primeiro protege sessão de um projeto de teste sem cliente nenhum — vira
+secret pela FORMA do valor (aciona scanner de segredo, `docs/diario.md`,
+08/08/2026), não pelo que protege de verdade. `SUPABASE_SERVICE_ROLE_KEY`
+protege acesso de verdade — ignora RLS por atributo (`rolbypassrls`, item 5,
+Tarefa 4) e alcança qualquer balde do projeto de teste, então aqui o risco
+funcional é real, não só a forma.
 
 ---
 
@@ -1359,16 +1400,17 @@ Não invente resposta. Pergunte.
   ligar os anúncios** — o mesmo marco já usado para o reteste do e-mail
   transacional (§ tarefa 7 no diário). Decidido em 07/08/2026.
 - **CONFERIR ANTES DE PUBLICAR — variáveis de ambiente na Vercel.** Achado na
-  tarefa 9 (08/08/2026): nada verifica, hoje, que as oito variáveis da tabela
-  em "Ambientes" (§5) estão configuradas na Vercel antes da primeira
-  publicação. E o jeito como isso falha importa: `src/lib/auth/index.ts` e
-  `src/lib/auth/email.ts` lançam erro **no carregamento do módulo**, mas
-  nenhuma rota que os importa é avaliada durante `next build` (são rota de
-  API e Server Actions, não página estática) — então a publicação **termina
-  com sucesso** mesmo faltando uma variável, e o erro só aparece no
-  **primeiro pedido real** que tocar login ou sessão. Sem conferência
-  manual antes de publicar, isso apareceria com cliente pagante já usando o
-  produto, não durante o deploy.
+  tarefa 9 (08/08/2026): nada verifica, hoje, que as dez variáveis da tabela
+  em "Ambientes" (§5, sete linhas desde o item 5, Tarefa 4) estão
+  configuradas na Vercel antes da primeira publicação. E o jeito como isso falha importa:
+  `src/lib/auth/index.ts`, `src/lib/auth/email.ts` e (desde o item 5, Tarefa 4)
+  `src/lib/servicos/comprovantes.ts` lançam erro **no carregamento do
+  módulo**, mas nenhuma rota que os importa é avaliada durante `next build`
+  (são rota de API e Server Actions, não página estática) — então a
+  publicação **termina com sucesso** mesmo faltando uma variável, e o erro só
+  aparece no **primeiro pedido real** que tocar login, sessão ou comprovante.
+  Sem conferência manual antes de publicar, isso apareceria com cliente
+  pagante já usando o produto, não durante o deploy.
 
   **O sintoma exato, se `NEXT_PUBLIC_APP_URL` estiver errado ou faltando**
   (achado do fundador, 12/08/2026, testando login pelo celular): **login

@@ -6,6 +6,103 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 25/08/2026 — Tarefa 4 do item 5: Isolamento do Storage
+
+Balde privado `comprovantes` (migration `20260825060000_balde_comprovantes_storage`,
+aplicada em desenvolvimento) e `src/lib/servicos/comprovantes.ts`
+(`gerarUrlComprovante`) — a fundação da Tarefa 5, pendência aberta desde o
+item 1 (`docs/diario.md`, 08/08/2026).
+
+**Achado no caminho, corrigido antes do commit: `REVOKE` de privilégio (o
+mesmo padrão já usado para `public`) não funciona em `storage.objects`/
+`storage.buckets` — essas tabelas são donas de `supabase_storage_admin`, não
+de `postgres`, e revogar exige autoridade que `postgres` não tem. Medido:
+`has_table_privilege` continuou `true` antes e depois do `REVOKE`, sem erro
+nenhum — mesma classe do achado antigo com `ALTER DEFAULT PRIVILEGES` em
+função (`CLAUDE.md` §3).** A proteção real, também medida: `postgres`
+consegue criar/derrubar política de RLS nessas tabelas mesmo sem posse, e
+RLS ligado sem política nenhuma já nega por padrão — a política explícita
+(`objects_nega_api_publica`/`buckets_nega_api_publica`, `USING (false) WITH
+CHECK (false)`) é defesa em profundidade, não a única coisa entre a API
+pública e a linha. Migration corrigida para ser idempotente (`DROP POLICY IF
+EXISTS` antes de cada `CREATE POLICY`) — sem isso a esteira ficaria vermelha
+no primeiro `prisma migrate reset --force` seguinte, porque esse comando só
+recria o schema `public`, nunca `storage`.
+
+`tests/isolamento/storage.test.ts` (novo): RLS medido de verdade (`SET ROLE
+anon`/`authenticated`/`service_role` dentro da sessão de `postgres`, contra
+uma linha real), contraste com política permissiva temporária (não dá para
+desligar RLS por inteiro nem derrubar só a política de deny — as duas
+tentativas medidas e documentadas no arquivo), e conferência do catálogo
+(`pg_policies`) provando que a política da migration é o mecanismo, não só
+o padrão de RLS-sem-política do Supabase. `tests/isolamento/comprovantes.test.ts`
+(novo): o contraste do §3 para a checagem de posse — chama o storage direto,
+pulando `gerarUrlComprovante` de propósito, prova que SEM a checagem a
+mesma chamada teria funcionado.
+
+**Duas variáveis novas** (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) —
+`.env.example`, `ci.yml` (a segunda como secret `SUPABASE_SERVICE_ROLE_KEY_CI`,
+criado pelo fundador), tabela de "Ambientes" do `CLAUDE.md` §5.
+`tests/guarda-de-banco.ts` estendida para validar `SUPABASE_URL` contra os
+projetos permitidos — a suíte passou a gravar/apagar objeto de verdade num
+balde, mesmo risco que a trava já cobria para linha de banco.
+
+**Achado do fundador, fora do que o `/revisar` pegou: a chave `service_role`
+(que ignora RLS) não tinha proteção contra acabar em código que roda no
+navegador — só contra um segundo cliente nascer em outro arquivo do
+servidor.** `import "server-only"` em `comprovantes.ts` (pacote do próprio
+Next.js: se o arquivo for arrastado para o pacote do navegador, o build
+quebra antes de publicar). **Testado de verdade, não suposto**: página e
+componente de mentira importando o arquivo do lado do cliente, `npm run
+build` reproduziu o erro apontando para a linha certa, removidos depois.
+Efeito colateral: `server-only` lança sempre fora do build do Next.js — o
+Vitest quebrava ao importar `comprovantes.ts` mesmo sendo o lado servidor.
+Corrigido com alias em `vitest.config.mts` para `tests/stubs/server-only.ts`
+(no-op), o mesmo que o webpack do Next.js já faz para compilação de
+servidor — não afrouxa a garantia, só não a testa nesse arquivo (quem testa
+o lado navegador é `npm run build`).
+
+**Registrado, não corrigido nesta tarefa**: a mesma proteção
+(`server-only`) não existe em `src/lib/db/index.ts` nem `src/lib/auth/index.ts`
+— hoje o build só quebraria por acidente (a biblioteca `pg` não roda em
+navegador), não por uma trava pensada para isso. Decisão do fundador, ao
+aprovar: vira **Tarefa 6** deste plano (`docs/planos/item-5-ordem-de-servico.md`),
+depois da Tarefa 5, para não interromper esta tarefa no meio.
+
+**60 segundos de expiração da URL assinada** — decisão do fundador,
+25/08/2026, registrada em `docs/especificacao.md` (entidade Servico,
+`comprovante_url`): tempo de a tela carregar a imagem, nada além disso.
+
+**Dois passes do `/revisar`.** Primeiro passe: 11 divergências, 5 lacunas —
+todas corrigidas ou fechadas por medição (achados de documentação
+desatualizada, o `EXPIRACAO_URL_SEGUNDOS` sem decisão registrada — resolvido
+acima —, e o achado mais sério, a migration não idempotente). Segundo passe:
+5 divergências, todas de precisão de documento (nenhuma mudava
+comportamento — corrigidas no mesmo passe, sem abrir um terceiro,
+`CLAUDE.md` §2 item 7), e 5 lacunas — duas fechadas por medição
+(`FORCE ROW LEVEL SECURITY` também não roda como `postgres`, e não faria
+diferença se rodasse: só afeta o dono da tabela, nunca `anon`/`authenticated`;
+tipo de conteúdo fixo é responsabilidade de quem grava — Tarefa 5 —, não de
+quem lê), as outras (secret do GitHub, entrada do diário) resolvidas com o
+fechamento desta tarefa.
+
+Também corrigida uma imprecisão da entrada anterior (Tarefa 3): dizia
+"esteira ainda não disparada" sobre um push já confirmado verde antes desta
+sessão começar (`/onde-paramos`, `gh run list`, `conclusion: success`).
+
+**Verificação:** `npm run lint`, `npx tsc --noEmit`, `npm run build`
+(incluindo a reprodução manual do vazamento de `server-only`, descrita
+acima) verdes. `npm test` **local** 361/361, contra o Supabase de
+desenvolvimento de verdade (banco e storage) — inclui
+`tests/isolamento/comprovantes.test.ts` rodando upload/leitura reais no
+balde `comprovantes`. Esteira deste commit ainda não disparada — ver
+`/onde-paramos`.
+
+Próximo: Tarefa 5 do item 5 — Upload do comprovante
+(`docs/planos/item-5-ordem-de-servico.md`).
+
+---
+
 ## 24/08/2026 — Tarefa 3 do item 5: Marcar como finalizado
 
 `marcarServicoFinalizado` (`src/lib/servicos/servicos.ts`): única transição
@@ -92,8 +189,8 @@ tarefa) na suíte inteira — isolado (`vitest run tests/servicos.test.ts`),
 50/50, sem reproduzir; suíte inteira rodada uma terceira vez, 339/339
 limpa. Instabilidade pontual de pool sob carga dos 21 arquivos juntos
 (mesma classe já documentada no `CLAUDE.md` §2), não regressão desta
-tarefa — nenhum teste novo tocado. Esteira deste commit ainda não
-disparada — ver `/onde-paramos`.
+tarefa — nenhum teste novo tocado. Commit `7be07cb`, push feito — esteira
+confirmada verde (`gh run list`, `conclusion: success`).
 
 Próximo: Tarefa 4 do item 5 — Isolamento do Storage
 (`docs/planos/item-5-ordem-de-servico.md`).

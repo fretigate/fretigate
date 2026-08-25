@@ -3,6 +3,7 @@ import {
   PROJETOS_DE_TESTE,
   PROJETO_DE_TESTE_CI,
   identificadorDoProjeto,
+  identificadorDoProjetoStorage,
   validar,
   validarSoTeste,
 } from "./guarda-de-banco";
@@ -27,7 +28,7 @@ function envPermitido(): Record<string, string> {
 }
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 9;
+const CONFERENCIAS_ESPERADAS = 14;
 
 describe("guarda-de-banco: a suíte só roda contra o projeto de teste certo", () => {
   it("identificadorDoProjeto reconhece o formato do Supabase (contraste)", () => {
@@ -106,7 +107,57 @@ describe("guarda-de-banco: a suíte só roda contra o projeto de teste certo", (
     ).toThrow();
     conferencias++;
   });
+});
 
+/**
+ * `SUPABASE_URL` (item 5, Tarefa 4) não é conexão de banco — é a API de
+ * storage do mesmo projeto, e `tests/isolamento/comprovantes.test.ts` grava
+ * e apaga objeto de verdade nela. Mesmo risco das três URLs de banco, formato
+ * de URL diferente — por isso a prova é separada, não reaproveita
+ * `urlDoProjeto`/`envPermitido`.
+ */
+describe("guarda-de-banco: SUPABASE_URL, quando definida, também precisa ser um projeto permitido", () => {
+  it("identificadorDoProjetoStorage reconhece o formato da API do Supabase (contraste)", () => {
+    expect(
+      identificadorDoProjetoStorage(`https://${PROJETOS_DE_TESTE[0]}.supabase.co`),
+    ).toBe(PROJETOS_DE_TESTE[0]);
+    conferencias++;
+  });
+
+  it("não definida não recusa — é opcional para quem não roda teste de storage", () => {
+    expect(() => validar(envPermitido())).not.toThrow();
+    conferencias++;
+  });
+
+  it("projeto permitido passa", () => {
+    expect(() =>
+      validar({
+        ...envPermitido(),
+        SUPABASE_URL: `https://${PROJETOS_DE_TESTE[0]}.supabase.co`,
+      }),
+    ).not.toThrow();
+    conferencias++;
+  });
+
+  it("projeto desconhecido recusa", () => {
+    expect(() =>
+      validar({
+        ...envPermitido(),
+        SUPABASE_URL: "https://aaaaaaaaaaaaaaaaaaaa.supabase.co",
+      }),
+    ).toThrow();
+    conferencias++;
+  });
+
+  it("formato irreconhecível recusa — mesma falha fechada das URLs de banco", () => {
+    expect(() =>
+      validar({ ...envPermitido(), SUPABASE_URL: "https://storage.googleapis.com" }),
+    ).toThrow();
+    conferencias++;
+  });
+});
+
+describe("cobertura", () => {
   it("rodou todas as verificações previstas", () => {
     expect(conferencias).toBe(CONFERENCIAS_ESPERADAS);
   });

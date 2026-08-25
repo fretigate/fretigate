@@ -108,21 +108,31 @@ jobs:
       # especial em senha já custou três rodadas neste projeto — ver
       # `docs/diario.md`, 08/08/2026.
       #
-      # As quatro últimas linhas (fora BETTER_AUTH_SECRET) são valor FIXO, não
-      # secret — de propósito. `src/lib/auth/index.ts` e `src/lib/auth/email.ts`
-      # lançam erro no carregamento se qualquer uma faltar, mas nenhum teste
-      # desta suíte manda e-mail de verdade nem assina sessão de cliente real —
-      # só precisam existir para o módulo carregar. Colocar chave de verdade do
-      # Resend aqui mandaria e-mail a cada execução da esteira, sem necessidade.
-      # EMAIL_REMETENTE/EMAIL_RESPOSTA em endereços diferentes de propósito —
-      # mesmo padrão do valor real (subdomínio de envio / domínio raiz,
-      # `docs/especificacao.md`), só que com valor fake.
+      # RESEND_API_KEY, EMAIL_REMETENTE, EMAIL_RESPOSTA, NEXT_PUBLIC_APP_URL e
+      # SUPABASE_URL são valor FIXO, não secret — de propósito.
+      # `src/lib/auth/index.ts`, `src/lib/auth/email.ts` e
+      # `src/lib/servicos/comprovantes.ts` lançam erro no carregamento se
+      # qualquer uma faltar, mas nenhum teste desta suíte manda e-mail de
+      # verdade nem assina sessão de cliente real — só precisam existir para o
+      # módulo carregar. Colocar chave de verdade do Resend aqui mandaria
+      # e-mail a cada execução da esteira, sem necessidade. EMAIL_REMETENTE/
+      # EMAIL_RESPOSTA em endereços diferentes de propósito — mesmo padrão do
+      # valor real (subdomínio de envio / domínio raiz,
+      # `docs/especificacao.md`), só que com valor fake. SUPABASE_URL é só o
+      # endereço da API do projeto de TESTE (`qutzsvrkaqvpluqxbhmp`,
+      # `CLAUDE.md` §5) — o projeto já é público no sentido de que
+      # `DATABASE_URL` (secret) já entrega o mesmo identificador no host do
+      # pooler; não há segredo extra aqui.
       #
-      # BETTER_AUTH_SECRET É SECRET DO GITHUB, não valor fixo como os outros
-      # quatro — mesmo sem proteger sessão real (`docs/diario.md`, 08/08/2026):
-      # um valor com FORMA de segredo, versionado, aciona scanner de segredo
-      # (inclusive o do próprio GitHub) e ensina a ignorar alerta. Endereço de
-      # e-mail e URL não têm essa forma, por isso ficam fixos.
+      # BETTER_AUTH_SECRET e SUPABASE_SERVICE_ROLE_KEY SÃO SECRET DO GITHUB,
+      # não valor fixo como os cinco acima — mas por motivos diferentes entre
+      # si. BETTER_AUTH_SECRET não protege sessão real (`docs/diario.md`,
+      # 08/08/2026): um valor com FORMA de segredo, versionado, aciona
+      # scanner de segredo (inclusive o do próprio GitHub) e ensina a ignorar
+      # alerta — as demais variáveis fixas não têm essa forma, por isso ficam
+      # fixas. SUPABASE_SERVICE_ROLE_KEY protege acesso de verdade: essa
+      # chave ignora RLS por atributo — quem a tiver lê/grava qualquer balde
+      # do projeto de teste (item 5, Tarefa 4).
       - name: Criar .env de teste
         run: |
           cat <<'EOF' > .env
@@ -134,6 +144,8 @@ jobs:
           EMAIL_RESPOSTA=ci@fretigate.com
           BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET_CI }}
           NEXT_PUBLIC_APP_URL=http://localhost:3000
+          SUPABASE_URL=https://qutzsvrkaqvpluqxbhmp.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY_CI }}
           EOF
 
       # A mesma trava que protege `npm test` (tests/guarda-de-banco.ts), rodada

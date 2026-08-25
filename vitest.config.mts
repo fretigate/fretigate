@@ -9,6 +9,11 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // Ver tests/stubs/server-only.ts — o pacote de verdade lança fora do
+      // build do Next.js, e o Vitest não passa por ele.
+      "server-only": fileURLToPath(
+        new URL("./tests/stubs/server-only.ts", import.meta.url),
+      ),
     },
   },
   test: {

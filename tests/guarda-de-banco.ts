@@ -44,6 +44,16 @@ export const PROJETO_DE_TESTE_CI = "qutzsvrkaqvpluqxbhmp";
 const VARIAVEIS = ["DATABASE_URL", "AUTH_DATABASE_URL", "DIRECT_URL"] as const;
 
 /**
+ * `SUPABASE_URL` (item 5, Tarefa 4) não é conexão de banco — é a API de
+ * storage do mesmo projeto. Fica FORA de `VARIAVEIS`/`identificadorDoProjeto`
+ * de propósito: o formato é outro (`https://<projeto>.supabase.co`, não
+ * `postgres://usuario.projeto@...`), e `tests/isolamento/comprovantes.test.ts`
+ * grava e apaga objeto de verdade no balde desse projeto — o mesmo risco que
+ * `VARIAVEIS` já cobre para linha de banco, só que em storage.
+ */
+const VARIAVEL_STORAGE = "SUPABASE_URL";
+
+/**
  * Extrai o identificador do projeto Supabase do usuário da conexão
  * (`fretigate_app.ysldmzvszjxdgcbtaurh`).
  *
@@ -57,6 +67,11 @@ export function identificadorDoProjeto(url: string): string | null {
   // O identificador do Supabase tem 20 letras minúsculas, depois do ponto.
   const ref = usuario.match(/\.([a-z]{20})$/)?.[1];
   return ref ?? null;
+}
+
+/** O mesmo, para a URL da API (`https://<projeto>.supabase.co`), formato diferente do de conexão. */
+export function identificadorDoProjetoStorage(url: string): string | null {
+  return url.match(/^https:\/\/([a-z]{20})\.supabase\.co\/?$/)?.[1] ?? null;
 }
 
 function recusar(motivo: string): never {
@@ -128,6 +143,24 @@ export function validar(env: Record<string, string | undefined>): void {
     if (!PROJETOS_DE_TESTE.includes(ref)) {
       // Imprime só o identificador, que é público. NUNCA a URL, que traz a senha.
       recusar(`A variável ${nome} aponta para o projeto \`${ref}\`.`);
+    }
+  }
+
+  // `SUPABASE_URL` é OPCIONAL aqui — quem roda só teste que não toca storage
+  // não precisa dela definida, e a suíte não deve recusar por isso. Mas
+  // QUANDO está definida, vale a mesma regra das três de cima, formato
+  // diferente: precisa apontar para um projeto permitido.
+  const urlStorage = env[VARIAVEL_STORAGE];
+  if (urlStorage) {
+    const refStorage = identificadorDoProjetoStorage(urlStorage);
+    if (refStorage === null) {
+      recusar(
+        `Não reconheci o projeto na variável ${VARIAVEL_STORAGE}.\n` +
+          "Ela não tem o formato da API do Supabase (`https://<projeto>.supabase.co`).",
+      );
+    }
+    if (!PROJETOS_DE_TESTE.includes(refStorage)) {
+      recusar(`A variável ${VARIAVEL_STORAGE} aponta para o projeto \`${refStorage}\`.`);
     }
   }
 }
