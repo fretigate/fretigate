@@ -7,8 +7,11 @@ import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { normalizarParaBusca } from "@/lib/utils/texto";
 import { formatarRota } from "@/lib/utils/rota";
 import { resolverLimiteDaLista, resolverPeriodoDaUrl, rotuloDoPeriodo } from "@/lib/utils/periodo";
+import type { SituacaoFinanceira } from "@/lib/servicos/titulos";
 import { AvisoFreteSalvo } from "./AvisoFreteSalvo";
 import { ListaFretes, type FreteParaLista } from "./ListaFretes";
+
+const SITUACOES_VALIDAS: SituacaoFinanceira[] = ["a_faturar", "faturado", "parcial", "quitado"];
 
 /**
  * "Meus fretes" (item 4, Tarefa 2) — substitui a tela provisória.
@@ -45,10 +48,26 @@ export default async function Pagina({
     de?: string;
     ate?: string;
     cliente?: string;
+    situacao?: string;
   }>;
 }) {
   const sessao = await exigirSessao();
-  const { criado, periodo: janela, de, ate, cliente: clienteInicial } = await searchParams;
+  const {
+    criado,
+    periodo: janela,
+    de,
+    ate,
+    cliente: clienteInicial,
+    situacao: situacaoUrl,
+  } = await searchParams;
+
+  // `situacao` só semeia o chip que já existe — o servidor continua sem
+  // filtrar por situação (a situação é derivada dos títulos, `CLAUDE.md` §9,
+  // e a lista já vem com ela). Valor desconhecido vira "sem filtro", nunca
+  // erro: é parâmetro de URL, texto arbitrário (`CLAUDE.md` §4).
+  const situacaoInicial = SITUACOES_VALIDAS.includes(situacaoUrl as SituacaoFinanceira)
+    ? (situacaoUrl as SituacaoFinanceira)
+    : undefined;
 
   const periodo = resolverPeriodoDaUrl(janela, de, ate);
   const limite = resolverLimiteDaLista(janela, periodo);
@@ -143,6 +162,7 @@ export default async function Pagina({
           rotuloPeriodo={rotuloDoPeriodo(janela, de, ate)}
           clienteInicial={clienteInicial}
           nomeClienteInicial={nomeClienteInicial}
+          situacaoInicial={situacaoInicial}
         />
       </div>
 

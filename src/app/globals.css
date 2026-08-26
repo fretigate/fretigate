@@ -142,6 +142,13 @@
   --text-total-contextual--line-height: 1;
   --text-eyebrow: 11px;
   --text-eyebrow--line-height: 1;
+  /* A única exceção ao rótulo de seção, e ela é declarada: `docs/estilo.md`,
+     "Conflitos resolvidos" 3 — "Mantida a exceção de 9px/`.09em` nos três
+     números do topo de Cobranças (só ali, para caber três rótulos numa grade
+     de 1/3 de tela)". O nome carrega o "só ali" para nenhuma outra tela
+     alcançar isto por engano. */
+  --text-eyebrow-topo-cobrancas: 9px;
+  --text-eyebrow-topo-cobrancas--line-height: 1;
   --text-placa: 11px;
   --text-placa--line-height: 1;
   --text-etiqueta: 10.5px;

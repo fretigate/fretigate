@@ -6,6 +6,167 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 26/08/2026 — Tarefa 2 do item 6: Tela de Cobranças
+
+Substitui a provisória que estava em `/cobrancas` desde o item 4. Agora a tela
+lê de verdade: os três números do topo (**A receber · Desse, vencido ·
+Recebido em <mês>**), os filtros Situação · Período · Cliente, a lista
+agrupada em **Vencidas · Vence hoje · A vencer** e o estado vazio que diz o
+que destrava a tela.
+
+`src/lib/servicos/cobrancas.ts` (`resumoDeCobrancas`, `listarCobrancas`,
+`contarFretesAFaturar`), `src/lib/servicos/cobrancas-situacao.ts`,
+`src/app/(app)/cobrancas/ListaCobrancas.tsx` e a página. Sem migration:
+`titulo_receber` já tem todos os campos desde o item 3.
+
+**Cinco decisões do fundador, commitadas no plano antes do código
+(`888e9bf`)**, com os motivos escritos lá: período conta pelo vencimento; a
+tela abre **sem filtro de período** (o mesmo motivo da lista de fretes, e pior
+aqui — a cobrança vencida em junho é justamente a que precisa aparecer); chip
+**Recebidas** com o quarto grupo; dentro de Recebidas o período conta pela
+**data do recebimento**, porque título de "Já recebi" não tem vencimento; e a
+linha só vira tocável na Tarefa 4, quando o detalhe existir.
+
+**Título parcial: a linha ficou na Tarefa 3, o número entrou agora.** O estado
+é inalcançável hoje, mas o código que soma se escreve nesta tarefa — "A
+receber" e "Vencido" somam o **saldo**, e o já recebido entra em "Recebido no
+mês". Medido com o título parcial semeado direto no banco
+(`tests/cobrancas.test.ts`), porque nenhuma função de produção cria esse
+estado até a Tarefa 3.
+
+**Por que existem dois arquivos de serviço, e não um.** `ListaCobrancas` é
+Client Component; importar rótulos e a regra de grupo de `cobrancas.ts`
+puxaria `@/lib/db` para o navegador. O `import "server-only"` que `db` ganhou
+no item 5, Tarefa 6, **reprovou o `npm run build` na hora**, apontando a
+cadeia inteira — a proteção fez o que existe para fazer, no primeiro caso real
+depois de construída. A resposta foi separar o puro
+(`cobrancas-situacao.ts`) do que toca o banco, nunca afrouxar a proteção.
+
+**Achados do `/revisar`, primeiro passe — sete divergências e seis lacunas.**
+Quatro corrigidas na hora, três decididas pelo fundador:
+
+- **O estado vazio saía antes dos chips**, e este era o grave: uma empresa que
+  só usou "Já recebi" (tudo pago, nada em aberto) abria Cobranças com
+  "Recebido no mês" mostrando dinheiro no topo e **nenhum chip para chegar até
+  ele** — exatamente o buraco que a decisão 3 (chip "Recebidas") existe para
+  fechar, reaberto por outro lado. O vazio passou a ocupar o lugar da lista,
+  nunca o da tela.
+- **"Ver os N fretes" podia mentir no número.** A contagem exigia frete
+  **finalizado**; o link abre "Meus fretes" filtrado por **A faturar**, que lá
+  sai de `situacaoFinanceira` e não olha `status_operacional` — o botão dizia
+  4 e a lista abria com 7. Decisão do fundador: contar pelo mesmo critério da
+  lista, e o texto dizer **"N fretes a faturar"** (o rótulo que a lista já usa,
+  reconhecível na chegada). O princípio é o mesmo já registrado em
+  `PERIODO_SEM_FIM` (22/08): o número nunca discorda da tela que ele abre.
+  **Quem garante isso daqui em diante é um teste que mede uma consulta contra
+  a outra** — não a leitura de que "parecem iguais", que foi justamente o que
+  falhou aqui.
+- **Rótulos do topo em 11px.** `docs/estilo.md` ("Conflitos resolvidos" 3)
+  registra exceção de **9px** para estes três, "só ali" — eu tinha juntado o
+  tamanho da regra geral com o rastreio da exceção. Token próprio
+  (`--text-eyebrow-topo-cobrancas`), com o "só ali" escrito no nome.
+- **O chip de Situação parecia desligado** mostrando "Em aberto". Esta tela
+  nunca fica sem situação aplicada (não existe "Todas" entre as quatro), e um
+  chip neutro mentiria sobre o que está em vigor: passou a aparecer sempre
+  como escolhido.
+- **A marca "Boleto" reescrevia as classes da etiqueta de situação** —
+  `CLAUDE.md` §8. A forma da etiqueta virou componente (`Etiqueta`, em
+  `EtiquetaSituacao.tsx`) e as duas usam a mesma; `docs/estilo.md` já listava
+  "BOLETO" entre elas, "todas iguais".
+- **Nome do cliente levando ao perfil** (`docs/navegacao.md`) — **não
+  construído**, decisão do fundador: a linha é estática hoje, mas na Tarefa 4
+  ela inteira vira tocável, e volta o problema já medido no item 4 (dois alvos
+  de 48px não cabem em 78px de altura). Seria construir para desconstruir.
+  Decide junto com a Tarefa 4.
+- **Pastilha "Vencido" (`#F6E6DD`)** — o achado do primeiro passe, decidido
+  errado por culpa minha e corrigido no segundo. Ver o bloco abaixo.
+
+**O erro do primeiro passe, e como ele quase virou decisão de produto.** Ao
+levar o achado da pastilha ao fundador, afirmei que os três números eram
+"texto solto, como no protótipo" — e ele decidiu manter, com a leitura de que
+`docs/estilo.md` provavelmente falava da dashboard. **O protótipo mostra o
+contrário**: os três ficam em pastilhas (`padding:13px 11px`,
+`border-radius:20px`), com fundo `#F0EDE6` nas laterais e **`#F6E6DD` no
+"DESSE, VENCIDO"**, exatamente a cor que a folha de estilo registra. O segundo
+`/revisar` achou, o protótipo foi aberto e conferido, e a construção passou a
+seguir documento e evidência, que concordavam entre si o tempo todo.
+
+É a mesma classe que `CLAUDE.md` §13 nomeia — **afirmação de medição sobre
+coisa que não foi medida engana justamente por dizer que foi**. Aqui a vítima
+não foi um documento: foi uma decisão do fundador, tomada sobre uma premissa
+falsa que eu apresentei como observação. Registrado para não repetir:
+**afirmação sobre o que o protótipo mostra se confere abrindo o arquivo, antes
+de virar argumento — nunca de memória do que se leu no começo da tarefa.**
+
+**Lacunas conhecidas, registradas e não corrigidas** (`CLAUDE.md` §2 item 7,
+terceira categoria):
+
+- **A "frase de resumo" de `docs/estilo.md` (linha 117) não foi construída**,
+  decisão do fundador: o rótulo **"Desse, vencido"** já diz o que ela diria,
+  em duas palavras em vez de uma linha, e ela repetiria os dois números que
+  estão logo acima. Provavelmente nasceu num protótipo sem esse rótulo. Se o
+  Design achar que precisa, ele diz.
+- **Tamanho do número do topo**: usei `text-valor-lista` (20/800), que a folha
+  define para valor **na lista**; nenhuma linha dela nomeia o número do topo
+  de Cobranças. O protótipo usa **17/800 com `wdth 94%` e o "R$" em 10px
+  separado** — não seguido porque 17px não existe como token e criar um seria
+  valor fora do sistema (`CLAUDE.md` §8: pergunte). Junto disso,
+  `docs/estilo.md` (linha 443) manda "encolhimento por faixa de dígitos para
+  valores muito altos", apontando para uma seção "Cobranças 5i" que **não
+  existe** em `docs/componentes.md` — construído sem encolhimento nenhum: o
+  valor muito alto quebra em duas linhas dentro da pastilha, que é o que o §8
+  permite, mas não necessariamente o que o Design quer. Achado do segundo
+  `/revisar`.
+- **Rótulo do terceiro número**: `docs/especificacao.md` §4.5 escreve
+  "Recebido no mês"; a tela escreve **"Recebido em agosto"**, seguindo o
+  protótipo ("RECEBIDO EM AGOSTO"). `docs/componentes.md`, dono do rótulo pelo
+  §13, não decide o caso.
+- **Texto de apoio do estado vazio** ("Você tem N fretes a faturar. Faturar um
+  frete cria a cobrança dele." / "Suas cobranças aparecem aqui quando você
+  faturar um frete.") não está em documento nenhum — `docs/componentes.md`
+  registra só os botões de "Cobranças vazia".
+- **Cor de "BOLETO"**: `text-tinta-fraca` (`#A8AFA9`); o protótipo usa
+  `#6E7770`. Nenhum documento decide o caso.
+- **Textos de prazo que não estão em documento nenhum**: "venceu ontem",
+  "venceu há N dias", "vence hoje", "vence amanhã", "vence em 12 ago",
+  "recebido em 5 ago", "sem vencimento", e o rótulo "Recebidas em agosto de
+  2026" — o protótipo escreve "RECEBIDAS EM AGOSTO", sem ano; o ano entrou
+  porque a tela abre sem filtro de período e pode listar dois anos juntos.
+- **Total contextual com a lista cortada no teto de 50**: o dinheiro exibido
+  soma só as 50 carregadas. Mesma lacuna herdada de "Meus fretes"; §4.5 pede
+  "total contextual que recalcula" sem dizer se é o do recorte ou o do
+  conjunto inteiro. **O texto do corte, esse, foi corrigido**: dizia "50 mais
+  recentes", copiado de "Meus fretes", mas aqui as abertas vêm ordenadas por
+  **vencimento crescente** — as 50 exibidas são as que vencem antes, não as
+  mais recentes. Passou a dizer "50 que vencem antes", e "50 mais recentes" só
+  em Recebidas, que é a única situação ordenada por data. Achado do segundo
+  `/revisar`.
+- **`FolhaDeOrdenacao` ficou com nome preso ao primeiro uso** — agora serve
+  também ao chip "Situação" (prop `titulo`). Renomear para `FolhaDeOpcoes`
+  tocaria as três telas de cadastro, fora do escopo desta tarefa.
+- **Sem verificação de tela**, igual à Tarefa 1: não existe teste de
+  componente no projeto e não há como autenticar numa sessão de navegador a
+  partir daqui. O que foi medido é a regra, no banco de verdade.
+
+**Pedido ao Design** (`CLAUDE.md` §13, o lado do repositório não substitui
+avisar o Design): confirmar a frase de resumo, o tamanho do número do topo e a
+regra de encolhimento que aponta para uma seção inexistente, o rótulo
+"Recebido em agosto", a cor de "BOLETO", os textos de prazo e o texto do
+estado vazio. **"Gerar relatório" no estado vazio entra no item 7**, como o plano já
+previa — hoje a tela usa a neutra "Ver os N fretes", que existe e leva a
+Fretes filtrado.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` e `npm run build`
+verdes. `npm test` local **419/419** contra o Supabase de desenvolvimento —
+398 anteriores mais 21 desta tarefa. Esteira deste commit ainda não
+confirmada — ver `/onde-paramos`.
+
+Próximo: Tarefa 3 do item 6 — Folha de recebimento e recebimento parcial
+(migration da tabela `recebimento`, "Marcar recebido" no detalhe do frete e a
+marca **Parcial** na linha de Cobranças).
+
+---
+
 ## 26/08/2026 — Tarefa 1 do item 6: Faturar frete
 
 O primeiro caminho do produto a criar uma cobrança **em aberto**. Até aqui, o

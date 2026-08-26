@@ -35,19 +35,48 @@ export function rotuloSituacao(situacao: SituacaoFinanceira): string {
   return CONFIGURACAO[situacao].texto;
 }
 
-export function EtiquetaSituacao({ situacao }: { situacao: SituacaoFinanceira }) {
-  const config = CONFIGURACAO[situacao];
+/**
+ * A forma da etiqueta, sem o domínio — `docs/estilo.md`, Tipografia:
+ * "Etiqueta de situação... 'A FATURAR', 'FATURADO', 'PARCIAL', 'QUITADO',
+ * 'VENCIDO', 'BOLETO' — todas iguais". A lista do documento passa por cima
+ * de `SituacaoFinanceira`: "BOLETO" é marca de cobrança (item 6, Tarefa 2),
+ * não situação de frete, e mesmo assim é a mesma etiqueta.
+ *
+ * Extraída no primeiro segundo uso real, não antes (`CLAUDE.md` §6) — e
+ * extraída, não copiada: reescrever as mesmas classes na tela de Cobranças
+ * era o que o `/revisar` achou, e o que o §8 proíbe.
+ */
+export function Etiqueta({
+  texto,
+  classeTexto,
+  classeFundo,
+}: {
+  texto: string;
+  classeTexto: string;
+  classeFundo?: string;
+}) {
   return (
     <span
       className={[
         "inline-flex w-fit items-center text-etiqueta font-bold uppercase leading-[1] tracking-[.1em]",
-        config.classeTexto,
-        config.comFundo ? "rounded-etiqueta bg-parcial-fundo px-8 py-4" : "",
+        classeTexto,
+        classeFundo ? `rounded-etiqueta px-8 py-4 ${classeFundo}` : "",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      {config.texto}
+      {texto}
     </span>
+  );
+}
+
+export function EtiquetaSituacao({ situacao }: { situacao: SituacaoFinanceira }) {
+  const config = CONFIGURACAO[situacao];
+  return (
+    <Etiqueta
+      texto={config.texto}
+      classeTexto={config.classeTexto}
+      classeFundo={config.comFundo ? "bg-parcial-fundo" : undefined}
+    />
   );
 }

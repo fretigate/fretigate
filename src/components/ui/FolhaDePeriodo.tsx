@@ -27,15 +27,27 @@ type Props = {
   janelaAtual: string | undefined;
   onEscolher: (janela: JanelaEscolhida) => void;
   onFechar: () => void;
+  /**
+   * O texto da terceira opção — "Todos os fretes" em "Meus fretes", "Todas as
+   * cobranças" em Cobranças (item 6, Tarefa 2). Só o nome do que está sendo
+   * listado muda; a janela em si (`"todos"`) é a mesma, e por isso a folha é
+   * a mesma (`CLAUDE.md` §8: componente existe uma vez).
+   */
+  rotuloTodos?: string;
 };
 
-const OPCOES: { valor: "mes-atual" | "mes-passado" | "todos"; rotulo: string }[] = [
-  { valor: "mes-atual", rotulo: "Este mês" },
-  { valor: "mes-passado", rotulo: "Mês passado" },
-  { valor: "todos", rotulo: "Todos os fretes" },
-];
-
-export function FolhaDePeriodo({ hoje, janelaAtual, onEscolher, onFechar }: Props) {
+export function FolhaDePeriodo({
+  hoje,
+  janelaAtual,
+  onEscolher,
+  onFechar,
+  rotuloTodos = "Todos os fretes",
+}: Props) {
+  const OPCOES: { valor: "mes-atual" | "mes-passado" | "todos"; rotulo: string }[] = [
+    { valor: "mes-atual", rotulo: "Este mês" },
+    { valor: "mes-passado", rotulo: "Mês passado" },
+    { valor: "todos", rotulo: rotuloTodos },
+  ];
   const [passo, setPasso] = useState<"opcoes" | "inicio" | "fim">("opcoes");
   const [dataInicio, setDataInicio] = useState<string | null>(null);
 

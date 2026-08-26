@@ -210,6 +210,24 @@ export function buscarServico(empresaId: string, id: string) {
 }
 
 /**
+ * Uma consulta só para vários fretes, **incluindo arquivado** — o par de
+ * `buscarClientesPorIds` (`src/lib/servicos/clientes.ts`), pelo mesmo motivo
+ * e para o mesmo tipo de tela: Cobranças (item 6, Tarefa 2) mostra a rota e o
+ * dia do frete de cada cobrança, e um título continua existindo depois de o
+ * frete ser arquivado (`CLAUDE.md` §7, nada é apagado) — filtrar por
+ * `arquivado_em: null` deixaria a linha sem referência nenhuma.
+ *
+ * Devolve só o que a linha exibe, não `CAMPOS_SERVICO` inteiro.
+ */
+export function buscarServicosPorIds(empresaId: string, ids: string[]) {
+  if (ids.length === 0) return Promise.resolve([]);
+  return db(empresaId).servico.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, origem_texto: true, destino_texto: true, data_servico: true },
+  });
+}
+
+/**
  * `numero` sequencial por empresa, via o contador atômico
  * `Empresa.proximo_numero_servico` — nunca `MAX(numero)+1`, que teria
  * corrida sob concorrência. `{ increment: 1 }` vira `SET x = x + 1` no

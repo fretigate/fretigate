@@ -54,12 +54,28 @@ type PropsBase = {
   /** Presente = variante de frete (nome + valor, apoio + situação). */
   valorCentavos?: number;
   situacao?: SituacaoFinanceira;
+  /**
+   * Ocupa, na variante de frete, o lugar da etiqueta de situação — para a
+   * lista de Cobranças (item 6, Tarefa 2), onde o canto direito da segunda
+   * linha traz o prazo ("venceu há 6 dias", "vence hoje") e a marca discreta
+   * de boleto, não uma `SituacaoFinanceira`. Mesma linha, mesmo lugar,
+   * conteúdo de outro domínio: extensão do componente que já existe, nunca
+   * uma cópia dele (`CLAUDE.md` §8).
+   */
+  marca?: ReactNode;
 };
 
 type PropsLink = PropsBase & { href: string; onClick?: undefined };
 type PropsBotao = PropsBase & { href?: undefined; onClick: () => void };
+/**
+ * Nem link nem botão — a linha de Cobranças até a Tarefa 4, quando o detalhe
+ * da cobrança passa a existir. Linha que não leva a lugar nenhum é o que
+ * `CLAUDE.md` §8 proíbe; uma linha que **não se anuncia tocável** é só um
+ * cartão de leitura, e é isso que ela é hoje.
+ */
+type PropsEstatica = PropsBase & { href?: undefined; onClick?: undefined };
 
-type Props = PropsLink | PropsBotao;
+type Props = PropsLink | PropsBotao | PropsEstatica;
 
 const CLASSE =
   "flex min-h-78 w-full rounded-linha bg-separacao px-18 py-14 text-left active:bg-principal-desabilitado";
@@ -85,7 +101,7 @@ function ConteudoClassico({ iniciais, nome, apoio }: PropsBase): ReactNode {
   );
 }
 
-function ConteudoFrete({ nome, apoio, valorCentavos, situacao }: PropsBase): ReactNode {
+function ConteudoFrete({ nome, apoio, valorCentavos, situacao, marca }: PropsBase): ReactNode {
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="flex items-start justify-between gap-10">
@@ -104,7 +120,11 @@ function ConteudoFrete({ nome, apoio, valorCentavos, situacao }: PropsBase): Rea
         ) : (
           <span />
         )}
-        {situacao ? <EtiquetaSituacao situacao={situacao} /> : null}
+        {marca ? (
+          <span className="flex flex-none items-center gap-8">{marca}</span>
+        ) : situacao ? (
+          <EtiquetaSituacao situacao={situacao} />
+        ) : null}
       </div>
     </div>
   );
@@ -124,9 +144,19 @@ export function LinhaDeLista(props: Props): ReactNode {
     );
   }
 
+  if (props.onClick !== undefined) {
+    return (
+      <button type="button" onClick={props.onClick} className={CLASSE}>
+        <Conteudo {...props} />
+      </button>
+    );
+  }
+
+  // Sem `active:` — nada acontece ao tocar, e um retorno visual de toque
+  // prometeria o contrário.
   return (
-    <button type="button" onClick={props.onClick} className={CLASSE}>
+    <div className={CLASSE.replace(" active:bg-principal-desabilitado", "")}>
       <Conteudo {...props} />
-    </button>
+    </div>
   );
 }

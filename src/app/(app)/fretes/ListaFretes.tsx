@@ -80,6 +80,14 @@ type Props = {
    * aplicado a um cliente sem resultado.
    */
   nomeClienteInicial?: string;
+  /**
+   * Semeia o chip Situação já aplicado — o estado vazio de Cobranças (item 6,
+   * Tarefa 2) chega aqui com `?situacao=a_faturar&periodo=todos`, para "Ver
+   * os N fretes" mostrar exatamente os N que ele prometeu. Mesmo papel de
+   * `clienteInicial`: não é filtro novo, só o estado inicial do que já
+   * existe, e o servidor continua sem filtrar por situação.
+   */
+  situacaoInicial?: SituacaoFinanceira;
 };
 
 const MESES = [
@@ -105,11 +113,14 @@ export function ListaFretes({
   rotuloPeriodo,
   clienteInicial,
   nomeClienteInicial,
+  situacaoInicial,
 }: Props) {
   const router = useRouter();
   const [busca, setBusca] = useState("");
   const [clienteFiltro, setClienteFiltro] = useState<string | undefined>(clienteInicial);
-  const [situacaoFiltro, setSituacaoFiltro] = useState<SituacaoFinanceira | undefined>();
+  const [situacaoFiltro, setSituacaoFiltro] = useState<SituacaoFinanceira | undefined>(
+    situacaoInicial,
+  );
   const [folhaAberta, setFolhaAberta] = useState<"periodo" | "cliente" | "situacao" | null>(null);
 
   const clientesUnicos = useMemo<ItemFolhaDeBusca[]>(() => {
@@ -169,6 +180,11 @@ export function ListaFretes({
     // período — o chip volta ao rótulo genérico "Cliente" mesmo com o
     // filtro de verdade ainda aplicado.
     if (clienteFiltro) parametros.set("cliente", clienteFiltro);
+    // Situação sobrevive sozinha como estado local (o componente não
+    // remonta), diferente de `cliente`, que o servidor precisa resolver para
+    // o nome — vai na URL só para o endereço continuar descrevendo o que a
+    // tela mostra.
+    if (situacaoFiltro) parametros.set("situacao", situacaoFiltro);
     setFolhaAberta(null);
     router.push(`/fretes?${parametros.toString()}`);
   }

@@ -167,11 +167,20 @@ export function formatarDataCurta(dia: string): string {
   return `${diaDoMes} ${MESES_ABREV[mes - 1]}`;
 }
 
-/** O texto do chip de Período quando uma janela está ativa — `null` = chip neutro ("Período"). */
+/**
+ * O texto do chip de Período quando uma janela está ativa — `null` = chip
+ * neutro ("Período").
+ *
+ * `rotuloTodos` acompanha o da `FolhaDePeriodo`: o chip precisa dizer o mesmo
+ * que a opção escolhida na folha ("Todos os fretes" em Meus fretes, "Todas as
+ * cobranças" em Cobranças, item 6 Tarefa 2). As duas listas usam a mesma
+ * janela `"todos"`; só o nome do que está listado muda.
+ */
 export function rotuloDoPeriodo(
   janela: string | undefined,
   de: string | undefined,
   ate: string | undefined,
+  rotuloTodos = "Todos os fretes",
 ): string | null {
   switch (janela) {
     case "mes-atual":
@@ -179,7 +188,7 @@ export function rotuloDoPeriodo(
     case "mes-passado":
       return "Mês passado";
     case "todos":
-      return "Todos os fretes";
+      return rotuloTodos;
     case "personalizado":
       return de && ate && REGEX_DIA.test(de) && REGEX_DIA.test(ate)
         ? `${formatarDataCurta(de)} – ${formatarDataCurta(ate)}`

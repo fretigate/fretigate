@@ -24,6 +24,18 @@ type Props<T extends string> = {
   atual: T;
   onEscolher: (criterio: T) => void;
   onFechar: () => void;
+  /**
+   * "Ordenar por" nas três listas de cadastro (o primeiro uso, item 4 Tarefa
+   * 5), "Situação" no chip de Cobranças (item 6, Tarefa 2). Mesma forma —
+   * lista de opções rotuladas, uma marcada —, então mesma folha: copiar os
+   * botões para uma folha nova é o que `CLAUDE.md` §8 proíbe.
+   *
+   * **O nome do arquivo ficou preso ao primeiro uso**, e isso é lacuna
+   * conhecida, não descuido: renomear para `FolhaDeOpcoes` tocaria as três
+   * telas de cadastro, fora do escopo desta tarefa (`CLAUDE.md` §2, item 4).
+   * Fica para quem for mexer nelas.
+   */
+  titulo?: string;
 };
 
 export function FolhaDeOrdenacao<T extends string>({
@@ -31,9 +43,10 @@ export function FolhaDeOrdenacao<T extends string>({
   atual,
   onEscolher,
   onFechar,
+  titulo = "Ordenar por",
 }: Props<T>) {
   return (
-    <FolhaInferior titulo="Ordenar por" onFechar={onFechar}>
+    <FolhaInferior titulo={titulo} onFechar={onFechar}>
       <div className="flex flex-col gap-6">
         {criterios.map((criterio) => (
           <button
