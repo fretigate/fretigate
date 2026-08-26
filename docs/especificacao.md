@@ -1208,13 +1208,21 @@ Três exigências para quando os itens 5 e 6 chegarem:
    o `CLAUDE.md` §6 manda regra de negócio morar), já com
    as variáveis no formato final — `{cliente}` `{valor}` `{vencimento}`
    `{rota}` `{empresa}` `{motorista}` `{carga}` `{origem}` `{destino}`
-   `{data}` `{caminhao}`. Quando a tela de edição entrar, é **ligar o campo
-   ao que já existe**, não refazer.
+   `{data}` `{caminhao}` `{pix}`. Quando a tela de edição entrar, é **ligar o
+   campo ao que já existe**, não refazer.
 
    `{caminhao}` entrou em 23/08/2026, planejamento do item 5: o texto da
    ordem de serviço precisa identificar o caminhão para o motorista (nome +
    placa, mesmo formato de `nomeCaminhao`), e não havia variável para isso
    na lista original.
+
+   `{pix}` entrou em 26/08/2026, planejamento do item 6, pelo mesmo motivo e
+   por decisão do fundador: a mensagem de cobrança precisa dizer **como
+   pagar** — sem a chave, o cliente lê o valor e o vencimento e não sabe para
+   onde mandar o dinheiro, que é o pior defeito possível numa cobrança. Sai
+   de `Empresa.chave_pix`, e o bloco inteiro some quando a empresa não tem
+   chave cadastrada (`docs/planos/item-6-titulo-e-cobrancas.md`, decisões 1
+   e 2).
 
    **Lacuna, achada no `/revisar` da Tarefa 2 do item 5 (23/08/2026):**
    `montarMensagemOrdem` (a primeira função de `mensagens.ts` a existir de

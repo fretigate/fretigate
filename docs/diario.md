@@ -99,7 +99,7 @@ para isolamento, dinheiro e dado que não volta — não para tudo.
 verdes (incluindo a reprodução manual da Tarefa 6 original, com Client
 Component e rota temporários, descrita acima). `npm test` local 384/384,
 contra o Supabase de desenvolvimento de verdade — 370 anteriores mais 14 do
-arquivo novo. Esteira deste commit ainda não disparada — ver `/onde-paramos`.
+arquivo novo. Esteira do commit `432a6d9` **verde**, confirmada em 26/08/2026.
 
 Próximo: item 6 da ordem de construção do produto
 (`docs/especificacao.md` §9) — Título a receber e Cobranças, incluindo
