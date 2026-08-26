@@ -6,6 +6,107 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 25/08/2026 — Tarefa 6 do item 5: `server-only` em db e auth
+
+`import "server-only"` no topo de `src/lib/db/index.ts` e `src/lib/auth/index.ts`
+— mesma proteção que a Tarefa 4 já tinha dado a `comprovantes.ts`. Item 5
+fecha aqui.
+
+**Estendida a um terceiro arquivo, decisão do fundador ao revisar o primeiro
+passe**: `src/lib/db/sem-filtro-de-empresa.ts` (a "saída de emergência" do
+login, guarda `AUTH_DATABASE_URL`, único caminho por fora do filtro de
+empresa) também ganhou `import "server-only"`. O plano original só citava os
+outros dois; o fundador reconheceu o buraco no próprio pedido — a proteção
+que este arquivo tinha (trava de lint, que não roda mais em `next build`
+desde o Next 16) é exatamente o tipo de proteção acidental que esta tarefa
+existe para substituir.
+
+**A prova exigida pelo plano** (`docs/planos/item-5-ordem-de-servico.md`,
+Tarefa 6): Client Component + rota temporários (`src/app/teste-server-only-temp/`)
+importando `db` e `auth`, `npm run build` reproduziu o erro apontando para a
+linha certa nos dois arquivos, arquivos apagados depois. Diferente da Tarefa 4
+(que ficou só com essa verificação manual), esta ganhou teste automatizado
+permanente — ver abaixo.
+
+**Achado no caminho, corrigido antes do commit: `server-only` quebrava
+`npm run medir:municipios`.** Medido, não suposto: o comando roda com `node
+--import tsx`, sem a condição `react-server` que o Next.js ativa no bundler —
+o pacote `server-only` resolve, por `exports` condicional
+(`node_modules/server-only/package.json`), para `index.js` (que lança sempre)
+em vez de `empty.js` nesse caso. `scripts/medir-municipios.mts` importa
+`fecharConexao` de `@/lib/db`, então passou a quebrar no import, reproduzido
+rodando o comando de verdade antes da correção. Corrigido acrescentando
+`--conditions=react-server` só ao script `medir:municipios` do `package.json`
+— ativa a mesma condição que o Next.js já ativa no build, resolvendo
+`server-only` para o no-op; reproduzido de novo, depois da correção, rodando
+o comando de verdade e confirmando que executa. `seed:municipios` não é
+afetado: abre a própria conexão, nunca passa por `@/lib/db` (`CLAUDE.md` §6).
+
+**Segundo passe do `/revisar`, zero divergências, três lacunas.** Uma
+corrigida no próprio passe (`CLAUDE.md` §2 item 7): o cabeçalho de
+`scripts/medir-municipios.mts` e a entrada "ATENÇÃO AO RODAR —
+`medir:municipios`" do `CLAUDE.md` §14 só citavam a exigência de `tsx`, não a
+de `--conditions=react-server` — atualizados os dois com o sintoma
+("This module cannot be imported from a Client Component module", sem citar
+flag nenhuma) para quem rodar o comando por fora do `npm run`.
+
+**Teste permanente construído, decisão do fundador**: `tests/protecao-server-only.test.ts`
+(novo). Duas camadas, as duas conferindo **quatro** arquivos **por nome**,
+nunca por varredura (pedido explícito do fundador — arquivo sensível novo sem
+proteção não deve passar despercebido só porque um `grep` não sabia dele):
+
+- **Presença** — o próprio código-fonte de cada um dos quatro começa com
+  `import "server-only";`.
+- **Efeito** (o que o fundador pediu para tentar antes de aceitar a versão
+  simples) — roda `node --import tsx` de verdade sobre cada arquivo, com e
+  sem a condição `react-server` (a mesma que o Next.js ativa ao empacotar
+  para o servidor; sem ela, é a resolução que um bundle de navegador teria).
+  Contraste com uma fixture nova (`tests/fixtures/sem-server-only.ts`, sem o
+  import) prova que o teste reage à proteção, não a qualquer coisa que der
+  errado ao carregar um módulo.
+
+**O quarto arquivo é `src/lib/servicos/comprovantes.ts`** — protegido desde a
+Tarefa 4, ficou de fora da primeira versão da lista (que só olhava os três
+desta tarefa) e entrou por achado do terceiro `/revisar` e decisão do
+fundador: "é o mais sensível dos quatro, guarda a chave que ignora o
+isolamento" (`SUPABASE_SERVICE_ROLE_KEY`, que ignora RLS por atributo —
+`CLAUDE.md` §5). Junto dele entrou, escrita **dentro do próprio teste**, a
+regra que impede o quinto de repetir o problema: todo arquivo que receber
+`import "server-only"` entra nesta lista, no mesmo commit que ganha a linha.
+Lista por nome só protege quem alguém escreveu nela.
+
+**A camada de presença não é redundante — motivo medido, não suposto,
+montando o teste**: `src/lib/auth/index.ts` importa
+`sem-filtro-de-empresa.ts`, também protegido. Removendo a linha só de
+`auth/index.ts` na mão para testar o próprio teste, o contraste de efeito
+continuou "passando" — o carregamento ainda lançava o erro de `server-only`,
+só que vindo de dentro do arquivo importado, não da linha que faltou.
+Só a checagem de presença, por nome, pegou essa remoção. As duas camadas
+ficam: efeito prova que o mecanismo funciona de ponta a ponta, presença
+prova que cada arquivo carrega a própria parte, sem depender do que ele
+importa.
+
+**Lacuna recusada de propósito, decisão do fundador — não reabrir sem
+reler**: a flag `--conditions=react-server` do `medir:municipios` **não**
+ganha cobertura na esteira. Se ela sumir, quem descobre é quem rodar o
+comando na mão, e o custo é uma mensagem de erro — não dado errado, não
+vazamento, não cliente afetado. Pôr o script na esteira faria uma medição
+rodar a cada envio para proteger uma ferramenta de operação rodada sob
+demanda. É exatamente a calibragem do `CLAUDE.md` §2 item 7: rigor total é
+para isolamento, dinheiro e dado que não volta — não para tudo.
+
+**Verificação: local.** `npm run lint`, `npx tsc --noEmit`, `npm run build`
+verdes (incluindo a reprodução manual da Tarefa 6 original, com Client
+Component e rota temporários, descrita acima). `npm test` local 384/384,
+contra o Supabase de desenvolvimento de verdade — 370 anteriores mais 14 do
+arquivo novo. Esteira deste commit ainda não disparada — ver `/onde-paramos`.
+
+Próximo: item 6 da ordem de construção do produto
+(`docs/especificacao.md` §9) — Título a receber e Cobranças, incluindo
+recebimento parcial e boleto. Plano ainda não feito.
+
+---
+
 ## 25/08/2026 — Tarefa 5 do item 5: Upload do comprovante
 
 Pipeline completo em `src/lib/servicos/comprovantes.ts` (`enviarComprovante`):
@@ -88,8 +189,8 @@ verdade — rodou **duas vezes** nesta sessão: a primeira, depois de muitas
 horas de sessão longa (seis passes de `/revisar`), reprovou 48 testes com
 "Connection terminated unexpectedly" em três pontos — mesma classe de
 instabilidade de pool já registrada em 18-19/08/2026, não defeito de código;
-a segunda, imediata, 370/370. Esteira deste commit ainda não disparada — ver
-`/onde-paramos`.
+a segunda, imediata, 370/370. Esteira deste commit confirmada verde
+(`gh run view 32919620150`, `conclusion: success`).
 
 ## 25/08/2026 — Tarefa 4 do item 5: Isolamento do Storage
 

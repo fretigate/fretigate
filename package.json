@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed:municipios": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/seed/municipios.mts",
-    "medir:municipios": "node --env-file-if-exists=.env --import tsx scripts/medir-municipios.mts"
+    "medir:municipios": "node --env-file-if-exists=.env --conditions=react-server --import tsx scripts/medir-municipios.mts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

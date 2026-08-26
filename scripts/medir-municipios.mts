@@ -23,6 +23,14 @@
  * aqui, abriria um segundo caminho para o mesmo dado que `resolverMunicipio`
  * já resolve, o que o `CLAUDE.md` §3 proíbe.
  *
+ * PRECISA TAMBÉM DE `--conditions=react-server` (item 5, Tarefa 6,
+ * 25/08/2026) — `@/lib/db` importa `"server-only"`, e sem essa condição o
+ * pacote resolve para a versão que lança sempre (`node_modules/server-only`
+ * só vira no-op sob a condição `react-server`, a mesma que o Next.js ativa
+ * no bundler). Sem a flag, o sintoma é "This module cannot be imported from
+ * a Client Component module" — não fala de condição nem de flag nenhuma; se
+ * aparecer, é isso, não falta de `tsx`.
+ *
  * Passa por `db(empresaId)` como a função que chama por baixo
  * (`medirResolucaoDeMunicipios`) — fretes são dado de cliente, e o filtro de
  * empresa nunca é opcional, nem para ferramenta interna.

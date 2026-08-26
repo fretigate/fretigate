@@ -1483,6 +1483,16 @@ Não invente resposta. Pergunte.
   instalado, o erro é sobre módulo não encontrado, não "faltam as
   dependências de desenvolvimento" — fácil de ler como o comando quebrado,
   quando falta só a instalação completa.
+
+  **O sintoma, se rodado por fora do `npm run`** (chamando `node` direto,
+  sem copiar a linha inteira do `package.json`): "This module cannot be
+  imported from a Client Component module" — o erro do pacote `server-only`,
+  não fala de flag nenhuma. Achado no item 5, Tarefa 6 (25/08/2026), quando
+  `db/index.ts` ganhou `import "server-only"`: o script importa `@/lib/db`, e
+  sem a flag `--conditions=react-server` (já parte do script `medir:municipios`
+  do `package.json`) o pacote resolve para a versão que lança sempre, em vez
+  do no-op que o bundler do Next.js ativa. Rodar via `npm run
+  medir:municipios -- --empresa=<id>` evita o problema por construção.
 - **PRAZO — trava de 2 GB por empresa no storage (§10) ainda não existe.**
   Achado do `/revisar` na Tarefa 5 do item 5 (25/08/2026), quando o upload de
   comprovante (`src/lib/servicos/comprovantes.ts`, `enviarComprovante`)

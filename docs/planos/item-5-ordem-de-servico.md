@@ -401,6 +401,32 @@ serviço de outra empresa).
 
 ## Tarefa 6 — `server-only` em `src/lib/db/index.ts` e `src/lib/auth/index.ts`
 
+**Ampliada na execução, 25/08/2026, decisão do fundador ao revisar o primeiro
+passe do `/revisar`** — as duas linhas abaixo eram só a versão original desta
+tarefa; ficam registradas aqui para não sobreviver só na conversa e no diário
+(`docs/diario.md`, mesma data):
+
+1. **Terceiro arquivo protegido**: `src/lib/db/sem-filtro-de-empresa.ts` (a
+   "saída de emergência" do login, guarda `AUTH_DATABASE_URL`, único caminho
+   por fora do filtro de empresa) também ganhou `import "server-only"`. O
+   revisor apontou que a versão original chamava os outros dois de "os dois
+   arquivos mais sensíveis do projeto" sem explicar por que este ficava de
+   fora — e a proteção que ele tinha (trava de `eslint.config.mjs`, que não
+   roda mais em `next build` desde o Next 16) é exatamente o tipo de
+   proteção acidental que esta tarefa existe para substituir.
+2. **Teste automatizado permanente**: `tests/protecao-server-only.test.ts`,
+   cobrindo **por nome** (nunca por varredura, para um arquivo sensível novo
+   sem proteção não passar despercebido) os três arquivos acima **mais
+   `src/lib/servicos/comprovantes.ts`** — protegido desde a Tarefa 4, e o que
+   guarda a chave que ignora o isolamento (`SUPABASE_SERVICE_ROLE_KEY`).
+   Duas camadas: presença da linha em cada arquivo, e o efeito real (`node
+   --import tsx`, com e sem a condição `react-server`, contra uma fixture de
+   contraste sem o import). A regra que impede a lista de envelhecer — todo
+   arquivo que receber `server-only` entra nela, no mesmo commit — fica
+   escrita dentro do próprio teste, não só aqui. Substitui a frase abaixo
+   ("não há teste automatizado permanente ... como foi na Tarefa 4"), que
+   valia só para a versão original.
+
 Acrescentada em 25/08/2026, decisão do fundador, ao aprovar a Tarefa 4: achado
 durante aquela tarefa, fora do escopo dela, registrado para não se perder.
 
