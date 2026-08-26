@@ -15,7 +15,11 @@ import {
   marcarOrdemEnviada,
   marcarServicoFinalizado,
 } from "@/lib/servicos/servicos";
-import { criarTituloJaRecebi, editarServicoComProtecaoDeTitulo } from "@/lib/servicos/titulos";
+import {
+  criarTituloJaRecebi,
+  editarServicoComProtecaoDeTitulo,
+  faturarServico,
+} from "@/lib/servicos/titulos";
 import { buscarMunicipios, type Municipio } from "@/lib/servicos/municipios";
 import { nomeCaminhao, TIPOS_VEICULO } from "@/lib/utils/caminhao";
 import { instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
@@ -398,6 +402,42 @@ export const marcarServicoFinalizadoAction = comoUsuario(async (
 
   try {
     await marcarServicoFinalizado(sessao.empresaId, validado.data.servicoId);
+    return { ok: true };
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };
+  }
+});
+
+const schemaFaturar = z.object({
+  servicoId: z.string().uuid(),
+  // "AAAA-MM-DD" no fuso de Fortaleza, como todo dia escolhido em folha de
+  // calendário no produto (`FolhaDeCalendario`) — nunca um `Date` vindo do
+  // cliente, que carregaria o fuso do aparelho de quem toca.
+  vencimento: z.string().regex(REGEX_DIA),
+  formaPrevista: z.enum(["boleto", "outro"]),
+});
+
+/**
+ * "Faturar frete", no detalhe (item 6, Tarefa 1) — o frete finalizado vira
+ * cobrança em aberto. `faturarServico` (`src/lib/servicos/titulos.ts`) recusa
+ * frete não finalizado, arquivado, de outra empresa, e o segundo título.
+ *
+ * O vencimento chega como dia, e vira instante aqui — mesma conversão que
+ * `criarServicoAction` já faz com a data do frete, e pelo mesmo motivo
+ * (`instanteDoDiaEmFortaleza`, nunca `new Date(texto)`).
+ */
+export const faturarServicoAction = comoUsuario(async (
+  sessao,
+  entrada: { servicoId: string; vencimento: string; formaPrevista: string },
+): Promise<ResultadoSimples> => {
+  const validado = schemaFaturar.safeParse(entrada);
+  if (!validado.success) return { ok: false, erro: "Não deu para faturar agora." };
+
+  try {
+    await faturarServico(sessao.empresaId, validado.data.servicoId, {
+      vencimento: instanteDoDiaEmFortaleza(validado.data.vencimento),
+      formaPrevista: validado.data.formaPrevista,
+    });
     return { ok: true };
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };

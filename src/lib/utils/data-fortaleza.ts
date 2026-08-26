@@ -100,3 +100,24 @@ export function formatarDiaDaSemanaEData(instante: Date): string {
   const [, mes, diaDoMes] = dia.split("-").map(Number);
   return `${DIAS_SEMANA[diaDaSemana(dia)]}, ${diaDoMes} de ${MESES[mes - 1]}`;
 }
+
+/**
+ * "segunda, 4 de janeiro de 2027" — o de cima **com ano**, e recebendo o dia
+ * `"AAAA-MM-DD"` direto, não um `Date`.
+ *
+ * **O ano não é enfeite aqui, e é por isso que este formatador existe
+ * separado** (item 6, Tarefa 1, achado do segundo `/revisar`): o único uso é
+ * o vencimento da folha de faturar (`FolhaDeFaturamento`), e vencimento
+ * cruza o ano no caso comum — 15 dias a partir de qualquer dia da segunda
+ * quinzena de dezembro já cai em janeiro. Sem ano, "segunda, 4 de janeiro"
+ * não distingue o janeiro que vem do que passou, num campo que decide
+ * quando a cobrança vira **vencida**.
+ *
+ * Segue a distinção que este arquivo já registra logo acima — leitores
+ * diferentes, formatos diferentes: a mensagem lida pelo **motorista** não
+ * leva ano (frete é de agora), a tela lida pelo **dono** leva.
+ */
+export function formatarDiaDaSemanaDataEAno(dia: string): string {
+  const [ano, mes, diaDoMes] = dia.split("-").map(Number);
+  return `${DIAS_SEMANA[diaDaSemana(dia)]}, ${diaDoMes} de ${MESES[mes - 1]} de ${ano}`;
+}

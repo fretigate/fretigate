@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { Prisma } from "@/lib/generated/prisma/client";
+import { Prisma, type FormaPagamentoPrevista } from "@/lib/generated/prisma/client";
 import {
   buscarServico,
   CAMPOS_SERVICO,
@@ -9,6 +9,7 @@ import {
   type DadosServico,
   type Periodo,
 } from "@/lib/servicos/servicos";
+import { deslocarDias } from "@/lib/utils/data-fortaleza";
 
 /**
  * TituloReceber: criar (via "Já recebi") e buscar por serviço — tudo por
@@ -120,6 +121,118 @@ export async function criarTituloJaRecebi(empresaId: string, servicoId: string) 
 }
 
 /**
+ * Vencimento pré-preenchido da folha de faturamento (item 6, Tarefa 1) — o
+ * **terceiro** dos três níveis de prazo de `docs/especificacao.md` §4.7
+ * (empresa → cliente → edição ao faturar) é a folha em si; esta função
+ * resolve os dois primeiros e entrega o dia sugerido.
+ *
+ * **Função pura, sobre `"AAAA-MM-DD"` no fuso de Fortaleza, nunca `Date`
+ * cru.** `hoje` tem que vir de `diaEmFortaleza`, não de `new Date()`: um
+ * frete faturado às 22h de Fortaleza é 01h UTC do dia seguinte, e o
+ * vencimento sairia um dia adiantado — o mesmo erro que
+ * `src/lib/utils/data-fortaleza.ts` existe para eliminar, e que o `/revisar`
+ * já achou uma vez na Tarefa 2 do item 3.
+ *
+ * `prazoDoCliente` nulo herda o da empresa — é o significado declarado do
+ * campo (`Cliente.prazo_pagamento_dias`, comentário do model: "Nulo = herda
+ * `Empresa.prazo_padrao_dias`"). O cadastro de cliente já recusa zero e
+ * negativo (`clientes/acoes.ts`: `Number.isInteger(numero) && numero > 0`),
+ * e `prazo_padrao_dias` é `NOT NULL DEFAULT 15` — então esta função não
+ * repete essas checagens: elas são garantidas antes, e repeti-las aqui
+ * sugeriria que este é o lugar que decide, quando não é.
+ */
+export function vencimentoPadrao(
+  hoje: string,
+  prazoDoCliente: number | null,
+  prazoDaEmpresa: number,
+): string {
+  return deslocarDias(hoje, prazoDoCliente ?? prazoDaEmpresa);
+}
+
+/**
+ * "Faturar frete" (item 6, Tarefa 1) — o frete finalizado vira **cobrança em
+ * aberto**. É o primeiro caminho do produto a criar um `TituloReceber` que
+ * ainda não foi pago: até aqui, o único jeito de um título nascer era
+ * `criarTituloJaRecebi`, que já cria pago.
+ *
+ * `docs/especificacao.md` §7 ("Como um serviço vira título") lista dois
+ * caminhos; este é o **manual**. O automático (relatório com a marcação de
+ * cobrança) é o item 7, e é por isso que `relatorio_id` fica nulo aqui.
+ *
+ * **`cliente_id` e `valor` vêm do próprio `Servico`, nunca do formulário** —
+ * mesma razão de `criarTituloJaRecebi`, e é o que a trava do §8 item 12
+ * (`editarServicoComProtecaoDeTitulo`, abaixo) protege depois: o título
+ * copia os dois ao nascer e nunca mais sincroniza.
+ *
+ * **Uma conferência de FK, não duas** (`CLAUDE.md` §3): `servico_id` é o
+ * único identificador que chega de fora, e `buscarServico` o confere contra
+ * a empresa. `cliente_id` nunca é escolhido — vem de `servico.cliente_id`,
+ * já conferido quando o `Servico` nasceu.
+ *
+ * **Só frete finalizado.** A tela só oferece o botão nesse estado
+ * (`docs/componentes.md`: "finalizado e sem cobrança → Faturar frete"), mas
+ * a tela é a primeira camada, não a garantia — um pedido formado por fora do
+ * formulário passaria sem esta linha.
+ *
+ * **A recusa do segundo título tem duas camadas**, como em
+ * `criarTituloJaRecebi`: a leitura abaixo é o caminho rápido, com a mensagem
+ * certa; quem garante sob concorrência é o índice único parcial
+ * `titulo_receber_um_integral_por_servico`.
+ *
+ * **LACUNA CONHECIDA, para a Tarefa 7 (estorno) resolver — achada aqui, não
+ * inventada lá.** O índice único é
+ * `WHERE integral = true AND arquivado_em IS NULL` — ele **não** exclui
+ * `status = 'cancelado'`. A leitura desta função exclui (procura só título
+ * ativo, pelo critério do §7), então as duas camadas discordam: depois de um
+ * estorno, esta função deixaria refaturar e o banco recusaria com erro de
+ * unicidade, traduzido para "Este frete já foi faturado" — mentira, porque o
+ * título anterior está cancelado. Hoje isso é inalcançável (nada cancela
+ * título: o estorno é a Tarefa 7). A correção certa é a migration da Tarefa 7
+ * acrescentar `AND status <> 'cancelado'` ao índice, fazendo-o dizer o que a
+ * regra diz — "no máximo um título integral **ativo** por frete" —, e não
+ * arquivar o título estornado para contornar o índice, que misturaria dois
+ * significados diferentes de "fora do ar".
+ */
+export async function faturarServico(
+  empresaId: string,
+  servicoId: string,
+  dados: { vencimento: Date; formaPrevista: FormaPagamentoPrevista },
+) {
+  const servico = await buscarServico(empresaId, servicoId);
+  if (!servico || servico.arquivado_em) throw new Error("Frete não encontrado.");
+  if (servico.status_operacional !== "finalizado") {
+    throw new Error("Só dá para faturar um frete finalizado.");
+  }
+
+  const jaFaturado = await db(empresaId).tituloReceber.findFirst({
+    where: { servico_id: servicoId, arquivado_em: null, status: { not: "cancelado" } },
+    select: { id: true },
+  });
+  if (jaFaturado) throw new Error("Este frete já foi faturado.");
+
+  try {
+    return await db(empresaId).tituloReceber.create({
+      data: {
+        servico_id: servico.id,
+        cliente_id: servico.cliente_id,
+        valor: servico.valor,
+        status: "aberto",
+        integral: true,
+        vencimento: dados.vencimento,
+        forma_pagamento_prevista: dados.formaPrevista,
+        empresa_id: empresaId,
+      },
+      select: CAMPOS,
+    });
+  } catch (erro) {
+    if (ehTituloIntegralDuplicado(erro)) {
+      throw new Error("Este frete já foi faturado.");
+    }
+    throw erro;
+  }
+}
+
+/**
  * Frete com título ativo trava `valor` e `cliente_id` na edição
  * (`docs/especificacao.md` §8, item 12) — os dois campos que o título
  * copiou do frete ao nascer (`criarTituloJaRecebi`, acima) e nunca mais
@@ -172,6 +285,18 @@ export async function criarTituloJaRecebi(empresaId: string, servicoId: string) 
  * **Não substitui a trava da tela.** A tela desabilita os dois campos
  * quando há título ativo, mas essa é só a primeira camada — sem esta
  * função, um pedido formado por fora do formulário passaria do mesmo jeito.
+ *
+ * **A mensagem diz "já tem cobrança", nunca "já recebido" — corrigido na
+ * Tarefa 1 do item 6 (26/08/2026), achado do segundo `/revisar`.** As duas
+ * mensagens (e a da tela, `fretes/novo/TelaLancarFrete.tsx`) diziam "Frete
+ * já recebido", o que era verdade **enquanto** `criarTituloJaRecebi` fosse
+ * o único jeito de um título nascer — ele já cria `pago`. `faturarServico`
+ * criou o primeiro título `aberto` do produto: a trava passa a disparar
+ * para frete **Faturado** (`docs/especificacao.md` §7: "existe título
+ * ativo, **nenhum centavo entrou ainda**"), e dizer "já recebido" ali seria
+ * afirmar ao usuário que entrou dinheiro que não entrou. A regra escrita
+ * sempre falou de **título ativo**, nunca de recebimento (§8 item 12) — a
+ * frase é que estava presa ao único caso que existia.
  */
 export async function editarServicoComProtecaoDeTitulo(
   empresaId: string,
@@ -197,11 +322,11 @@ export async function editarServicoComProtecaoDeTitulo(
     if (!atual) throw new Error("Frete não encontrado.");
     if (dados.cliente_id !== atual.cliente_id) {
       throw new Error(
-        "Frete já recebido: não é possível trocar o cliente. Estorne o título para corrigir.",
+        "Este frete já tem cobrança: não é possível trocar o cliente. Estorne para corrigir.",
       );
     }
     throw new Error(
-      "Frete já recebido: não é possível alterar o valor. Estorne o título para corrigir.",
+      "Este frete já tem cobrança: não é possível alterar o valor. Estorne para corrigir.",
     );
   }
 }

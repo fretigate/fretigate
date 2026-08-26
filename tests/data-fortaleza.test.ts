@@ -6,6 +6,7 @@ import {
   diaEmFortaleza,
   diasNoMes,
   formatarDiaDaSemanaEData,
+  formatarDiaDaSemanaDataEAno,
   instanteDoDiaEmFortaleza,
 } from "@/lib/utils/data-fortaleza";
 
@@ -28,7 +29,7 @@ import {
  */
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 16;
+const CONFERENCIAS_ESPERADAS = 18;
 
 beforeAll(() => {
   vi.stubEnv("TZ", "UTC");
@@ -109,6 +110,25 @@ describe("formatarDiaDaSemanaEData", () => {
   it("usa o dia de Fortaleza, não o de UTC — mesma virada de diaEmFortaleza", () => {
     // 2026-08-12T02:30Z ainda é 23h30 do dia 11 em Fortaleza.
     expect(formatarDiaDaSemanaEData(new Date("2026-08-12T02:30:00.000Z"))).toBe("terça, 11 de agosto");
+    conferencias++;
+  });
+});
+
+describe("formatarDiaDaSemanaDataEAno", () => {
+  it("dia da semana + dia do mês + ano — o vencimento da folha de faturar (item 6, Tarefa 1)", () => {
+    // 11/08/2026 é terça-feira, a mesma data dos testes acima.
+    expect(formatarDiaDaSemanaDataEAno("2026-08-11")).toBe("terça, 11 de agosto de 2026");
+    conferencias++;
+  });
+
+  /**
+   * O motivo de este formatador existir, e não é enfeite: 15 dias a partir
+   * de qualquer dia da segunda quinzena de dezembro já caem no ano seguinte.
+   * Sem ano, "segunda, 4 de janeiro" não distingue o janeiro que vem do que
+   * passou — num campo que decide quando a cobrança vira vencida.
+   */
+  it("mostra o ano seguinte quando o vencimento cruza o ano", () => {
+    expect(formatarDiaDaSemanaDataEAno("2027-01-04")).toBe("segunda, 4 de janeiro de 2027");
     conferencias++;
   });
 });

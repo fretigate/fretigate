@@ -149,6 +149,52 @@ você escreve.** O padrão é o meu.
   primeiro que bater" — merece a pergunta explícita: a regra fala de UM
   item ou de TODOS eles? Se for de todos, o código precisa examinar todos,
   não confiar que o primeiro que aparecer representa o resto.
+- **Texto que está certo só por coincidência de estado envelhece calado — e
+  quem cria o estado novo é quem tem que reler o texto.** Segundo padrão a
+  procurar de propósito, pelo mesmo critério do de cima: apareceu duas
+  vezes, as duas em texto que o usuário lê.
+
+  Uma frase pode ser verdadeira **hoje** não porque descreva a regra, mas
+  porque um estado do sistema ainda não é alcançável. No dia em que alguém
+  torna aquele estado alcançável — e é sempre outra tarefa, outra sessão —,
+  a frase vira mentira **sem que nada falhe**: nenhum teste quebra, nenhum
+  tipo reclama, a tela continua renderizando. É diferente de documentação
+  desatualizada por descuido: aqui ninguém errou ao escrever, e o texto não
+  mudou. Mudou o mundo em volta dele.
+
+  A primeira: `docs/especificacao.md` dizia "a regra não protege nada hoje"
+  — verdade enquanto nada usasse aquela regra, falso assim que algo passou a
+  usar (`docs/diario.md`, 23/08/2026, Tarefa 1 do item 5, achado 5 do
+  `/revisar`).
+
+  A segunda, em dinheiro: as três mensagens da trava de edição de frete
+  diziam **"Frete já recebido"** (`src/lib/servicos/titulos.ts`,
+  `fretes/novo/TelaLancarFrete.tsx`). Era verdade **enquanto**
+  `criarTituloJaRecebi` fosse o único jeito de um título nascer — ele já
+  cria `status: "pago"`. A Tarefa 1 do item 6 (26/08/2026) criou o primeiro
+  título `aberto` do produto, e a mesma frase passou a aparecer para um
+  frete **Faturado** (§7: "existe título ativo, **nenhum centavo entrou
+  ainda**") — afirmando ao dono que entrou um dinheiro que não entrou. A
+  regra escrita (§8 item 12) sempre falou de **título ativo**, nunca de
+  recebimento: a frase é que estava presa ao único caso que existia.
+  Corrigida para "Este frete já tem cobrança", verdadeira nos dois estados.
+
+  **O que procurar, da próxima vez — e a pergunta é para quem CRIA o estado,
+  não para quem escreveu o texto:** toda tarefa que torna alcançável um
+  estado que antes não era (valor novo de `enum`, situação derivada que
+  ninguém produzia, papel, plano, etapa de um fluxo) fecha com uma varredura
+  pelos textos que falam daquele domínio — mensagem de erro, rótulo, aviso,
+  comentário, documento — perguntando de cada um: **isto continua verdade
+  agora que este estado existe?** Procure em especial o texto que descreve o
+  estado pelo **caso único** em vez de pela regra ("já recebido" no lugar de
+  "tem título ativo"; "não protege nada" no lugar de "ninguém usa ainda").
+
+  **Onde isto vai acontecer de novo, e já dá para saber:** o **item 7**
+  (relatório) cria o segundo jeito de um título nascer, e uma cobrança que
+  cobre **vários** fretes — todo texto que hoje diz "o frete" no singular
+  merece a pergunta. O **item 13** (assinatura) liga `inadimplente`,
+  `vencida` e `encerrada`, que hoje só existem no schema: todo texto escrito
+  supondo empresa sempre ativa entra na mesma varredura.
 - Se auditassem esse código para comprar a empresa, não teria nada para ter vergonha.
 
 ### Como executar

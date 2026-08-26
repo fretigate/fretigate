@@ -6,6 +6,179 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 26/08/2026 — Tarefa 1 do item 6: Faturar frete
+
+O primeiro caminho do produto a criar uma cobrança **em aberto**. Até aqui, o
+único jeito de um título nascer era "Já recebi", que já cria pago — por isso
+"A receber"/"Vencido" eram zero em toda tela e a etiqueta **Faturado** era
+inalcançável na prática.
+
+`faturarServico` (`src/lib/servicos/titulos.ts`), a folha
+`FolhaDeFaturamento` e a principal "Faturar frete" no detalhe do frete
+(`AcaoFaturarFrete.tsx`), que aparece no estado "finalizado e sem cobrança".
+Sem migration: `titulo_receber` já tinha todos os campos desde o item 3, e
+`vencimento`/`forma_pagamento_prevista`/`status` nunca tinham sido
+preenchidos por ninguém.
+
+**Plano do item inteiro commitado antes (`12385fc`)**, com seis decisões do
+fundador registradas antes de qualquer código —
+`docs/planos/item-6-titulo-e-cobrancas.md`.
+
+**A folha não fatura direto, e o motivo é do fundador:** o vencimento define
+quando aquilo vira "vencido" na tela, e errar significa cobrar antes da hora
+ou tarde demais. O prazo do cadastro é **padrão, não verdade daquele frete**
+— cliente pede prazo maior num mês, combina diferente numa carga. É o
+terceiro dos três níveis de prazo do §4.7, que nunca tinha existido em
+código.
+
+**Achados do `/revisar`, primeiro passe — duas divergências e sete lacunas.**
+Três corrigidas na hora, quatro decididas pelo fundador:
+
+- **O arquivo de teste aparecia reescrito inteiro** (1022 linhas saindo,
+  1221 entrando) numa mudança pontual — `CLAUDE.md` §2 item 6. **A causa era
+  minha e vale registrar para não repetir: um script em Python reescreveu o
+  arquivo convertendo LF para CRLF.** O repositório guarda este arquivo em
+  LF puro; `io.open(caminho, "w")` no Windows traduz `\n` para `\r\n` na
+  escrita, então **toda** linha passou a diferir. Normalizado de volta;
+  o diff virou 200 linhas acrescentadas e 1 alterada, que é o que de fato
+  mudou. Editar arquivo do repositório por script em Python no Windows
+  precisa de `newline=""` (ou escrita binária) — senão o diff mente sobre o
+  tamanho da mudança e a revisão não enxerga o que importa.
+- **"Faturar frete" aparecia em frete arquivado.** Esta tela lê frete
+  arquivado de propósito (§7), e um arquivado pode estar finalizado e sem
+  título — o botão apareceria e o toque falharia sempre com "Frete não
+  encontrado". Botão sem destino é o que `CLAUDE.md` §8 proíbe, e aqui numa
+  ação de dinheiro. `arquivado_em` entrou na condição.
+- **A armadilha do estorno morava num comentário de código.** O índice único
+  `titulo_receber_um_integral_por_servico` é
+  `WHERE integral = true AND arquivado_em IS NULL` — **não exclui
+  `status = 'cancelado'`**. Quando o estorno existir (Tarefa 7), refaturar
+  vai falhar com mensagem mentirosa ("Este frete já foi faturado", com o
+  título cancelado). Movido para a **Tarefa 7 do plano**, com a correção
+  (acrescentar `AND status <> 'cancelado'` ao índice) e o motivo de não
+  resolver arquivando o título estornado — seria usar `arquivado_em` como
+  truque para contornar restrição, misturando dois significados de "fora do
+  ar". Nas palavras do fundador, "foi a correção mais importante da rodada —
+  quem construir a tarefa 7 lê o plano, não o comentário".
+
+**Decisões do fundador nesta rodada, todas registradas no plano:**
+
+1. **`vencimentoPadrao` fica dentro de `titulos.ts`, e o plano é que foi
+   corrigido** — ele mandava criar `src/lib/servicos/vencimento.ts`.
+   Vencimento de título é o mesmo assunto que título, e duas funções de uma
+   linha em arquivo próprio seriam o arquivo especulativo que o §6 proíbe.
+2. **"Outro" é a forma de cobrança marcada por padrão**, e o motivo ficou
+   escrito no plano **e** na docstring do componente, a pedido do fundador,
+   "senão alguém corrige depois achando que boleto é mais comum": boleto
+   **não** exibe "Cobrar no WhatsApp" e não gera pendência (§8 item 11), então
+   quem confirmasse sem prestar atenção perderia a ação de cobrar sem
+   entender por quê. O padrão errado aqui não erra um campo — some com uma
+   ação.
+3. **Vencimento no passado é permitido.** Recusar obrigaria a mentir na data:
+   faturar frete antigo com prazo já vencido é caso real, e quem faz isso
+   está registrando o que aconteceu, não criando dívida nova.
+4. **Conferência pedida pelo fundador junto da decisão 3** — se "cobrado há X
+   dias" fica estranho num título que nasceu vencido e nunca foi cobrado.
+   **Não fica: ele não aparece**, porque a marca sai de `CobrancaEnviada`,
+   gravada só quando alguém responde "Enviei". Registrado na Tarefa 6 do
+   plano junto do erro a não cometer — derivar "cobrado" do vencimento ou da
+   data de faturamento diria "cobrado há 40 dias" para algo que ninguém
+   cobrou nenhuma vez.
+
+**Achados do `/revisar`, segundo passe — duas divergências e quatro
+lacunas.** Nenhuma da primeira categoria do §2 item 7 (rigor total), então o
+teto de dois passes se aplica e a tarefa fecha aqui; as que mudam
+comportamento hoje foram corrigidas no próprio passe, o resto virou registro:
+
+- **As três mensagens da trava de edição diziam "Frete já recebido", e isso
+  virou mentira nesta tarefa.** Eram verdade **enquanto** "Já recebi" fosse o
+  único jeito de um título nascer — ele já cria pago. `faturarServico` criou
+  o primeiro título **aberto** do produto: a trava passa a disparar para
+  frete **Faturado** ("existe título ativo, nenhum centavo entrou ainda",
+  §7), e dizer "já recebido" ali afirma ao usuário que entrou dinheiro que
+  não entrou. A regra escrita (§8 item 12) sempre falou de **título ativo**,
+  nunca de recebimento — a frase é que estava presa ao único caso que
+  existia. As três passaram a dizer **"Este frete já tem cobrança"**
+  (`titulos.ts`, duas; `fretes/novo/TelaLancarFrete.tsx`, uma), verdadeiro
+  tanto para título aberto quanto para pago. Nenhum teste dependia das
+  frases antigas.
+- **O vencimento aparecia sem ano na folha** ("segunda, 4 de janeiro"). O
+  formatador usado é declarado, no próprio `data-fortaleza.ts`, como o da
+  mensagem lida pelo **motorista** — a tela lida pelo dono leva ano. E aqui o
+  ano não é enfeite: 15 dias a partir de qualquer dia da segunda quinzena de
+  dezembro já caem no ano seguinte (o próprio teste desta tarefa cobre
+  20/12 → 04/01), e sem ele "4 de janeiro" não distingue o janeiro que vem do
+  que passou, num campo que decide quando a cobrança vira vencida. Nasceu
+  `formatarDiaDaSemanaDataEAno`, com dois testes próprios.
+
+**O que foi pedido ao Design — seis itens, enviados juntos por decisão do
+fundador. Cinco são de `docs/componentes.md`; o último é de
+`docs/navegacao.md`:**
+
+1. **Folha de "Faturar frete"** — tela nova, não existe na tabela "Onde cada
+   tela usa o quê" (que já tem linha própria para Folha de busca, de
+   calendário e de recebimento).
+2. **Os rótulos "Vencimento" e "Cobrança"** dentro dela, escritos por não
+   haver de onde tirar — rótulo é decisão de produto (§2 item 5).
+3. **Estorno** — ação destrutiva em texto no detalhe da cobrança, junto de
+   Arquivar mas **com confirmação**, dizendo as três consequências (o frete
+   volta a A faturar, o título é cancelado, o histórico registra). Item novo
+   do inventário.
+4. **Estado vazio de Cobranças** — `docs/componentes.md` prevê principal
+   **Gerar relatório**, que é item 7 e não existe. A Tarefa 2 vai usar a
+   neutra "Ver os N fretes", que existe, porque botão sem destino é proibido
+   (§8). Gerar relatório entra no item 7.
+5. **A cor da etiqueta "Faturado"** — achado do segundo `/revisar`.
+   `EtiquetaSituacao.tsx` usa `--color-tinta-apoio` como **placeholder
+   declarado** ("cor própria pedida ao Design"), decidido no item 4, Tarefa 1,
+   quando o estado era **inalcançável**. Esta tarefa o torna alcançável no
+   produto: o placeholder passa a aparecer para o usuário de verdade.
+6. **A linha do Detalhe do frete em `docs/navegacao.md`** — "Faturar frete"
+   está lá na coluna "Leva para" **sem destino**, enquanto a ação irmã tem o
+   caminho descrito ("abre a Folha do campo que falta → conversa"). A folha
+   nova precisa entrar ali: `CLAUDE.md` §13 dá a `navegacao.md` o escopo de
+   "para onde ela leva", e desenho novo é do Design, não do repositório.
+
+**Padrão nomeado em `CLAUDE.md` §2, a pedido do fundador:** "texto que está
+certo só por coincidência de estado envelhece calado — e quem cria o estado
+novo é quem tem que reler o texto". Conferido no diário antes de escrever, a
+pedido dele: **já tinha acontecido uma vez**, em 23/08/2026 (Tarefa 1 do item
+5, achado 5 do `/revisar`) — `docs/especificacao.md` dizia "a regra não
+protege nada hoje", verdade enquanto nada usasse aquela regra. Com o "Frete
+já recebido" desta tarefa são dois, que é o critério que o §2 usa para nomear
+padrão em vez de registrar achado isolado.
+
+O que o padrão pede é uma **varredura de fim de tarefa** por textos do
+domínio sempre que a tarefa tornar alcançável um estado que antes não era —
+e a nota já diz onde isso volta a acontecer, também a pedido do fundador: o
+**item 7** (cobrança de vários fretes, contra todo texto que diz "o frete" no
+singular) e o **item 13** (assinatura liga `inadimplente`/`vencida`/
+`encerrada`, hoje só no schema, contra todo texto escrito supondo empresa
+sempre ativa).
+
+**Registrado no plano, não construído agora** (achado do segundo `/revisar`):
+`docs/componentes.md` prevê a secundária **Marcar recebido** no detalhe do
+frete, e com "Faturado" alcançável o frete faturado fica sem caminho para
+registrar recebimento a partir da própria tela dele. Não entrou aqui pela
+regra de sempre — a ação de fundo não existe até a Tarefa 3 —, e foi
+acrescentada ao escopo da **Tarefa 3** do plano para não escapar.
+
+**Lacuna conhecida, registrada e não corrigida** (`CLAUDE.md` §2 item 7,
+terceira categoria): a folha e a principal não têm verificação de tela — não
+existe teste de componente no projeto, e não há como autenticar numa sessão
+de navegador a partir daqui para conferir no ar. O que foi medido é a regra
+de negócio, no banco de verdade.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` e `npm run build`
+verdes. `npm test` local **398/398** contra o Supabase de desenvolvimento —
+384 anteriores, mais 12 da regra de faturamento e 2 do formatador de data com
+ano. Esteira deste commit ainda não disparada — ver `/onde-paramos`.
+
+Próximo: Tarefa 2 do item 6 — Tela de Cobranças (três números no topo,
+filtros, lista agrupada em Vencidas · Vence hoje · A vencer, estado vazio).
+
+---
+
 ## 25/08/2026 — Tarefa 6 do item 5: `server-only` em db e auth
 
 `import "server-only"` no topo de `src/lib/db/index.ts` e `src/lib/auth/index.ts`

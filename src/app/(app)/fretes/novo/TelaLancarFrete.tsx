@@ -416,7 +416,7 @@ export function TelaLancarFrete({
           ) : null}
           {travadoPeloTitulo ? (
             <span className="px-4 text-apoio font-medium text-tinta-apoio">
-              Frete já recebido — para alterar valor ou cliente, estorne o título.
+              Este frete já tem cobrança — para alterar valor ou cliente, estorne.
             </span>
           ) : null}
           <LinhaRecolhida rotulo="Caminhão" valor={nomeVeiculo} onClick={() => abrirFolha("caminhao")} />

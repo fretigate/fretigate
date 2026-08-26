@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import {
   criarTituloJaRecebi,
+  faturarServico,
+  vencimentoPadrao,
   buscarTituloPorServico,
   editarServicoComProtecaoDeTitulo,
   listarServicosComSituacao,
@@ -15,6 +17,7 @@ import {
 import {
   criarServico,
   arquivarServico,
+  marcarServicoFinalizado,
   resumoDoCaminhao,
   resumoDoMotorista,
   type DadosServico,
@@ -23,6 +26,7 @@ import {
 import { criarCliente } from "@/lib/servicos/clientes";
 import { criarCaminhao } from "@/lib/servicos/caminhoes";
 import { criarMotorista } from "@/lib/servicos/motoristas";
+import { diaEmFortaleza, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
 
 /**
  * TituloReceber (tarefa 3 do item 3): "Já recebi" cria um título já pago,
@@ -46,7 +50,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 34;
+const CONFERENCIAS_ESPERADAS = 46;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -1009,6 +1013,201 @@ describe("7. históricos dos perfis — teto de 5, total real, situação em cad
     expect(historicoNoPeriodo.total).toBe(0);
     // e.servicoId (auto-criado, ~agora) + o de semanaQuePassou, sem filtro.
     expect(historicoNoPeriodo.totalGeral).toBe(2);
+    conferencias++;
+  });
+});
+
+/**
+ * Item 6, Tarefa 1 — "Faturar frete": o primeiro caminho do produto a criar
+ * um título que ainda NÃO foi pago. Até aqui, `criarTituloJaRecebi` era o
+ * único, e ele já nasce pago — por isso a etiqueta "Faturado"
+ * (`situacaoFinanceira`) era inalcançável na prática.
+ */
+describe("8. vencimentoPadrao — os dois primeiros dos três níveis de prazo (§4.7)", () => {
+  it("usa o prazo do cliente quando ele tem um", () => {
+    expect(vencimentoPadrao("2026-08-26", 30, 15)).toBe("2026-09-25");
+    conferencias++;
+  });
+
+  it("herda o prazo da empresa quando o do cliente é nulo", () => {
+    expect(vencimentoPadrao("2026-08-26", null, 15)).toBe("2026-09-10");
+    conferencias++;
+  });
+
+  it("atravessa virada de mês e de ano", () => {
+    expect(vencimentoPadrao("2026-12-20", null, 15)).toBe("2027-01-04");
+    conferencias++;
+  });
+
+  /**
+   * O erro que esta verificação existe para pegar: usar UTC cru em vez do
+   * dia de Fortaleza. Às 22h de Fortaleza (01h UTC do dia seguinte), quem
+   * lesse a data em UTC contaria o prazo a partir de amanhã, e o vencimento
+   * sairia um dia adiantado — o mesmo defeito que o `/revisar` já achou na
+   * Tarefa 2 do item 3, e que `src/lib/utils/data-fortaleza.ts` existe para
+   * eliminar. Mede a COMPOSIÇÃO (`diaEmFortaleza` + `vencimentoPadrao`),
+   * não cada peça isolada — é na junção que o erro aparece.
+   */
+  it("conta o prazo a partir do dia de Fortaleza, não do dia em UTC", () => {
+    // 27/08 às 01h UTC = 26/08 às 22h em Fortaleza (UTC-3).
+    const instante = new Date("2026-08-27T01:00:00.000Z");
+    expect(instante.toISOString().slice(0, 10)).toBe("2026-08-27"); // o dia errado
+    expect(diaEmFortaleza(instante)).toBe("2026-08-26"); // o dia certo
+    expect(vencimentoPadrao(diaEmFortaleza(instante), null, 15)).toBe("2026-09-10");
+    conferencias++;
+  });
+});
+
+describe("9. faturarServico — cria o título EM ABERTO", () => {
+  it("status aberto, sem nada recebido, com vencimento e forma prevista gravados", async () => {
+    const e = await criarEmpresaDeTeste("f1");
+    await marcarServicoFinalizado(e.empresaId, e.servicoId);
+
+    const vencimento = instanteDoDiaEmFortaleza("2026-09-10");
+    const titulo = await faturarServico(e.empresaId, e.servicoId, {
+      vencimento,
+      formaPrevista: "boleto",
+    });
+
+    expect(titulo.status).toBe("aberto");
+    expect(titulo.integral).toBe(true);
+    expect(titulo.valor_recebido).toBeNull();
+    expect(titulo.data_pagamento).toBeNull();
+    expect(titulo.vencimento?.getTime()).toBe(vencimento.getTime());
+    expect(titulo.forma_pagamento_prevista).toBe("boleto");
+    // Derivados do Servico, nunca de input — mesma regra de "Já recebi".
+    expect(titulo.cliente_id).toBe(e.clienteId);
+    expect(titulo.valor).toBe(e.valorServico);
+    // O automático é o item 7 (relatório); este caminho é o manual.
+    expect(titulo.relatorio_id).toBeNull();
+    conferencias++;
+  });
+
+  /**
+   * O que este item destrava, dito como comportamento e não como campo:
+   * antes dele, um frete só podia estar "A faturar" ou "Quitado", porque o
+   * único título possível já nascia pago.
+   */
+  it("o frete passa a Faturado — título ativo, nenhum centavo entrou", async () => {
+    const e = await criarEmpresaDeTeste("f2");
+    await marcarServicoFinalizado(e.empresaId, e.servicoId);
+
+    const antes = await buscarServicoComTitulos(e.empresaId, e.servicoId);
+    expect(antes?.situacao_financeira).toBe("a_faturar");
+
+    await faturarServico(e.empresaId, e.servicoId, {
+      vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+      formaPrevista: "outro",
+    });
+
+    const depois = await buscarServicoComTitulos(e.empresaId, e.servicoId);
+    expect(depois?.situacao_financeira).toBe("faturado");
+    conferencias++;
+  });
+
+  it("recusa frete que ainda está em andamento", async () => {
+    const e = await criarEmpresaDeTeste("f3");
+    await expect(
+      faturarServico(e.empresaId, e.servicoId, {
+        vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+        formaPrevista: "outro",
+      }),
+    ).rejects.toThrow("Só dá para faturar um frete finalizado.");
+    conferencias++;
+  });
+
+  it("recusa frete arquivado", async () => {
+    const e = await criarEmpresaDeTeste("f4");
+    await marcarServicoFinalizado(e.empresaId, e.servicoId);
+    await arquivarServico(e.empresaId, e.servicoId);
+    await expect(
+      faturarServico(e.empresaId, e.servicoId, {
+        vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+        formaPrevista: "outro",
+      }),
+    ).rejects.toThrow("Frete não encontrado.");
+    conferencias++;
+  });
+
+  /** `CLAUDE.md` §3 — o Postgres não aplica RLS ao verificar chave estrangeira. */
+  it("recusa servico_id de outra empresa", async () => {
+    const a = await criarEmpresaDeTeste("f5a");
+    const b = await criarEmpresaDeTeste("f5b");
+    await marcarServicoFinalizado(b.empresaId, b.servicoId);
+
+    await expect(
+      faturarServico(a.empresaId, b.servicoId, {
+        vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+        formaPrevista: "outro",
+      }),
+    ).rejects.toThrow("Frete não encontrado.");
+
+    // E o frete de B continua sem título nenhum — a recusa não gravou nada
+    // "quase certo" no lugar errado.
+    const b_ = await buscarServicoComTitulos(b.empresaId, b.servicoId);
+    expect(b_?.titulos).toEqual([]);
+    conferencias++;
+  });
+
+  it("recusa faturar duas vezes o mesmo frete", async () => {
+    const e = await criarEmpresaDeTeste("f6");
+    await marcarServicoFinalizado(e.empresaId, e.servicoId);
+    const dados = {
+      vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+      formaPrevista: "outro" as const,
+    };
+    await faturarServico(e.empresaId, e.servicoId, dados);
+    await expect(faturarServico(e.empresaId, e.servicoId, dados)).rejects.toThrow(
+      "Este frete já foi faturado.",
+    );
+    conferencias++;
+  });
+
+  it("recusa faturar um frete que já tem título de 'Já recebi'", async () => {
+    const e = await criarEmpresaDeTeste("f7");
+    await criarTituloJaRecebi(e.empresaId, e.servicoId);
+    await marcarServicoFinalizado(e.empresaId, e.servicoId);
+    await expect(
+      faturarServico(e.empresaId, e.servicoId, {
+        vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+        formaPrevista: "outro",
+      }),
+    ).rejects.toThrow("Este frete já foi faturado.");
+    conferencias++;
+  });
+
+  /**
+   * **Quem garante é o banco, não o `if`.** Dois pedidos simultâneos passam
+   * os dois pela leitura antes de qualquer `INSERT` terminar — é o índice
+   * único parcial `titulo_receber_um_integral_por_servico` que recusa o
+   * segundo. Mesma prova já feita para `criarTituloJaRecebi` (bloco 3),
+   * repetida aqui porque é outro caminho de escrita: se ele esquecesse de
+   * traduzir o `P2002`, o usuário veria o erro cru do banco.
+   */
+  it("sob concorrência, exatamente um dos dois faturamentos passa", async () => {
+    const e = await criarEmpresaDeTeste("f8");
+    await marcarServicoFinalizado(e.empresaId, e.servicoId);
+    const dados = {
+      vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+      formaPrevista: "outro" as const,
+    };
+
+    const resultados = await Promise.allSettled([
+      faturarServico(e.empresaId, e.servicoId, dados),
+      faturarServico(e.empresaId, e.servicoId, dados),
+    ]);
+
+    const aceitos = resultados.filter((r) => r.status === "fulfilled");
+    const recusados = resultados.filter((r) => r.status === "rejected");
+    expect(aceitos).toHaveLength(1);
+    expect(recusados).toHaveLength(1);
+    // Mensagem do produto, nunca a do Postgres.
+    expect((recusados[0] as PromiseRejectedResult).reason.message).toBe(
+      "Este frete já foi faturado.",
+    );
+
+    const servico = await buscarServicoComTitulos(e.empresaId, e.servicoId);
+    expect(servico?.titulos).toHaveLength(1);
     conferencias++;
   });
 });

@@ -277,14 +277,38 @@ sem nenhum centavo recebido.
     o segundo integral sob concorrência — traduzir `P2002` para a mesma
     mensagem, como `criarTituloJaRecebi` faz.
   - Recusa frete não finalizado e frete arquivado.
-- `src/lib/servicos/vencimento.ts` (novo): o cálculo dos três níveis —
-  `Cliente.prazo_pagamento_dias` ?? `Empresa.prazo_padrao_dias`, somado à data
-  de hoje **no fuso de Fortaleza** (`diaEmFortaleza`, nunca UTC cru: um frete
-  faturado às 22h de Fortaleza é 01h UTC do dia seguinte, e o vencimento
-  sairia um dia adiantado).
+- `vencimentoPadrao`, **dentro de `src/lib/servicos/titulos.ts`** — o cálculo
+  dos dois primeiros níveis: `Cliente.prazo_pagamento_dias` ??
+  `Empresa.prazo_padrao_dias`, somado à data de hoje **no fuso de Fortaleza**
+  (`diaEmFortaleza`, nunca UTC cru: um frete faturado às 22h de Fortaleza é
+  01h UTC do dia seguinte, e o vencimento sairia um dia adiantado). O
+  terceiro nível é a própria folha.
+
+  **Correção do plano, decisão do fundador em 26/08/2026, achado do
+  `/revisar`:** a primeira versão desta linha mandava criar
+  `src/lib/servicos/vencimento.ts`. O plano é que estava errado — vencimento
+  de título é o mesmo assunto que título, e duas funções de uma linha num
+  arquivo só delas seriam o arquivo especulativo que o `CLAUDE.md` §6
+  proíbe. Registrado em vez de corrigido em silêncio para não ser reaberto
+  por quem comparar o plano com o código.
 - `src/components/ui/FolhaDeFaturamento.tsx` (novo): vencimento pré-preenchido
   e editável (reaproveita `FolhaDeCalendario`), chips **Boleto** / **Outro**
   (`ChipEscolha`, já existe), principal **Faturar frete**.
+
+  **"Outro" vem marcado por padrão — decisão do fundador, 26/08/2026, achado
+  do `/revisar`, e o motivo fica escrito para ninguém "corrigir" depois
+  achando que boleto é mais comum:** cobrança marcada como boleto **não**
+  exibe "Cobrar no WhatsApp" e não gera pendência na dashboard
+  (`docs/especificacao.md` §8 item 11 e §4.5 — o banco já avisa o atraso).
+  Com "Boleto" pré-marcado, quem confirmasse sem prestar atenção perderia a
+  ação de cobrar **e não entenderia por quê** — o botão simplesmente não
+  estaria lá. O padrão errado aqui não erra um campo: some com uma ação.
+
+  **Vencimento no passado é permitido — decisão do fundador, 26/08/2026**,
+  mesma rodada. Recusar obrigaria a mentir na data: faturar um frete antigo
+  cujo prazo já venceu é caso real, e quem faz isso está **registrando o que
+  aconteceu, não criando dívida nova**. A cobrança nasce vencida, e é isso
+  mesmo que a tela deve mostrar.
 - `src/app/(app)/fretes/[id]/`: o botão principal passa a ser **Faturar frete**
   quando o frete está finalizado e sem título ativo — o rótulo que
   `docs/componentes.md` já prevê para esse estado.
@@ -345,6 +369,13 @@ conviverem com a nova tabela como segunda fonte de verdade.
     já pago; a principal do detalhe vira **Recebido ✓** desabilitada.
 - Deslizar revela **Marcar recebido** na lista de Cobranças e em Meus fretes
   (`docs/componentes.md` já prevê os dois).
+- **Secundária "Marcar recebido" no detalhe do frete** — achado do segundo
+  `/revisar` da Tarefa 1 (26/08/2026), registrado aqui para não escapar do
+  escopo. `docs/componentes.md` (linha 432) prevê essa secundária no detalhe,
+  e a partir da Tarefa 1 o estado **Faturado** existe de verdade — sem ela, o
+  frete faturado fica sem nenhum caminho para registrar recebimento a partir
+  da própria tela dele. Não foi construída na Tarefa 1 pela regra de sempre
+  (a ação de fundo não existia ainda); nasce aqui, junto da folha.
 
 ### Tarefa 4 — Detalhe da cobrança
 
@@ -397,6 +428,22 @@ conviverem com a nova tabela como segunda fonte de verdade.
   cobrado.
 - Linhas já cobradas exibem **quem cobrou e quando** ("cobrado há 2 dias por
   Monalisa"); o detalhe mostra o histórico.
+
+  **Conferência pedida pelo fundador ao permitir vencimento no passado
+  (Tarefa 1, decisão de 26/08/2026): a marca não pode ficar estranha num
+  título que nasceu vencido e nunca foi cobrado.** A resposta é que ela
+  **não aparece**, e o motivo tem que continuar sendo esse: "cobrado há X
+  dias" sai de `CobrancaEnviada` — uma linha que só existe quando alguém
+  respondeu "Enviei" ao voltar do WhatsApp. Título nunca cobrado não tem
+  nenhuma linha, então não tem o que exibir; a linha mostra só a situação
+  (Vencida) e o valor.
+
+  **O erro a não cometer, que é o que a conferência protege:** derivar
+  "cobrado" de qualquer outra coisa — a data de faturamento, o vencimento,
+  ou "está vencido há tanto tempo". Um título que nasce vencido tem
+  vencimento no passado **desde o primeiro instante**, então qualquer
+  derivação desse tipo diria "cobrado há 40 dias" para algo que ninguém
+  cobrou nenhuma vez. A única fonte de "cobrado" é `CobrancaEnviada`.
 - **Boleto não exibe "Cobrar no WhatsApp"** (§8 item 11) — continua na lista,
   com marca discreta.
 - Sem telefone do cliente: **folha do campo que falta**, com principal
@@ -404,6 +451,25 @@ conviverem com a nova tabela como segunda fonte de verdade.
   (`rotuloBotao`/`apoio`), sem refazer.
 
 ### Tarefa 7 — Estorno
+
+**Migration obrigatória, achada na Tarefa 1 e registrada aqui para quem
+construir esta ler — não só na docstring de `faturarServico`.** O índice único
+parcial `titulo_receber_um_integral_por_servico`
+(`20260814150000_titulo_integral_unico_por_frete`) é
+`WHERE integral = true AND arquivado_em IS NULL` — **não exclui
+`status = 'cancelado'`**. Sem mexer nele, o estorno cancela o título e o frete
+volta a "A faturar" na tela, mas **refaturar falha**: a leitura de
+`faturarServico` deixa passar (procura só título ativo) e o banco recusa com
+erro de unicidade, traduzido para "Este frete já foi faturado" — mentira, já
+que o anterior está cancelado. A correção é acrescentar `AND status <>
+'cancelado'` ao índice, fazendo-o dizer o que a regra diz: **no máximo um
+título integral ativo por frete**.
+
+**Não resolver arquivando o título estornado.** Arquivar liberaria o índice
+sem mexer nele, mas usaria `arquivado_em` como truque para contornar uma
+restrição, misturando dois significados diferentes de "fora do ar" (§7:
+arquivar é a exclusão do usuário; cancelar é o estorno). O teste da tarefa
+prova o ciclo inteiro: faturar → estornar → **refaturar**.
 
 - `estornarTitulo`: `status: "cancelado"`, nunca apagado (§7). O frete volta a
   **A faturar** sozinho, porque a situação é derivada — nenhum campo de frete

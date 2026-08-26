@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { exigirSessao } from "@/lib/auth/sessao";
 import { db } from "@/lib/db";
-import { buscarServicoComTitulos } from "@/lib/servicos/titulos";
+import { buscarServicoComTitulos, vencimentoPadrao } from "@/lib/servicos/titulos";
 import { buscarCliente } from "@/lib/servicos/clientes";
 import { buscarCaminhao } from "@/lib/servicos/caminhoes";
 import { buscarMotorista } from "@/lib/servicos/motoristas";
@@ -17,6 +17,7 @@ import { diaEmFortaleza, formatarDiaDaSemanaEData } from "@/lib/utils/data-forta
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { BotaoArquivarFrete } from "../BotaoArquivarFrete";
 import { AcaoOrdemDeServico } from "./AcaoOrdemDeServico";
+import { AcaoFaturarFrete } from "./AcaoFaturarFrete";
 import { BotaoMarcarFinalizado } from "./BotaoMarcarFinalizado";
 import { AnexarComprovante } from "./AnexarComprovante";
 
@@ -34,9 +35,10 @@ import { AnexarComprovante } from "./AnexarComprovante";
  * finalizado"** (`BotaoMarcarFinalizado.tsx`, item 5, Tarefa 3) acompanha
  * sempre que o frete estiver "em andamento", qualquer que seja o estado da
  * principal — são ações independentes (dá para finalizar um frete que nunca
- * teve ordem enviada). Finalizado sem cobrança/já faturado (itens 6/7)
- * continuam sem principal, e sem "Marcar como finalizado" — mesmo
- * precedente já registrado para o perfil do caminhão, "sem principal"
+ * teve ordem enviada). **Finalizado e sem cobrança → "Faturar frete"**
+ * (`AcaoFaturarFrete.tsx`, item 6, Tarefa 1). **Já faturado** continua sem
+ * principal: o rótulo previsto ali é "Ver relatório", que é o item 7 —
+ * mesmo precedente já registrado para o perfil do caminhão, "sem principal"
  * (`docs/componentes.md` linhas 379–390 e 427): **botão cuja ação de fundo
  * não existe não entra, nem desabilitado.** Isso não vale para **Editar
  * frete** (secundária) nem **Arquivar frete** (texto destrutiva) — os dois
@@ -89,7 +91,11 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
     servico.motorista_id ? buscarMotorista(sessao.empresaId, servico.motorista_id) : null,
     db(sessao.empresaId).empresa.findUnique({
       where: { id: sessao.empresaId },
-      select: { nome_fantasia: true },
+      // `prazo_padrao_dias` é o topo dos três níveis de prazo
+      // (`docs/especificacao.md` §4.7) — de onde `Cliente.
+      // prazo_pagamento_dias` nulo herda, para sugerir o vencimento ao
+      // faturar (item 6, Tarefa 1).
+      select: { nome_fantasia: true, prazo_padrao_dias: true },
     }),
     // `gerarUrlComprovante` lança para frete arquivado (mesma mensagem de
     // "não encontrado" de `buscarServico`) — mas ESTA tela lê frete
@@ -106,6 +112,29 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
   const rota = formatarRota(servico.origem_texto, servico.destino_texto);
   const data = formatarDataPorExtenso(diaEmFortaleza(servico.data_servico));
   const tipoNome = tipoOperacao?.nome ?? "Frete";
+
+  // "Finalizado e sem cobrança" (`docs/componentes.md`) — `situacao_financeira`
+  // é derivada de TODOS os títulos do frete (`situacaoFinanceira`), não de um
+  // escolhido por acaso, então "a_faturar" já é exatamente "nenhum título
+  // ativo" (`CLAUDE.md` §2, sobre regra que vale para a coleção inteira).
+  //
+  // **`arquivado_em` entra na condição** — achado do `/revisar`: esta tela lê
+  // frete arquivado de propósito (§7, "nada é apagado"; ver o comentário de
+  // `gerarUrlComprovante` acima), e um frete arquivado pode perfeitamente
+  // estar finalizado e sem título. Sem esta linha, ele exibiria "Faturar
+  // frete" e o toque falharia sempre com "Frete não encontrado."
+  // (`faturarServico` recusa arquivado) — um botão que não leva a lugar
+  // nenhum, que é o que `CLAUDE.md` §8 proíbe, numa ação de dinheiro.
+  const podeFaturar =
+    !servico.arquivado_em &&
+    servico.status_operacional === "finalizado" &&
+    servico.situacao_financeira === "a_faturar";
+  const hoje = diaEmFortaleza(new Date());
+  const vencimentoInicial = vencimentoPadrao(
+    hoje,
+    cliente?.prazo_pagamento_dias ?? null,
+    empresa!.prazo_padrao_dias,
+  );
 
   const mensagemOrdem = montarMensagemOrdem({
     empresa: empresa!.nome_fantasia,
@@ -258,6 +287,12 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           <BotaoMarcarFinalizado
             servicoId={id}
             emAndamento={servico.status_operacional === "em_andamento"}
+          />
+          <AcaoFaturarFrete
+            servicoId={id}
+            podeFaturar={podeFaturar}
+            hoje={hoje}
+            vencimentoInicial={vencimentoInicial}
           />
           <Botao variante="secundaria" href={`/fretes/${id}/editar`}>
             Editar frete
