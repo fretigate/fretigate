@@ -6,6 +6,91 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 25/08/2026 — Tarefa 5 do item 5: Upload do comprovante
+
+Pipeline completo em `src/lib/servicos/comprovantes.ts` (`enviarComprovante`):
+tamanho declarado do corpo (rota `src/app/api/fretes/[id]/comprovante/route.ts`,
+antes de ler o arquivo — Server Action não serviria, limite de 1 MB e sem
+acesso ao `Content-Length` cru), sniff por conteúdo (`file-type`), pipeline de
+imagem (`sharp` para JPEG/PNG/WEBP; `libheif-js` direto, em duas etapas, para
+HEIC/HEIF — o binário pré-compilado do `sharp` não decodifica HEIC de iPhone
+de verdade, medido nesta tarefa), redimensiona/recomprime sempre em JPEG,
+remove EXIF, grava com nome aleatório no balde `comprovantes` (Tarefa 4).
+`salvarCaminhoComprovante` (`servicos.ts`) grava o caminho. Rate limit próprio
+(`trava-de-comprovante.ts`, por IP, 20/5min — número aprovado, entrou na
+tabela de `docs/especificacao.md`). Tela: `AnexarComprovante.tsx`, pílula em
+linha entre os campos e o bloco de ações do detalhe do frete.
+
+**HEIC real de iPhone testado de verdade** (pendência do plano, não só
+suposta): o fundador mandou uma foto real (`3024×4032`, "Alta Eficiência").
+Decodificou certo via `libheif-js`, saiu `1200×1600`/153 KB/sem EXIF, e a
+orientação conferida visualmente (a foto em si) saiu correta. A foto não
+entrou no repositório nem ficou salva — apagada depois de conferir, é imagem
+pessoal de terceiro.
+
+**Seis passes do `/revisar`, o maior número desta tarefa até agora.** Todos os
+achados de rigor total (isolamento, dado apagado, teste que engana) vieram nos
+passes 2, 3 e 4 e foram corrigidos até fechar:
+
+- O objeto do comprovante anterior era apagado ao trocar — violava
+  `CLAUDE.md` §7 ("Nada é apagado"). Corrigido: o antigo fica no balde
+  (órfão, registrado na lacuna de 2 GB abaixo).
+- O primeiro teste de "contraste" de isolamento gravava com o papel
+  `postgres` (ignora RLS por atributo, sempre) — não provava nada sobre a
+  checagem de `enviarComprovante`. Removido, com o motivo escrito: esta
+  proteção é a RLS de `servico`, já coberta genericamente pela suíte de
+  isolamento — diferente de `gerarUrlComprovante` (Tarefa 4), que usa
+  `service_role` e por isso TEM contraste próprio.
+- `Content-Length` vazio/negativo/ilegível passava como "dentro do limite" —
+  corrigido para checagem de formato (só dígitos).
+- Frete arquivado com comprovante quebrava a tela inteira do detalhe
+  (`gerarUrlComprovante` lançava, a chamada nova entrou no `Promise.all` do
+  render) — corrigido: não pede URL assinada de frete arquivado.
+- Rate limit contava por usuário — `docs/especificacao.md` exige por
+  endereço de rede. Corrigido, mesmo padrão de `trava-de-redefinicao.ts`.
+- Erro cru do Supabase Storage (escrita e leitura) e de bibliotecas
+  internas (`sharp`, Prisma) podiam vazar para a tela em inglês/jargão —
+  corrigido com lista fechada de mensagens seguras
+  (`MENSAGENS_SEGURAS_DE_COMPROVANTE`) e `gerarUrlComprovante` devolvendo
+  `null` em vez de relançar na leitura.
+
+Os passes 5 e 6 trouxeram só citação imprecisa (linha errada, seção errada,
+contagem de itens desatualizada) — corrigidos no próprio passe, sem abrir
+mais um, conforme `CLAUDE.md` §2 item 7.
+
+**Pedido ao Design** (`docs/componentes.md`, `docs/estilo.md`,
+`docs/planos/item-5-ordem-de-servico.md` — todas as lacunas abaixo já
+registradas nesses arquivos, não só aqui):
+
+- Rótulo da pílula ("Anexar" / "Trocar comprovante") e a lista inteira de
+  textos de aviso do upload — sem confirmação.
+- Altura da miniatura (`h-180`, provisório), se recorta ou mostra a foto
+  inteira, se abre em tamanho cheio ao tocar, e cor/raio da miniatura —
+  tudo reaproveitado do que já existe, nada formalizado.
+
+**Lacunas registradas, não corrigidas — decisão de domínio ou borda rara**:
+trava de 2 GB por empresa ainda não soma uso (`CLAUDE.md` §14, vira tarefa
+antes de ligar anúncio); dois `AvisoDoSistema` simultâneos na mesma tela;
+sessão vencida no meio do envio; frete arquivado ou falha de storage na
+leitura mostram "sem comprovante" mesmo quando existe um (o objeto continua
+no balde, só a tela não indica); se `exigirDono()` deveria valer aqui (hoje é
+`exigirSessao()`, qualquer papel — nenhuma outra escrita do frete é restrita a
+dono, mas a especificação diz "para o dono").
+
+**Achado à parte, sem ação**: `libheif-js` é LGPL-3.0 — primeira dependência
+copyleft do projeto (as demais são MIT/Apache/ISC/BSD). Não há política de
+licença de dependência escrita; uso server-side, sem distribuir o binário,
+risco baixo, mas fica registrado por ser o primeiro caso.
+
+**Verificação: local.** `npm run lint`, `npx tsc --noEmit`, `npm run build`
+verdes. `npm test` local 370/370, contra o Supabase de desenvolvimento de
+verdade — rodou **duas vezes** nesta sessão: a primeira, depois de muitas
+horas de sessão longa (seis passes de `/revisar`), reprovou 48 testes com
+"Connection terminated unexpectedly" em três pontos — mesma classe de
+instabilidade de pool já registrada em 18-19/08/2026, não defeito de código;
+a segunda, imediata, 370/370. Esteira deste commit ainda não disparada — ver
+`/onde-paramos`.
+
 ## 25/08/2026 — Tarefa 4 do item 5: Isolamento do Storage
 
 Balde privado `comprovantes` (migration `20260825060000_balde_comprovantes_storage`,

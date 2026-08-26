@@ -366,6 +366,26 @@ export async function marcarServicoFinalizado(empresaId: string, id: string) {
 }
 
 /**
+ * Grava o caminho do comprovante já reprocessado (item 5, Tarefa 5 —
+ * `docs/planos/item-5-ordem-de-servico.md`) — chamada por
+ * `src/lib/servicos/comprovantes.ts` depois de o pipeline de upload
+ * (tamanho, tipo por conteúdo, redimensionar/recomprimir, gravar no balde)
+ * já ter terminado. Confere posse via `buscarServico`, mesmo padrão de
+ * `marcarOrdemEnviada`/`marcarServicoFinalizado` — este arquivo não sabe
+ * nada de storage nem de imagem, só grava o caminho que já veio pronto.
+ */
+export async function salvarCaminhoComprovante(empresaId: string, id: string, caminho: string) {
+  const servico = await buscarServico(empresaId, id);
+  if (!servico || servico.arquivado_em) throw new Error("Frete não encontrado.");
+
+  return db(empresaId).servico.update({
+    where: { id },
+    data: { comprovante_url: caminho },
+    select: CAMPOS_SERVICO,
+  });
+}
+
+/**
  * Leituras para a tela de lançamento (Tarefa 2) — `docs/especificacao.md`
  * §4.1. Ficam aqui, não em `clientes.ts`/`caminhoes.ts`/`motoristas.ts`,
  * porque a fonte é `Servico`, não a entidade em si.

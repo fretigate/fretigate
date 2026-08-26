@@ -8,6 +8,7 @@ import { buscarCaminhao } from "@/lib/servicos/caminhoes";
 import { buscarMotorista } from "@/lib/servicos/motoristas";
 import { buscarTipoOperacao } from "@/lib/servicos/tipos-de-operacao";
 import { montarMensagemOrdem } from "@/lib/servicos/mensagens";
+import { gerarUrlComprovante } from "@/lib/servicos/comprovantes";
 import { Botao } from "@/components/ui/Botao";
 import { EtiquetaSituacao } from "@/components/ui/EtiquetaSituacao";
 import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
@@ -17,6 +18,7 @@ import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { BotaoArquivarFrete } from "../BotaoArquivarFrete";
 import { AcaoOrdemDeServico } from "./AcaoOrdemDeServico";
 import { BotaoMarcarFinalizado } from "./BotaoMarcarFinalizado";
+import { AnexarComprovante } from "./AnexarComprovante";
 
 /**
  * Detalhe do frete (item 4, Tarefa 3; principal da fatia "em andamento" no
@@ -80,7 +82,7 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
   const servico = await buscarServicoComTitulos(sessao.empresaId, id);
   if (!servico) notFound();
 
-  const [cliente, tipoOperacao, caminhao, motorista, empresa] = await Promise.all([
+  const [cliente, tipoOperacao, caminhao, motorista, empresa, urlComprovante] = await Promise.all([
     buscarCliente(sessao.empresaId, servico.cliente_id),
     buscarTipoOperacao(sessao.empresaId, servico.tipo_operacao_id),
     servico.veiculo_id ? buscarCaminhao(sessao.empresaId, servico.veiculo_id) : null,
@@ -89,6 +91,16 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
       where: { id: sessao.empresaId },
       select: { nome_fantasia: true },
     }),
+    // `gerarUrlComprovante` lança para frete arquivado (mesma mensagem de
+    // "não encontrado" de `buscarServico`) — mas ESTA tela lê frete
+    // arquivado normalmente, sem checagem nenhuma até aqui (§7: "nada é
+    // apagado", o registro continua existindo e sendo lido). Achado do
+    // `/revisar`: chamar direto quebraria a tela inteira num frete
+    // arquivado que já tinha comprovante. `null` para arquivado — o
+    // comprovante anexado antes de arquivar fica sem miniatura nesta
+    // leitura; não é perda de dado (o objeto continua no balde, o caminho
+    // continua no `Servico`), só a exibição que este item não cobre.
+    servico.arquivado_em ? null : gerarUrlComprovante(sessao.empresaId, id),
   ]);
 
   const rota = formatarRota(servico.origem_texto, servico.destino_texto);
@@ -225,6 +237,12 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
             valor={servico.km ? `${servico.km / 1000} km` : null}
             semAdicionarQuandoVazio
           />
+        </div>
+
+        {/* mt-22 — "entre seções verticais: 22–26px" (docs/estilo.md); era
+            mt-18 (fora da faixa), achado do quinto passe do `/revisar`. */}
+        <div className="mt-22">
+          <AnexarComprovante servicoId={id} urlAssinada={urlComprovante} />
         </div>
 
         <div className="mt-26 flex flex-col gap-10">

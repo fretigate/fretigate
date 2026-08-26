@@ -185,6 +185,15 @@ tabela de Cores acima não lista "cartão de resumo" entre os usos de
 teclado numérico). Registrado para o Design decidir, mesma categoria da
 lacuna irmã acima (Caminhões/Motoristas, lista).
 
+**Mesma lacuna, terceiro caso: a miniatura do comprovante** (item 5, Tarefa
+5, 25/08/2026, achado do quinto `/revisar`). `AnexarComprovante.tsx`
+reaproveita `18px` (`rounded-campo`) e `#F0EDE6` (`bg-separacao`) como fundo
+atrás da imagem — mesmo precedente do parágrafo acima (reaproveitar, não
+inventar), mas nem a tabela de Cores nem a de raio listam "miniatura de
+imagem" entre os usos. Junta com a lacuna de altura (`h-180`, seção
+"Alturas fixas" abaixo) na
+mesma resposta do Design — as duas são a mesma peça.
+
 **Sombra** — só existe em um lugar: o aviso do sistema.
 `box-shadow: 0 14px 34px rgba(20,26,23,.30), 0 3px 10px rgba(20,26,23,.16)`.
 Nenhum outro elemento tem sombra.
@@ -235,6 +244,16 @@ valor específico por modelo.
 | Botão secundário | 52px |
 | Botão texto | 44px |
 | Pílula em linha | 38px |
+
+**Lacuna aberta — altura de miniatura de imagem não é um valor formal desta
+folha.** A miniatura do comprovante anexado (`AnexarComprovante.tsx`, item
+5 Tarefa 5) usa `h-180` (180px) — decisão provisória do fundador,
+25/08/2026, achado do `/revisar`: nenhuma linha desta tabela cobre imagem.
+Valor que só existe no código é o que o §8 do `CLAUDE.md` proíbe ("nenhum
+valor fora do sistema"); fica registrado aqui até o Design formalizar,
+junto com as outras duas pendências da mesma peça (recortar ou mostrar a
+foto inteira; abrir em tamanho cheio ao tocar — `docs/planos/
+item-5-ordem-de-servico.md`, "O que precisa chegar ao Design").
 
 **Nota (07/08/2026):** rótulo, apoio, erro e o tratamento de foco/erro do
 Campo de texto estão em `docs/componentes.md`, seção "Rótulo, apoio e erro" —

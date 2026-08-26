@@ -347,12 +347,19 @@ específica do `CLAUDE.md` §4 ("Upload de imagem"):
 1. Rejeita acima de 10 MB **pelo tamanho declarado do corpo**, antes de ler
    o arquivo inteiro para memória.
 2. Sniff por conteúdo (`file-type` sobre os primeiros bytes) — só aceita
-   JPEG, PNG, WEBP, HEIC. Qualquer outra coisa (SVG incluso, mesmo que
-   alguém troque a extensão) é recusada aqui, antes de qualquer
-   decodificação.
-3. Abre com `sharp`, limite de dimensão de entrada configurado na própria
-   instância (`limitInputPixels`) — imagem pequena que expande para
-   gigabytes na decodificação nunca chega a alocar tudo isso.
+   JPEG, PNG, WEBP, HEIC e HEIF (`CLAUDE.md` §4, HEIF acrescentado
+   25/08/2026 — mesmo formato de contêiner que HEIC, rótulo diferente).
+   Qualquer outra coisa (SVG incluso, mesmo que alguém troque a extensão) é
+   recusada aqui, antes de qualquer decodificação.
+3. JPEG/PNG/WEBP abrem com `sharp`, limite de dimensão de entrada
+   configurado na própria instância (`limitInputPixels`). HEIC/HEIF NÃO
+   passam pelo `sharp` para decodificar — o binário pré-compilado não
+   decodifica HEIC de iPhone de verdade (medido, `CLAUDE.md` §4) — vão por
+   `libheif-js` (WASM) em duas etapas, com a mesma checagem de dimensão
+   ANTES de alocar os pixels (ver o comentário de `decodificarHeic`,
+   `src/lib/servicos/comprovantes.ts`). Em ambos os casos: imagem pequena
+   que expande para gigabytes na decodificação nunca chega a alocar tudo
+   isso.
 4. Redimensiona (maior lado em 1600px, mantendo proporção), recodifica em
    JPEG mirando ~300 KB (qualidade inicial fixa; se o resultado passar de
    um teto, reduz a qualidade em um segundo passo — nunca abaixo de um piso
@@ -363,15 +370,16 @@ específica do `CLAUDE.md` §4 ("Upload de imagem"):
    uma URL — a URL assinada é gerada a cada leitura, com expiração curta
    (mesma razão de "caminho não é autorização").
 
-**Risco técnico a validar, não decisão de produto:** suporte a HEIC
-depende de como o `sharp` desta versão foi compilado (leitura de HEIF nem
-sempre vem no binário padrão). **Antes de considerar esta tarefa pronta,
-testar com uma foto HEIC real de iPhone** — é o formato padrão do
-motorista/dono tirando foto no pátio (`CLAUDE.md` §4, "HEIC é
-obrigatório"). Se o suporte não vier de fábrica, decidir o caminho
-alternativo (biblioteca de conversão à parte) é ajuste de implementação
-dentro da tarefa, não retorna ao fundador — a exigência ("aceitar HEIC")
-já está decidida, só a forma de cumprir é técnica.
+**Risco técnico validado (25/08/2026).** Medido, não suposto: o binário
+pré-compilado do `sharp` NÃO decodifica HEIC de iPhone (só AVIF —
+`CLAUDE.md` §4, comentário de `src/lib/servicos/comprovantes.ts`). Caminho
+alternativo, decidido dentro da tarefa (a exigência "aceitar HEIC" já
+estava decidida, só a forma de cumprir era técnica): `libheif-js` (WASM)
+direto, sem passar pelo `sharp` para decodificar. **Testado com uma foto
+HEIC real de iPhone**, fornecida pelo fundador: `3024×4032`, "Alta
+Eficiência", decodificou certo, saiu `1200×1600`/153 KB/sem EXIF, e a
+orientação conferida visualmente saiu correta — a foto não entrou no
+repositório (imagem pessoal de terceiro, apagada depois de conferir).
 
 **Tela — pílula em linha para anexar comprovante** (`docs/componentes.md`
 linha 398 e linha 358, "detalhe do frete: campos → comprovante → ações,
@@ -429,8 +437,23 @@ fundador, "para não interromper o item 5 no meio".
 
 ## O que precisa chegar ao Design
 
-- **Seletor de foto (câmera/galeria) e miniatura do comprovante anexado**
-  — Tarefa 5, sem desenho hoje em `docs/estilo.md`/`componentes.md`.
+- **Miniatura do comprovante anexado** — construída (`AnexarComprovante.tsx`)
+  com o que já existia: `PilulaEmLinha` + `<img>` em `h-180`, `object-cover`
+  (recorta a imagem). Três decisões sem desenho em `docs/estilo.md`/
+  `componentes.md`, achado do `/revisar` na Tarefa 5 (25/08/2026), decisão do
+  fundador ao revisar: **180px é provisório** — não existe altura de imagem
+  na folha de estilo, o valor é do Design; se a miniatura deve **recortar ou
+  mostrar a foto inteira**; se deve **abrir em tamanho cheio** ao tocar. As
+  três resolvem juntas, na mesma resposta do Design. O rótulo da pílula
+  ("Anexar comprovante" / "Trocar comprovante") também não está no
+  inventário (`docs/componentes.md`, tabela "Onde cada tela usa o quê",
+  linha do Detalhe do frete — só diz "pílula em linha para anexar
+  comprovante", sem os dois estados) — mesma pendência. **Os textos de aviso também
+  ficam fora do inventário** — lista completa em `docs/componentes.md`
+  (seção "Aviso do sistema", "Lacuna — textos de aviso do upload de
+  comprovante"), não repetida aqui de propósito: duas listas do mesmo
+  conjunto de textos divergem cedo ou tarde, e a que ninguém confere
+  primeiro é sempre a que envelhece (`CLAUDE.md` §3).
 - **`FolhaDeTelefone`** (Tarefa 1) — mede contra a "Folha do campo que
   falta" já descrita em `docs/componentes.md` §12, mas é a primeira vez que
   o documento sai do papel; qualquer ajuste visual encontrado na construção
@@ -438,6 +461,49 @@ fundador, "para não interromper o item 5 no meio".
 - **Etiqueta de "cancelado"** — pendência já registrada no item 4
   (`docs/especificacao.md` §7), sem mudança aqui; citada só para lembrar
   que continua aberta.
+- **Quatro bordas registradas (quarto e quinto/sexto `/revisar`,
+  25/08/2026), sem correção — não ocorrem no uso normal:**
+  1. O detalhe do frete pode ter até três `AvisoDoSistema` independentes
+     (ordem enviada, marcar finalizado, anexar comprovante), todos na
+     mesma âncora fixa. Se dois aparecerem ao mesmo tempo, hoje eles se
+     sobrepõem — cada um dispara por uma ação distinta da pessoa, então
+     na prática exige tocar duas ações quase juntas. Sem desenho para
+     "dois avisos ao mesmo tempo" em documento nenhum.
+  2. Sessão vencida NO MEIO do envio (não ao abrir a tela) devolve 401,
+     que `AnexarComprovante.tsx` mostra como aviso comum — a pessoa fica
+     na tela, sem ser levada para Entrar. Mesmo comportamento não-escrito
+     das outras ações de servidor desta tela (`AcaoOrdemDeServico`,
+     `BotaoMarcarFinalizado`); não é regressão desta tarefa, mas também
+     nunca foi decidido em documento.
+  3. **Frete arquivado com comprovante** — achado do quinto `/revisar`.
+     `page.tsx` não pede a URL assinada de um frete arquivado (evita o
+     erro de servidor — ver acima), então a miniatura some e a pílula
+     volta a dizer "Anexar comprovante", mesmo já havendo um gravado. A
+     ação, se tocada, sempre recusa com "Frete não encontrado." (mesma
+     regra de posse de qualquer escrita em frete arquivado) — não quebra
+     a tela, só oferece um botão que nunca funciona ali. Sem documento
+     que diga o que o detalhe de um frete arquivado deveria mostrar sobre
+     comprovante.
+  4. **Falha ao assinar a URL do storage — mesmo sintoma do item 3, sem
+     estar arquivado.** Achado do sexto `/revisar`: `gerarUrlComprovante`
+     devolve `null` numa falha do storage (nunca relança — ver acima),
+     e `null` é o MESMO valor de "este frete nunca teve comprovante". Um
+     frete normal, com comprovante de verdade, mostraria "Anexar
+     comprovante" (não "Trocar") durante a falha, e um novo envio nessa
+     janela sobrescreveria `comprovante_url` sem apagar o objeto anterior
+     (§7) — o comprovante antigo fica órfão, não perdido, mas sem
+     nenhuma tela mostrando que ele existia. Sem documento que distinga
+     "sem comprovante" de "comprovante que não carregou desta vez".
+- **"Para o dono salvar a foto" (`docs/especificacao.md` §4.2) é persona,
+  não papel — decidido.** Achado do quinto `/revisar`, respondido pelo
+  fundador ao aprovar a tarefa (25/08/2026): a rota de upload
+  (`src/app/api/fretes/[id]/comprovante/route.ts`) usa `exigirSessao()`
+  (qualquer papel), de propósito — **não** `exigirDono()`. O motorista não
+  usa o produto (`CLAUDE.md` §12), então quem anexa é sempre quem opera —
+  dono ou segundo usuário —, mesma lógica de lançar frete e enviar ordem,
+  nenhum dos quais exige dono. "Para o dono" em `docs/especificacao.md`
+  §4.2 é a persona do produto (o dono da transportadora, em contraste com
+  o motorista), não o papel técnico `Usuario.papel = 'dono'`.
 
 ## Verificação obrigatória, resumida
 
@@ -446,7 +512,8 @@ fundador, "para não interromper o item 5 no meio".
 - Isolamento do Storage: contraste com e sem a checagem de posse (Tarefa
   4) e privilégio de `anon`/`authenticated` (mesmo padrão de
   `tests/isolamento/`).
-- HEIC real de iPhone antes de fechar a Tarefa 5.
+- HEIC real de iPhone antes de fechar a Tarefa 5 — **feito, 25/08/2026**
+  (ver "Risco técnico validado" acima).
 - `npm run lint`, `npx tsc --noEmit`, `npm run build`, `npm test` locais
   verdes a cada tarefa — mesma régua das anteriores. Esteira confirmada via
   `/onde-paramos`, não suposta (`CLAUDE.md` §2, "suíte verde ≠ esteira

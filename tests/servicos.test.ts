@@ -9,6 +9,7 @@ import {
   arquivarServico,
   marcarOrdemEnviada,
   marcarServicoFinalizado,
+  salvarCaminhoComprovante,
   resumoDoCaminhao,
   resumoDoMotorista,
   valoresTotaisPorCliente,
@@ -40,7 +41,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 49;
+const CONFERENCIAS_ESPERADAS = 52;
 
 /** Uma janela de 2 dias em volta de agora — cobre `data_servico: new Date()` de `dadosMinimos`. */
 function periodoAmplo(): Periodo {
@@ -928,6 +929,48 @@ describe("13. marcarServicoFinalizado — item 5, Tarefa 3", () => {
     );
     const aindaEmAndamento = await buscarServico(a.empresaId, servicoDeA.id);
     expect(aindaEmAndamento?.status_operacional).toBe("em_andamento");
+    conferencias++;
+  });
+});
+
+/**
+ * O pipeline inteiro do upload (tamanho, tipo por conteúdo, imagem,
+ * storage) mora em `tests/isolamento/enviar-comprovante.test.ts` — precisa
+ * do balde de verdade e de `SUPABASE_SERVICE_ROLE_KEY`. Aqui mede só a
+ * gravação do caminho no `Servico`, a mesma classe de teste de
+ * `marcarOrdemEnviada`/`marcarServicoFinalizado` acima.
+ */
+describe("14. salvarCaminhoComprovante — item 5, Tarefa 5", () => {
+  it("grava o caminho, nulo antes", async () => {
+    const e = await criarEmpresaDeTeste("s12a");
+    const criado = await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e));
+    expect(criado.comprovante_url).toBeNull();
+
+    const atualizado = await salvarCaminhoComprovante(e.empresaId, criado.id, `${e.empresaId}/x.jpg`);
+    expect(atualizado.comprovante_url).toBe(`${e.empresaId}/x.jpg`);
+    conferencias++;
+  });
+
+  it("trocar comprovante sobrescreve o caminho anterior", async () => {
+    const e = await criarEmpresaDeTeste("s12b");
+    const criado = await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e));
+
+    await salvarCaminhoComprovante(e.empresaId, criado.id, `${e.empresaId}/primeiro.jpg`);
+    const trocado = await salvarCaminhoComprovante(e.empresaId, criado.id, `${e.empresaId}/segundo.jpg`);
+    expect(trocado.comprovante_url).toBe(`${e.empresaId}/segundo.jpg`);
+    conferencias++;
+  });
+
+  it("isolamento — recusa gravar em serviço de outra empresa", async () => {
+    const a = await criarEmpresaDeTeste("s12c");
+    const b = await criarEmpresaDeTeste("s12d");
+    const servicoDeA = await criarServico(a.empresaId, a.usuarioId, dadosMinimos(a));
+
+    await expect(
+      salvarCaminhoComprovante(b.empresaId, servicoDeA.id, `${b.empresaId}/invasor.jpg`),
+    ).rejects.toThrow("Frete não encontrado.");
+    const aindaSemComprovante = await buscarServico(a.empresaId, servicoDeA.id);
+    expect(aindaSemComprovante?.comprovante_url).toBeNull();
     conferencias++;
   });
 });

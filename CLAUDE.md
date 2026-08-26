@@ -547,8 +547,15 @@ O risco não é vírus — é arquivo que o navegador executa.
 
 - **Reprocessar toda imagem no servidor**, gravando de novo em JPEG. Essa é a
   defesa principal: destrói qualquer conteúdo embutido no arquivo original.
-- Aceitar **apenas JPEG, PNG, WEBP e HEIC**. HEIC é obrigatório: é o padrão do
-  iPhone. **Nunca SVG** — é o único formato de imagem que executa script.
+- Aceitar **apenas JPEG, PNG, WEBP, HEIC e HEIF**. HEIC é obrigatório: é o
+  padrão do iPhone. HEIF entrou junto (decisão do fundador, item 5 Tarefa 5,
+  25/08/2026): é o mesmo formato de contêiner, só com outro rótulo — usado por
+  parte dos aparelhos Android — e recusar faria a foto de um Android sair como
+  "formato não suportado" sendo idêntica à do iPhone; o motorista manda o que
+  o aparelho dele produz. Não aumenta risco: a validação é por **conteúdo**,
+  nunca por rótulo (linha abaixo), então aceitar o rótulo HEIF não abre
+  exceção nenhuma na validação. **Nunca SVG** — é o único formato de imagem
+  que executa script.
 - **Validar pelo conteúdo do arquivo**, nunca pela extensão ou pelo tipo
   declarado pelo cliente.
 - Rejeitar acima de **10 MB** e acima de um limite de dimensão **antes de abrir
@@ -1153,6 +1160,23 @@ nenhuma no produto. Quem escrever a primeira ação inline está, por isso,
 **fora da proteção deste mecanismo** — precisa aplicar `comoUsuario`/`comoDono`
 por decisão própria, porque nada vai avisar se esquecer.
 
+**A mesma lacuna existe, de verdade, para rota de API** (não hipotética
+como a de cima — `src/app/api/fretes/[id]/comprovante/route.ts`, item 5
+Tarefa 5, 25/08/2026, achado do `/revisar`). Rota de API nunca tem
+`"use server"`, então nunca é ação de servidor no sentido deste mecanismo —
+`comoUsuario`/`comoDono` são feitos para embrulhar Server Action, e
+`tests/protecao-de-acoes.test.ts` só varre arquivo com essa diretiva. A
+checagem de sessão nessa rota é escrita à mão (`exigirSessao()` direto,
+mesma função — ela só lê `next/headers()`, funciona em qualquer contexto de
+pedido), sem trava automática nenhuma cobrindo se alguém esquecer. Registrado
+porque a Tarefa 5 foi a primeira rota de API do produto que grava estado
+(a de autenticação, `api/auth/[...all]/route.ts`, só repassa para o Better
+Auth) — não corrigido agora: não existe padrão definido para rota de API
+protegida, e inventar um para uma rota só seria abstração sem o segundo caso
+que `CLAUDE.md` §6 pede. Quem escrever a próxima rota de API que grava
+precisa da mesma checagem manual, e revisitar esta nota se um padrão comum
+valer a pena depois da segunda ou terceira rota.
+
 **Extração por IA é isolada em `/src/lib/importacao`.** Trocar de fornecedor tem
 que ser trocar uma peça. O modelo ainda não está decidido (ver §14).
 
@@ -1459,6 +1483,20 @@ Não invente resposta. Pergunte.
   instalado, o erro é sobre módulo não encontrado, não "faltam as
   dependências de desenvolvimento" — fácil de ler como o comando quebrado,
   quando falta só a instalação completa.
+- **PRAZO — trava de 2 GB por empresa no storage (§10) ainda não existe.**
+  Achado do `/revisar` na Tarefa 5 do item 5 (25/08/2026), quando o upload de
+  comprovante (`src/lib/servicos/comprovantes.ts`, `enviarComprovante`)
+  nasceu como o primeiro (e hoje único) escritor de storage do produto. Cada
+  envio confere só o próprio tamanho (10 MB) — nada soma o espaço que a
+  empresa já ocupa contra o teto de 2 GB do §10. **Sem ela**, nada impede uma
+  empresa de ocupar espaço sem limite; o custo de armazenamento extra é do
+  FretiGate, não dela. **Trocar de comprovante acumula objeto órfão** — o
+  antigo fica no balde, sem apagar (§7, "Nada é apagado"; corrigido no
+  segundo passe do `/revisar` da mesma tarefa, que primeiro tentou apagar e
+  achou a contradição), então o espaço cresce a cada troca, não só no
+  primeiro comprovante de cada frete. Decisão do fundador, 25/08/2026: não
+  é urgente com zero clientes pagantes — vira tarefa própria **antes de
+  ligar anúncio**, junto das outras pendências desta lista.
 - **Modelo de IA da importação** — testar a extração com o material real do
   usuário antes de escolher. Decidir por acerto, não por preço: a diferença de
   custo entre os candidatos é inferior a 2% da receita por cliente.

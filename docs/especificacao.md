@@ -540,15 +540,25 @@ que gere custo. Os números, aprovados em 07/08/2026:
 | Redefinir a senha pelo link | **5 por 5 minutos** |
 | Consultar o código em `/redefinir-senha` (carregar a tela) | **20 por minuto** |
 | Criar conta | **5 por 10 minutos** |
+| Enviar comprovante | **20 por 5 minutos** |
 
 A contagem é por endereço de rede e por rota, e fica **no banco** — a
 hospedagem roda várias instâncias, e contagem em memória viraria uma contagem
-por instância. As travas de **Criar conta** e de **consultar o código em
-`/redefinir-senha`** não são rota do Better Auth (são Server Action e Server
-Component, respectivamente — `src/lib/servicos/trava-de-cadastro.ts` e
-`trava-de-redefinicao.ts`), mas usam a mesma tabela `rate_limit` e o mesmo
+por instância. As travas de **Criar conta**, de **consultar o código em
+`/redefinir-senha`** e de **Enviar comprovante** não são rota do Better Auth
+(são Server Action, Server Component e rota de API, respectivamente —
+`src/lib/servicos/trava-de-cadastro.ts`, `trava-de-redefinicao.ts` e
+`trava-de-comprovante.ts`), mas usam a mesma tabela `rate_limit` e o mesmo
 mecanismo atômico; estão aqui, e não só no código, para as listas nunca
 divergirem de novo — já aconteceu três vezes.
+
+**Contar por endereço de rede tem um efeito colateral nomeado, não
+escondido** (decisão do fundador ao aprovar o número de "Enviar
+comprovante", 25/08/2026): numa transportadora pequena, o escritório inteiro
+sai pela mesma rede — duas pessoas anexando comprovante ao mesmo tempo
+dividem a mesma cota. Com **20 por 5 minutos** isso não aperta no uso real;
+fica registrado porque, se esse número um dia baixar, é este o efeito que
+volta a valer a pena medir.
 
 **A consulta do código de `/redefinir-senha` é limite de custo, não de
 adivinhação.** O código tem 24 caracteres aleatórios — não é o que essa trava
@@ -572,6 +582,7 @@ vezes seguidas — a saída certa depende de qual travou:
 | **Entrar** | recuperação de senha — o link "Esqueci a senha" já fica na tela |
 | **Criar conta** | falar com a empresa — quem trava aqui ainda não tem conta, "esqueci a senha" não é saída para quem nunca teve senha |
 | **Mandar link de recuperação · Reenviar confirmação de e-mail · Redefinir a senha pelo link** | nenhuma — esperar **é** a saída. Quem trava aqui já está dentro do próprio caminho de autoatendimento; oferecer "recuperar a senha" a quem já está recuperando a senha não ajuda, só confunde |
+| **Enviar comprovante** | nenhuma — esperar **é** a saída, mesmo raciocínio da linha acima: quem travou aqui já está dentro do próprio fluxo de anexar comprovante. A foto continua na galeria do aparelho — a mensagem precisa dizer isso, não só "espere" |
 
 Sem a saída certa, quem trava conclui que o produto está quebrado e some —
 mesmo desfecho da recuperação que cai em spam. Oferecer a saída errada (ex.:

@@ -128,6 +128,23 @@ Um componente só, usado pelo “Frete salvo” e pelo “Cobrou o Frigorífico 
 
 **Lacuna — texto do aviso de confirmação ao voltar do WhatsApp, gatilho "Enviar ordem".** O único exemplo documentado desta família com pergunta + Enviei/Ainda não é "Cobrou o Frigorífico São Luiz?" (Cobranças, item 6, ainda não construído). "Enviar ordem" (detalhe do frete, Tarefa 2 do item 5, 23/08/2026) é o primeiro uso real construído, e usa "Mandou a ordem pro motorista?" por inferência do mesmo padrão — nomear o destinatário, terminar em interrogação —, sem confirmação escrita para este texto específico. Registrado para o Design confirmar, mesmo padrão da lacuna do rótulo "Salvar no cadastro" (§12).
 
+**Lacuna — textos de aviso do upload de comprovante (item 5, Tarefa 5,
+25/08/2026, achado do quarto `/revisar`).** Nenhum destes tem confirmação
+do Design: "Não deu para enviar agora." (`AnexarComprovante.tsx`, erro
+genérico e falha de storage — `comprovantes.ts`), "O arquivo passa de
+10 MB.", "Envie uma foto em JPEG, PNG, WEBP ou HEIC.", "Envie um arquivo.",
+"Imagem grande demais.", "Não deu para abrir a imagem.", "Frete inválido.",
+"Sessão inválida.", "Frete não encontrado." (chega à tela via
+`gerarUrlComprovante`/`enviarComprovante`, exibida como aviso quando o
+upload falha), e a mensagem de trava, já registrada com o número aprovado
+em `docs/especificacao.md` § "Trava de tentativas". Mesmo padrão da lacuna
+acima ("Enviar ordem") — registrado para o Design confirmar, não bloqueia.
+**Achado do sexto `/revisar`:** "Envie uma foto em JPEG, PNG, WEBP ou
+HEIC." não cita HEIF, embora o tipo já seja aceito (`CLAUDE.md` §4) — fica
+junto desta lacuna, não corrigido agora: o texto certo (enumerar HEIF
+também, ou dizer só "HEIC") é decisão do Design, mesma resposta das
+outras.
+
 **Exceção — "Enviei" que falha ao gravar não some sozinho.** Decisão do
 fundador, Tarefa 2 do item 5 (23/08/2026), achado do primeiro `/revisar`
 desta tarefa: `ordem_enviada_em` é o dado que a pendência "fretes sem ordem
