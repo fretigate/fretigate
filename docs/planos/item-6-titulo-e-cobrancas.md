@@ -336,6 +336,65 @@ Substitui a provisória de `src/app/(app)/cobrancas/page.tsx`.
   no item 7**, e fica registrado no diário como pedido ao Design.
 - Total contextual que recalcula com os filtros (§4.5).
 
+**Decisões do fundador, 26/08/2026, ao planejar esta tarefa.** As quatro
+primeiras confirmam a recomendação apresentada; a quinta responde uma pergunta
+que o chip "Recebidas" criou.
+
+1. **O filtro de Período conta pelo vencimento** — é a data que a tela inteira
+   já usa para agrupar.
+
+2. **A tela abre sem filtro de período** (a situação abre em "Em aberto"). Não
+   é preferência de layout, e o motivo fica escrito porque já valeu uma vez:
+   **é o mesmo da lista de fretes** (item 4, Tarefa 2) — abrir no mês esconde
+   justamente o que mais importa. Lá o que sumia era o frete recém-lançado;
+   **aqui é pior**, porque a cobrança vencida em junho é exatamente a que
+   precisa aparecer, e um padrão "este mês" a esconderia em agosto. O protótipo
+   abre em "Este mês" (`referencia/.../TelaCobrancas.dc.html`, `periodo: 'Este
+   mês'`) — evidência corroborante, nunca autoridade (`CLAUDE.md` §13).
+
+3. **Entra o chip "Recebidas", com um quarto grupo "Recebidas em <mês>"**, que
+   só aparece quando essa situação está escolhida. `docs/especificacao.md` §4.5
+   nomeia três grupos; o quarto vem do protótipo e da necessidade: sem ele, o
+   número "Recebido no mês" do topo não leva a lugar nenhum, e todo título
+   criado por "Já recebi" (item 3) não aparece em Cobranças em canto nenhum.
+
+4. **Dentro de "Recebidas", o período conta pela data do recebimento
+   (`data_pagamento`), não pelo vencimento — e o motivo fica escrito aqui
+   porque sem ele isso parece inconsistência.** Título criado por
+   `criarTituloJaRecebi` nasce `pago` **sem vencimento nenhum**: o campo é
+   nulo. Contar por vencimento dentro de "Recebidas" faria esses títulos
+   sumirem dos dois lados — não caem em Vencidas/Vence hoje/A vencer (não têm
+   vencimento) e também não passariam pelo filtro de período. A exceção existe
+   para o número do topo e a lista dizerem a mesma coisa, não por conveniência.
+
+5. **A linha só vira tocável na Tarefa 4**, quando o detalhe da cobrança
+   existir. Linha que não leva a lugar nenhum é o que `CLAUDE.md` §8 proíbe, e
+   adiantar meio detalhe aqui quebraria "uma tarefa por vez".
+
+**Título parcialmente recebido: a LINHA fica na Tarefa 3, o NÚMERO não pode
+esperar.** Pergunta do fundador ao aprovar: um título parcial está em aberto e
+tem dinheiro dentro — aparece nos dois grupos ou só em aberto? A inclinação
+dele, **só em aberto** (ainda é cobrança pendente), fica registrada como a
+direção, mas a decisão da linha pertence à **Tarefa 3**: hoje esse estado é
+**inalcançável** — o único caminho que preenche `valor_recebido` é
+`criarTituloJaRecebi`, que preenche o valor inteiro e marca `pago`
+(`CLAUDE.md` §2, item 7, terceira categoria).
+
+O que não pode esperar é **a soma dos três números do topo**, porque o código
+que soma se escreve nesta tarefa e ficaria errado no dia da Tarefa 3 **sem nada
+avisar** — a mesma classe de problema do `CLAUDE.md` §2 ("texto que está certo
+só por coincidência de estado envelhece calado"), aqui em código e em dinheiro.
+A regra é a inclinação acima aplicada ao número: **"A receber" e "Vencido"
+somam o SALDO** (valor menos o que já entrou) e **o pedaço já recebido entra em
+"Recebido no mês"** — nada contado duas vezes, nada sumindo. Hoje o resultado é
+idêntico ao de somar o valor cheio (todo título aberto tem `valor_recebido`
+nulo), então isto não muda número nenhum visível agora; muda no dia em que o
+parcial existir. Em lote, sem consulta por linha: soma dos valores menos soma
+do já recebido, duas agregações, nunca uma por título. **O teste desta tarefa
+mede o parcial mesmo sem caminho na interface**, semeando o título direto no
+banco (`/tests` fala com o banco de verdade) — senão a regra fica escrita e não
+medida.
+
 ### Tarefa 3 — Folha de recebimento e recebimento parcial
 
 **Migration:** tabela `recebimento` (decisão 6), com `ENABLE` + `FORCE ROW
