@@ -1005,9 +1005,9 @@ sobra para qualquer outro uso. Decisão do fundador, 25/08/2026.
 
 ### TituloReceber
 **Entidade própria, não campo no serviço.**
-`servico_id` · `cliente_id` · `valor` · `valor_recebido` · `vencimento` ·
+`servico_id` · `cliente_id` · `valor` · `vencimento` ·
 `forma_pagamento_prevista` (`boleto` | `outro`) · `status` (`aberto` | `pago` |
-`cancelado`) · `data_pagamento` · `forma_pagamento` · `relatorio_id` · `integral`
+`cancelado`) · `relatorio_id` · `integral`
 
 `integral` diz se **este título cobre o valor inteiro do frete**, em oposição
 a uma fração dele — adiantamento ou saldo. Um frete tem no máximo um título
@@ -1015,6 +1015,30 @@ integral; pode ter qualquer número de títulos não integrais. O campo descreve
 o título, não como ele nasceu: "Já recebi" sempre cria um título integral,
 mas qualquer outro caminho que também cubra o frete inteiro (sem passar por
 adiantamento) é igualmente integral.
+
+**O que entrou de fato não mora aqui** — ver `Recebimento`, abaixo (item 6,
+Tarefa 3). Até essa tarefa, três campos escalares (`valor_recebido` ·
+`data_pagamento` · `forma_pagamento`) guardavam o recebimento direto nesta
+entidade; saíram porque um título pode ser recebido em mais de uma vez
+(adiantamento + saldo, ou dois parciais), e um campo único sobrescreveria o
+recebimento anterior sem nada avisar (`CLAUDE.md` §9).
+
+### Recebimento
+Um recebimento de verdade — item 6, Tarefa 3. Entidade própria, não campo em
+`TituloReceber`: cada recebimento é um fato que aconteceu numa data, com uma
+forma, e um título pode acumular vários.
+`titulo_id` · `valor` · `data` · `forma` · `usuario_id`
+
+`forma` é texto livre, sem inventário fechado no banco — a lista fechada
+(Pix · Dinheiro · Transferência · Boleto · Outro) é da interface. Nasce nulo
+em "Já recebi", que não pergunta isso.
+
+A soma dos recebimentos de um título nunca passa do valor dele — garantido
+pelo banco (função `registrar_recebimento`), não por checagem em código.
+
+`data` nunca é futura — recebimento é registro de um fato que já aconteceu,
+nunca uma data que ainda vai chegar. Diferente de `TituloReceber.vencimento`,
+que pode ser passado ou futuro de propósito.
 
 ### CobrancaEnviada
 Histórico. Sem isso, dois usuários cobram o mesmo cliente na mesma semana.
@@ -1073,9 +1097,9 @@ ser alcançado):
 
 1. Nenhum título ativo → **A faturar**.
 2. Todos os títulos ativos pagos (e existe ao menos um) → **Quitado**.
-3. Algum dinheiro já entrou — existe título ativo **pago** ou com
-   recebimento parcial registrado (`valor_recebido > 0`) — e ainda falta
-   pagar algo → **Parcial**. Cobre tanto o recebimento parcial de um único
+3. Algum dinheiro já entrou — existe título ativo **pago** ou com algum
+   `Recebimento` registrado contra ele — e ainda falta pagar algo →
+   **Parcial**. Cobre tanto o recebimento parcial de um único
    título quanto o frete com mais de um título (ex.: adiantamento pago +
    saldo em aberto) — dizer "Faturado" quando dinheiro já entrou esconderia
    exatamente o que a situação existe para mostrar.
@@ -1111,6 +1135,22 @@ financeira acima (que deriva de `TituloReceber.status`) — um frete pode estar
 cancelado e ainda ter título associado; a situação financeira dele continua
 calculada normalmente pelas quatro regras acima, só as somas por período é
 que excluem o frete.
+
+**Frete arquivado com título ainda em aberto não conta em "A receber" nem em
+"Vencido" (tela de Cobranças, item 6, Tarefa 3)** — decisão do fundador,
+26/08/2026, achado do terceiro `/revisar`: `arquivarServico` não trava nem
+toca o título, então um frete arquivado depois de faturado continuava
+contando dinheiro em aberto numa tela que existe para responder "quanto há a
+receber", e continuava oferecendo a ação de registrar recebimento contra ele.
+Palavras do fundador: "não é botão inconveniente, é número errado."
+`resumoDeCobrancas`/`listarCobrancas` (`src/lib/servicos/cobrancas.ts`)
+excluem pelo `servico_id` do título.
+
+**Não se estende a "Recebidas" nem a "Recebido no mês"** — dinheiro que já
+entrou continua tendo entrado, mesmo que o frete seja arquivado depois
+(`CLAUDE.md` §7, nada é apagado). É a mesma distinção do parágrafo acima
+("sai das somas, não das telas/histórico"), aplicada ao lado já recebido em
+vez de ao lado cancelado.
 
 ### Como um serviço vira título
 1. **Automático:** ao gerar relatório com a marcação de cobrança ativa.

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AvisoDoSistema } from "@/components/ui/AvisoDoSistema";
 import { Botao } from "@/components/ui/Botao";
 import { CampoBusca } from "@/components/ui/CampoBusca";
 import { ChipFiltro } from "@/components/ui/ChipFiltro";
@@ -9,12 +10,14 @@ import { EstadoVazio } from "@/components/ui/EstadoVazio";
 import { rotuloSituacao } from "@/components/ui/EtiquetaSituacao";
 import { FolhaDeBusca, type ItemFolhaDeBusca } from "@/components/ui/FolhaDeBusca";
 import { FolhaDePeriodo, type JanelaEscolhida } from "@/components/ui/FolhaDePeriodo";
+import { FolhaDeRecebimento } from "@/components/ui/FolhaDeRecebimento";
 import { FolhaDeSituacao } from "@/components/ui/FolhaDeSituacao";
 import { LinhaDeLista } from "@/components/ui/LinhaDeLista";
 import { deslocarDias } from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { normalizarParaBusca } from "@/lib/utils/texto";
-import type { SituacaoFinanceira } from "@/lib/servicos/titulos";
+import type { SituacaoFinanceira, TituloAbertoResumo } from "@/lib/servicos/titulos";
+import { registrarRecebimentoAction } from "./acoes";
 
 /**
  * "Meus fretes" (item 4, Tarefa 2) — `docs/componentes.md` linha 360 e o
@@ -32,6 +35,12 @@ export type FreteParaLista = {
   rota: string | null;
   valorCentavos: number;
   situacao: SituacaoFinanceira;
+  /**
+   * Presente quando existe título aberto (faturado ou parcial) — item 6,
+   * Tarefa 3. É o que faz "deslizar → folha de recebimento" aparecer só
+   * onde faz sentido (nunca em "A faturar" ou "Quitado").
+   */
+  tituloAberto: TituloAbertoResumo | null;
   /** `status_operacional === "cancelado"` — nunca entra na soma/contagem do total (`docs/especificacao.md` §7). */
   cancelado: boolean;
   /** "AAAA-MM-DD" em Fortaleza — para agrupar por dia. */
@@ -122,6 +131,10 @@ export function ListaFretes({
     situacaoInicial,
   );
   const [folhaAberta, setFolhaAberta] = useState<"periodo" | "cliente" | "situacao" | null>(null);
+  // Deslizar → folha de recebimento (item 6, Tarefa 3) — separado de
+  // `folhaAberta` porque guarda QUAL título recebe, não só um nome de tela.
+  const [recebendo, setRecebendo] = useState<TituloAbertoResumo | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const clientesUnicos = useMemo<ItemFolhaDeBusca[]>(() => {
     const mapa = new Map<string, string>();
@@ -287,6 +300,11 @@ export function ListaFretes({
                     apoio={frete.rota ?? undefined}
                     valorCentavos={frete.valorCentavos}
                     situacao={frete.situacao}
+                    aoDeslizar={
+                      frete.tituloAberto
+                        ? { rotulo: "Marcar recebido", onRevelar: () => setRecebendo(frete.tituloAberto) }
+                        : undefined
+                    }
                   />
                 ))}
               </div>
@@ -327,6 +345,37 @@ export function ListaFretes({
           onFechar={() => setFolhaAberta(null)}
         />
       ) : null}
+
+      {recebendo ? (
+        <FolhaDeRecebimento
+          hoje={hoje}
+          saldoCentavos={recebendo.saldoCentavos}
+          onFechar={() => setRecebendo(null)}
+          onConfirmar={async ({ valorCentavos, data, forma }) => {
+            try {
+              const resultado = await registrarRecebimentoAction({
+                tituloId: recebendo.id,
+                valorCentavos,
+                data,
+                forma,
+              });
+              if (!resultado.ok) return resultado;
+              setRecebendo(null);
+              setAviso(
+                valorCentavos < recebendo.saldoCentavos
+                  ? "Recebimento parcial registrado"
+                  : "Recebimento registrado",
+              );
+              router.refresh();
+              return { ok: true as const };
+            } catch {
+              return { ok: false as const, erro: "Não deu para salvar agora." };
+            }
+          }}
+        />
+      ) : null}
+
+      {aviso ? <AvisoDoSistema mensagem={aviso} onSumir={() => setAviso(null)} /> : null}
     </div>
   );
 }

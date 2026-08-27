@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { DeslizarParaRevelar } from "./DeslizarParaRevelar";
 import { EtiquetaSituacao } from "./EtiquetaSituacao";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import type { SituacaoFinanceira } from "@/lib/servicos/titulos";
@@ -63,6 +64,14 @@ type PropsBase = {
    * uma cópia dele (`CLAUDE.md` §8).
    */
   marca?: ReactNode;
+  /**
+   * Deslizar revela "Marcar recebido" (item 6, Tarefa 3 —
+   * `docs/componentes.md`: Meus fretes e Cobranças). Independente de
+   * `href`/`onClick`: a linha continua navegando ou selecionando
+   * normalmente no toque; o painel só aparece arrastando para a esquerda
+   * (`DeslizarParaRevelar`).
+   */
+  aoDeslizar?: { rotulo: string; onRevelar: () => void };
 };
 
 type PropsLink = PropsBase & { href: string; onClick?: undefined };
@@ -71,7 +80,8 @@ type PropsBotao = PropsBase & { href?: undefined; onClick: () => void };
  * Nem link nem botão — a linha de Cobranças até a Tarefa 4, quando o detalhe
  * da cobrança passa a existir. Linha que não leva a lugar nenhum é o que
  * `CLAUDE.md` §8 proíbe; uma linha que **não se anuncia tocável** é só um
- * cartão de leitura, e é isso que ela é hoje.
+ * cartão de leitura, e é isso que ela é hoje — **exceto pelo painel de
+ * `aoDeslizar`**, que continua levando a algum lugar mesmo sem `href`.
  */
 type PropsEstatica = PropsBase & { href?: undefined; onClick?: undefined };
 
@@ -135,7 +145,7 @@ function Conteudo(props: PropsBase): ReactNode {
   return <ConteudoClassico {...props} />;
 }
 
-export function LinhaDeLista(props: Props): ReactNode {
+function linha(props: Props): ReactNode {
   if (props.href !== undefined) {
     return (
       <Link href={props.href} className={CLASSE}>
@@ -158,5 +168,15 @@ export function LinhaDeLista(props: Props): ReactNode {
     <div className={CLASSE.replace(" active:bg-principal-desabilitado", "")}>
       <Conteudo {...props} />
     </div>
+  );
+}
+
+export function LinhaDeLista(props: Props): ReactNode {
+  if (!props.aoDeslizar) return linha(props);
+
+  return (
+    <DeslizarParaRevelar rotulo={props.aoDeslizar.rotulo} onRevelar={props.aoDeslizar.onRevelar}>
+      {linha(props)}
+    </DeslizarParaRevelar>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Botao } from "./Botao";
+import { CampoTocavel } from "./CampoTocavel";
 import { ChipEscolha } from "./ChipEscolha";
 import { FolhaInferior } from "./FolhaInferior";
 import { FolhaDeCalendario } from "./FolhaDeCalendario";
@@ -116,13 +117,9 @@ export function FolhaDeFaturamento({ hoje, vencimentoInicial, onFaturar, onFecha
         <span className="px-4 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
           Vencimento
         </span>
-        <button
-          type="button"
-          onClick={() => setCalendarioAberto(true)}
-          className="flex min-h-64 items-center rounded-campo bg-separacao px-16 text-nome-recolhida font-semibold text-tinta"
-        >
+        <CampoTocavel onClick={() => setCalendarioAberto(true)}>
           {formatarDiaDaSemanaDataEAno(vencimento)}
-        </button>
+        </CampoTocavel>
       </div>
 
       <div className="flex flex-col gap-6">

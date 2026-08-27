@@ -17,7 +17,7 @@ let conferencias = 0;
 const CONFERENCIAS_ESPERADAS = 11;
 
 function titulo(parcial: Partial<TituloParaSituacao>): TituloParaSituacao {
-  return { status: "aberto", valor_recebido: null, arquivado_em: null, ...parcial };
+  return { status: "aberto", totalRecebido: 0, arquivado_em: null, ...parcial };
 }
 
 describe("os quatro estados são todos alcançáveis", () => {
@@ -27,7 +27,7 @@ describe("os quatro estados são todos alcançáveis", () => {
   });
 
   it("um título pago → quitado", () => {
-    expect(situacaoFinanceira([titulo({ status: "pago", valor_recebido: 1000 })])).toBe(
+    expect(situacaoFinanceira([titulo({ status: "pago", totalRecebido: 1000 })])).toBe(
       "quitado",
     );
     conferencias++;
@@ -36,15 +36,15 @@ describe("os quatro estados são todos alcançáveis", () => {
   it("dois títulos, os dois pagos → quitado", () => {
     expect(
       situacaoFinanceira([
-        titulo({ status: "pago", valor_recebido: 500 }),
-        titulo({ status: "pago", valor_recebido: 500 }),
+        titulo({ status: "pago", totalRecebido: 500 }),
+        titulo({ status: "pago", totalRecebido: 500 }),
       ]),
     ).toBe("quitado");
     conferencias++;
   });
 
-  it("recebimento parcial num único título (aberto, com valor_recebido > 0) → parcial", () => {
-    expect(situacaoFinanceira([titulo({ status: "aberto", valor_recebido: 300 })])).toBe(
+  it("recebimento parcial num único título (aberto, com totalRecebido > 0) → parcial", () => {
+    expect(situacaoFinanceira([titulo({ status: "aberto", totalRecebido: 300 })])).toBe(
       "parcial",
     );
     conferencias++;
@@ -56,22 +56,22 @@ describe("os quatro estados são todos alcançáveis", () => {
     // um aberto que soma "algum dinheiro entrou, ainda falta pagar".
     expect(
       situacaoFinanceira([
-        titulo({ status: "pago", valor_recebido: 500 }),
-        titulo({ status: "aberto", valor_recebido: null }),
+        titulo({ status: "pago", totalRecebido: 500 }),
+        titulo({ status: "aberto", totalRecebido: 0 }),
       ]),
     ).toBe("parcial");
     conferencias++;
   });
 
   it("título aberto sem nada recebido → faturado", () => {
-    expect(situacaoFinanceira([titulo({ status: "aberto", valor_recebido: null })])).toBe(
+    expect(situacaoFinanceira([titulo({ status: "aberto", totalRecebido: 0 })])).toBe(
       "faturado",
     );
     conferencias++;
   });
 
-  it("título aberto com valor_recebido zero → faturado (zero não é dinheiro que entrou)", () => {
-    expect(situacaoFinanceira([titulo({ status: "aberto", valor_recebido: 0 })])).toBe(
+  it("título aberto com totalRecebido zero → faturado (zero não é dinheiro que entrou)", () => {
+    expect(situacaoFinanceira([titulo({ status: "aberto", totalRecebido: 0 })])).toBe(
       "faturado",
     );
     conferencias++;
@@ -80,7 +80,7 @@ describe("os quatro estados são todos alcançáveis", () => {
 
 describe("título cancelado conta como se não existisse", () => {
   it("um título cancelado, sozinho → a_faturar (mesmo raciocínio de arquivado)", () => {
-    expect(situacaoFinanceira([titulo({ status: "cancelado", valor_recebido: 1000 })])).toBe(
+    expect(situacaoFinanceira([titulo({ status: "cancelado", totalRecebido: 1000 })])).toBe(
       "a_faturar",
     );
     conferencias++;
@@ -90,7 +90,7 @@ describe("título cancelado conta como se não existisse", () => {
     expect(
       situacaoFinanceira([
         titulo({ status: "cancelado" }),
-        titulo({ status: "cancelado", valor_recebido: 500 }),
+        titulo({ status: "cancelado", totalRecebido: 500 }),
       ]),
     ).toBe("a_faturar");
     conferencias++;
@@ -99,8 +99,8 @@ describe("título cancelado conta como se não existisse", () => {
   it("um cancelado + um pago → quitado (o cancelado não pesa em nada)", () => {
     expect(
       situacaoFinanceira([
-        titulo({ status: "cancelado", valor_recebido: 1000 }),
-        titulo({ status: "pago", valor_recebido: 500 }),
+        titulo({ status: "cancelado", totalRecebido: 1000 }),
+        titulo({ status: "pago", totalRecebido: 500 }),
       ]),
     ).toBe("quitado");
     conferencias++;
@@ -111,7 +111,7 @@ describe("título arquivado também não conta — mesma regra de título ativo"
   it("um título pago, porém arquivado, sozinho → a_faturar", () => {
     expect(
       situacaoFinanceira([
-        titulo({ status: "pago", valor_recebido: 1000, arquivado_em: new Date() }),
+        titulo({ status: "pago", totalRecebido: 1000, arquivado_em: new Date() }),
       ]),
     ).toBe("a_faturar");
     conferencias++;

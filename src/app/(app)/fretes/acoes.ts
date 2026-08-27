@@ -19,6 +19,7 @@ import {
   criarTituloJaRecebi,
   editarServicoComProtecaoDeTitulo,
   faturarServico,
+  registrarRecebimento,
 } from "@/lib/servicos/titulos";
 import { buscarMunicipios, type Municipio } from "@/lib/servicos/municipios";
 import { nomeCaminhao, TIPOS_VEICULO } from "@/lib/utils/caminhao";
@@ -342,7 +343,7 @@ export const criarTituloJaRecebiAction = comoUsuario(async (
   if (!validado.success) return { ok: false, erro: "Não deu para salvar agora." };
 
   try {
-    await criarTituloJaRecebi(sessao.empresaId, validado.data.servicoId);
+    await criarTituloJaRecebi(sessao.empresaId, sessao.usuarioId, validado.data.servicoId);
     return { ok: true };
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };
@@ -441,5 +442,43 @@ export const faturarServicoAction = comoUsuario(async (
     return { ok: true };
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };
+  }
+});
+
+const schemaRegistrarRecebimento = z.object({
+  tituloId: z.string().uuid(),
+  valorCentavos: z.number().int().positive(),
+  // "AAAA-MM-DD" de Fortaleza, mesmo motivo de `schemaFaturar.vencimento`.
+  data: z.string().regex(REGEX_DIA),
+  // Texto livre — a lista fechada (Pix · Dinheiro · Transferência · Boleto ·
+  // Outro) é da interface (`FolhaDeRecebimento`), não do banco
+  // (`docs/planos/item-6-titulo-e-cobrancas.md`, decisão 5): "Outro" grava o
+  // que a pessoa escreveu, não a palavra "Outro".
+  forma: z.string().trim().min(1).max(60),
+});
+
+/**
+ * "Confirmar recebimento" (item 6, Tarefa 3) — a folha de recebimento e a
+ * secundária "Marcar recebido" no detalhe do frete. `registrarRecebimento`
+ * (`src/lib/servicos/titulos.ts`) confere posse do título e recusa valor
+ * maior que o saldo, sob concorrência real (função de banco
+ * `registrar_recebimento`).
+ */
+export const registrarRecebimentoAction = comoUsuario(async (
+  sessao,
+  entrada: { tituloId: string; valorCentavos: number; data: string; forma: string },
+): Promise<ResultadoSimples> => {
+  const validado = schemaRegistrarRecebimento.safeParse(entrada);
+  if (!validado.success) return { ok: false, erro: "Não deu para registrar agora." };
+
+  try {
+    await registrarRecebimento(sessao.empresaId, sessao.usuarioId, validado.data.tituloId, {
+      valor: validado.data.valorCentavos,
+      data: instanteDoDiaEmFortaleza(validado.data.data),
+      forma: validado.data.forma,
+    });
+    return { ok: true };
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para registrar agora." };
   }
 });

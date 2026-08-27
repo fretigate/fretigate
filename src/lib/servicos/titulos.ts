@@ -1,4 +1,5 @@
-import { db } from "@/lib/db";
+import { uuidv7 } from "uuidv7";
+import { db, registrarRecebimentoAtomico } from "@/lib/db";
 import { Prisma, type FormaPagamentoPrevista } from "@/lib/generated/prisma/client";
 import {
   buscarServico,
@@ -10,6 +11,7 @@ import {
   type Periodo,
 } from "@/lib/servicos/servicos";
 import { deslocarDias } from "@/lib/utils/data-fortaleza";
+import { formatarCentavos } from "@/lib/utils/dinheiro";
 
 /**
  * TituloReceber: criar (via "Já recebi") e buscar por serviço — tudo por
@@ -29,12 +31,9 @@ const CAMPOS = {
   servico_id: true,
   cliente_id: true,
   valor: true,
-  valor_recebido: true,
   vencimento: true,
   forma_pagamento_prevista: true,
   status: true,
-  data_pagamento: true,
-  forma_pagamento: true,
   relatorio_id: true,
   integral: true,
   criado_em: true,
@@ -85,13 +84,25 @@ function ehTituloIntegralDuplicado(erro: unknown): boolean {
  * terminar — é o banco, não este `if`, que recusa o segundo, e
  * `ehTituloIntegralDuplicado` traduz esse erro para a mesma mensagem.
  *
- * `data_pagamento` é o instante do toque (`new Date()`), não um dia
- * escolhido em calendário — não passa por `instanteDoDiaEmFortaleza`, que é
- * só para "AAAA-MM-DD" digitado. `vencimento`, `forma_pagamento_prevista`,
- * `forma_pagamento` e `relatorio_id` ficam nulos: ninguém pergunta isso
- * nesta tela.
+ * **O recebimento nasce junto do título, no mesmo `create` aninhado** (item
+ * 6, Tarefa 3 — `docs/planos/item-6-titulo-e-cobrancas.md`, decisão 6): não
+ * existe mais campo `valor_recebido` em `TituloReceber` para gravar direto.
+ * `data` é o instante do toque (`new Date()`), não um dia escolhido em
+ * calendário — não passa por `instanteDoDiaEmFortaleza`, que é só para
+ * "AAAA-MM-DD" digitado. `vencimento`, `forma_pagamento_prevista` e
+ * `relatorio_id` do título, e `forma` do recebimento, ficam nulos: ninguém
+ * pergunta isso nesta tela. `usuarioId` vem sempre da sessão, nunca de
+ * input — mesma razão de `Servico.criado_por_usuario_id`.
+ *
+ * **Um único `create` aninhado, não duas gravações separadas** — o Prisma
+ * garante que a criação do título e a do recebimento são atômicas (as duas
+ * ou nenhuma), sem precisar de `emTransacao` explícito para este caso: ao
+ * contrário de `registrarRecebimento` (abaixo), aqui não existe agregado
+ * concorrente para proteger — o título acabou de nascer, com zero
+ * recebimentos, e o índice único parcial já impede um segundo "Já recebi"
+ * simultâneo.
  */
-export async function criarTituloJaRecebi(empresaId: string, servicoId: string) {
+export async function criarTituloJaRecebi(empresaId: string, usuarioId: string, servicoId: string) {
   const servico = await buscarServico(empresaId, servicoId);
   if (!servico || servico.arquivado_em) throw new Error("Selecione um frete válido.");
 
@@ -104,11 +115,18 @@ export async function criarTituloJaRecebi(empresaId: string, servicoId: string) 
         servico_id: servico.id,
         cliente_id: servico.cliente_id,
         valor: servico.valor,
-        valor_recebido: servico.valor,
         status: "pago",
         integral: true,
-        data_pagamento: new Date(),
         empresa_id: empresaId,
+        recebimentos: {
+          create: {
+            id: uuidv7(),
+            valor: servico.valor,
+            data: new Date(),
+            usuario_id: usuarioId,
+            empresa_id: empresaId,
+          },
+        },
       },
       select: CAMPOS,
     });
@@ -233,6 +251,171 @@ export async function faturarServico(
 }
 
 /**
+ * Soma dos recebimentos ativos de um título, um só ou vários — em lote,
+ * nunca uma consulta por título (`comSituacaoEmLote`, abaixo, é quem chama
+ * com vários de uma vez; `registrarRecebimento` chama com um só;
+ * `src/lib/servicos/cobrancas.ts` chama com a página inteira da lista).
+ */
+export async function totalRecebidoPorTitulo(
+  empresaId: string,
+  tituloIds: string[],
+): Promise<Map<string, number>> {
+  if (tituloIds.length === 0) return new Map();
+  const somas = await db(empresaId).recebimento.groupBy({
+    by: ["titulo_id"],
+    where: { titulo_id: { in: tituloIds }, arquivado_em: null },
+    _sum: { valor: true },
+  });
+  return new Map(somas.map((s) => [s.titulo_id, s._sum.valor ?? 0]));
+}
+
+/**
+ * Um título pela própria id, escopado por empresa — a conferência de FK que
+ * `registrarRecebimento` (abaixo) precisa fazer antes de chamar a função de
+ * banco (`CLAUDE.md` §3: o Postgres não aplica RLS na checagem de FK). Devolve
+ * `null` para título de outra empresa, do mesmo jeito que `buscarServico`.
+ */
+export function buscarTituloReceber(empresaId: string, tituloId: string) {
+  return db(empresaId).tituloReceber.findUnique({ where: { id: tituloId }, select: CAMPOS });
+}
+
+/**
+ * "Confirmar recebimento" (item 6, Tarefa 3 — folha de recebimento e a
+ * secundária "Marcar recebido" no detalhe do frete): grava um `Recebimento`
+ * e ajusta `TituloReceber.status`, atomicamente.
+ *
+ * **Duas camadas, mesmo desenho de `criarTituloJaRecebi`/`faturarServico`.**
+ * As três checagens amigáveis abaixo (título existe e é desta empresa, está
+ * `aberto`, valor cabe no saldo) dão a mensagem certa no caso comum, sem
+ * round-trip extra ao banco. Quem garante de verdade, inclusive sob
+ * concorrência real (dois toques simultâneos em "Confirmar recebimento", ou
+ * o mesmo em duas abas), é `registrar_recebimento` — a função de banco que
+ * `registrarRecebimentoAtomico` (`src/lib/db/index.ts`) chama: ela trava a
+ * linha do título (`FOR UPDATE`) pela duração da transação, então nenhum
+ * recebimento concorrente para o MESMO título consegue somar além do valor
+ * dele. `titulos.ts` não sabe SQL (`CLAUDE.md` §3) — só chama a função
+ * exportada de `lib/db`.
+ *
+ * **Por que não é o mesmo padrão de `editarServicoComProtecaoDeTitulo`
+ * (condição embutida no `WHERE` de um `UPDATE`).** Aquele padrão resolve uma
+ * comparação simples na PRÓPRIA linha sendo gravada. Aqui a condição é um
+ * agregado sobre OUTRA tabela (soma dos recebimentos existentes), que
+ * precisa ser lido e comparado sob uma trava explícita — e trava explícita
+ * só faz sentido dentro de uma função de banco, não de uma consulta do
+ * Prisma.
+ *
+ * **A falha atômica é traduzida pela mensagem que a função de banco devolve,
+ * não presumida.** Achado do `/revisar`: uma primeira versão desta função
+ * convertia QUALQUER exceção daqui em "Valor maior que o saldo em aberto" —
+ * uma falha de rede, de pool ou de sessão do banco viraria essa mensagem
+ * específica, exatamente o defeito que `CLAUDE.md` §2 registra (12/08/2026):
+ * rotular com uma causa um sinal que pode ter mais de uma é pior que a
+ * mensagem genérica que a correção queria melhorar. `registrar_recebimento`
+ * lança `saldo_insuficiente` ou `titulo_invalido` como texto exato da
+ * exceção (medido: o erro do Prisma para `$executeRaw` inclui esse texto em
+ * `.message`, nunca só o código) — só esses dois casos viram mensagem de
+ * produto; qualquer outro erro sobe como está, sem fingir saber a causa.
+ *
+ * **`titulo_invalido` vira "já foi recebida ou cancelada", não "não
+ * encontrada"** — segundo achado do `/revisar`. A função de banco levanta
+ * `titulo_invalido` para três estados (id de outra empresa/inexistente,
+ * arquivado, ou `status !== 'aberto'`), mas os dois primeiros já foram
+ * descartados pela checagem amigável logo abaixo, ANTES de chegar aqui —
+ * então, na prática, só a corrida chega a esta função: o único jeito de
+ * `titulo_invalido` disparar depois da checagem amigável passar é o status
+ * ter mudado NO MEIO-TEMPO (outro recebimento completou o título entre a
+ * leitura e a gravação). "Não encontrada" mentiria sobre uma cobrança que
+ * existe e foi vista segundos atrás; a mensagem certa é a mesma que a
+ * checagem amigável já usa para esse estado, duas linhas abaixo.
+ *
+ * Exportada só para o teste determinístico da tradução em si — ver
+ * `tests/titulos.test.ts`, bloco "10." — sem depender de vencer uma corrida
+ * de verdade para exercitar cada ramo.
+ */
+export function traduzirFalhaDeRecebimento(erro: unknown): never {
+  const texto = erro instanceof Error ? erro.message : String(erro);
+  if (texto.includes("titulo_invalido")) {
+    throw new Error("Esta cobrança já foi recebida ou cancelada.");
+  }
+  // Sem o valor do saldo aqui, de propósito — diferente da mesma checagem
+  // na checagem amigável de `registrarRecebimento` (que diz "R$ X,XX",
+  // decisão do fundador, 26/08/2026). Só a corrida chega neste ramo (a
+  // checagem amigável já validou o saldo segundos antes), e essa função
+  // é pura — buscar o saldo atual de novo, só para uma mensagem mais bonita
+  // num caminho quase inatingível, não vale o round-trip a mais.
+  if (texto.includes("saldo_insuficiente")) throw new Error("Valor maior que o saldo em aberto.");
+  throw erro;
+}
+
+export async function registrarRecebimento(
+  empresaId: string,
+  usuarioId: string,
+  tituloId: string,
+  dados: { valor: number; data: Date; forma: string | null },
+) {
+  if (!Number.isInteger(dados.valor) || dados.valor <= 0) {
+    throw new Error("Informe um valor válido.");
+  }
+  // Recebimento é registro de um fato que já aconteceu — nunca no futuro
+  // (diferente de vencimento, que pode ser no passado de propósito). Compara
+  // instante com instante, não dia com dia: `dados.data` já chega como
+  // meia-noite de Fortaleza do dia escolhido (`instanteDoDiaEmFortaleza`,
+  // `fretes/acoes.ts`), sempre anterior a "agora" enquanto o dia escolhido
+  // for hoje ou antes.
+  if (dados.data.getTime() > Date.now()) {
+    throw new Error("Não dá para registrar um recebimento no futuro.");
+  }
+
+  const titulo = await buscarTituloReceber(empresaId, tituloId);
+  if (!titulo || titulo.arquivado_em) throw new Error("Cobrança não encontrada.");
+  if (titulo.status !== "aberto") {
+    throw new Error("Esta cobrança já foi recebida ou cancelada.");
+  }
+
+  // O frete pode ter sido arquivado depois do título nascer —
+  // `arquivarServico` não trava nem toca o título (`CLAUDE.md` §3: FK não
+  // é conferida pelo Postgres, e aqui nem existe FK entre os dois estados,
+  // é regra de negócio pura). Achado do segundo `/revisar`: sem esta
+  // checagem AQUI (o único lugar por onde as duas telas passam — a
+  // secundária do detalhe do frete e o deslizar de Cobranças), a tela do
+  // frete escondia "Marcar recebido" mas Cobranças continuava oferecendo o
+  // mesmo gesto para a mesma cobrança — duas regras diferentes para a
+  // mesma ação.
+  const servico = await buscarServico(empresaId, titulo.servico_id);
+  if (!servico || servico.arquivado_em) {
+    throw new Error("Este frete foi arquivado — não é possível registrar recebimento.");
+  }
+
+  // Decisão do fundador, 26/08/2026: nunca aceitar mais que o saldo — um
+  // valor maior criaria um estado sem nome no produto (não é quitado, não é
+  // aberto, e nenhuma tela sabe mostrar). A mensagem diz o saldo, para a
+  // pessoa corrigir na hora — ver `docs/planos/item-6-titulo-e-cobrancas.md`,
+  // Tarefa 3.
+  const jaRecebido = (await totalRecebidoPorTitulo(empresaId, [tituloId])).get(tituloId) ?? 0;
+  const saldo = titulo.valor - jaRecebido;
+  if (dados.valor > saldo) {
+    throw new Error(`Valor maior que o saldo em aberto (R$ ${formatarCentavos(saldo)}).`);
+  }
+
+  try {
+    await registrarRecebimentoAtomico(empresaId, {
+      id: uuidv7(),
+      tituloId,
+      valor: dados.valor,
+      data: dados.data,
+      forma: dados.forma,
+      usuarioId,
+    });
+  } catch (erro) {
+    traduzirFalhaDeRecebimento(erro);
+  }
+
+  const atualizado = await buscarTituloReceber(empresaId, tituloId);
+  if (!atualizado) throw new Error("Cobrança não encontrada.");
+  return atualizado;
+}
+
+/**
  * Frete com título ativo trava `valor` e `cliente_id` na edição
  * (`docs/especificacao.md` §8, item 12) — os dois campos que o título
  * copiou do frete ao nascer (`criarTituloJaRecebi`, acima) e nunca mais
@@ -339,7 +522,8 @@ export async function editarServicoComProtecaoDeTitulo(
  */
 export type TituloParaSituacao = {
   status: "aberto" | "pago" | "cancelado";
-  valor_recebido: number | null;
+  /** Soma dos recebimentos ativos deste título — nunca `valor_recebido`, que saiu de `TituloReceber` na Tarefa 3. */
+  totalRecebido: number;
   arquivado_em: Date | null;
 };
 
@@ -358,52 +542,81 @@ export function situacaoFinanceira(titulos: TituloParaSituacao[]): SituacaoFinan
   if (ativos.length === 0) return "a_faturar";
   if (ativos.every((t) => t.status === "pago")) return "quitado";
 
-  const algumDinheiroEntrou = ativos.some(
-    (t) => t.status === "pago" || (t.valor_recebido ?? 0) > 0,
-  );
+  const algumDinheiroEntrou = ativos.some((t) => t.status === "pago" || t.totalRecebido > 0);
   return algumDinheiroEntrou ? "parcial" : "faturado";
 }
 
 const CAMPOS_PARA_SITUACAO = {
+  id: true,
   servico_id: true,
   status: true,
-  valor_recebido: true,
   arquivado_em: true,
 } as const;
 
 /**
  * Anexa `situacao_financeira` a uma lista de serviços já carregada —
- * **uma consulta só**, não uma por frete: todos os títulos daqueles serviços
- * de uma vez (`servico_id IN (...)`), agrupados em memória. Uma lista de 50
- * fretes buscando título um a um seria 50 idas ao banco — a esteira já
- * mostrou o que pressão de conexão faz aqui (`docs/diario.md`, 18-20/08/2026).
+ * **duas consultas, não uma por frete**: todos os títulos daqueles serviços
+ * de uma vez (`servico_id IN (...)`), e a soma dos recebimentos deles
+ * também de uma vez (`totalRecebidoPorTitulo`, acima) — agrupados em
+ * memória. Uma lista de 50 fretes buscando título ou recebimento um a um
+ * seria 100 idas ao banco — a esteira já mostrou o que pressão de conexão
+ * faz aqui (`docs/diario.md`, 18-20/08/2026).
  *
  * Compartilhado por `listarServicosComSituacao` e pelos históricos dos
  * perfis (`historicoPorEntidade`, abaixo) — os dois precisam da mesma coisa,
  * só a origem da lista de serviços muda.
  */
+/** Um título, do jeito que `comSituacaoEmLote` precisa dele — a situação, e o suficiente para "Marcar recebido". */
+type TituloDoLote = TituloParaSituacao & { id: string; valor: number };
+
+/** Id e saldo do título aberto de um frete — o que a secundária/o deslizar "Marcar recebido" precisam para abrir a folha já preenchida. `null` sem título aberto (a_faturar, quitado, ou só cancelado). */
+export type TituloAbertoResumo = { id: string; saldoCentavos: number };
+
 async function comSituacaoEmLote<T extends { id: string }>(
   empresaId: string,
   servicos: T[],
-): Promise<(T & { situacao_financeira: SituacaoFinanceira })[]> {
+): Promise<(T & { situacao_financeira: SituacaoFinanceira; tituloAberto: TituloAbertoResumo | null })[]> {
   if (servicos.length === 0) return [];
 
   const titulos = await db(empresaId).tituloReceber.findMany({
     where: { servico_id: { in: servicos.map((s) => s.id) } },
-    select: CAMPOS_PARA_SITUACAO,
+    select: { ...CAMPOS_PARA_SITUACAO, valor: true },
   });
+  const totalPorTitulo = await totalRecebidoPorTitulo(
+    empresaId,
+    titulos.map((t) => t.id),
+  );
 
-  const porServico = new Map<string, TituloParaSituacao[]>();
+  const porServico = new Map<string, TituloDoLote[]>();
   for (const t of titulos) {
     const lista = porServico.get(t.servico_id) ?? [];
-    lista.push(t);
+    lista.push({
+      id: t.id,
+      status: t.status,
+      valor: t.valor,
+      arquivado_em: t.arquivado_em,
+      totalRecebido: totalPorTitulo.get(t.id) ?? 0,
+    });
     porServico.set(t.servico_id, lista);
   }
 
-  return servicos.map((s) => ({
-    ...s,
-    situacao_financeira: situacaoFinanceira(porServico.get(s.id) ?? []),
-  }));
+  return servicos.map((s) => {
+    const titulosDoServico = porServico.get(s.id) ?? [];
+    // Hoje um frete tem no máximo um título integral (índice único parcial
+    // da migration `20260814150000`) — mesmo critério do `find` em
+    // `fretes/[id]/page.tsx`. **`arquivado_em === null` entra aqui** —
+    // achado do terceiro `/revisar`: `titulos` (acima) não filtra arquivado
+    // de propósito (`situacaoFinanceira` precisa da lista inteira para
+    // aplicar a própria regra), mas um título arquivado nunca é "título
+    // ativo" (`docs/especificacao.md` §7) e não pode virar candidato a
+    // receber — mesmo critério que `situacaoFinanceira` já aplica internamente.
+    const aberto = titulosDoServico.find((t) => t.status === "aberto" && t.arquivado_em === null);
+    return {
+      ...s,
+      situacao_financeira: situacaoFinanceira(titulosDoServico),
+      tituloAberto: aberto ? { id: aberto.id, saldoCentavos: aberto.valor - aberto.totalRecebido } : null,
+    };
+  });
 }
 
 /**
@@ -442,9 +655,14 @@ export async function listarServicosComSituacao(
   return comSituacaoEmLote(empresaId, servicos);
 }
 
-/** O `Servico` do detalhe (Tarefa 3) mais os títulos associados (hoje, no máximo um). */
+/**
+ * O `Servico` do detalhe (Tarefa 3 do item 4) mais os títulos associados
+ * (hoje, no máximo um) — cada um com `totalRecebido` já somado (item 6,
+ * Tarefa 3), para a tela decidir o saldo sem uma consulta própria (a
+ * secundária "Marcar recebido" precisa dele para pré-preencher a folha).
+ */
 export async function buscarServicoComTitulos(empresaId: string, id: string) {
-  const [servico, titulos] = await Promise.all([
+  const [servico, titulosCrus] = await Promise.all([
     buscarServico(empresaId, id),
     db(empresaId).tituloReceber.findMany({
       where: { servico_id: id, arquivado_em: null },
@@ -454,27 +672,35 @@ export async function buscarServicoComTitulos(empresaId: string, id: string) {
   ]);
   if (!servico) return null;
 
+  const totalPorTitulo = await totalRecebidoPorTitulo(
+    empresaId,
+    titulosCrus.map((t) => t.id),
+  );
+  const titulos = titulosCrus.map((t) => ({
+    ...t,
+    totalRecebido: totalPorTitulo.get(t.id) ?? 0,
+  }));
+
   return { ...servico, titulos, situacao_financeira: situacaoFinanceira(titulos) };
 }
 
 /**
- * Resumo do cliente (Tarefa 6) — **dois números, não quatro**: já rodado
- * (soma de `Servico.valor` no período) e recebido no período (soma de
- * `valor_recebido` com `data_pagamento` no período). Sem "a receber" nem
- * "vencido" nesta fatia: os dois dependem de título em aberto, e até o item 6
- * existir o único jeito de um título nascer é "Já recebi", que já cria pago —
- * um número que só pode ser zero é dado incompleto disfarçado de completo
- * (`CLAUDE.md` §8, `docs/especificacao.md` §4.7).
+ * Resumo do cliente (Tarefa 6 do item 4) — **dois números, não quatro**: já
+ * rodado (soma de `Servico.valor` no período) e recebido no período (soma
+ * de `Recebimento.valor`, com `Recebimento.data` no período — item 6,
+ * Tarefa 3; antes desta tarefa era `valor_recebido`/`data_pagamento` do
+ * próprio título). Sem "a receber" nem "vencido" nesta fatia — os dois
+ * pertencem à tela de Cobranças (`src/lib/servicos/cobrancas.ts`).
  *
  * Título cancelado não conta para "recebido" — mesmo raciocínio de
- * `situacaoFinanceira`. Frete cancelado (`status_operacional`) não conta
- * para "já rodado" — decisão do fundador, 20/08/2026, `docs/especificacao.md`
- * §7: ele não vai acontecer (`em_andamento` conta — a tese do produto é o
- * frete nascer na ordem), e continua na lista/histórico do perfil, só não
- * entra na soma.
+ * `situacaoFinanceira`, aplicado pelo filtro na relação `titulo` abaixo.
+ * Frete cancelado (`status_operacional`) não conta para "já rodado" —
+ * decisão do fundador, 20/08/2026, `docs/especificacao.md` §7: ele não vai
+ * acontecer (`em_andamento` conta — a tese do produto é o frete nascer na
+ * ordem), e continua na lista/histórico do perfil, só não entra na soma.
  *
- * **`recebidoNoPeriodo` NÃO exclui título de frete cancelado** (só título
- * com `status = "cancelado"` — regra já existente, acima) — e isto é
+ * **`recebidoNoPeriodo` NÃO exclui recebimento de frete cancelado** (só
+ * título com `status = "cancelado"` — regra já existente, acima) — e isto é
  * intencional, não lacuna: cancelamento afeta o que foi **operado**, não o
  * que foi **recebido**. Se o cliente pagou antes do frete ser cancelado,
  * esse dinheiro entrou de verdade — é fato, independente do frete depois
@@ -498,20 +724,19 @@ export async function resumoFinanceiroDoCliente(
       },
       _sum: { valor: true },
     }),
-    db(empresaId).tituloReceber.aggregate({
+    db(empresaId).recebimento.aggregate({
       where: {
-        cliente_id: clienteId,
         arquivado_em: null,
-        status: { not: "cancelado" },
-        data_pagamento: { gte: periodo.inicio, lte: periodo.fim },
+        data: { gte: periodo.inicio, lte: periodo.fim },
+        titulo: { cliente_id: clienteId, arquivado_em: null, status: { not: "cancelado" } },
       },
-      _sum: { valor_recebido: true },
+      _sum: { valor: true },
     }),
   ]);
 
   return {
     jaRodado: jaRodado._sum.valor ?? 0,
-    recebidoNoPeriodo: recebido._sum.valor_recebido ?? 0,
+    recebidoNoPeriodo: recebido._sum.valor ?? 0,
   };
 }
 

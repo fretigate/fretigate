@@ -97,6 +97,11 @@ const TABELAS_DO_LACO: Record<
       where: { empresa_id: { in: [A, B] } },
       select: { empresa_id: true },
     }),
+  recebimento: (empresaId) =>
+    db(empresaId).recebimento.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
 };
 
 const semear = async (id: string, nome: string) => {
@@ -167,11 +172,23 @@ const semear = async (id: string, nome: string) => {
   );
   // Um TituloReceber por empresa (tarefa 3 do item 3), mesma razão acima. A
   // regra de negócio ("Já recebi", as duas conferências de FK, um título por
-  // frete) é testada em `tests/titulos.test.ts`.
+  // frete) é testada em `tests/titulos.test.ts`. Id gerado aqui, não
+  // `gen_random_uuid()` no SQL, porque o Recebimento semeado abaixo
+  // referencia esta linha por `VALUES` — mesmo motivo do `tipoOperacaoId`.
+  const tituloId = randomUUID();
   await raiz.query(
     `INSERT INTO "titulo_receber" (id, empresa_id, servico_id, cliente_id, valor)
-     VALUES (gen_random_uuid(), $1, $2, $3, 10000)`,
-    [id, servicoId, clienteId],
+     VALUES ($1, $2, $3, $4, 10000)`,
+    [tituloId, id, servicoId, clienteId],
+  );
+  // Um Recebimento por empresa (item 6, Tarefa 3), mesma razão acima. A
+  // regra de negócio (soma nunca passa do valor, conferência de FK de
+  // `titulo_id`) é testada em `tests/titulos.test.ts`, bloco "10.
+  // registrarRecebimento".
+  await raiz.query(
+    `INSERT INTO "recebimento" (id, empresa_id, titulo_id, valor, data, usuario_id)
+     VALUES (gen_random_uuid(), $1, $2, 10000, now(), $3)`,
+    [id, tituloId, `u-${id}`],
   );
 };
 
@@ -183,12 +200,15 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // `cliente`, `veiculo`, `motorista`, `tipo_operacao`, `servico` e
-  // `titulo_receber` são `RESTRICT`/`CASCADE` de propósito
-  // (`docs/especificacao.md`, `CLAUDE.md` §7). `titulo_receber` referencia
-  // `servico` e `cliente` (tarefa 3 do item 3), então sai primeiro; `servico`
-  // referencia os quatro da tarefa 1, então sai antes deles; `motorista`
-  // referencia `veiculo` (`veiculo_habitual_id`), então sai antes dele.
+  // `cliente`, `veiculo`, `motorista`, `tipo_operacao`, `servico`,
+  // `titulo_receber` e `recebimento` são `RESTRICT`/`CASCADE` de propósito
+  // (`docs/especificacao.md`, `CLAUDE.md` §7). `recebimento` referencia
+  // `titulo_receber` (item 6, Tarefa 3), então sai primeiro; `titulo_receber`
+  // referencia `servico` e `cliente` (tarefa 3 do item 3), então sai antes
+  // deles; `servico` referencia os quatro da tarefa 1, então sai antes
+  // deles; `motorista` referencia `veiculo` (`veiculo_habitual_id`), então
+  // sai antes dele.
+  await raiz.query(`DELETE FROM "recebimento" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "titulo_receber" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "servico" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "motorista" WHERE empresa_id IN ($1,$2)`, [A, B]);

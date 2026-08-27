@@ -436,6 +436,67 @@ conviverem com a nova tabela como segunda fonte de verdade.
   da própria tela dele. Não foi construída na Tarefa 1 pela regra de sempre
   (a ação de fundo não existia ainda); nasce aqui, junto da folha.
 
+**Três decisões do fundador, tomadas depois do código escrito, ao revisar o
+resultado da tarefa (26/08/2026) — registradas aqui com o motivo, não só no
+código:**
+
+1. **Nunca aceitar valor maior que o saldo — nem por engano, nem como
+   "crédito" para o cliente.** A mensagem de recusa diz o saldo em reais
+   (`"Valor maior que o saldo em aberto (R$ X,XX)."`), para a pessoa corrigir
+   na hora, sem precisar calcular de cabeça quanto falta. Palavras do
+   fundador: "aceitar mais cria um estado que não tem nome no produto — não
+   é quitado nem aberto, e nenhuma tela sabe mostrar. Ela corrige na hora e
+   você não grava dado que ninguém sabe ler." Continua existindo uma segunda
+   mensagem, sem o valor, só na corrida real entre dois recebimentos
+   simultâneos (`traduzirFalhaDeRecebimento`, `src/lib/servicos/titulos.ts`)
+   — ali, buscar o saldo de novo só para a mensagem não compensaria o
+   round-trip extra num caminho quase inatingível.
+2. **O teto do campo de valor na folha é o saldo, não o valor cheio do
+   frete.** `TecladoNumerico` já tinha um teto genérico
+   (`TETO_CENTAVOS`, um valor grande, para nunca estourar o tipo numérico);
+   `FolhaDeRecebimento` agora trava o próprio antes disso, no saldo. Mesmo
+   raciocínio da decisão 1: "o saldo é o que falta, e é o número que a folha
+   já mostra" — travar aqui evita o vaivém de digitar demais, confirmar e só
+   então ler o erro do servidor.
+3. **"Já recebi" grava um `Recebimento`, com a mesma regra de qualquer outro
+   recebimento — não é um caminho à parte.** Já era assim desde que esta
+   tarefa começou (`criarTituloJaRecebi` cria título e recebimento no mesmo
+   `create` aninhado), e o fundador confirmou a decisão com o motivo, para
+   não ser vista como acidente de implementação: "sem isso, 'recebido no
+   mês' mente no primeiro mês real de uso, e é o número que eu olho para
+   saber quanto entrou. E a inconsistência é pior que o buraco: um caminho
+   grava recebimento e o outro não — a mesma informação existe ou não
+   dependendo de como o dinheiro entrou, e ninguém consegue explicar isso
+   depois."
+
+**Backfill da migration, confirmado.** A migration
+(`20260826070000_recebimento_e_derivacao_de_titulo`) precisou aproximar
+`usuario_id` dos recebimentos pré-existentes por `Servico.
+criado_por_usuario_id` (não existe, e nunca existiu, registro de quem deu
+baixa num título "Já recebi" antes desta tarefa). Perguntado se essa
+aproximação seria aceitável, o fundador respondeu: "os títulos existentes
+são de teste, sem cliente real: se der migration simples, faz; se não, apaga
+e recomeça. Não existe banco de produção ainda." A migration simples
+funcionou (aplicada, suíte completa verde) — fica como está, sem reescrever.
+
+**Quarta decisão do fundador: buraco da Tarefa 2 (Cobranças não excluía
+frete arquivado das somas) corrigido nesta tarefa, não levado para a
+Tarefa 4.** Achado do terceiro `/revisar`: `arquivarServico` não trava nem
+toca o título — um frete arquivado com título ainda aberto continuava
+contando em "A receber"/"Vencido", e o deslizar continuava oferecendo
+"Marcar recebido" para uma ação que `registrarRecebimento` já recusa. O
+fundador decidiu corrigir na hora, não adiar: "é dinheiro: 'A receber' e
+'Vencido' mostram valor de frete arquivado, na tela que existe justamente
+para responder quanto há a receber. Não é botão inconveniente, é número
+errado... você tem o contexto na mão agora; deixar para a tarefa 4 é
+recarregar tudo e arriscar escapar. E é filtro na consulta, não redesenho."
+`resumoDeCobrancas` e `listarCobrancas` (situações em aberto) ganharam
+`servico: { arquivado_em: null }` no `where` — a cobrança some da lista e
+das somas, e o botão de deslizar deixa de existir junto, sem precisar de
+lógica própria para escondê-lo. **Não se estende a "Recebidas"**: dinheiro
+já recebido continua contando, mesmo que o frete seja arquivado depois —
+arquivar não apaga histórico (`CLAUDE.md` §7).
+
 ### Tarefa 4 — Detalhe da cobrança
 
 - `src/app/(app)/cobrancas/[id]/page.tsx` (novo).

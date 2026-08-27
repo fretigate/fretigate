@@ -4,15 +4,21 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ChipFiltro } from "@/components/ui/ChipFiltro";
 import { EstadoVazio } from "@/components/ui/EstadoVazio";
+import { AvisoDoSistema } from "@/components/ui/AvisoDoSistema";
 import { FolhaDeBusca, type ItemFolhaDeBusca } from "@/components/ui/FolhaDeBusca";
 import { FolhaDeOrdenacao } from "@/components/ui/FolhaDeOrdenacao";
 import { FolhaDePeriodo, type JanelaEscolhida } from "@/components/ui/FolhaDePeriodo";
+import { FolhaDeRecebimento } from "@/components/ui/FolhaDeRecebimento";
 import { LinhaDeLista } from "@/components/ui/LinhaDeLista";
 import { Etiqueta } from "@/components/ui/EtiquetaSituacao";
 import { Botao } from "@/components/ui/Botao";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { formatarDataCurta } from "@/lib/utils/periodo";
 import { instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
+// A ação mora em `fretes/acoes.ts`, ao lado de `faturarServicoAction` e
+// `criarTituloJaRecebiAction` — as outras ações de título, mesmo motivo de
+// não terem nascido cada uma no seu próprio domínio de tela.
+import { registrarRecebimentoAction } from "../fretes/acoes";
 // De `cobrancas-situacao`, nunca de `cobrancas`: este é Client Component, e
 // o outro módulo importa `@/lib/db` (`server-only`) — o `npm run build`
 // reprova a cadeia inteira, como reprovou ao escrever esta tarefa.
@@ -58,6 +64,11 @@ export type CobrancaParaLista = {
   /** Dia (`"AAAA-MM-DD"` em Fortaleza) do vencimento, ou do recebimento nas pagas. */
   dia: string | null;
   boleto: boolean;
+  /**
+   * Já entrou parte, e ainda falta (item 6, Tarefa 3) — nunca `true` junto
+   * com o grupo "recebidas", que é o caso cheio, não parcial.
+   */
+  parcial: boolean;
 };
 
 type Props = {
@@ -153,6 +164,13 @@ export function ListaCobrancas({
   const router = useRouter();
   const [clienteFiltro, setClienteFiltro] = useState<string | undefined>();
   const [folhaAberta, setFolhaAberta] = useState<"periodo" | "cliente" | "situacao" | null>(null);
+  // Deslizar → folha de recebimento (item 6, Tarefa 3, decisão do
+  // fundador, 26/08/2026: as duas listas que revelam "Marcar recebido"
+  // abrem a mesma folha, nunca marcam na hora — `DeslizarParaRevelar.tsx`).
+  const [recebendo, setRecebendo] = useState<{ tituloId: string; saldoCentavos: number } | null>(
+    null,
+  );
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const clientesUnicos = useMemo<ItemFolhaDeBusca[]>(() => {
     const mapa = new Map<string, string>();
@@ -330,6 +348,21 @@ export function ListaCobrancas({
                     apoio={cobranca.referencia ?? undefined}
                     valorCentavos={cobranca.valorCentavos}
                     marca={<MarcaDaCobranca cobranca={cobranca} hoje={hoje} />}
+                    aoDeslizar={
+                      // "Recebidas" já está pago — nada para receber, então
+                      // sem painel (a função recusaria mesmo, mas o painel
+                      // nem deveria aparecer para essa ação).
+                      cobranca.grupo === "recebidas"
+                        ? undefined
+                        : {
+                            rotulo: "Marcar recebido",
+                            onRevelar: () =>
+                              setRecebendo({
+                                tituloId: cobranca.id,
+                                saldoCentavos: cobranca.valorCentavos,
+                              }),
+                          }
+                    }
                   />
                 ))}
               </div>
@@ -370,6 +403,37 @@ export function ListaCobrancas({
           onFechar={() => setFolhaAberta(null)}
         />
       ) : null}
+
+      {recebendo ? (
+        <FolhaDeRecebimento
+          hoje={hoje}
+          saldoCentavos={recebendo.saldoCentavos}
+          onFechar={() => setRecebendo(null)}
+          onConfirmar={async ({ valorCentavos, data, forma }) => {
+            try {
+              const resultado = await registrarRecebimentoAction({
+                tituloId: recebendo.tituloId,
+                valorCentavos,
+                data,
+                forma,
+              });
+              if (!resultado.ok) return resultado;
+              setRecebendo(null);
+              setAviso(
+                valorCentavos < recebendo.saldoCentavos
+                  ? "Recebimento parcial registrado"
+                  : "Recebimento registrado",
+              );
+              router.refresh();
+              return { ok: true as const };
+            } catch {
+              return { ok: false as const, erro: "Não deu para salvar agora." };
+            }
+          }}
+        />
+      ) : null}
+
+      {aviso ? <AvisoDoSistema mensagem={aviso} onSumir={() => setAviso(null)} /> : null}
     </div>
   );
 }
@@ -389,6 +453,14 @@ function MarcaDaCobranca({
           etiqueta das situações de frete: `docs/estilo.md` lista "BOLETO"
           entre elas, "todas iguais". */}
       {cobranca.boleto ? <Etiqueta texto="Boleto" classeTexto="text-tinta-fraca" /> : null}
+      {/* Já entrou parte, ainda falta (item 6, Tarefa 3) — mesma etiqueta
+          "Parcial" de `EtiquetaSituacao` (fundo próprio `--color-parcial-fundo`,
+          `docs/estilo.md`), extraída para cá em vez de copiada
+          (`CLAUDE.md` §8). Pedido de confirmação de posição ao Design,
+          junto do resto desta tarefa. */}
+      {cobranca.parcial ? (
+        <Etiqueta texto="Parcial" classeTexto="text-parcial-apoio" classeFundo="bg-parcial-fundo" />
+      ) : null}
       <span className={`text-apoio font-medium ${CLASSE_DO_PRAZO[cobranca.grupo]}`}>
         {textoDoPrazo(cobranca, hoje)}
       </span>

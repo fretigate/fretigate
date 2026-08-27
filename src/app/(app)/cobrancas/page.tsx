@@ -69,7 +69,10 @@ export default async function Pagina({
     const rota = servico ? formatarRota(servico.origem_texto, servico.destino_texto) : null;
     const diaDoFrete = servico ? diaEmFortaleza(servico.data_servico) : null;
     const grupo = grupoDaCobranca(t, hoje);
-    const recebido = t.valor_recebido ?? 0;
+    // Sempre igual a `t.valor` quando `status === "pago"` — a função de
+    // banco (`registrar_recebimento`) só marca "pago" quando a soma dos
+    // recebimentos alcança o valor, nunca antes (item 6, Tarefa 3).
+    const recebido = t.totalRecebido;
 
     return {
       id: t.id,
@@ -84,10 +87,15 @@ export default async function Pagina({
       // Em aberto mostra o que falta entrar; recebida mostra o que entrou.
       valorCentavos: grupo === "recebidas" ? recebido : t.valor - recebido,
       grupo,
-      dia: grupo === "recebidas"
-        ? (t.data_pagamento ? diaEmFortaleza(t.data_pagamento) : null)
+      // "Recebidas" usa a data do último `Recebimento`, nunca `vencimento`
+      // — ver o comentário de `listarCobrancas` em `cobrancas.ts`.
+      dia: grupo === "recebidas" && t.ultimoRecebimentoEm
+        ? diaEmFortaleza(t.ultimoRecebimentoEm)
         : (t.vencimento ? diaEmFortaleza(t.vencimento) : null),
       boleto: t.forma_pagamento_prevista === "boleto",
+      // Só faz sentido fora de "Recebidas": um título pago não é "parcial",
+      // é o caso normal (item 6, Tarefa 3 — a linha do recebimento parcial).
+      parcial: grupo !== "recebidas" && recebido > 0,
     };
   });
 

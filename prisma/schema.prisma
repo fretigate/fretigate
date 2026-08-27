@@ -128,6 +128,7 @@ model Empresa {
   motoristas      Motorista[]
   servicos        Servico[]
   titulos_receber TituloReceber[]
+  recebimentos    Recebimento[]
 
   @@map("empresa")
 }
@@ -209,9 +210,10 @@ model Usuario {
   atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
   arquivado_em  DateTime? @db.Timestamptz(6)
 
-  sessions Session[]
-  accounts Account[]
-  servicos Servico[]
+  sessions     Session[]
+  accounts     Account[]
+  servicos     Servico[]
+  recebimentos Recebimento[]
 
   @@index([empresa_id])
   @@map("usuario")
@@ -672,8 +674,6 @@ model TituloReceber {
 
   /// Centavos, inteiro (CLAUDE.md §7). Obrigatório.
   valor Int
-  /// Centavos, inteiro. Nulo enquanto nada foi recebido.
-  valor_recebido Int?
 
   /// **O significado, não o uso de hoje** (`docs/especificacao.md`, entidade
   /// TituloReceber): diz se ESTE título cobre o valor inteiro do frete, em
@@ -695,11 +695,6 @@ model TituloReceber {
 
   status StatusTituloReceber @default(aberto)
 
-  data_pagamento DateTime? @db.Timestamptz(6)
-  /// Texto livre — como o pagamento chegou (pix, dinheiro, etc.). Sem
-  /// inventário fechado ainda; nasce nulo em "Já recebi".
-  forma_pagamento String?
-
   /// Sem relação — ver o comentário do model.
   relatorio_id String? @db.Uuid
 
@@ -711,8 +706,79 @@ model TituloReceber {
   /// §7 — nada é apagado. Preenchido = arquivado.
   arquivado_em DateTime? @db.Timestamptz(6)
 
+  /// O que entrou de fato — item 6, Tarefa 3. `valor_recebido`,
+  /// `data_pagamento` e `forma_pagamento` (a versão anterior deste model)
+  /// SAÍRAM daqui para não conviver como segunda fonte de verdade: um
+  /// título pode receber em mais de uma vez (adiantamento + saldo, ou dois
+  /// parciais), e um único campo escalar sobrescreveria data e forma do
+  /// pagamento anterior a cada novo recebimento — o próprio dado
+  /// desaparecendo em silêncio (`CLAUDE.md` §9, `docs/planos/
+  /// item-6-titulo-e-cobrancas.md`, decisão 6). Ver `model Recebimento`.
+  recebimentos Recebimento[]
+
   @@index([empresa_id])
   @@map("titulo_receber")
+}
+
+/// Um recebimento de verdade — item 6, Tarefa 3
+/// (`docs/planos/item-6-titulo-e-cobrancas.md`, decisão 6). Entidade
+/// própria, não campo escalar em `TituloReceber`: um título pode ser
+/// recebido em mais de uma vez (dois parciais, ou adiantamento + saldo), e
+/// cada recebimento é um fato que aconteceu numa data, com uma forma —
+/// sobrescrever um campo único a cada novo recebimento apagaria o anterior
+/// sem nada avisar (`CLAUDE.md` §9).
+///
+/// **`titulo_id` é a única referência conferida contra a empresa antes de
+/// gravar** (`CLAUDE.md` §3 — o Postgres não aplica RLS na checagem de FK):
+/// `src/lib/servicos/titulos.ts` busca o título por `db(empresaId)` antes de
+/// chamar a função de banco que grava. `usuario_id` não tem conferência
+/// própria: nunca é escolhido, vem sempre da sessão (mesmo padrão de
+/// `Servico.criado_por_usuario_id`).
+///
+/// **A soma dos recebimentos de um título nunca passa do valor dele** —
+/// garantido pela função de banco `registrar_recebimento` (migration desta
+/// tarefa), não por checagem em código: ela trava a linha do título
+/// (`FOR UPDATE`) antes de somar e gravar, então dois recebimentos
+/// concorrentes para o MESMO título nunca somam além do valor — é o banco
+/// que garante, não corrida de aplicação (mesmo princípio do índice único
+/// `titulo_receber_um_integral_por_servico`).
+model Recebimento {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  titulo_id String        @db.Uuid
+  titulo    TituloReceber @relation(fields: [titulo_id], references: [id], onDelete: Restrict)
+
+  /// Centavos, inteiro (CLAUDE.md §7). Sempre positivo — garantido pela
+  /// função de banco, não só pela validação do servidor.
+  valor Int
+
+  /// O dia do recebimento, escolhido em folha de calendário (chips Hoje ·
+  /// Ontem · Outra data) — nunca o instante do toque, exceto em "Já
+  /// recebi", onde é `new Date()` (mesmo padrão que `data_pagamento` já
+  /// tinha nesta entidade antes de se tornar campo do título).
+  data DateTime @db.Timestamptz(6)
+
+  /// Texto livre — como o pagamento chegou (pix, dinheiro, transferência,
+  /// boleto, outro). Sem inventário fechado no banco (a lista fechada é da
+  /// interface — decisão 5 do plano); nasce nulo em "Já recebi", que não
+  /// pergunta isso.
+  forma String?
+
+  /// Da sessão que registrou, nunca de input do formulário.
+  usuario_id String
+  usuario    Usuario @relation(fields: [usuario_id], references: [id], onDelete: Restrict)
+
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  /// §7 — nada é apagado. Preenchido = arquivado.
+  arquivado_em DateTime? @db.Timestamptz(6)
+
+  @@index([empresa_id])
+  @@index([titulo_id])
+  @@map("recebimento")
 }
 
 // ---------------------------------------------------------------------------

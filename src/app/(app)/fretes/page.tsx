@@ -116,6 +116,7 @@ export default async function Pagina({
       rota,
       valorCentavos: s.valor,
       situacao: s.situacao_financeira,
+      tituloAberto: s.tituloAberto,
       cancelado: s.status_operacional === "cancelado",
       dia: diaEmFortaleza(s.data_servico),
       // Busca única (achado do /revisar, Tarefa 2): varre placa E apelido, não

@@ -3,9 +3,11 @@
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 
 /**
- * Teclado numérico sobreposto — só para o campo Valor do Lançamento de frete
- * (`docs/componentes.md`, "Auditoria da regra de posição": exceção
- * documentada, salvar nunca fica coberto). Grade 3 colunas, tecla `52px`
+ * Teclado numérico sobreposto — nasceu só para o campo Valor do Lançamento
+ * de frete (`docs/componentes.md`, "Auditoria da regra de posição": exceção
+ * documentada, salvar nunca fica coberto), e ganhou o segundo consumidor
+ * real no campo Valor recebido de `FolhaDeRecebimento` (item 6, Tarefa 3) —
+ * mesmo comportamento, mesma regra de posição. Grade 3 colunas, tecla `52px`
  * raio `14px` (`docs/estilo.md` § Formas), fundo do painel `#F0EDE6`
  * (`docs/estilo.md`, cor "Separação... fundo do teclado numérico").
  *

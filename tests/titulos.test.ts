@@ -6,6 +6,9 @@ import {
   faturarServico,
   vencimentoPadrao,
   buscarTituloPorServico,
+  buscarTituloReceber,
+  registrarRecebimento,
+  traduzirFalhaDeRecebimento,
   editarServicoComProtecaoDeTitulo,
   listarServicosComSituacao,
   buscarServicoComTitulos,
@@ -27,6 +30,7 @@ import { criarCliente } from "@/lib/servicos/clientes";
 import { criarCaminhao } from "@/lib/servicos/caminhoes";
 import { criarMotorista } from "@/lib/servicos/motoristas";
 import { diaEmFortaleza, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { formatarCentavos } from "@/lib/utils/dinheiro";
 
 /**
  * TituloReceber (tarefa 3 do item 3): "Já recebi" cria um título já pago,
@@ -50,7 +54,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 46;
+const CONFERENCIAS_ESPERADAS = 59;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -74,32 +78,40 @@ function periodoAmplo(): Periodo {
  * Planta um título direto por SQL (`raiz`, o mesmo papel que já insere
  * `tipo_operacao` nestes testes) — só para alcançar estados que nenhuma
  * função de serviço cria ainda (`aberto`, ou um segundo título não integral
- * para o mesmo frete). `criarTituloJaRecebi` é o único caminho de produção
- * até o item 6 existir, e ele só cria título pago e integral.
+ * para o mesmo frete, ou `cancelado`). `criarTituloJaRecebi` e
+ * `registrarRecebimento` são os caminhos de produção, e nenhum dos dois
+ * cria "cancelado" nem um segundo título para o mesmo frete (estorno é o
+ * item 7).
+ *
+ * **`valorRecebido`, quando informado, também planta um `Recebimento`**
+ * (item 6, Tarefa 3) — desde que essa tarefa saiu de `TituloReceber`, é
+ * essa a única forma de simular "já entrou dinheiro" que `situacaoFinanceira`
+ * e `resumoFinanceiroDoCliente` enxergam.
  */
 async function plantarTitulo(
-  e: { empresaId: string; clienteId: string },
+  e: { empresaId: string; clienteId: string; usuarioId: string },
   servicoId: string,
   dados: { valor: number; valorRecebido: number | null; status: "aberto" | "pago" | "cancelado"; integral: boolean; dataPagamento?: Date },
-) {
+): Promise<string> {
   // Sem DEFAULT para "id" (migration `20260814140000_titulo_receber`) — a
   // aplicação gera o uuid antes do INSERT, como em toda tabela do domínio.
+  const tituloId = randomUUID();
   await raiz.query(
     `INSERT INTO "titulo_receber"
-       (id, servico_id, cliente_id, valor, valor_recebido, status, integral, data_pagamento, empresa_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-    [
-      randomUUID(),
-      servicoId,
-      e.clienteId,
-      dados.valor,
-      dados.valorRecebido,
-      dados.status,
-      dados.integral,
-      dados.dataPagamento ?? null,
-      e.empresaId,
-    ],
+       (id, servico_id, cliente_id, valor, status, integral, empresa_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [tituloId, servicoId, e.clienteId, dados.valor, dados.status, dados.integral, e.empresaId],
   );
+
+  if (dados.valorRecebido !== null && dados.valorRecebido > 0) {
+    await raiz.query(
+      `INSERT INTO "recebimento" (id, titulo_id, valor, data, usuario_id, empresa_id)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [randomUUID(), tituloId, dados.valorRecebido, dados.dataPagamento ?? new Date(), e.usuarioId, e.empresaId],
+    );
+  }
+
+  return tituloId;
 }
 
 /**
@@ -194,7 +206,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (empresasParaLimpar.length) {
-    // `titulo_receber` referencia servico e cliente — sai primeiro.
+    // `recebimento` referencia `titulo_receber` (item 6, Tarefa 3) — sai
+    // primeiro. `titulo_receber` referencia servico e cliente — sai antes
+    // deles.
+    await raiz.query(`DELETE FROM "recebimento" WHERE empresa_id = ANY($1)`, [
+      empresasParaLimpar,
+    ]);
     await raiz.query(`DELETE FROM "titulo_receber" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
@@ -228,27 +245,38 @@ describe("1. Já recebi — cria título pago derivado do Servico", () => {
   it("status pago, valor e cliente_id vêm do Servico, não de input", async () => {
     const e = await criarEmpresaDeTeste("a");
     const antes = new Date();
-    const titulo = await criarTituloJaRecebi(e.empresaId, e.servicoId);
+    const titulo = await criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId);
 
     expect(titulo.status).toBe("pago");
     expect(titulo.integral).toBe(true);
     expect(titulo.servico_id).toBe(e.servicoId);
     expect(titulo.cliente_id).toBe(e.clienteId);
     expect(titulo.valor).toBe(e.valorServico);
-    expect(titulo.valor_recebido).toBe(e.valorServico);
-    expect(titulo.data_pagamento).not.toBeNull();
-    expect((titulo.data_pagamento as Date).getTime()).toBeGreaterThanOrEqual(antes.getTime());
     // Nada perguntado nesta fatia — CLAUDE.md §9, "carga_categoria" mesma lógica.
     expect(titulo.vencimento).toBeNull();
     expect(titulo.forma_pagamento_prevista).toBeNull();
-    expect(titulo.forma_pagamento).toBeNull();
     expect(titulo.relatorio_id).toBeNull();
+    conferencias++;
+
+    // O recebimento nasce junto (item 6, Tarefa 3) — `valor_recebido` saiu
+    // de `TituloReceber`; quem prova o fato agora é `Recebimento`.
+    const recebimento = await raiz.query<{
+      valor: number;
+      data: Date;
+      forma: string | null;
+      usuario_id: string;
+    }>("SELECT valor, data, forma, usuario_id FROM recebimento WHERE titulo_id = $1", [titulo.id]);
+    expect(recebimento.rowCount).toBe(1);
+    expect(recebimento.rows[0].valor).toBe(e.valorServico);
+    expect(recebimento.rows[0].data.getTime()).toBeGreaterThanOrEqual(antes.getTime());
+    expect(recebimento.rows[0].forma).toBeNull();
+    expect(recebimento.rows[0].usuario_id).toBe(e.usuarioId);
     conferencias++;
   });
 
   it("buscarTituloPorServico acha o título recém-criado", async () => {
     const e = await criarEmpresaDeTeste("b");
-    const criado = await criarTituloJaRecebi(e.empresaId, e.servicoId);
+    const criado = await criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId);
     const achado = await buscarTituloPorServico(e.empresaId, e.servicoId);
     expect(achado?.id).toBe(criado.id);
     conferencias++;
@@ -259,7 +287,7 @@ describe("2. a conferência de FK — CLAUDE.md §3", () => {
   it("recusa servico_id de outra empresa (via Já recebi)", async () => {
     const a = await criarEmpresaDeTeste("c1");
     const b = await criarEmpresaDeTeste("c2");
-    await expect(criarTituloJaRecebi(a.empresaId, b.servicoId)).rejects.toThrow(
+    await expect(criarTituloJaRecebi(a.empresaId, a.usuarioId, b.servicoId)).rejects.toThrow(
       "Selecione um frete válido.",
     );
     conferencias++;
@@ -267,7 +295,7 @@ describe("2. a conferência de FK — CLAUDE.md §3", () => {
 
   it("recusa servico_id que não existe", async () => {
     const e = await criarEmpresaDeTeste("e");
-    await expect(criarTituloJaRecebi(e.empresaId, randomUUID())).rejects.toThrow(
+    await expect(criarTituloJaRecebi(e.empresaId, e.usuarioId, randomUUID())).rejects.toThrow(
       "Selecione um frete válido.",
     );
     conferencias++;
@@ -276,7 +304,7 @@ describe("2. a conferência de FK — CLAUDE.md §3", () => {
   it("recusa servico_id arquivado", async () => {
     const e = await criarEmpresaDeTeste("f");
     await arquivarServico(e.empresaId, e.servicoId);
-    await expect(criarTituloJaRecebi(e.empresaId, e.servicoId)).rejects.toThrow(
+    await expect(criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId)).rejects.toThrow(
       "Selecione um frete válido.",
     );
     conferencias++;
@@ -286,8 +314,8 @@ describe("2. a conferência de FK — CLAUDE.md §3", () => {
 describe("3. um título integral por frete — achado da revisão do fundador", () => {
   it("Já recebi chamado duas vezes em sequência para o mesmo frete recusa na segunda", async () => {
     const e = await criarEmpresaDeTeste("g");
-    await criarTituloJaRecebi(e.empresaId, e.servicoId);
-    await expect(criarTituloJaRecebi(e.empresaId, e.servicoId)).rejects.toThrow(
+    await criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId);
+    await expect(criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId)).rejects.toThrow(
       "Este frete já tem título lançado.",
     );
     conferencias++;
@@ -304,8 +332,8 @@ describe("3. um título integral por frete — achado da revisão do fundador", 
     // `tests/servicos.test.ts`).
     const e = await criarEmpresaDeTeste("h");
     const resultados = await Promise.allSettled([
-      criarTituloJaRecebi(e.empresaId, e.servicoId),
-      criarTituloJaRecebi(e.empresaId, e.servicoId),
+      criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId),
+      criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId),
     ]);
 
     const sucesso = resultados.filter((r) => r.status === "fulfilled");
@@ -355,7 +383,7 @@ describe("3b. editarServicoComProtecaoDeTitulo — trava valor e cliente do fret
 
   it("com título ativo, recusa mudar o valor — a gravação nem chega a acontecer", async () => {
     const e = await criarEmpresaDeTeste("w2");
-    await criarTituloJaRecebi(e.empresaId, e.servicoId);
+    await criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId);
     await expect(
       editarServicoComProtecaoDeTitulo(e.empresaId, e.servicoId, dadosParaEditar(e, { valor: e.valorServico + 1 })),
     ).rejects.toThrow(/valor/);
@@ -367,7 +395,7 @@ describe("3b. editarServicoComProtecaoDeTitulo — trava valor e cliente do fret
   it("com título ativo, recusa trocar o cliente", async () => {
     const e = await criarEmpresaDeTeste("w3");
     const outroCliente = await criarCliente(e.empresaId, { nome: "Outro" });
-    await criarTituloJaRecebi(e.empresaId, e.servicoId);
+    await criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId);
     await expect(
       editarServicoComProtecaoDeTitulo(e.empresaId, e.servicoId, dadosParaEditar(e, { cliente_id: outroCliente.id })),
     ).rejects.toThrow(/cliente/);
@@ -376,7 +404,7 @@ describe("3b. editarServicoComProtecaoDeTitulo — trava valor e cliente do fret
 
   it("com título ativo, aceita quando valor e cliente ficam iguais — os outros sete campos continuam livres", async () => {
     const e = await criarEmpresaDeTeste("w4");
-    await criarTituloJaRecebi(e.empresaId, e.servicoId);
+    await criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId);
     const editado = await editarServicoComProtecaoDeTitulo(
       e.empresaId,
       e.servicoId,
@@ -456,7 +484,7 @@ describe("4. listarServicosComSituacao — leitura em lote, sem N+1", () => {
     };
 
     const servicoQuitado = await criarServico(e.empresaId, e.usuarioId, dadosServico);
-    await criarTituloJaRecebi(e.empresaId, servicoQuitado.id);
+    await criarTituloJaRecebi(e.empresaId, e.usuarioId, servicoQuitado.id);
 
     const servicoFaturado = await criarServico(e.empresaId, e.usuarioId, dadosServico);
     await plantarTitulo(e, servicoFaturado.id, {
@@ -522,7 +550,7 @@ describe("4. listarServicosComSituacao — leitura em lote, sem N+1", () => {
         await Promise.all(
           servicos
             .slice(0, Math.floor(quantidade / 2))
-            .map((s) => criarTituloJaRecebi(empresa.empresaId, s.id)),
+            .map((s) => criarTituloJaRecebi(empresa.empresaId, empresa.usuarioId, s.id)),
         );
       }
 
@@ -642,7 +670,7 @@ describe("4. listarServicosComSituacao — leitura em lote, sem N+1", () => {
 describe("5. buscarServicoComTitulos", () => {
   it("traz o servico com os títulos e a situação derivada", async () => {
     const e = await criarEmpresaDeTeste("t1");
-    await criarTituloJaRecebi(e.empresaId, e.servicoId);
+    await criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId);
 
     const detalhe = await buscarServicoComTitulos(e.empresaId, e.servicoId);
     expect(detalhe?.id).toBe(e.servicoId);
@@ -672,7 +700,7 @@ describe("6. resumoFinanceiroDoCliente — dois números, título cancelado não
       data_servico: new Date(),
       valor: 50000,
     });
-    await criarTituloJaRecebi(e.empresaId, servicoRecebido.id);
+    await criarTituloJaRecebi(e.empresaId, e.usuarioId, servicoRecebido.id);
 
     const servicoCancelado = await criarServico(e.empresaId, e.usuarioId, {
       tipo_operacao_id: e.tipoOperacaoId,
@@ -787,7 +815,7 @@ describe("7. históricos dos perfis — teto de 5, total real, situação em cad
       // O mais recente ganha título — decisão do fundador, 20/08/2026: toda
       // linha de frete no produto mostra a etiqueta, o histórico do perfil
       // também precisa.
-      await criarTituloJaRecebi(e.empresaId, ultimo.id);
+      await criarTituloJaRecebi(e.empresaId, e.usuarioId, ultimo.id);
       // Frete de outro cliente não deve contar nem aparecer.
       await criarServico(e.empresaId, e.usuarioId, { ...dadosServicoBase, cliente_id: outroCliente.id, data_servico: agora });
 
@@ -1071,8 +1099,12 @@ describe("9. faturarServico — cria o título EM ABERTO", () => {
 
     expect(titulo.status).toBe("aberto");
     expect(titulo.integral).toBe(true);
-    expect(titulo.valor_recebido).toBeNull();
-    expect(titulo.data_pagamento).toBeNull();
+    // Sem nada recebido — item 6, Tarefa 3: quem prova isso agora é a
+    // ausência de `Recebimento`, não mais um campo nulo no título.
+    const recebimentos = await raiz.query("SELECT 1 FROM recebimento WHERE titulo_id = $1", [
+      titulo.id,
+    ]);
+    expect(recebimentos.rowCount).toBe(0);
     expect(titulo.vencimento?.getTime()).toBe(vencimento.getTime());
     expect(titulo.forma_pagamento_prevista).toBe("boleto");
     // Derivados do Servico, nunca de input — mesma regra de "Já recebi".
@@ -1165,7 +1197,7 @@ describe("9. faturarServico — cria o título EM ABERTO", () => {
 
   it("recusa faturar um frete que já tem título de 'Já recebi'", async () => {
     const e = await criarEmpresaDeTeste("f7");
-    await criarTituloJaRecebi(e.empresaId, e.servicoId);
+    await criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId);
     await marcarServicoFinalizado(e.empresaId, e.servicoId);
     await expect(
       faturarServico(e.empresaId, e.servicoId, {
@@ -1208,6 +1240,301 @@ describe("9. faturarServico — cria o título EM ABERTO", () => {
 
     const servico = await buscarServicoComTitulos(e.empresaId, e.servicoId);
     expect(servico?.titulos).toHaveLength(1);
+    conferencias++;
+  });
+});
+
+/**
+ * Um título aberto de verdade (via `faturarServico`), pronto para receber.
+ *
+ * **Sempre um frete NOVO, nunca `e.servicoId`** — achado ao rodar: uma
+ * primeira versão chamava `faturarServico(e.empresaId, e.servicoId, ...)` e
+ * ignorava `valor`, porque `faturarServico` deriva o valor do próprio
+ * `Servico` (nunca de parâmetro — `CLAUDE.md` §9, mesma regra de
+ * "Já recebi"). O título saía sempre com `e.valorServico` (150000),
+ * silenciosamente, e os testes de saldo/concorrência mediam o valor errado
+ * sem nenhum `expect` acusar — só o teste do próprio saldo ficou vermelho.
+ */
+async function criarTituloAberto(e: EmpresaDeTeste, valor = e.valorServico) {
+  const servico = await criarServico(e.empresaId, e.usuarioId, {
+    tipo_operacao_id: e.tipoOperacaoId,
+    cliente_id: e.clienteId,
+    data_servico: new Date(),
+    valor,
+  });
+  await marcarServicoFinalizado(e.empresaId, servico.id);
+  return faturarServico(e.empresaId, servico.id, {
+    vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+    formaPrevista: "outro",
+  });
+}
+
+describe("10. registrarRecebimento — confirmar recebimento (item 6, Tarefa 3)", () => {
+  it("recusa valor zero ou negativo, sem tocar o banco", async () => {
+    const e = await criarEmpresaDeTeste("rec1");
+    const titulo = await criarTituloAberto(e);
+
+    await expect(
+      registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+        valor: 0,
+        data: new Date(),
+        forma: "Pix",
+      }),
+    ).rejects.toThrow("Informe um valor válido.");
+    await expect(
+      registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+        valor: -100,
+        data: new Date(),
+        forma: "Pix",
+      }),
+    ).rejects.toThrow("Informe um valor válido.");
+    conferencias++;
+  });
+
+  /**
+   * Recebimento é registro de um fato que já aconteceu — nunca no futuro
+   * (achado do `/revisar`: a folha permite "Outra data" sem teto, e nem o
+   * schema nem esta função tinham essa recusa).
+   */
+  it("recusa data no futuro", async () => {
+    const e = await criarEmpresaDeTeste("rec1b");
+    const titulo = await criarTituloAberto(e);
+    const amanha = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await expect(
+      registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+        valor: e.valorServico,
+        data: amanha,
+        forma: "Pix",
+      }),
+    ).rejects.toThrow("Não dá para registrar um recebimento no futuro.");
+    conferencias++;
+  });
+
+  /**
+   * Teste determinístico de `traduzirFalhaDeRecebimento`, exportada só para
+   * isto — achado do segundo `/revisar`: o teste de concorrência abaixo não
+   * prova sozinho qual ramo desta função rodou, porque a checagem amigável
+   * de `registrarRecebimento` pode pegar o mesmo caso antes de chegar aqui,
+   * com a MESMA mensagem — o teste passaria pelo motivo errado. Testar a
+   * função pura, com o texto exato que `registrar_recebimento` (a função de
+   * banco) levanta, prova o mapeamento sem depender de vencer uma corrida.
+   */
+  it("traduzirFalhaDeRecebimento — mapeia cada causa da função de banco, sobe o resto como está", () => {
+    expect(() => traduzirFalhaDeRecebimento(new Error("titulo_invalido"))).toThrow(
+      "Esta cobrança já foi recebida ou cancelada.",
+    );
+    expect(() => traduzirFalhaDeRecebimento(new Error("saldo_insuficiente"))).toThrow(
+      "Valor maior que o saldo em aberto.",
+    );
+    const desconhecido = new Error("connection terminated unexpectedly");
+    expect(() => traduzirFalhaDeRecebimento(desconhecido)).toThrow(desconhecido);
+    conferencias++;
+  });
+
+  it("recusa recebimento contra frete arquivado — mesma regra da secundária do detalhe, agora no serviço", async () => {
+    const e = await criarEmpresaDeTeste("rec1c");
+    const titulo = await criarTituloAberto(e);
+    // O `servicoId` real não é `e.servicoId` (que fica sem título nesta
+    // suíte) — `criarTituloAberto` cria um frete próprio. Precisa ser
+    // resgatado do título para arquivar o frete certo.
+    await arquivarServico(e.empresaId, titulo.servico_id);
+
+    await expect(
+      registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+        valor: 100,
+        data: new Date(),
+        forma: "Pix",
+      }),
+    ).rejects.toThrow("Este frete foi arquivado — não é possível registrar recebimento.");
+    conferencias++;
+  });
+
+  /**
+   * A conferência de FK que `CLAUDE.md` §3 exige: o Postgres não aplica RLS
+   * na checagem de chave estrangeira, então sem esta checagem em
+   * `buscarTituloReceber` o `tituloId` de outra empresa passaria batido para
+   * a função de banco. `registrarRecebimento` confere ANTES de chamar
+   * `registrarRecebimentoAtomico` — a mensagem prova que a recusa aconteceu
+   * na camada certa.
+   */
+  it("recusa título de outra empresa (conferência de FK — CLAUDE.md §3)", async () => {
+    const a = await criarEmpresaDeTeste("rec2a");
+    const b = await criarEmpresaDeTeste("rec2b");
+    const tituloDeB = await criarTituloAberto(b);
+
+    await expect(
+      registrarRecebimento(a.empresaId, a.usuarioId, tituloDeB.id, {
+        valor: 100,
+        data: new Date(),
+        forma: "Pix",
+      }),
+    ).rejects.toThrow("Cobrança não encontrada.");
+
+    // A cobrança de B continua intacta — nada vazou nem foi alterado.
+    const aindaAberto = await buscarTituloReceber(b.empresaId, tituloDeB.id);
+    expect(aindaAberto?.status).toBe("aberto");
+    conferencias++;
+  });
+
+  it("recusa título que não existe", async () => {
+    const e = await criarEmpresaDeTeste("rec3");
+    await expect(
+      registrarRecebimento(e.empresaId, e.usuarioId, randomUUID(), {
+        valor: 100,
+        data: new Date(),
+        forma: "Pix",
+      }),
+    ).rejects.toThrow("Cobrança não encontrada.");
+    conferencias++;
+  });
+
+  it("recusa título já pago — não edita o que já foi recebido por inteiro", async () => {
+    const e = await criarEmpresaDeTeste("rec4");
+    const titulo = await criarTituloAberto(e);
+    await registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+      valor: e.valorServico,
+      data: new Date(),
+      forma: "Pix",
+    });
+
+    await expect(
+      registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+        valor: 1,
+        data: new Date(),
+        forma: "Pix",
+      }),
+    ).rejects.toThrow("Esta cobrança já foi recebida ou cancelada.");
+    conferencias++;
+  });
+
+  /**
+   * A mensagem diz o saldo — decisão do fundador, 26/08/2026
+   * (`docs/planos/item-6-titulo-e-cobrancas.md`, Tarefa 3): aceitar mais que
+   * o saldo criaria um estado sem nome no produto, e dizer o número deixa a
+   * pessoa corrigir na hora.
+   */
+  it("recusa valor maior que o saldo em aberto, com o saldo na mensagem", async () => {
+    const e = await criarEmpresaDeTeste("rec5");
+    const titulo = await criarTituloAberto(e);
+
+    await expect(
+      registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+        valor: e.valorServico + 1,
+        data: new Date(),
+        forma: "Pix",
+      }),
+    ).rejects.toThrow(`Valor maior que o saldo em aberto (R$ ${formatarCentavos(e.valorServico)}).`);
+    conferencias++;
+  });
+
+  it("recebimento parcial: título continua aberto, com o saldo certo", async () => {
+    const e = await criarEmpresaDeTeste("rec6");
+    const titulo = await criarTituloAberto(e); // e.valorServico, ver criarEmpresaDeTeste
+
+    const parcial = Math.floor(e.valorServico / 3);
+    const atualizado = await registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+      valor: parcial,
+      data: new Date(),
+      forma: "Dinheiro",
+    });
+    expect(atualizado.status).toBe("aberto");
+
+    const recebimentos = await raiz.query<{ valor: number; forma: string }>(
+      "SELECT valor, forma FROM recebimento WHERE titulo_id = $1",
+      [titulo.id],
+    );
+    expect(recebimentos.rowCount).toBe(1);
+    expect(recebimentos.rows[0].valor).toBe(parcial);
+    expect(recebimentos.rows[0].forma).toBe("Dinheiro");
+    conferencias++;
+  });
+
+  it("dois recebimentos parciais que somam o valor cheio fecham o título — pago", async () => {
+    const e = await criarEmpresaDeTeste("rec7");
+    const titulo = await criarTituloAberto(e, 30000);
+
+    const meio = await registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+      valor: 10000,
+      data: new Date(),
+      forma: "Pix",
+    });
+    expect(meio.status).toBe("aberto");
+
+    const final = await registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+      valor: 20000,
+      data: new Date(),
+      forma: "Transferência",
+    });
+    expect(final.status).toBe("pago");
+    conferencias++;
+  });
+
+  it("'Outro' grava o texto digitado, não a palavra 'Outro'", async () => {
+    const e = await criarEmpresaDeTeste("rec8");
+    const titulo = await criarTituloAberto(e);
+
+    await registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+      valor: e.valorServico,
+      data: new Date(),
+      forma: "Cheque pré-datado",
+    });
+    const { rows } = await raiz.query<{ forma: string }>(
+      "SELECT forma FROM recebimento WHERE titulo_id = $1",
+      [titulo.id],
+    );
+    expect(rows[0].forma).toBe("Cheque pré-datado");
+    conferencias++;
+  });
+
+  /**
+   * **Quem garante é o banco, não o `if`** — mesmo princípio da concorrência
+   * de `faturarServico` (bloco 9) e `criarTituloJaRecebi` (bloco 3), aqui um
+   * nível mais fundo: a condição não é "existe uma linha" (índice único),
+   * é um AGREGADO sobre outra tabela (soma dos recebimentos). Dois
+   * recebimentos de metade do valor, disparados ao mesmo tempo, só podem
+   * fechar o título uma vez — se os dois passassem, o título receberia mais
+   * do que vale, dinheiro que não existe.
+   */
+  it("concorrência: dois recebimentos que juntos passam do valor — só um soma o suficiente para completar", async () => {
+    const e = await criarEmpresaDeTeste("rec9");
+    const titulo = await criarTituloAberto(e, 100000);
+    const metade = 60000; // duas vezes isso estoura o valor (120000 > 100000)
+
+    const resultados = await Promise.allSettled([
+      registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+        valor: metade,
+        data: new Date(),
+        forma: "Pix",
+      }),
+      registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+        valor: metade,
+        data: new Date(),
+        forma: "Pix",
+      }),
+    ]);
+
+    const aceitos = resultados.filter((r) => r.status === "fulfilled");
+    const recusados = resultados.filter((r) => r.status === "rejected");
+    expect(aceitos).toHaveLength(1);
+    expect(recusados).toHaveLength(1);
+    // Substring, não igualdade exata: qual das duas chamadas perde a corrida
+    // decide SE a mensagem sai com o valor do saldo (a checagem amigável de
+    // `registrarRecebimento`, quando ela ainda vê o saldo íntegro) ou sem
+    // (`traduzirFalhaDeRecebimento`, quando a corrida só é detectada pela
+    // função de banco) — as duas são "saldo insuficiente" de verdade, só
+    // achadas em momentos diferentes. `traduzirFalhaDeRecebimento` (acima)
+    // já prova cada mensagem sozinha, sem depender de vencer corrida nenhuma.
+    expect((recusados[0] as PromiseRejectedResult).reason.message).toContain(
+      "Valor maior que o saldo em aberto",
+    );
+
+    // A prova final, em dinheiro: nunca mais que o valor do título.
+    const soma = await raiz.query<{ total: string }>(
+      "SELECT COALESCE(SUM(valor), 0)::text AS total FROM recebimento WHERE titulo_id = $1",
+      [titulo.id],
+    );
+    expect(Number(soma.rows[0].total)).toBe(metade);
     conferencias++;
   });
 });

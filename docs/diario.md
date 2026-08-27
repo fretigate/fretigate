@@ -6,6 +6,180 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 26/08/2026 — Tarefa 3 do item 6: Folha de recebimento e recebimento parcial
+
+Fecha o que a Tarefa 2 deixou pendente: até aqui, o único jeito de dinheiro
+entrar era "Já recebi" (integral, na hora). Agora um título aberto pode
+receber em partes, com data e forma escolhidas, e o produto ganha o primeiro
+mecanismo de **deslizar para revelar uma ação**.
+
+**Recebimento vira entidade própria** (decisão 6 do plano, já registrada):
+migration `20260826070000_recebimento_e_derivacao_de_titulo` cria a tabela
+`recebimento` (RLS, política, `GRANT`, sem `DELETE`) e remove de
+`titulo_receber` os três campos que guardavam isso antes
+(`valor_recebido`/`data_pagamento`/`forma_pagamento`) — um título pode ser
+recebido em mais de uma vez, e um campo escalar sobrescreveria o recebimento
+anterior sem nada avisar. Backfill na própria migration preserva os
+recebimentos que "Já recebi" já tinha gravado, com `usuario_id` aproximado
+por `Servico.criado_por_usuario_id` (não existe, e nunca existiu, registro de
+quem deu baixa num título — ver "Pendências" abaixo).
+
+**A garantia contra dinheiro demais mora no banco, não em código.** A soma
+dos recebimentos de um título nunca pode passar do valor dele, mesmo sob
+concorrência real (dois toques em "Confirmar recebimento", ou o mesmo em duas
+abas) — quem garante é `registrar_recebimento`, função de banco que trava a
+linha do título (`FOR UPDATE`) pela duração da transação antes de somar e
+gravar. Fechada com `REVOKE EXECUTE ... FROM PUBLIC` na própria migration
+(`CLAUDE.md` §3). `src/lib/db/index.ts` ganhou `registrarRecebimentoAtomico`,
+o único lugar fora de `/tests` com SQL cru para chamá-la.
+
+`src/lib/servicos/titulos.ts`: `registrarRecebimento` (confere posse do
+título, status `aberto`, saldo, frete não arquivado e data não-futura antes
+de chamar a função de banco), `buscarTituloReceber`, `totalRecebidoPorTitulo`.
+`criarTituloJaRecebi` passou a criar título e recebimento juntos (`create`
+aninhado). `situacaoFinanceira`/`comSituacaoEmLote`/`resumoFinanceiroDoCliente`/
+`buscarServicoComTitulos` migrados para ler de `Recebimento`.
+`src/lib/servicos/cobrancas.ts` (`resumoDeCobrancas`/`listarCobrancas`) segue
+o mesmo caminho — "Recebidas" busca pelo `Recebimento` mais recente de cada
+título, não mais por um campo do título.
+
+**Interface nova:** `FolhaDeRecebimento.tsx` (valor editável com teclado
+numérico, pré-preenchido com o saldo; chips Hoje/Ontem/Outra data; chips de
+forma — Pix/Dinheiro/Transferência/Boleto/Outro, com campo livre para
+"Outro"); `DeslizarParaRevelar.tsx` (o gesto em si, por ponteiro, sem
+biblioteca); `AcaoMarcarRecebido.tsx` (secundária no detalhe do frete,
+quando há título aberto e o frete não está arquivado); a marca **Parcial**
+na linha de Cobranças. `LinhaDeLista` ganhou a prop `aoDeslizar`, usada em
+Meus fretes e em Cobranças.
+
+**Decisão do fundador, durante a tarefa: as duas listas abrem a mesma folha
+ao deslizar — nenhuma marca recebido na hora.** `docs/navegacao.md`
+registrava um comportamento diferente para Meus fretes ("marca recebido na
+hora") — corrigido para "Deslizar → folha de recebimento", o mesmo texto que
+já valia para Cobranças. Palavras do fundador: "o mesmo gesto com efeitos
+diferentes em duas telas é pior que nome duplicado... e o risco decide:
+marcar recebido na hora é gravar dinheiro por um gesto que pode ser
+acidental — deslizar acontece rolando a lista." **Pedido ao Design**: a
+correção do texto de `docs/navegacao.md` (linha da tela Fretes), e as
+medidas visuais de `DeslizarParaRevelar` (largura do painel, tipografia do
+rótulo), que hoje são escolha de engenharia registrada em comentário, sem
+linha em `docs/estilo.md`.
+
+**Achados do `/revisar`, corrigidos ao longo de três passes** (o segundo e o
+terceiro exigidos porque o primeiro e o segundo trouxeram achados de rigor
+total — dinheiro e teste que não media o que afirmava):
+
+- "Recebidas" usava `TituloReceber.atualizado_em` como aproximação da data
+  do recebimento — verdade só quando ninguém backdata, e a própria folha
+  oferece "Ontem"/"Outra data" para backdatar. Reescrito para buscar pela
+  data real do `Recebimento` (o mais recente de cada título), em duas
+  consultas (`groupBy` para achar e ordenar os títulos pagos, depois buscar
+  os da página resultante) — Prisma não agrega `MAX` de uma relação dentro
+  de `where`/`orderBy`.
+- Qualquer falha em `registrarRecebimentoAtomico` virava "Valor maior que o
+  saldo em aberto" — uma falha de rede ou de pool ganharia essa causa
+  específica sem ter sido essa a causa. `traduzirFalhaDeRecebimento` agora só
+  traduz as duas mensagens exatas que a função de banco levanta
+  (`titulo_invalido`/`saldo_insuficiente`); qualquer outro erro sobe como
+  está.
+- Recebimento no futuro não tinha teto nem no schema nem no serviço, e
+  "Outra data" abre o mesmo calendário genérico que a data do frete usa (que
+  permite futuro de propósito). `registrarRecebimento` recusa
+  `data > agora`; `FolhaDeCalendario` ganhou a prop `travarEmHoje` (esconde
+  "Amanhã", trava mês seguinte e dias futuros) — só usada por
+  `FolhaDeRecebimento`, os outros quatro usos do componente continuam iguais.
+- Frete arquivado com título aberto: a secundária do detalhe escondia
+  "Marcar recebido", mas Cobranças e o próprio serviço não conferiam —
+  fechado dentro de `registrarRecebimento` (o único lugar por onde as duas
+  telas passam), não só na tela.
+- Dois testes que não mediam o que afirmavam: o de concorrência de
+  `registrarRecebimento` podia passar pelo motivo errado (a checagem
+  amigável pega a mesma causa com a mesma mensagem, sem provar que a
+  tradução da função de banco funciona) — resolvido com um teste puro e
+  determinístico de `traduzirFalhaDeRecebimento`, exportada só para isso. O
+  de ordenação de "Recebidas" plantava um título só e não provava ordem
+  nenhuma — resolvido com três títulos fora de ordem de criação, verificando
+  a saída do mais recente ao mais antigo e o corte do teto de 50.
+- `CampoTocavel.tsx` extraído: `FolhaDeFaturamento` e `FolhaDeRecebimento`
+  tinham a mesma classe do campo tocável (valor/vencimento) copiada à mão.
+- Textos de aviso unificados: as três telas que confirmam a mesma ação
+  diziam "Frete recebido"/"Cobrança recebida"/"Recebimento parcial
+  registrado" — agora "Recebimento registrado"/"Recebimento parcial
+  registrado" nas três.
+
+**Três decisões do fundador, depois de eu mostrar o resultado pronto**
+(registradas com o motivo em
+`docs/planos/item-6-titulo-e-cobrancas.md`, Tarefa 3):
+
+1. Nunca aceitar valor maior que o saldo — a mensagem de recusa passou a
+   dizer o saldo em reais (`"...(R$ X,XX)."`), não só a frase genérica.
+2. O teto do campo de valor na folha é o saldo, não o valor cheio do frete —
+   `FolhaDeRecebimento` agora trava o próprio teclado nisso, antes do
+   servidor precisar recusar.
+3. "Já recebi" grava um `Recebimento`, com a mesma regra de qualquer outro
+   recebimento — já era assim desde o código (`criarTituloJaRecebi` cria
+   título e recebimento no mesmo `create`), e o fundador confirmou a decisão
+   com o motivo (evitar "recebido no mês" mentindo, e evitar dois caminhos
+   de dinheiro com regras diferentes).
+
+**Backfill do `usuario_id`, confirmado**: são títulos de teste, sem cliente
+real — a aproximação por `Servico.criado_por_usuario_id` fica como está.
+
+**Quarta decisão do fundador, buraco da Tarefa 2 corrigido nesta tarefa —
+não esperou a Tarefa 4.** Achado no terceiro `/revisar`: um frete arquivado
+depois de faturado (título ainda aberto — `arquivarServico` não trava isso e
+não toca o título) continuava contando em "A receber"/"Vencido" na tela de
+Cobranças, e o deslizar continuava oferecendo "Marcar recebido" — ação que
+`registrarRecebimento` já recusa, mas o botão não deveria nem aparecer.
+Palavras do fundador, sobre por que corrigir agora em vez de levar para a
+Tarefa 4 (Detalhe da cobrança): "é dinheiro: 'A receber' e 'Vencido' mostram
+valor de frete arquivado, na tela que existe justamente para responder
+quanto há a receber. Não é botão inconveniente, é número errado... você tem
+o contexto na mão agora; deixar para a tarefa 4 é recarregar tudo e
+arriscar escapar. E é filtro na consulta, não redesenho." Resolvido com
+`servico: { arquivado_em: null }` no `where` de `resumoDeCobrancas` e de
+`listarCobrancas` (situações em aberto) — a cobrança some da lista e das
+somas, e o botão de deslizar deixa de existir junto, sem precisar de lógica
+própria para escondê-lo. **Não se estende a "Recebidas"**: dinheiro que já
+entrou continua tendo entrado, mesmo que o frete seja arquivado depois —
+arquivar não apaga histórico (`CLAUDE.md` §7).
+
+**Pendência registrada, sem decisão necessária agora**: as medidas visuais
+de `DeslizarParaRevelar` (largura do painel, tipografia do rótulo) —
+pendentes de confirmação do Design, registradas em comentário no próprio
+arquivo. Fundador confirmou: fica como lacuna.
+
+Um título `pago` sem nenhum `Recebimento` ativo (hoje inalcançável — todo
+caminho de produção que marca `pago` também grava o recebimento)
+desapareceria de "Recebidas", porque a busca agora parte do `Recebimento`.
+Registrado para quando o item 7 (estorno) ou qualquer outro caminho novo
+tocar esse estado.
+
+Achado do quarto `/revisar`: uma cobrança em "Recebidas" cujo frete foi
+arquivado DEPOIS de recebida continua na lista (por decisão, acima), com a
+`referencia` (rota + dia) montada normalmente a partir do frete arquivado —
+nenhum documento diz se essa linha deveria se anunciar como "frete
+arquivado" de algum jeito, ou se é indistinguível de propósito. Lacuna de
+Design, não de dinheiro; registrada para quando alguém notar na prática.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` e `npm run build`
+verdes, conferidos de novo depois de cada rodada de correção (quatro passes
+do `/revisar`, mais os quatro ajustes pedidos pelo fundador). `npm test`
+local completo: 431/431 antes das correções do `/revisar`, 436/436 depois
+dos três primeiros passes; `titulos.test.ts` sozinho (59/59) depois dos três
+ajustes de mensagem/teto/"Já recebi" — as mensagens de erro mudaram, os
+testes foram atualizados junto. **A rodada final, depois de excluir frete
+arquivado das somas de Cobranças (quarta decisão): completa outra vez,
+437/437** — a mais recente, a que vale como estado atual. Verificado também
+ao vivo no navegador (dev): faturar → recebimento
+parcial → marca "Parcial" → deslizar revela "Marcar recebido" → folha
+pré-preenchida com o saldo → confirma → "Quitado", com o aviso correto em
+cada passo. Esteira deste commit ainda não confirmada — ver `/onde-paramos`.
+
+Próximo: Tarefa 4 do item 6 — Detalhe da cobrança.
+
+---
+
 ## 26/08/2026 — Tarefa 2 do item 6: Tela de Cobranças
 
 Substitui a provisória que estava em `/cobrancas` desde o item 4. Agora a tela

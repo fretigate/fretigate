@@ -18,6 +18,7 @@ import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { BotaoArquivarFrete } from "../BotaoArquivarFrete";
 import { AcaoOrdemDeServico } from "./AcaoOrdemDeServico";
 import { AcaoFaturarFrete } from "./AcaoFaturarFrete";
+import { AcaoMarcarRecebido } from "./AcaoMarcarRecebido";
 import { BotaoMarcarFinalizado } from "./BotaoMarcarFinalizado";
 import { AnexarComprovante } from "./AnexarComprovante";
 
@@ -129,6 +130,24 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
     !servico.arquivado_em &&
     servico.status_operacional === "finalizado" &&
     servico.situacao_financeira === "a_faturar";
+
+  // Secundária "Marcar recebido" (item 6, Tarefa 3 —
+  // `docs/componentes.md` linha 432): aparece com título **aberto** —
+  // "faturado" ou "parcial". "Quitado" não tem mais saldo para receber, e
+  // "a_faturar" não tem título nenhum. Hoje um frete tem no máximo um
+  // título (índice único parcial da migration `20260814150000`), então o
+  // `find` abaixo não escolhe entre vários — é só a forma de achar o único
+  // que existe.
+  //
+  // **`!servico.arquivado_em` entra na condição** — mesmo motivo de
+  // `podeFaturar`, achado do `/revisar`: esta tela lê frete arquivado de
+  // propósito (§7), e um frete arquivado com título aberto (arquivar não
+  // arquiva o título — `arquivarServico`, `src/lib/servicos/servicos.ts`)
+  // mostraria "Marcar recebido" levando a registrar dinheiro contra um
+  // frete que já saiu de circulação.
+  const tituloAberto = !servico.arquivado_em
+    ? servico.titulos.find((t) => t.status === "aberto")
+    : undefined;
   const hoje = diaEmFortaleza(new Date());
   const vencimentoInicial = vencimentoPadrao(
     hoje,
@@ -293,6 +312,12 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
             podeFaturar={podeFaturar}
             hoje={hoje}
             vencimentoInicial={vencimentoInicial}
+          />
+          <AcaoMarcarRecebido
+            podeReceber={tituloAberto !== undefined}
+            tituloId={tituloAberto?.id}
+            saldoCentavos={tituloAberto ? tituloAberto.valor - tituloAberto.totalRecebido : 0}
+            hoje={hoje}
           />
           <Botao variante="secundaria" href={`/fretes/${id}/editar`}>
             Editar frete

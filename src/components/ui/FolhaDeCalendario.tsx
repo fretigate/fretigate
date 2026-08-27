@@ -39,6 +39,25 @@ type Props = {
    * a folha inteira. Todo outro uso (Lançamento de frete) mantém o padrão.
    */
   fecharAoEscolher?: boolean;
+  /**
+   * Trava a navegação e a escolha em hoje — usado quando a data não pode
+   * ser futura (`FolhaDeRecebimento`, item 6, Tarefa 3: recebimento é
+   * registro de um fato que já aconteceu, `registrarRecebimento` recusa
+   * data futura no servidor). `false` em todo outro uso, de propósito:
+   * data do frete pode ser futura (`docs/especificacao.md` §4.1), e
+   * vencimento é sempre futuro (`FolhaDeFaturamento`). Sem isto, o chip
+   * "Amanhã", a seta de mês seguinte e os dias futuros ofereciam uma
+   * escolha que o servidor sempre recusaria — achado do `/revisar` na
+   * Tarefa 3.
+   *
+   * **Desabilita, nunca esconde** — achado do terceiro `/revisar`:
+   * `docs/componentes.md` (linha 435) declara os três chips (Hoje · Ontem ·
+   * Amanhã) como conteúdo fixo da folha, e esconder um deles mudaria o que
+   * a tela contém sem passar pelo Design (`CLAUDE.md` §13). Cinza e sem
+   * toque é o mesmo tratamento já usado para os dias futuros do próprio
+   * calendário e para a seta de mês seguinte, duas linhas abaixo.
+   */
+  travarEmHoje?: boolean;
 };
 
 export function FolhaDeCalendario({
@@ -48,6 +67,7 @@ export function FolhaDeCalendario({
   onFechar,
   titulo = "Data do frete",
   fecharAoEscolher = true,
+  travarEmHoje = false,
 }: Props) {
   const [mesExibido, setMesExibido] = useState(() => `${escolhida.slice(0, 7)}-01`);
 
@@ -56,6 +76,9 @@ export function FolhaDeCalendario({
   const primeiroDiaSemana = diaDaSemana(mesExibido);
   const totalDias = diasNoMes(mesExibido);
   const dias = Array.from({ length: totalDias }, (_, i) => i + 1);
+  // Comparação lexical funciona porque as duas strings são sempre
+  // "AAAA-MM-01" — mesmo formato, mesmo tamanho.
+  const podeAvancarMes = !travarEmHoje || mesExibido < `${hoje.slice(0, 7)}-01`;
 
   function escolherEFechar(dia: string) {
     onEscolher(dia);
@@ -87,8 +110,9 @@ export function FolhaDeCalendario({
         <button
           type="button"
           onClick={() => setMesExibido(deslocarMes(mesExibido, 1))}
+          disabled={!podeAvancarMes}
           aria-label="Mês seguinte"
-          className="flex h-44 w-44 flex-none items-center justify-center rounded-pilula bg-separacao active:bg-principal-desabilitado"
+          className="flex h-44 w-44 flex-none items-center justify-center rounded-pilula bg-separacao active:bg-principal-desabilitado disabled:text-tinta-desabilitada disabled:active:bg-separacao"
         >
           <svg width={9} height={15} viewBox="0 0 8 14" fill="none" aria-hidden="true">
             <path
@@ -125,18 +149,22 @@ export function FolhaDeCalendario({
           const diaStr = `${ano}-${mesPad}-${String(dia).padStart(2, "0")}`;
           const ehEscolhida = diaStr === escolhida;
           const ehHoje = !ehEscolhida && diaStr === hoje;
+          const ehFuturo = travarEmHoje && diaStr > hoje;
           return (
             <button
               key={dia}
               type="button"
               onClick={() => escolherEFechar(diaStr)}
+              disabled={ehFuturo}
               className={[
                 "h-48 rounded-tecla text-[16px] leading-[1] [font-variant-numeric:tabular-nums]",
-                ehEscolhida
-                  ? "bg-acao font-bold text-white"
-                  : ehHoje
-                    ? "bg-pilula font-bold text-acao active:bg-pilula-pressionada"
-                    : "bg-separacao font-semibold text-tinta active:bg-principal-desabilitado",
+                ehFuturo
+                  ? "bg-separacao text-tinta-desabilitada"
+                  : ehEscolhida
+                    ? "bg-acao font-bold text-white"
+                    : ehHoje
+                      ? "bg-pilula font-bold text-acao active:bg-pilula-pressionada"
+                      : "bg-separacao font-semibold text-tinta active:bg-principal-desabilitado",
               ].join(" ")}
             >
               {dia}
@@ -163,7 +191,8 @@ export function FolhaDeCalendario({
         <button
           type="button"
           onClick={() => escolherEFechar(deslocarDias(hoje, 1))}
-          className="h-38 rounded-pilula bg-pilula px-14 text-[12.5px] font-bold leading-[1] text-acao active:bg-pilula-pressionada"
+          disabled={travarEmHoje}
+          className="h-38 rounded-pilula bg-pilula px-14 text-[12.5px] font-bold leading-[1] text-acao active:bg-pilula-pressionada disabled:bg-separacao disabled:text-tinta-desabilitada disabled:active:bg-separacao"
         >
           Amanhã
         </button>

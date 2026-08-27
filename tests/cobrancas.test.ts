@@ -37,7 +37,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 20;
+const CONFERENCIAS_ESPERADAS = 24;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -90,8 +90,14 @@ async function criarFrete(e: EmpresaDeTeste, valor: number, origem?: string, des
  * Planta um título direto por SQL — o mesmo recurso de `tests/titulos.test.ts`,
  * pelo mesmo motivo e com um a mais: além de vencimento no passado (que
  * `faturarServico` aceitaria), alcança o **recebimento parcial** (título
- * `aberto` com `valor_recebido > 0`), que nenhuma função de produção cria até
+ * `aberto` com algum `Recebimento`), que nenhuma função de produção cria até
  * a Tarefa 3 existir.
+ *
+ * **`valorRecebido`, quando informado, também planta um `Recebimento`**
+ * (item 6, Tarefa 3 — a mesma mudança do `plantarTitulo` de
+ * `tests/titulos.test.ts`): é dessa tabela, não mais de um campo escalar em
+ * `titulo_receber`, que `resumoDeCobrancas`/`listarCobrancas` somam o que já
+ * entrou.
  *
  * É o que permite medir hoje a regra de soma por saldo, aprovada pelo
  * fundador em 26/08/2026 — sem isto, a regra ficaria escrita e não medida, e
@@ -110,25 +116,34 @@ async function plantarTitulo(
     arquivado?: boolean;
   },
 ) {
+  const tituloId = randomUUID();
   await raiz.query(
     `INSERT INTO "titulo_receber"
-       (id, servico_id, cliente_id, valor, valor_recebido, status, integral,
-        vencimento, data_pagamento, forma_pagamento_prevista, arquivado_em, empresa_id)
-     VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8, $9, $10, $11)`,
+       (id, servico_id, cliente_id, valor, status, integral,
+        vencimento, forma_pagamento_prevista, arquivado_em, empresa_id)
+     VALUES ($1, $2, $3, $4, $5, true, $6, $7, $8, $9)`,
     [
-      randomUUID(),
+      tituloId,
       servicoId,
       e.clienteId,
       dados.valor,
-      dados.valorRecebido ?? null,
       dados.status,
       dados.vencimento ? instanteDoDiaEmFortaleza(dados.vencimento) : null,
-      dados.dataPagamento ?? null,
       dados.formaPrevista ?? null,
       dados.arquivado ? new Date() : null,
       e.empresaId,
     ],
   );
+
+  if (dados.valorRecebido !== null && dados.valorRecebido !== undefined && dados.valorRecebido > 0) {
+    await raiz.query(
+      `INSERT INTO "recebimento" (id, titulo_id, valor, data, usuario_id, empresa_id)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [randomUUID(), tituloId, dados.valorRecebido, dados.dataPagamento ?? new Date(), e.usuarioId, e.empresaId],
+    );
+  }
+
+  return tituloId;
 }
 
 beforeAll(async () => {
@@ -138,6 +153,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (empresasParaLimpar.length) {
+    // `recebimento` referencia `titulo_receber` (item 6, Tarefa 3) — sai
+    // primeiro.
+    await raiz.query(`DELETE FROM "recebimento" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
     await raiz.query(`DELETE FROM "titulo_receber" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
     await raiz.query(`DELETE FROM "servico" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
     await raiz.query(`DELETE FROM "cliente" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
@@ -281,6 +299,35 @@ describe("3. resumoDeCobrancas — os três números do topo", () => {
     const resumo = await resumoDeCobrancas(e.empresaId, hoje);
     expect(resumo.aReceber).toBe(0);
     expect(resumo.vencido).toBe(0);
+    conferencias++;
+  });
+
+  /**
+   * Diferente do teste acima ("cancelado e arquivado") — ali o TÍTULO está
+   * arquivado; aqui é o FRETE, com o título continuando `aberto` e sem
+   * `arquivado_em` próprio. Achado do fundador, 26/08/2026: `arquivarServico`
+   * não trava nada e não toca o título — um frete arquivado com título ainda
+   * aberto é alcançável hoje, e antes desta correção continuava contando em
+   * "A receber"/"Vencido", dinheiro errado na tela que existe para responder
+   * essa pergunta. Buraco da Tarefa 2, corrigido aqui.
+   */
+  it("frete arquivado com título ainda aberto não entra em A receber nem em Vencido", async () => {
+    const e = await criarEmpresaDeTeste("r3b");
+    const hoje = diaEmFortaleza(new Date());
+    const freteId = await criarFrete(e, 80000);
+    await plantarTitulo(e, freteId, {
+      valor: 80000,
+      status: "aberto",
+      vencimento: deslocarDias(hoje, -2),
+    });
+    await arquivarServico(e.empresaId, freteId);
+
+    const resumo = await resumoDeCobrancas(e.empresaId, hoje);
+    expect(resumo.aReceber).toBe(0);
+    expect(resumo.vencido).toBe(0);
+
+    const listados = await listarCobrancas(e.empresaId, { situacao: "vencidas", periodo: null, hoje });
+    expect(listados.find((t) => t.valor === 80000)).toBeUndefined();
     conferencias++;
   });
 
@@ -446,7 +493,7 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
     const e = await criarEmpresaDeTeste("l5");
     const hoje = diaEmFortaleza(new Date());
     const servicoId = await criarFrete(e, 77000);
-    const titulo = await criarTituloJaRecebi(e.empresaId, servicoId);
+    const titulo = await criarTituloJaRecebi(e.empresaId, e.usuarioId, servicoId);
     expect(titulo.vencimento).toBeNull();
 
     const lista = await listarCobrancas(e.empresaId, {
@@ -458,6 +505,144 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
       hoje,
     });
     expect(lista.map((t) => t.valor)).toEqual([77000]);
+    conferencias++;
+  });
+
+  /**
+   * Achado do `/revisar` na Tarefa 3: uma primeira versão usava
+   * `atualizado_em` do título (o instante em que a linha foi gravada) como
+   * proxy da data do recebimento — verdade só quando ninguém backdata. Este
+   * teste planta um título `pago` cujo `Recebimento.data` é de 40 dias
+   * atrás, mas cuja LINHA acabou de ser gravada agora (`atualizado_em` ~
+   * "agora", por ser a única coisa que `plantarTitulo`/o banco preenchem
+   * sozinhos). Se o filtro ainda usasse `atualizado_em`, este título
+   * apareceria dentro da janela de 2 dias em volta de hoje — o que provaria
+   * que a correção não pegou.
+   */
+  it("em Recebidas, o filtro e a ordem seguem a data do Recebimento, não a de quando a linha do título foi gravada", async () => {
+    const e = await criarEmpresaDeTeste("l5b");
+    const hoje = diaEmFortaleza(new Date());
+    const haQuarentaDias = new Date(instanteDoDiaEmFortaleza(hoje).getTime() - 40 * 24 * 3600 * 1000);
+
+    // Pago há 40 dias (Recebimento.data), mas a LINHA do título é gravada
+    // agora — atualizado_em não sabe disso.
+    await plantarTitulo(e, await criarFrete(e, 44400), {
+      valor: 44400,
+      valorRecebido: 44400,
+      status: "pago",
+      dataPagamento: haQuarentaDias,
+    });
+
+    const dentroDosUltimos2Dias = await listarCobrancas(e.empresaId, {
+      situacao: "recebidas",
+      periodo: {
+        inicio: instanteDoDiaEmFortaleza(deslocarDias(hoje, -1)),
+        fim: instanteDoDiaEmFortaleza(deslocarDias(hoje, 1)),
+      },
+      hoje,
+    });
+    // Se o código ainda usasse `atualizado_em` (que seria "agora"), este
+    // título apareceria aqui — e não deveria, porque foi recebido há 40 dias.
+    expect(dentroDosUltimos2Dias.map((t) => t.valor)).not.toContain(44400);
+
+    const semFiltro = await listarCobrancas(e.empresaId, {
+      situacao: "recebidas",
+      periodo: null,
+      hoje,
+    });
+    const encontrado = semFiltro.find((t) => t.valor === 44400);
+    expect(encontrado?.ultimoRecebimentoEm?.getTime()).toBe(haQuarentaDias.getTime());
+    conferencias++;
+  });
+
+  /**
+   * Achado do segundo `/revisar`: o teste acima planta um título só, e não
+   * mede ordem nem corte — "recebidas" passou a ordenar e cortar em
+   * memória (`groupBy` + `sort` + `slice`, não mais `orderBy`/`take` do
+   * Prisma), e nenhum teste provava que essa reimplementação preserva a
+   * ordem certa. `ListaCobrancas.tsx` confia por escrito que a lista "já
+   * vem ordenada do servidor... nunca reordena" — se o `sort` ou o `slice`
+   * fossem invertidos ou removidos, nada além deste teste acusaria.
+   */
+  it("em Recebidas, três títulos com datas de recebimento diferentes saem do mais recente ao mais antigo, e o teto corta os mais antigos", async () => {
+    const e = await criarEmpresaDeTeste("l5c");
+    const hoje = diaEmFortaleza(new Date());
+    const ha3Dias = new Date(instanteDoDiaEmFortaleza(hoje).getTime() - 3 * 24 * 3600 * 1000);
+    const ha10Dias = new Date(instanteDoDiaEmFortaleza(hoje).getTime() - 10 * 24 * 3600 * 1000);
+    const ha20Dias = new Date(instanteDoDiaEmFortaleza(hoje).getTime() - 20 * 24 * 3600 * 1000);
+
+    // Plantados fora de ordem de propósito — se o código confiasse na ordem
+    // de inserção (`criado_em`) em vez da data do recebimento, passaria por
+    // coincidência.
+    await plantarTitulo(e, await criarFrete(e, 10001), {
+      valor: 10001,
+      valorRecebido: 10001,
+      status: "pago",
+      dataPagamento: ha10Dias,
+    });
+    await plantarTitulo(e, await criarFrete(e, 10003), {
+      valor: 10003,
+      valorRecebido: 10003,
+      status: "pago",
+      dataPagamento: ha3Dias,
+    });
+    await plantarTitulo(e, await criarFrete(e, 10002), {
+      valor: 10002,
+      valorRecebido: 10002,
+      status: "pago",
+      dataPagamento: ha20Dias,
+    });
+
+    const semTeto = await listarCobrancas(e.empresaId, {
+      situacao: "recebidas",
+      periodo: null,
+      hoje,
+    });
+    // Do mais recente (3 dias) ao mais antigo (20 dias) — nunca a ordem de
+    // criação (10001, 10003, 10002).
+    expect(semTeto.map((t) => t.valor)).toEqual([10003, 10001, 10002]);
+
+    const comTeto = await listarCobrancas(e.empresaId, {
+      situacao: "recebidas",
+      periodo: null,
+      limite: 2,
+      hoje,
+    });
+    // O corte mantém os dois mais recentes, descarta o mais antigo (20 dias).
+    expect(comTeto.map((t) => t.valor)).toEqual([10003, 10001]);
+    conferencias++;
+  });
+
+  /**
+   * A outra metade da decisão do fundador sobre frete arquivado (26/08/2026):
+   * o filtro que tira frete arquivado de "A receber"/"Vencido"
+   * (`resumoDeCobrancas`) e das listas em aberto **não se estende** a
+   * "Recebidas" nem a "Recebido no mês" — dinheiro já recebido continua
+   * contando, mesmo que o frete seja arquivado depois (`CLAUDE.md` §7).
+   * Achado do quarto `/revisar`: só a metade que EXCLUI tinha teste; esta é
+   * a metade que garante que ninguém estende o filtro por engano depois.
+   */
+  it("frete arquivado não tira a cobrança de Recebidas nem de Recebido no mês", async () => {
+    const e = await criarEmpresaDeTeste("l5d");
+    const hoje = diaEmFortaleza(new Date());
+    const freteId = await criarFrete(e, 55500);
+    await plantarTitulo(e, freteId, {
+      valor: 55500,
+      valorRecebido: 55500,
+      status: "pago",
+      dataPagamento: new Date(),
+    });
+    await arquivarServico(e.empresaId, freteId);
+
+    const resumo = await resumoDeCobrancas(e.empresaId, hoje);
+    expect(resumo.recebidoNoMes).toBe(55500);
+
+    const recebidas = await listarCobrancas(e.empresaId, {
+      situacao: "recebidas",
+      periodo: null,
+      hoje,
+    });
+    expect(recebidas.find((t) => t.valor === 55500)).toBeDefined();
     conferencias++;
   });
 

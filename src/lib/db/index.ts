@@ -158,6 +158,56 @@ export function reverterCadastroIncompleto(empresaId: string): Promise<number> {
 }
 
 /**
+ * Registra um recebimento e ajusta o status do título, atomicamente — chama
+ * a função de banco `registrar_recebimento` (migration
+ * `20260826070000_recebimento_e_derivacao_de_titulo`, item 6, Tarefa 3).
+ *
+ * **Diferente de `reverterCadastroIncompleto`, esta função NÃO é `SECURITY
+ * DEFINER`** — ela roda com o privilégio de quem chama (`fretigate_app`, que
+ * já tem tudo que precisa: `SELECT`/`UPDATE` em `titulo_receber`,
+ * `SELECT`/`INSERT` em `recebimento`) e RLS continua valendo dentro dela.
+ * Por isso, ao contrário daquela, esta chamada PRECISA definir
+ * `app.empresa_id` antes — é o mesmo `[definirEmpresa, query]` de `db()`, só
+ * que com `$executeRaw` no lugar de uma operação do Prisma Client. É essa
+ * definição que faz um `tituloId` de outra empresa ser recusado pela própria
+ * política de `titulo_receber` (a função nem encontra a linha), não por uma
+ * checagem extra aqui.
+ *
+ * **A garantia contra dois recebimentos concorrentes somarem além do valor
+ * do título mora inteira dentro da função** (`FOR UPDATE` na linha do
+ * título, pela duração da transação) — `src/lib/servicos/titulos.ts` não
+ * sabe SQL (`CLAUDE.md` §3: "SQL cru só em `src/lib/db` e em `/tests`"), só
+ * chama isto depois de já ter confirmado, com `db(empresaId)`, que o título
+ * existe, pertence à empresa e está aberto. Essa checagem prévia é só para a
+ * mensagem de erro ficar boa no caso comum; quem garante de verdade,
+ * inclusive sob corrida, é a função.
+ *
+ * Lança se a função de banco recusar (título inválido/não aberto, ou valor
+ * que estoura o saldo) — `titulos.ts` traduz qualquer exceção daqui para a
+ * mensagem certa, porque a essa altura as checagens amigáveis já passaram.
+ */
+export async function registrarRecebimentoAtomico(
+  empresaId: string,
+  dados: {
+    id: string;
+    tituloId: string;
+    valor: number;
+    data: Date;
+    forma: string | null;
+    usuarioId: string;
+  },
+): Promise<void> {
+  const empresa = exigirEmpresaId(empresaId);
+  await clienteBase.$transaction([
+    definirEmpresa(empresa),
+    clienteBase.$executeRaw`SELECT registrar_recebimento(
+      ${dados.id}::uuid, ${dados.tituloId}::uuid, ${dados.valor}::integer,
+      ${dados.data}::timestamptz, ${dados.forma}, ${dados.usuarioId}, ${empresa}::uuid
+    )`,
+  ]);
+}
+
+/**
  * Fecha o pool de conexões do `clienteBase` — para processo CURTO que usa
  * `db()`/`emTransacao()` e depois termina (comando de terminal, suíte de
  * teste), nunca para o servidor em execução (lá o processo é longo, e o pool
