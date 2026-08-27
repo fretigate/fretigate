@@ -31,7 +31,7 @@ política e `GRANT` desde o item 3 (`20260814140000_titulo_receber`) — os
 campos `vencimento`, `forma_pagamento_prevista`, `status`, `data_pagamento`,
 `forma_pagamento` nascem nulos e nunca foram preenchidos. Três migrations novas
 são necessárias, e só três: a tabela `recebimento` (Tarefa 3, decisão 6),
-`empresa.chave_pix` (Tarefa 5) e a tabela `cobranca_enviada` (Tarefa 6).
+`empresa.chave_pix` e a tabela `cobranca_enviada` (as duas na Tarefa 5).
 
 ---
 
@@ -521,7 +521,7 @@ procurado).
   desabilitada, conforme o estado — reaproveita `registrarRecebimentoAction` +
   `FolhaDeRecebimento`, sem action nova.
 - Secundária **Ver relatório** e **Cobrar no WhatsApp** ficam de fora (item 7
-  e Tarefa 6), pela mesma regra de botão sem destino.
+  e Tarefa 5), pela mesma regra de botão sem destino.
 
 **Decisões tomadas ao planejar, aprovadas pelo fundador em 26/08/2026:**
 
@@ -549,12 +549,12 @@ procurado).
    confirmado pelo fundador** — o mockup desenha como editável, mas nem o
    plano nem `titulos.ts` prevêem essa ação, e sua única consequência (mostrar
    ou esconder "Cobrar no WhatsApp", `docs/especificacao.md` §8 item 11) é da
-   Tarefa 6. Mostra só como texto, dentro do campo FORMA.
+   Tarefa 5. Mostra só como texto, dentro do campo FORMA.
 7. **FRETES INCLUÍDOS reaproveita `LinhaDeLista`**, do mesmo jeito que
    `HistoricoDoPerfil` já faz (data como `nome`, rota como `apoio`,
    `valorCentavos`, `situacao`) — sempre 1 linha hoje (agrupamento por
    relatório é item 7), sem pílula "ver todos".
-8. **COBRANÇAS ENVIADAS não entra** — a tabela `cobranca_enviada` é Tarefa 6.
+8. **COBRANÇAS ENVIADAS não entra** — a tabela `cobranca_enviada` é Tarefa 5.
 9. **`textoDoPrazo`/`CLASSE_DO_PRAZO` saem de `ListaCobrancas.tsx` para
    `cobrancas-situacao.ts`**, reaproveitados pela lista e pelo detalhe — nunca
    copiados (mesmo princípio que já corrigiu três cópias de `LinhaDePerfil`
@@ -667,7 +667,7 @@ procurado).
   `notFound()` no detalhe da cobrança, enquanto o detalhe do frete lê
   registro arquivado de propósito (§7, "nada é apagado"). Nenhum documento
   decide qual dos dois vale para cobrança, e o caso é inalcançável hoje
-  (nada arquiva título até o estorno, Tarefa 7) — revisitar lá.
+  (nada arquiva título até o estorno, Tarefa 6) — revisitar lá.
 - **Não é achado, é convenção já existente**: `docs/navegacao.md` e
   `docs/componentes.md` marcam a tela ✅ com secundárias (Cobrar no WhatsApp,
   Ver relatório) que a Tarefa 4 não constrói. O ✅ já significava "design
@@ -704,9 +704,9 @@ procurado).
 - **Lacuna nova, registrada**: `grupoDaCobranca` não tem ramo para
   `status = "cancelado"` — um título cancelado cairia nos ramos de
   vencimento (mostraria "Vencida"/"Em aberto" para algo que não é cobrança
-  ativa). Inalcançável hoje (nada cancela título até o estorno, Tarefa 7);
+  ativa). Inalcançável hoje (nada cancela título até o estorno, Tarefa 6);
   revisitar junto da lacuna do arquivado, acima — as duas são a mesma
-  pergunta (o que a Tarefa 7 precisa decidir sobre título fora de circulação
+  pergunta (o que a Tarefa 6 precisa decidir sobre título fora de circulação
   no detalhe da cobrança).
 
 **Quarto passe do `/revisar` (27/08/2026):**
@@ -730,7 +730,28 @@ procurado).
   (as duas lacunas acima), é escrita ao fechar** — CLAUDE.md §13 exige isso
   antes do commit, não durante a construção.
 
-### Tarefa 5 — Chave Pix e o texto da cobrança
+### Tarefa 5 — Cobrar no WhatsApp, chave Pix e o texto da cobrança
+
+**Fusão decidida pelo fundador em 27/08/2026, ao planejar a tarefa**: o plano
+original separava esta tarefa (chave Pix e o texto) de "Cobrar no WhatsApp"
+(a antiga Tarefa 6). Ao detalhar a construção, ficou claro que `FolhaDePix`
+nasceria sem nenhum gatilho real — os dois lugares que a acionam ("Cobrar no
+WhatsApp" e "Gerar relatório com Pix") ainda não existiam, um deles só
+nascendo na tarefa seguinte. É o mesmo problema que `CLAUDE.md` §6 proíbe
+("sem camada sem dois casos de uso reais"), e o precedente mais próximo já
+tinha resolvido junto: a Tarefa 2 do item 5 construiu `mensagens.ts`
+(`montarMensagemOrdem`) na mesma tarefa que seu gatilho real ("Enviar ordem
+no WhatsApp"), nunca em separado. As duas tarefas viram uma.
+
+**Aviso do fundador, registrado para quem construir:** esta tarefa fica
+grande — migration com duas coisas (`chave_pix` e `cobranca_enviada`),
+mensagem, folha nova, botão em duas telas, aviso de confirmação, histórico e
+a regra do boleto. Do tamanho de uma tarefa de tela cheia. **Se durante a
+construção ficar claro que dá para cortar em dois commits — a base
+(migrations, `mensagens.ts`, `FolhaDePix`) e a tela (o botão, o aviso, o
+histórico) —, vale fazer**, como já aconteceu com os três perfis do item 4
+(Tarefa 6, um commit por perfil). Não é obrigatório partir; é permissão
+registrada antecipadamente, para não parecer desvio do plano se acontecer.
 
 - **Migration:** `empresa.chave_pix` (texto, nulável). Sem `enum`, sem
   validação de formato: chave Pix pode ser CPF, CNPJ, e-mail, telefone ou
@@ -743,11 +764,9 @@ procurado).
   se a diferença couber em props): título **"Falta a chave Pix da sua
   empresa"**, já escrito em `docs/componentes.md` §12. "Agora não" **não
   cancela a ação** (decisão 2).
-- Testes: o molde com e sem Pix, com e sem rota, vencido e a vencer — que a
-  linha "Venceu" só aparece quando passou, no fuso de Fortaleza.
-
-### Tarefa 6 — Cobrar no WhatsApp: histórico, aviso e a regra do boleto
-
+- Testes do molde da mensagem: com e sem Pix, com e sem rota, vencido e a
+  vencer — que a linha "Venceu" só aparece quando passou, no fuso de
+  Fortaleza.
 - **Migration:** tabela `cobranca_enviada` (`titulo_id` · `usuario_id` ·
   `enviado_em` · `empresa_id`), com `ENABLE` + `FORCE ROW LEVEL SECURITY`,
   política de isolamento com `USING` **e** `WITH CHECK` explícitos, `GRANT` a
@@ -789,7 +808,7 @@ procurado).
   **"Salvar e cobrar"** — `FolhaDeTelefone` já nasceu genérica para isto
   (`rotuloBotao`/`apoio`), sem refazer.
 
-### Tarefa 7 — Estorno
+### Tarefa 6 — Estorno
 
 **Migration obrigatória, achada na Tarefa 1 e registrada aqui para quem
 construir esta ler — não só na docstring de `faturarServico`.** O índice único
@@ -822,7 +841,7 @@ prova o ciclo inteiro: faturar → estornar → **refaturar**.
   dinheiro registrado deixa de contar.
 - Item novo do inventário → Design, registrado no diário.
 
-### Tarefa 8 — "A receber" e "Vencido" nos perfis
+### Tarefa 7 — "A receber" e "Vencido" nos perfis
 
 Fecha a pendência deixada de propósito no item 4.
 

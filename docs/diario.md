@@ -6,6 +6,36 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 27/08/2026 — Fusão das Tarefas 5 e 6 do item 6, plano atualizado
+
+Antes de construir a Tarefa 5 ("Chave Pix e o texto da cobrança"), a conferência
+de onde `FolhaDePix` seria usada achou que ela nasceria sem gatilho real — os
+dois lugares que a acionam ("Cobrar no WhatsApp", antiga Tarefa 6, e "Gerar
+relatório com Pix", item 7) ainda não existem. É o mesmo problema que
+`CLAUDE.md` §6 proíbe ("sem camada sem dois casos de uso reais"), e diferente
+do precedente do item 5, onde `FolhaDeTelefone` e `montarMensagemOrdem`
+nasceram na mesma tarefa que seu gatilho real.
+
+**Decisão do fundador:** funde as Tarefas 5 e 6 numa só — "Tarefa 5: Cobrar no
+WhatsApp, chave Pix e o texto da cobrança" —, pelo mesmo precedente que achou o
+problema: a Tarefa 2 do item 5 já tinha construído `mensagens.ts` junto do seu
+gatilho real, no mesmo commit. As antigas Tarefa 7 (Estorno) e Tarefa 8
+("A receber"/"Vencido" nos perfis) recuam para Tarefa 6 e Tarefa 7.
+
+`docs/planos/item-6-titulo-e-cobrancas.md` atualizado: a seção da Tarefa 5
+fundida, com o motivo da fusão e o aviso do fundador de que a tarefa fica
+grande (migration dupla, mensagem, folha nova, botão em duas telas, aviso,
+histórico, regra do boleto) e pode ser cortada em dois commits durante a
+construção — base e tela —, mesmo precedente dos três perfis do item 4
+(Tarefa 6). Todas as referências cruzadas às Tarefas 6/7/8 dentro do plano
+foram renumeradas junto, inclusive a armadilha do índice único do estorno
+(antiga Tarefa 7, agora Tarefa 6).
+
+Próximo: Tarefa 5 do item 6 — Cobrar no WhatsApp, chave Pix e o texto da
+cobrança.
+
+---
+
 ## 27/08/2026 — Tarefa 4 do item 6: Detalhe da cobrança
 
 Fecha o link provisório de "Cobranças" — a lista ganhou `href` na linha
