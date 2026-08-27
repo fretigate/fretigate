@@ -6,6 +6,50 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 27/08/2026 — instabilidade na esteira do commit `11a4654`, rerun disparado
+
+Achado ao rodar `/onde-paramos`: a esteira do commit `11a4654` (Tarefa 5 do
+item 6, segundo commit) estava com `conclusion: "failure"`, sem diagnóstico
+registrado. Investigado antes de qualquer tarefa nova, como pedido.
+
+**O que falhou.** `npm test`, dentro de `tests/servicos.test.ts`, duas
+reprovações:
+
+1. `estatisticasPorMotorista — bate exatamente com resumoDoMotorista...` —
+   `PrismaClientKnownRequestError: Transaction API error: Unable to start a
+   transaction in the given time.`
+2. `cobertura > rodou todas as verificações previstas` — `expected 51 to be
+   52`. Consequência da primeira, não um defeito à parte: é o contador de
+   verificações do `CLAUDE.md` §3 item 4, e ficou uma a menos porque o teste
+   1 estourou a exceção antes de completar a própria checagem.
+
+**Classificação: instabilidade conhecida do pool/transação (`CLAUDE.md` §2),
+não defeito de código.** O arquivo inteiro (53 testes) levou **366 segundos**
+nessa execução, com cada teste individual entre **2 e 17 segundos** — muito
+acima do normal (a mesma classe de lentidão geral já registrada em 18-20/08,
+não um teste reagindo diferente do resto).
+
+**O commit seguinte (`748c669`, Tarefa 6 — Estorno) já tinha rodado e
+confirmou verde** (`gh run view 33111565488`, `conclusion: success`) sem
+tocar nesse teste — o mesmo arquivo passou limpo no commit imediatamente
+depois, o que reforça instabilidade e não regressão.
+
+**Proporção, contando a partir da correção de 20/08/2026 (commit `a28263f`,
+onde a contagem reiniciou):** 33 envios confirmados (`93085a7` até `748c669`,
+`gh run list`), com **1 falha por defeito real** (`868a653`, corrigida por
+código no commit seguinte `d2d3005` — teste de criação sequencial de fretes
+estourando timeout, não instabilidade de pool) e **esta é a primeira falha
+classificada como instabilidade desde o reset**. **1 rerun em 33 envios** —
+bem abaixo do 1-em-10 que o fundador definiu como ruído tolerável. Não abre
+investigação de causa raiz.
+
+Rerun disparado (`gh run rerun 33101066666 --failed`) só depois de confirmar
+que `748c669` já tinha terminado — sem risco de cancelar a execução em fila
+(`CLAUDE.md` §2, fila de reruns). Confirmou verde (`gh run view 33101066666`,
+`conclusion: success`) — `main` está com todos os commits confirmados.
+
+---
+
 ## 27/08/2026 — Tarefa 6 do item 6: Estorno
 
 Fecha a promessa que a Tarefa 4 do item 4 já fazia na tela de Editar frete

@@ -875,16 +875,95 @@ por analogia com esta.
 
 ### Tarefa 7 — "A receber" e "Vencido" nos perfis
 
-Fecha a pendência deixada de propósito no item 4.
+Fecha a pendência deixada de propósito no item 4 e no item 6.
 
-- `resumoFinanceiroDoCliente` passa de dois números para **quatro** — a razão
-  registrada para deixá-los fora ("um número que só pode ser zero") deixa de
-  valer nesta tarefa, e a docstring diz isso.
-- O apoio "· R$ X em aberto" na linha da lista de Clientes
-  (`docs/especificacao.md` §4.7), também adiado pelo mesmo motivo.
-- Atualizar `docs/navegacao.md` e `docs/especificacao.md` onde eles dizem
-  "entram no item 6" — o estado é do repositório (`CLAUDE.md` §13), e o pedido
-  ao Design entra no diário.
+**Decisão do fundador, 27/08/2026, antes de escrever código — "A receber" e
+"Vencido" são situação atual, sempre, no perfil do cliente e na lista de
+Clientes.** Não respondem ao chip de período — mesmo princípio já decidido
+para Cobranças e a dashboard (`docs/especificacao.md` §4.6: "'a receber' e
+'vencido' são situação atual, e um filtro tornaria o significado deles
+ambíguo"). A frase do §4.7 ("com filtro de período que recalcula os quatro")
+está errada e é corrigida nesta tarefa: só **já rodado** e **recebido no
+período** respondem ao chip; **a receber** e **vencido** não.
+
+**Consultas**
+
+- `resumoFinanceiroDoCliente` (`titulos.ts`) passa de dois números para
+  quatro. Ganha um parâmetro `hoje: string`, mesmo padrão de
+  `resumoDeCobrancas`. `aReceber`/`vencido` são duas consultas cada (total do
+  título aberto + total já recebido desses títulos), escopadas por
+  `cliente_id`, servico ativo — mesmo desenho de `resumoDeCobrancas`
+  (`cobrancas.ts`), só que por um cliente em vez da empresa inteira. Seis
+  consultas paralelas ao todo (as duas já existentes + quatro novas).
+- `valorEmAbertoPorCliente` (nova, `titulos.ts`) — saldo em aberto de **todos**
+  os clientes de uma vez, para ordenar a lista e montar o apoio. Duas
+  consultas: os títulos abertos com serviço ativo (`id`, `cliente_id`,
+  `valor`), e `totalRecebidoPorTitulo` sobre os ids encontrados — reduzidas em
+  memória por `cliente_id`. Nunca uma consulta por cliente.
+- "Mais > Clientes" reaproveita `resumoDeCobrancas(empresaId, hoje).aReceber`
+  para o total da empresa (`"7 cadastrados · R$ 12.080 em aberto"`,
+  `referencia/.../TelaMais.dc.html`) — não escreve uma segunda função para o
+  mesmo número.
+
+**Interface**
+
+- `ListaClientes`: terceiro critério de ordenação, "Maior valor em aberto"
+  (`docs/especificacao.md` §4.7 já lista os três; `docs/componentes.md` linha
+  369 já usa esse rótulo como exemplo — só o código ficava para trás). Mesmo
+  padrão de três critérios que Caminhões já usa.
+- Apoio da linha, com esse critério ativo: **"R$ X em aberto"**, sem "no
+  total". **Decisão registrada, para não virar exceção por analogia depois:**
+  o qualificador "no total" existe para distinguir o número da vida inteira
+  (lista) do número por período (perfil) do MESMO conceito (`docs/
+  especificacao.md` §4.7, regra geral de 22/08/2026) — "valor transportado" e
+  "fretes" têm as duas versões, e por isso precisam do qualificador. "Valor
+  em aberto" não tem versão por período em lugar nenhum (decisão acima: é
+  situação atual, sempre, tanto na lista quanto no perfil) — não existe o
+  outro recorte para confundir, então não existe qualificador para escrever.
+  Se um dia "valor em aberto" ganhar uma versão por período, esta decisão se
+  reabre — não se herda por analogia.
+- Perfil do cliente: `ResumoDoPerfil` ganha uma segunda linha — grade de duas
+  linhas de dois números, não uma fileira de quatro. Em cima, os que
+  respondem ao chip de período (já rodado, recebido no período); embaixo, os
+  de situação atual (a receber, vencido). Decisão do fundador: a separação
+  não é estética — carrega a informação de que a linha de cima muda ao trocar
+  o período e a de baixo não. Embaralhados, a pessoa troca o período, vê dois
+  números mudarem e dois pararem, e lê como travamento. Rótulo/tratamento
+  visual da segunda linha ficam **provisórios**, registrados como lacuna para
+  o Design confirmar, com este motivo — mesmo tratamento já dado à Folha de
+  Estorno (item 6, Tarefa 6).
+- "A receber" e "Vencido" tocáveis (dos "três primeiros tocáveis" do §4.7)
+  levam a `/cobrancas?situacao=em_aberto&cliente=<id>` e
+  `?situacao=vencidas&cliente=<id>` — **sem** `periodo=`, coerente com serem
+  situação atual. `cobrancas/page.tsx` ganha `?cliente=` na URL só para
+  semear o filtro que já existe (`ListaCobrancas`, `clienteFiltro`) — o
+  filtro em si continua no navegador, sem nova consulta ao servidor (mesmo
+  desenho já documentado: "Cliente filtra no navegador, sobre o que já
+  veio").
+
+**Textos que ficam errados com este item, corrigidos aqui — achado ao revisar
+o pedido do fundador (27/08/2026): o motivo da ausência de "Cobrar no
+WhatsApp" no perfil do cliente muda de natureza, de falta de dado para
+escopo, e o texto velho engana quem procurar "por que não tem Cobrar aqui"
+sem saber que trocou.**
+
+- `src/app/(app)/clientes/[id]/page.tsx` (docstring): dizia que "Gerar
+  relatório" e "Cobrar no WhatsApp" ficam de fora pela mesma razão (dado que
+  só existe a partir do item 6/7). Deixa de ser verdade para o segundo: o
+  dado (valor em aberto) passa a existir nesta tarefa. Reescrita para separar
+  os dois motivos — "Gerar relatório" continua esperando o item 7; "Cobrar no
+  WhatsApp" não é construído nesta tarefa por não estar no escopo pedido, não
+  por falta de dado.
+- `src/app/(app)/clientes/ListaClientes.tsx` (docstring): a mesma classe de
+  frase ("no item 4, maior valor em aberto nasce sem servir") — corrigida ao
+  implementar o terceiro critério, não deixada para trás.
+- **Não corrigido, e trazido como achado separado, não pedido**: `docs/
+  navegacao.md` linha 40 (Perfil do cliente) já lista "Gerar relatório →
+  Relatório preenchido" e "Cobrar no WhatsApp → conversa" como destinos da
+  tela marcada ✅, embora nenhum dos dois exista. Não é a mesma classe de
+  erro (não é uma razão-de-ausência ficando velha; é o link aparecendo pronto
+  antes de existir) e não estava no que foi pedido — decisão de corrigir ou
+  não fica com o fundador.
 
 ---
 
