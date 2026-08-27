@@ -499,17 +499,66 @@ arquivar não apaga histórico (`CLAUDE.md` §7).
 
 ### Tarefa 4 — Detalhe da cobrança
 
-- `src/app/(app)/cobrancas/[id]/page.tsx` (novo).
-- Ordem já medida pelo Design (`docs/componentes.md`): resumo → campos → forma
-  prevista → **ações** → fretes incluídos → cobranças enviadas.
+Planejamento detalhado em 26/08/2026 (achado de mockup real: os estados
+`detalhe` e `parcial` de `referencia/.../TelaCobrancas.dc.html` já desenham
+esta tela — evidência corroborante, não usada até agora por ninguém ter
+procurado).
+
+- `src/app/(app)/cobrancas/[id]/page.tsx` (novo), mesma estrutura do detalhe
+  do frete.
+- Ordem já medida pelo Design (`docs/componentes.md`): resumo (cliente ·
+  referência · valor · marca de prazo/parcial) → campos (VENCIMENTO ·
+  SITUAÇÃO · FORMA) → **ações** → fretes incluídos.
 - **Requisito somado, medido e não estimado:** a ação principal fica visível
-  sem rolar, no pior caso (estado **parcial**, em que a linha SITUAÇÃO ganha
-  saldo recebido e restante). Medir com `getBoundingClientRect` e
-  `scrollTop: 0`, nunca a olho.
+  sem rolar, no pior caso — **e o pior caso é parcial COM vencido ao mesmo
+  tempo**, não parcial isolado (correção do fundador, 26/08/2026, ao aprovar
+  este plano): as duas condições são independentes (`grupoDaCobranca` e
+  `parcial` não se excluem) e coexistem quando um título vencido já recebeu
+  parte. A marca de prazo (vencida) e a linha SITUAÇÃO (recebeu X, falta Y)
+  crescem juntas nesse caso — é ele que precisa ser medido, não só o parcial
+  sozinho. Medir com `getBoundingClientRect` e `scrollTop: 0`, nunca a olho.
 - Principal **Marcar recebido** / **Receber o resto** / **Recebido ✓**
-  desabilitada, conforme o estado.
-- Secundária **Ver relatório** fica de fora (item 7), pela mesma regra de botão
-  sem destino.
+  desabilitada, conforme o estado — reaproveita `registrarRecebimentoAction` +
+  `FolhaDeRecebimento`, sem action nova.
+- Secundária **Ver relatório** e **Cobrar no WhatsApp** ficam de fora (item 7
+  e Tarefa 6), pela mesma regra de botão sem destino.
+
+**Decisões tomadas ao planejar, aprovadas pelo fundador em 26/08/2026:**
+
+1. **A linha da lista vira tocável** (`href` em `LinhaDeLista`, dentro de
+   `ListaCobrancas.tsx`) — adiado de propósito na Tarefa 2 para não construir
+   meio detalhe.
+2. **Nome do cliente não é link à parte.** Mesma medida do item 4 (alvo de
+   48px não cabe no cartão de 78px de `LinhaDeLista`) — é o mesmo componente,
+   então a conclusão vale sem remedir. Corrige duas afirmações que ficaram
+   desatualizadas quando essa decisão nasceu para "Meus fretes" e não foi
+   replicada para Cobranças: `docs/navegacao.md` linhas 19 e 93, e
+   `docs/especificacao.md` §4.7 ("tocando o nome em qualquer linha de frete ou
+   de cobrança"). Viram nome sem link, igual ao que já vale para Meus fretes.
+3. **Deslizar → fechar a folha sem receber**: testado ao vivo no navegador
+   antes deste plano — a linha continua normal, o painel fecha, nada some.
+   Não é defeito hoje; reconferido depois do `href` entrar (a combinação
+   already existe em "Meus fretes" desde a Tarefa 3, não é interação nova).
+4. **Campos VENCIMENTO/SITUAÇÃO/FORMA reaproveitam `LinhaDePerfil`**, sem
+   `href` — não são editáveis nesta tarefa. FORMA some quando
+   `forma_pagamento_prevista` é nulo (título nascido de "Já recebi", que nunca
+   pergunta isso).
+5. **Sem linha PIX** — `Empresa.chave_pix` só nasce na Tarefa 5; mostrar o
+   rótulo sem dado seria pior que não mostrar.
+6. **"Trocar forma prevista" (Boleto/Outro) fica de fora desta tarefa,
+   confirmado pelo fundador** — o mockup desenha como editável, mas nem o
+   plano nem `titulos.ts` prevêem essa ação, e sua única consequência (mostrar
+   ou esconder "Cobrar no WhatsApp", `docs/especificacao.md` §8 item 11) é da
+   Tarefa 6. Mostra só como texto, dentro do campo FORMA.
+7. **FRETES INCLUÍDOS reaproveita `LinhaDeLista`**, do mesmo jeito que
+   `HistoricoDoPerfil` já faz (data como `nome`, rota como `apoio`,
+   `valorCentavos`, `situacao`) — sempre 1 linha hoje (agrupamento por
+   relatório é item 7), sem pílula "ver todos".
+8. **COBRANÇAS ENVIADAS não entra** — a tabela `cobranca_enviada` é Tarefa 6.
+9. **`textoDoPrazo`/`CLASSE_DO_PRAZO`/a composição "marca da cobrança" saem de
+   `ListaCobrancas.tsx` para um componente compartilhado**, reaproveitado
+   pela lista e pelo detalhe — nunca copiado (mesmo princípio que já corrigiu
+   três cópias de `LinhaDePerfil` no item 2).
 
 ### Tarefa 5 — Chave Pix e o texto da cobrança
 
