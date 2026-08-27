@@ -270,6 +270,26 @@ export async function totalRecebidoPorTitulo(
 }
 
 /**
+ * A data do recebimento mais recente de um título — nunca `vencimento`, que
+ * é a data prevista, não a que aconteceu (item 6, Tarefa 4, achado do
+ * `/revisar`: o resumo do detalhe da cobrança dizia "recebido em X" usando o
+ * vencimento para um título que foi faturado com vencimento e só depois
+ * recebido, afirmando que o dinheiro entrou num dia em que não entrou).
+ * Mesma regra que `listarCobrancas` já aplica para "Recebidas"
+ * (`src/lib/servicos/cobrancas.ts`), aqui para um título só — extraída para
+ * cá, e não deixada como consulta solta na página, porque regra de negócio
+ * mora em `/src/lib/servicos` (`CLAUDE.md` §6), nunca dentro de componente
+ * de tela.
+ */
+export async function ultimoRecebimentoEm(empresaId: string, tituloId: string): Promise<Date | null> {
+  const resultado = await db(empresaId).recebimento.aggregate({
+    where: { titulo_id: tituloId, arquivado_em: null },
+    _max: { data: true },
+  });
+  return resultado._max.data;
+}
+
+/**
  * Um título pela própria id, escopado por empresa — a conferência de FK que
  * `registrarRecebimento` (abaixo) precisa fazer antes de chamar a função de
  * banco (`CLAUDE.md` §3: o Postgres não aplica RLS na checagem de FK). Devolve

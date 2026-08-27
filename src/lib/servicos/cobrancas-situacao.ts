@@ -1,4 +1,5 @@
-import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { diaEmFortaleza, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { formatarDataCurta } from "@/lib/utils/periodo";
 
 /**
  * A parte de Cobranças que **não fala com o banco**: as quatro situações do
@@ -82,3 +83,53 @@ export function grupoDaCobranca(
   if (dia === hoje) return "vence_hoje";
   return "a_vencer";
 }
+
+function diferencaEmDias(de: string, ate: string): number {
+  const umDia = 24 * 60 * 60 * 1000;
+  return Math.round(
+    (instanteDoDiaEmFortaleza(ate).getTime() - instanteDoDiaEmFortaleza(de).getTime()) / umDia,
+  );
+}
+
+/** O mínimo que `textoDoPrazo` precisa de uma cobrança — a marca da lista (`ListaCobrancas.tsx`) e o resumo do detalhe (`cobrancas/[id]/page.tsx`) montam isto de formas diferentes. */
+export type CobrancaParaMarca = {
+  grupo: GrupoDeCobranca;
+  dia: string | null;
+};
+
+/**
+ * O prazo, em palavras — "venceu há 6 dias", "vence hoje", "vence em 12 ago",
+ * "recebido em 5 ago". Extraída de `ListaCobrancas.tsx` (item 6, Tarefa 4)
+ * para o detalhe da cobrança reaproveitar a mesma frase, em vez de copiá-la
+ * (`CLAUDE.md` §8, "componente existe uma vez" — aqui aplicado a uma função
+ * pura, não a um componente, mesma razão: duas fontes do mesmo texto
+ * divergem, e uma delas seria esquecida na próxima mudança).
+ *
+ * A conta é entre **dias de Fortaleza**, nunca entre instantes: é o que
+ * mantém "vence hoje" sendo hoje até a meia-noite de lá, mesmo com o
+ * servidor em UTC.
+ */
+export function textoDoPrazo(cobranca: CobrancaParaMarca, hoje: string): string {
+  const { grupo, dia } = cobranca;
+  if (grupo === "recebidas") return dia ? `recebido em ${formatarDataCurta(dia)}` : "recebido";
+  if (!dia) return "sem vencimento";
+  if (grupo === "vence_hoje") return "vence hoje";
+  if (grupo === "vencidas") {
+    const dias = diferencaEmDias(dia, hoje);
+    return dias === 1 ? "venceu ontem" : `venceu há ${dias} dias`;
+  }
+  const dias = diferencaEmDias(hoje, dia);
+  return dias === 1 ? "vence amanhã" : `vence em ${formatarDataCurta(dia)}`;
+}
+
+/**
+ * Cor do prazo — `docs/estilo.md`: `#B3401A` ("Vencido"), `#8A6206` ("A
+ * faturar / vence hoje"), `--color-acao` para o que já entrou. A vencer fica
+ * na tinta de apoio: é o estado normal, não um alerta.
+ */
+export const CLASSE_DO_PRAZO: Record<GrupoDeCobranca, string> = {
+  vencidas: "text-vencido",
+  vence_hoje: "text-a-faturar",
+  a_vencer: "text-tinta-apoio",
+  recebidas: "text-acao",
+};

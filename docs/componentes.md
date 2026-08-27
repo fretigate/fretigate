@@ -389,6 +389,21 @@ Duas telas violavam a ordem interna (ações **antes** de listas) e foram corrig
 
 No detalhe da cobrança a regra tem um requisito somado: **a ação principal fica visível sem rolar.** A dobra útil é o topo do (+), em `774`. Medido com `scrollTop: 0`: principal em `688–748` no estado vencido e nos mesmos `688–748` no estado **parcial**, que é o pior caso (a linha SITUAÇÃO ganha saldo recebido e restante). O cap de 3 linhas em FRETES INCLUÍDOS existe para isso, mas não bastava — havia duas listas acima das ações, não uma.
 
+**Detalhe da cobrança, medido na tela construída (item 6, Tarefa 4,
+27/08/2026)** — os números acima (`688–748`, dobra `774`) são do mockup do
+Design; esta medição é da página real, em `viewport 375×812` (celular, não os
+`1280×720` usados nas remedições de perfil abaixo). **O pior caso corrigido
+pelo fundador ao aprovar o plano: parcial COM vencido ao mesmo tempo**, não
+parcial isolado — a marca de prazo (vencida) e a linha SITUAÇÃO (recebeu X,
+falta Y) crescem juntas nesse caso. Medido com `scrollTop: 0`, cobrança
+faturada há 17 dias com R$ 40 de R$ 100 já recebidos: resumo em `124`,
+VENCIMENTO em `299`, SITUAÇÃO em `374`, a principal ("Receber o resto") em
+`533–593`, FRETES INCLUÍDOS em `619`. **A dobra é o topo do (+)**, não a
+barra (`CLAUDE.md` §8: a folga se mede "a partir do topo do (+), que sobe
+acima da linha da barra") — medido neste viewport, o topo do (+) fica em
+`711,5` (a barra em si começa em `729`, mas o círculo do botão sobe `17,5px`
+acima dela). A principal fica inteira acima do (+), com folga de `≈119px`.
+
 Corretas sem mudança: detalhe do frete (campos → comprovante → ações, sem lista depois), formulários de **cliente**, **motorista** e **despesa** (salvar no fim, arquivar em texto abaixo), listas (sem bloco de ação), estados vazios (ação dentro do conteúdo).
 
 **Correção desta auditoria.** A versão anterior listava o formulário de **caminhão** entre os conferidos. Ele não existia quando a medição foi feita — a linha afirmava verificação de uma tela ausente, o que engana mais que uma lacuna, porque quem lê "conferido" para de conferir. O formulário existe agora e segue a regra (salvar no fim do conteúdo rolável, arquivar em texto abaixo), mas fica registrado **por que** o erro aconteceu: a auditoria foi escrita por analogia entre as três telas de cadastro, não por medição de cada uma. **Auditoria por analogia não é auditoria** — cada linha aqui vale só para a tela que foi de fato aberta e medida.

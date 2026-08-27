@@ -2,6 +2,7 @@ import { exigirSessao } from "@/lib/auth/sessao";
 import {
   contarFretesAFaturar,
   listarCobrancas,
+  referenciaDoServico,
   resumoDeCobrancas,
 } from "@/lib/servicos/cobrancas";
 import { grupoDaCobranca, resolverSituacaoDaUrl } from "@/lib/servicos/cobrancas-situacao";
@@ -9,9 +10,7 @@ import { buscarClientesPorIds } from "@/lib/servicos/clientes";
 import { buscarServicosPorIds } from "@/lib/servicos/servicos";
 import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
-import { formatarRota } from "@/lib/utils/rota";
 import {
-  formatarDataCurta,
   resolverLimiteDaLista,
   resolverPeriodoDaUrl,
   rotuloDoPeriodo,
@@ -66,8 +65,6 @@ export default async function Pagina({
 
   const cobrancas: CobrancaParaLista[] = titulos.map((t) => {
     const servico = servicoPorId.get(t.servico_id);
-    const rota = servico ? formatarRota(servico.origem_texto, servico.destino_texto) : null;
-    const diaDoFrete = servico ? diaEmFortaleza(servico.data_servico) : null;
     const grupo = grupoDaCobranca(t, hoje);
     // Sempre igual a `t.valor` quando `status === "pago"` — a função de
     // banco (`registrar_recebimento`) só marca "pago" quando a soma dos
@@ -78,12 +75,7 @@ export default async function Pagina({
       id: t.id,
       clienteId: t.cliente_id,
       cliente: nomeDoCliente.get(t.cliente_id) ?? "Cliente",
-      // "Sobral → Crateús · 22 jul" — a rota e o dia do frete que originou a
-      // cobrança. Uma cobrança de relatório cobre vários fretes e vai ter
-      // referência própria ("Relatório de julho · 9 fretes"), no item 7.
-      referencia: [rota, diaDoFrete ? formatarDataCurta(diaDoFrete) : null]
-        .filter(Boolean)
-        .join(" · ") || null,
+      referencia: referenciaDoServico(servico ?? null),
       // Em aberto mostra o que falta entrar; recebida mostra o que entrou.
       valorCentavos: grupo === "recebidas" ? recebido : t.valor - recebido,
       grupo,

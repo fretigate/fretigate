@@ -13,8 +13,6 @@ import { LinhaDeLista } from "@/components/ui/LinhaDeLista";
 import { Etiqueta } from "@/components/ui/EtiquetaSituacao";
 import { Botao } from "@/components/ui/Botao";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
-import { formatarDataCurta } from "@/lib/utils/periodo";
-import { instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
 // A ação mora em `fretes/acoes.ts`, ao lado de `faturarServicoAction` e
 // `criarTituloJaRecebiAction` — as outras ações de título, mesmo motivo de
 // não terem nascido cada uma no seu próprio domínio de tela.
@@ -23,9 +21,11 @@ import { registrarRecebimentoAction } from "../fretes/acoes";
 // o outro módulo importa `@/lib/db` (`server-only`) — o `npm run build`
 // reprova a cadeia inteira, como reprovou ao escrever esta tarefa.
 import {
+  CLASSE_DO_PRAZO,
   ROTULO_SITUACAO,
   SITUACAO_PADRAO,
   SITUACOES as VALORES_DE_SITUACAO,
+  textoDoPrazo,
   type GrupoDeCobranca,
   type SituacaoCobranca,
 } from "@/lib/servicos/cobrancas-situacao";
@@ -100,44 +100,6 @@ const ORDEM_DOS_GRUPOS: GrupoDeCobranca[] = ["vencidas", "vence_hoje", "a_vencer
 const SITUACOES: { valor: SituacaoCobranca; rotulo: string }[] = VALORES_DE_SITUACAO.map(
   (valor) => ({ valor, rotulo: ROTULO_SITUACAO[valor] }),
 );
-
-function diferencaEmDias(de: string, ate: string): number {
-  const umDia = 24 * 60 * 60 * 1000;
-  return Math.round(
-    (instanteDoDiaEmFortaleza(ate).getTime() - instanteDoDiaEmFortaleza(de).getTime()) / umDia,
-  );
-}
-
-/**
- * O prazo, em palavras — "venceu há 6 dias", "vence hoje", "vence em 12 ago",
- * "recebido em 5 ago". A conta é entre **dias de Fortaleza**, nunca entre
- * instantes: é o que mantém "vence hoje" sendo hoje até a meia-noite de lá,
- * mesmo com o servidor em UTC.
- */
-function textoDoPrazo(cobranca: CobrancaParaLista, hoje: string): string {
-  const { grupo, dia } = cobranca;
-  if (grupo === "recebidas") return dia ? `recebido em ${formatarDataCurta(dia)}` : "recebido";
-  if (!dia) return "sem vencimento";
-  if (grupo === "vence_hoje") return "vence hoje";
-  if (grupo === "vencidas") {
-    const dias = diferencaEmDias(dia, hoje);
-    return dias === 1 ? "venceu ontem" : `venceu há ${dias} dias`;
-  }
-  const dias = diferencaEmDias(hoje, dia);
-  return dias === 1 ? "vence amanhã" : `vence em ${formatarDataCurta(dia)}`;
-}
-
-/**
- * Cor do prazo — `docs/estilo.md`: `#B3401A` ("Vencido"), `#8A6206` ("A
- * faturar / vence hoje"), `--color-acao` para o que já entrou. A vencer fica
- * na tinta de apoio: é o estado normal, não um alerta.
- */
-const CLASSE_DO_PRAZO: Record<GrupoDeCobranca, string> = {
-  vencidas: "text-vencido",
-  vence_hoje: "text-a-faturar",
-  a_vencer: "text-tinta-apoio",
-  recebidas: "text-acao",
-};
 
 function rotuloDoGrupo(grupo: GrupoDeCobranca, dia: string | null): string {
   if (grupo === "vencidas") return "Vencidas";
@@ -340,10 +302,9 @@ export function ListaCobrancas({
               </span>
               <div className="flex flex-col gap-6">
                 {grupo.itens.map((cobranca) => (
-                  // Sem `href`: o detalhe da cobrança é a Tarefa 4 (decisão do
-                  // fundador, 26/08/2026 — plano do item 6).
                   <LinhaDeLista
                     key={cobranca.id}
+                    href={`/cobrancas/${cobranca.id}`}
                     nome={cobranca.cliente}
                     apoio={cobranca.referencia ?? undefined}
                     valorCentavos={cobranca.valorCentavos}
@@ -438,6 +399,15 @@ export function ListaCobrancas({
   );
 }
 
+/**
+ * A marca de uma cobrança na lista — tarjas Boleto/Parcial + o prazo em
+ * palavras, colorido. Único consumidor hoje (achado do segundo `/revisar` na
+ * Tarefa 4: nasceu componente à parte para o detalhe reaproveitar também,
+ * mas o resumo do detalhe mostra só o prazo, sem as tarjas — `CLAUDE.md` §6,
+ * "sem camada sem dois casos de uso reais"). `textoDoPrazo`/`CLASSE_DO_PRAZO`
+ * continuam exportados de `cobrancas-situacao.ts`, onde o detalhe
+ * (`cobrancas/[id]/page.tsx`) importa só o texto, sem a composição inteira.
+ */
 function MarcaDaCobranca({
   cobranca,
   hoje,
@@ -455,9 +425,10 @@ function MarcaDaCobranca({
       {cobranca.boleto ? <Etiqueta texto="Boleto" classeTexto="text-tinta-fraca" /> : null}
       {/* Já entrou parte, ainda falta (item 6, Tarefa 3) — mesma etiqueta
           "Parcial" de `EtiquetaSituacao` (fundo próprio `--color-parcial-fundo`,
-          `docs/estilo.md`), extraída para cá em vez de copiada
-          (`CLAUDE.md` §8). Pedido de confirmação de posição ao Design,
-          junto do resto desta tarefa. */}
+          `docs/estilo.md`). Pedido de confirmação de posição ao Design,
+          ainda em aberto (não respondido na Tarefa 3 nem revisitado nesta
+          tarefa — achado do quarto `/revisar` na Tarefa 4: uma reescrita
+          anterior deste comentário tinha deixado a pergunta cair). */}
       {cobranca.parcial ? (
         <Etiqueta texto="Parcial" classeTexto="text-parcial-apoio" classeFundo="bg-parcial-fundo" />
       ) : null}

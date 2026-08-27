@@ -9,6 +9,7 @@ import {
   buscarTituloReceber,
   registrarRecebimento,
   traduzirFalhaDeRecebimento,
+  ultimoRecebimentoEm,
   editarServicoComProtecaoDeTitulo,
   listarServicosComSituacao,
   buscarServicoComTitulos,
@@ -54,7 +55,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 59;
+const CONFERENCIAS_ESPERADAS = 61;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -1535,6 +1536,50 @@ describe("10. registrarRecebimento — confirmar recebimento (item 6, Tarefa 3)"
       [titulo.id],
     );
     expect(Number(soma.rows[0].total)).toBe(metade);
+    conferencias++;
+  });
+});
+
+describe("11. ultimoRecebimentoEm — a data que \"recebido em X\" mostra (item 6, Tarefa 4)", () => {
+  /**
+   * Achado do `/revisar` na Tarefa 4: o resumo do detalhe da cobrança usava
+   * `vencimento` como a data de "recebido em X" — para um título faturado
+   * (com vencimento) e só depois recebido, isso afirmaria que o dinheiro
+   * entrou num dia em que não entrou. `ultimoRecebimentoEm` é a fonte
+   * correta: a data real do `Recebimento` mais recente, nunca o vencimento.
+   */
+  it("sem nenhum recebimento, devolve null", async () => {
+    const e = await criarEmpresaDeTeste("urec1");
+    const titulo = await criarTituloAberto(e);
+    expect(await ultimoRecebimentoEm(e.empresaId, titulo.id)).toBeNull();
+    conferencias++;
+  });
+
+  it("com dois recebimentos parciais registrados fora de ordem, devolve a data do MAIS RECENTE — nunca a mais antiga, nunca a ordem de inserção", async () => {
+    const e = await criarEmpresaDeTeste("urec2");
+    const titulo = await criarTituloAberto(e, 30000);
+    const hoje = instanteDoDiaEmFortaleza(diaEmFortaleza(new Date()));
+    const ontem = new Date(hoje.getTime() - 24 * 60 * 60 * 1000);
+
+    // O recebimento de HOJE é registrado primeiro, o de ONTEM depois — se a
+    // função lesse pela ordem de inserção (ou pelo primeiro que o banco
+    // devolvesse), acertaria por acaso aqui. A prova real é inverter: gravar
+    // fora de ordem cronológica e conferir que a função ainda acha a maior
+    // data, não a última gravada.
+    await registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+      valor: 10000,
+      data: hoje,
+      forma: "Pix",
+    });
+    await registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+      valor: 10000,
+      data: ontem,
+      forma: "Dinheiro",
+    });
+
+    const ultimo = await ultimoRecebimentoEm(e.empresaId, titulo.id);
+    expect(ultimo).not.toBeNull();
+    expect(diaEmFortaleza(ultimo!)).toBe(diaEmFortaleza(hoje));
     conferencias++;
   });
 });

@@ -248,8 +248,14 @@ atual, e um filtro tornaria o significado deles ambíguo.
 ### 4.7 Cadastros
 
 **Clientes, Caminhões e Motoristas** seguem o mesmo padrão: lista com busca e
-**seletor de ordenação**, perfil e formulário. Acessíveis por "Mais" e, no caso
-do cliente, tocando o nome em qualquer linha de frete ou cobrança.
+**seletor de ordenação**, perfil e formulário. Acessíveis por "Mais".
+
+**O perfil do cliente NÃO é acessível tocando o nome numa linha de frete ou
+cobrança** — medido e revertido no item 4 (Fretes). O item 6, Tarefa 4
+(Cobranças) decidiu sem remedir: é o mesmo componente `LinhaDeLista`, com o
+mesmo cartão de 78px, então a conclusão de Fretes já vale ali. O alvo de toque
+do nome fica abaixo de 48px dentro desse cartão, que já é ele mesmo tocável
+(leva ao frete ou à cobrança). Ver `docs/navegacao.md`, "Regras de navegação".
 
 Ordenações: clientes por mais recente · maior valor em aberto · maior valor
 total. Caminhões e motoristas por mais recente · mais fretes · maior valor

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { exigirSessao } from "@/lib/auth/sessao";
 import { db } from "@/lib/db";
@@ -10,15 +9,17 @@ import { buscarTipoOperacao } from "@/lib/servicos/tipos-de-operacao";
 import { montarMensagemOrdem } from "@/lib/servicos/mensagens";
 import { gerarUrlComprovante } from "@/lib/servicos/comprovantes";
 import { Botao } from "@/components/ui/Botao";
+import { CabecalhoDeDetalhe } from "@/components/ui/CabecalhoDeDetalhe";
 import { EtiquetaSituacao } from "@/components/ui/EtiquetaSituacao";
 import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
 import { nomeCaminhao } from "@/lib/utils/caminhao";
 import { diaEmFortaleza, formatarDiaDaSemanaEData } from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { BotaoArquivarFrete } from "../BotaoArquivarFrete";
+import { registrarRecebimentoAction } from "../acoes";
 import { AcaoOrdemDeServico } from "./AcaoOrdemDeServico";
 import { AcaoFaturarFrete } from "./AcaoFaturarFrete";
-import { AcaoMarcarRecebido } from "./AcaoMarcarRecebido";
+import { AcaoMarcarRecebido } from "@/components/ui/AcaoMarcarRecebido";
 import { BotaoMarcarFinalizado } from "./BotaoMarcarFinalizado";
 import { AnexarComprovante } from "./AnexarComprovante";
 
@@ -132,7 +133,7 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
     servico.situacao_financeira === "a_faturar";
 
   // Secundária "Marcar recebido" (item 6, Tarefa 3 —
-  // `docs/componentes.md` linha 432): aparece com título **aberto** —
+  // `docs/componentes.md` linha 447): aparece com título **aberto** —
   // "faturado" ou "parcial". "Quitado" não tem mais saldo para receber, e
   // "a_faturar" não tem título nenhum. Hoje um frete tem no máximo um
   // título (índice único parcial da migration `20260814150000`), então o
@@ -169,29 +170,7 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
       className="mx-auto flex min-h-full max-w-[480px] flex-col"
       style={{ paddingBottom: "var(--folga-rolagem)" }}
     >
-      <div
-        className="flex items-center gap-10 px-20 pb-14"
-        style={{ paddingTop: "var(--area-segura-topo)" }}
-      >
-        <Link
-          href="/fretes"
-          aria-label="Voltar"
-          className="-ml-10 flex h-44 w-44 flex-none items-center justify-center"
-        >
-          <svg width={12} height={20} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M15.6 4.35 8.4 12l7.2 7.65"
-              stroke="currentColor"
-              strokeWidth={2.2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Link>
-        <span className="min-w-0 flex-1 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
-          Frete
-        </span>
-      </div>
+      <CabecalhoDeDetalhe href="/fretes" rotulo="Frete" />
 
       <div className="flex flex-col px-20">
         {/* Terciário — docs/estilo.md linha 115: "'FRETE · data'". */}
@@ -318,6 +297,7 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
             tituloId={tituloAberto?.id}
             saldoCentavos={tituloAberto ? tituloAberto.valor - tituloAberto.totalRecebido : 0}
             hoje={hoje}
+            registrar={registrarRecebimentoAction}
           />
           <Botao variante="secundaria" href={`/fretes/${id}/editar`}>
             Editar frete

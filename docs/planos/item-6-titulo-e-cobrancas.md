@@ -430,7 +430,7 @@ conviverem com a nova tabela como segunda fonte de verdade.
   (`docs/componentes.md` já prevê os dois).
 - **Secundária "Marcar recebido" no detalhe do frete** — achado do segundo
   `/revisar` da Tarefa 1 (26/08/2026), registrado aqui para não escapar do
-  escopo. `docs/componentes.md` (linha 432) prevê essa secundária no detalhe,
+  escopo. `docs/componentes.md` (linha 447) prevê essa secundária no detalhe,
   e a partir da Tarefa 1 o estado **Faturado** existe de verdade — sem ela, o
   frete faturado fica sem nenhum caminho para registrar recebimento a partir
   da própria tela dele. Não foi construída na Tarefa 1 pela regra de sempre
@@ -555,10 +555,180 @@ procurado).
    `valorCentavos`, `situacao`) — sempre 1 linha hoje (agrupamento por
    relatório é item 7), sem pílula "ver todos".
 8. **COBRANÇAS ENVIADAS não entra** — a tabela `cobranca_enviada` é Tarefa 6.
-9. **`textoDoPrazo`/`CLASSE_DO_PRAZO`/a composição "marca da cobrança" saem de
-   `ListaCobrancas.tsx` para um componente compartilhado**, reaproveitado
-   pela lista e pelo detalhe — nunca copiado (mesmo princípio que já corrigiu
-   três cópias de `LinhaDePerfil` no item 2).
+9. **`textoDoPrazo`/`CLASSE_DO_PRAZO` saem de `ListaCobrancas.tsx` para
+   `cobrancas-situacao.ts`**, reaproveitados pela lista e pelo detalhe — nunca
+   copiados (mesmo princípio que já corrigiu três cópias de `LinhaDePerfil`
+   no item 2). A composição visual inteira (tarjas Boleto/Parcial + prazo),
+   batizada `MarcaDaCobranca`, **não** virou componente à parte: o resumo do
+   detalhe mostra só o prazo (decisão do fundador, achado do segundo
+   `/revisar`), então só a lista usa a composição completa — fica como
+   função local em `ListaCobrancas.tsx`, e só as duas funções puras é que são
+   genuinamente compartilhadas.
+
+**Achados do `/revisar` (27/08/2026), todos aceitos pelo fundador:**
+
+- **Rigor total, dinheiro:** o resumo do detalhe passava `vencimento` como a
+  data de "recebido em X" para um título já pago — para um título que foi
+  faturado (ganhou vencimento) e só depois recebido, isso afirmaria que o
+  dinheiro entrou num dia em que não entrou. Corrigido para buscar a data real
+  do último `Recebimento` (mesma consulta que `listarCobrancas` já faz para
+  "Recebidas", só que para um título). Verificado ao vivo: título faturado com
+  vencimento 10/08, recebido em 27/08 — lista e detalhe agora concordam em
+  "recebido em 27 ago".
+- **`AcaoDetalheCobranca.tsx` era cópia de `AcaoMarcarRecebido.tsx`**
+  (`CLAUDE.md` §8). Generalizado: `AcaoMarcarRecebido` mudou de
+  `fretes/[id]/` para `src/components/ui/`, ganhou `variante` ("secundaria"
+  default, "principal" para o detalhe da cobrança) e as props
+  `jaRecebeuAlgo`/`jaRecebido` (rótulo "Receber o resto" e o estado
+  desabilitado "Recebido ✓", que só a cobrança usa). O detalhe do frete não
+  mudou de comportamento — não passa as duas props novas, então continua
+  sempre "Marcar recebido", nunca desabilitado.
+- **`docs/navegacao.md` linha 40** (Perfil do cliente) ainda afirmava o link
+  pelo nome que as linhas 17/19/93 já tinham corrigido — quarta ocorrência
+  esquecida. Corrigida.
+- **Fraseado errado em `docs/navegacao.md` linha 93 e `docs/especificacao.md`
+  §4.7**: diziam "medido e revertido"/"confirmado" também para Cobranças,
+  mas nada foi medido nem revertido ali — a decisão 2 (acima) já é clara que a
+  conclusão vale sem remedir, e a linha nunca teve o link para reverter.
+  `CLAUDE.md` §13: "afirmação de medição sobre coisa que não existe é o pior
+  tipo de erro de documento". Reescrito para separar o que foi medido (Fretes)
+  do que foi decidido sem medir de novo (Cobranças).
+- **Marca do resumo simplificada** (decisão do fundador): mostra só o prazo
+  colorido, sem as tarjas Boleto/Parcial que a lista usa — SITUAÇÃO e FORMA,
+  logo abaixo, já dizem o mesmo, e o espaço ali é o mais caro da tela (é o que
+  precisa caber a ação principal sem rolar).
+- **`docs/componentes.md`, "Auditoria da regra de posição"** ganhou o
+  registro da medição real (não só a do mockup): viewport 375×812, pior caso
+  parcial+vencido, principal em `533–593` contra o topo do (+) em `711,5`.
+- **`docs/navegacao.md` linha 29** ganhou o destino que faltava: FRETES
+  INCLUÍDOS → Detalhe do frete.
+- **Lacuna registrada, não corrigida agora** (decisão do fundador): "Voltar"
+  do detalhe sempre manda para `/cobrancas` sem filtro — quem entra vindo de
+  "Recebidas" ou "Vencidas" volta para "Em aberto". Não é regra escrita em
+  lugar nenhum, e preservar o filtro ao voltar é uma pergunta de navegação do
+  produto inteiro (a mesma existe em Meus fretes e nas listas de cadastro),
+  não só desta tela — decidir uma vez, não aqui.
+- **Lacuna registrada, não corrigida agora**: os rótulos VENCIMENTO/SITUAÇÃO/
+  FORMA e os textos de cada estado vêm só do mockup, não de
+  `docs/componentes.md` — mesma categoria já aceita para os rótulos da folha
+  de faturamento (Tarefa 1): decisão provisória de produto, sem bloquear.
+
+**Segundo passe do `/revisar` (27/08/2026):**
+
+- **A generalização de `AcaoMarcarRecebido` tinha um `if (!podeReceber &&
+  !jaRecebido) return null;` que quebrava o próprio contrato do componente**
+  ("sempre montado, mesmo quando o botão não aparece", para o aviso de
+  sucesso sobreviver ao `router.refresh()`). Para o detalhe do FRETE — que
+  nunca passa `jaRecebido` —, um recebimento **integral** torna `podeReceber`
+  falso e o `return null` matava o componente inteiro antes de chegar no
+  aviso, derrubando junto o "Recebimento registrado" no instante em que ele
+  devia aparecer. Rigor total (dinheiro/UX de confirmação): removido o
+  `return` antecipado, voltando à mesma estrutura de sempre (botão OU nada OU
+  desabilitado, e o resto do JSX sempre alcançável).
+- **`MarcaDaCobranca` ficou com um consumidor só** depois da simplificação do
+  resumo (achado do primeiro passe) — a lista continua usando a composição
+  inteira (tarjas + prazo), mas o detalhe passou a montar só o prazo. Sem um
+  segundo consumidor real, o componente separado violava `CLAUDE.md` §6
+  ("sem camada sem dois casos de uso reais"). Desfeito: `MarcaDaCobranca`
+  voltou a ser função local em `ListaCobrancas.tsx`; só `textoDoPrazo`/
+  `CLASSE_DO_PRAZO` (as duas funções puras, essas sim com dois consumidores
+  reais) continuam em `cobrancas-situacao.ts`.
+- **Citações de linha de `docs/componentes.md` (432, 437) ficaram desatualizadas**
+  pela própria inserção desta tarefa na "Auditoria da regra de posição" (+12
+  linhas, deslocando tudo abaixo). Corrigidas nos arquivos que este commit
+  toca (`AcaoMarcarRecebido.tsx`, `fretes/[id]/page.tsx`, este plano) — as
+  citações em arquivos que a tarefa não tocou (ex.: `FolhaDeCalendario.tsx`,
+  `mais/page.tsx`) não entram, mesmo precedente já registrado em
+  `docs/diario.md` ("só a frase que esta tarefa escreveu foi corrigida — o
+  resto do documento já usava esse atalho antes, e não é desta tarefa
+  arrumar").
+- **A régua da medição de altura estava errada**: usei o topo da barra
+  (`729`) como a dobra; a regra escrita (`CLAUDE.md` §8) é o topo do **(+)**,
+  que sobe acima da linha da barra. Remedido: o círculo do (+) começa em
+  `711,5` neste viewport (a barra em si em `729`, o botão sobe `17,5px`
+  acima). A conclusão não muda (a principal continua toda acima), só a folga
+  registrada — de `136px` (errado) para `≈119px` (contra a referência certa).
+- **`ultimoRecebimentoEm` extraída para `titulos.ts`**, em vez de ficar como
+  consulta solta na página — a mesma regra ("recebido" é a data do
+  `Recebimento`, nunca o vencimento) já existia em `listarCobrancas`, e uma
+  segunda cópia em `cobrancas/[id]/page.tsx` seria a mesma duplicação que o
+  primeiro passe já tinha corrigido para `referenciaDoServico`. Ganhou dois
+  testes em `tests/titulos.test.ts` (bloco 11) — nenhum, o do detalhe, e o de
+  dois recebimentos fora de ordem, provando que a função acha a data mais
+  recente, não a última gravada.
+- **`LinhaDeLista.PropsEstatica` (nem link nem botão) ficou sem nenhum
+  consumidor real** assim que a linha de Cobranças ganhou `href` — o próprio
+  comentário da variante já dizia que ela era "a linha de Cobranças até a
+  Tarefa 4". `CLAUDE.md` §6 ("sem camada sem dois casos de uso reais")
+  também vale para uma variante de tipo, não só para componente inteiro:
+  removida a variante e o ramo de render que ela alimentava; `LinhaDeLista`
+  agora exige `href` ou `onClick` sempre.
+- **Lacuna registrada, não corrigida agora**: um título arquivado cai em
+  `notFound()` no detalhe da cobrança, enquanto o detalhe do frete lê
+  registro arquivado de propósito (§7, "nada é apagado"). Nenhum documento
+  decide qual dos dois vale para cobrança, e o caso é inalcançável hoje
+  (nada arquiva título até o estorno, Tarefa 7) — revisitar lá.
+- **Não é achado, é convenção já existente**: `docs/navegacao.md` e
+  `docs/componentes.md` marcam a tela ✅ com secundárias (Cobrar no WhatsApp,
+  Ver relatório) que a Tarefa 4 não constrói. O ✅ já significava "design
+  especificado", não "construído", antes desta tarefa (a própria linha
+  "Detalhe da cobrança ✅" já existia assim); não é uma contradição nova.
+
+**Terceiro passe do `/revisar` (27/08/2026):**
+
+- **As citações de linha corrigidas no segundo passe estavam erradas de
+  novo** — a inserção desta tarefa em `docs/componentes.md` deslocou tudo
+  abaixo em **15** linhas, não 12 (a edição cresceu ao corrigir a referência
+  da dobra, no mesmo passe). Corrigido por `grep` direto no arquivo atual
+  (447/452), não por aritmética — a mesma conta errada duas vezes é sinal de
+  não confiar em contar linha por cabeça.
+- **`AcaoMarcarRecebido` (em `src/components/ui`) importava
+  `registrarRecebimentoAction` de `src/app` — único arquivo da pasta que
+  alcançava `app`.** `CLAUDE.md` §6: `/components/ui` é "componentes base",
+  não amarrados a domínio. Corrigido para o mesmo padrão que
+  `FolhaDeRecebimento` (um nível abaixo) já usa: a ação vira prop
+  (`registrar`), injetada por cada chamador (`fretes/[id]/page.tsx` e
+  `cobrancas/[id]/page.tsx` passam a mesma `registrarRecebimentoAction`, sem
+  duplicar nada).
+- **O cabeçalho do detalhe da cobrança (seta de Voltar + eyebrow) era cópia
+  literal do detalhe do frete** — `CLAUDE.md` §8, "proibido copiar
+  componente". Extraído para `CabecalhoDeDetalhe.tsx`, usado pelos dois. As
+  outras telas de detalhe com o mesmo bloco (fora do escopo desta tarefa)
+  não entraram — mesmo critério do §2, "não refatore o que não faz parte da
+  tarefa".
+- **Discordância registrada, não aplicada**: o `/revisar` apontou o alvo de
+  44px do "Voltar" como abaixo do mínimo de 48px do `CLAUDE.md` §8. Mas
+  `docs/componentes.md` (§ "Ícone", linha sobre alvo isolado) já documenta
+  44px como o alvo de "voltar, fechar", separado do 48px do (+) — é o padrão
+  usado pelo detalhe do frete, copiado de propósito. Não é divergência.
+- **Lacuna nova, registrada**: `grupoDaCobranca` não tem ramo para
+  `status = "cancelado"` — um título cancelado cairia nos ramos de
+  vencimento (mostraria "Vencida"/"Em aberto" para algo que não é cobrança
+  ativa). Inalcançável hoje (nada cancela título até o estorno, Tarefa 7);
+  revisitar junto da lacuna do arquivado, acima — as duas são a mesma
+  pergunta (o que a Tarefa 7 precisa decidir sobre título fora de circulação
+  no detalhe da cobrança).
+
+**Quarto passe do `/revisar` (27/08/2026):**
+
+- **Um comentário apagado por engano no segundo passe carregava um pedido ao
+  Design ainda em aberto** — "confirmação de posição da etiqueta Parcial",
+  da Tarefa 3, nunca respondido e não registrado em nenhum outro documento.
+  Ao reescrever `MarcaDaCobranca` como função local (desfazendo a extração
+  do segundo passe), a frase caiu. Restaurada, com a ressalva de que ainda
+  está sem resposta — entra na lista de "pedido ao Design" desta tarefa,
+  abaixo, para não se perder de novo.
+- **Lacuna registrada**: o prazo no resumo do detalhe (`text-apoio
+  font-medium`, minúsculo, cor do grupo) segue o mesmo tratamento da lista.
+  O mockup desenha esse mesmo texto em `700 12px`, maiúsculo, sem cor de
+  fundo — diferente do que a lista usa. `docs/estilo.md` não nomeia um
+  papel para este texto no resumo do detalhe (só "valor" e "nome" como
+  Primário). Fica como está (reaproveita o tratamento já existente da
+  lista) até o Design decidir se o resumo do detalhe merece um tratamento
+  próprio.
+- **A entrada do diário desta tarefa, com a lista de pedidos ao Design
+  (as duas lacunas acima), é escrita ao fechar** — CLAUDE.md §13 exige isso
+  antes do commit, não durante a construção.
 
 ### Tarefa 5 — Chave Pix e o texto da cobrança
 

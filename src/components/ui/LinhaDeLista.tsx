@@ -76,16 +76,8 @@ type PropsBase = {
 
 type PropsLink = PropsBase & { href: string; onClick?: undefined };
 type PropsBotao = PropsBase & { href?: undefined; onClick: () => void };
-/**
- * Nem link nem botão — a linha de Cobranças até a Tarefa 4, quando o detalhe
- * da cobrança passa a existir. Linha que não leva a lugar nenhum é o que
- * `CLAUDE.md` §8 proíbe; uma linha que **não se anuncia tocável** é só um
- * cartão de leitura, e é isso que ela é hoje — **exceto pelo painel de
- * `aoDeslizar`**, que continua levando a algum lugar mesmo sem `href`.
- */
-type PropsEstatica = PropsBase & { href?: undefined; onClick?: undefined };
 
-type Props = PropsLink | PropsBotao | PropsEstatica;
+type Props = PropsLink | PropsBotao;
 
 const CLASSE =
   "flex min-h-78 w-full rounded-linha bg-separacao px-18 py-14 text-left active:bg-principal-desabilitado";
@@ -154,20 +146,10 @@ function linha(props: Props): ReactNode {
     );
   }
 
-  if (props.onClick !== undefined) {
-    return (
-      <button type="button" onClick={props.onClick} className={CLASSE}>
-        <Conteudo {...props} />
-      </button>
-    );
-  }
-
-  // Sem `active:` — nada acontece ao tocar, e um retorno visual de toque
-  // prometeria o contrário.
   return (
-    <div className={CLASSE.replace(" active:bg-principal-desabilitado", "")}>
+    <button type="button" onClick={props.onClick} className={CLASSE}>
       <Conteudo {...props} />
-    </div>
+    </button>
   );
 }
 

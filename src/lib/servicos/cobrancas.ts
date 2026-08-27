@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
 import type { Periodo } from "@/lib/servicos/servicos";
 import { totalRecebidoPorTitulo } from "@/lib/servicos/titulos";
-import { deslocarMes, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { deslocarMes, diaEmFortaleza, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { formatarDataCurta } from "@/lib/utils/periodo";
+import { formatarRota } from "@/lib/utils/rota";
 import type { SituacaoCobranca } from "@/lib/servicos/cobrancas-situacao";
 
 /**
@@ -255,6 +257,22 @@ export async function listarCobrancas(
 }
 
 export type CobrancaDoBanco = Awaited<ReturnType<typeof listarCobrancas>>[number];
+
+/**
+ * "Fortaleza → Sobral · 22 jul" — a rota e o dia do frete que originou a
+ * cobrança, só o que existir. Extraída de `cobrancas/page.tsx` (item 6,
+ * Tarefa 2) para o detalhe da cobrança (Tarefa 4) reaproveitar, em vez de
+ * duplicar (`CLAUDE.md` §8). Uma cobrança de relatório terá referência
+ * própria ("Relatório de julho · 9 fretes"), no item 7.
+ */
+export function referenciaDoServico(
+  servico: { origem_texto: string | null; destino_texto: string | null; data_servico: Date } | null,
+): string | null {
+  if (!servico) return null;
+  const rota = formatarRota(servico.origem_texto, servico.destino_texto);
+  const dia = formatarDataCurta(diaEmFortaleza(servico.data_servico));
+  return [rota, dia].filter(Boolean).join(" · ") || null;
+}
 
 /**
  * Quantos fretes estão **A faturar** — só para o estado vazio da tela, que

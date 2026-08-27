@@ -6,6 +6,108 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 27/08/2026 — Tarefa 4 do item 6: Detalhe da cobrança
+
+Fecha o link provisório de "Cobranças" — a lista ganhou `href` na linha
+(`ListaCobrancas.tsx`), levando a `src/app/(app)/cobrancas/[id]/page.tsx`
+(novo). Mockup real encontrado em `referencia/.../TelaCobrancas.dc.html`
+(estados `detalhe`/`parcial`) serviu de evidência corroborante para o layout,
+que nenhuma tela do produto tinha construído ainda.
+
+**Layout:** cabeçalho (Voltar · "Cobrança") → resumo (cliente · referência ·
+valor · prazo colorido) → campos (Vencimento · Situação · Forma) → **ação**
+principal (Marcar recebido / Receber o resto / Recebido ✓ desabilitada,
+reaproveitando `registrarRecebimentoAction` e `FolhaDeRecebimento`, sem
+action nova) → Fretes incluídos (sempre 1 linha hoje — o agrupamento por
+relatório é item 7).
+
+**Decisões do fundador ao aprovar o plano:** sem chave Pix (Tarefa 5); sem
+edição de "forma prevista" (a única consequência, mostrar/esconder "Cobrar
+no WhatsApp", é da Tarefa 6); nome do cliente não é link na linha da lista
+(mesma medida de 48px do item 4, sem precisar remedir — é o mesmo
+`LinhaDeLista`); e o pior caso da exigência de altura corrigido para
+**parcial COM vencido ao mesmo tempo**, não parcial isolado.
+
+**Quatro passes do `/revisar`**, todos com achado real (nenhum fechou vazio):
+
+1. Reduziu escopo do resumo (a marca virou só o prazo, sem tarjas — decisão
+   do fundador) e confirmou a extração de `textoDoPrazo`/`CLASSE_DO_PRAZO`
+   para `cobrancas-situacao.ts`.
+2. **Achado de dinheiro**: o resumo mostrava a data do *vencimento* como se
+   fosse a do *recebimento*, para um título faturado e só depois pago — lista
+   e detalhe discordavam. Corrigido com `ultimoRecebimentoEm` (nova, em
+   `titulos.ts`, com dois testes em `tests/titulos.test.ts`, bloco 11).
+   Também corrigiu um `MarcaDaCobranca` com consumidor único (desfeita a
+   extração — virou função local de novo) e uma variante de `LinhaDeLista`
+   sem consumidor nenhum (removida).
+3. **Achado sério**: a generalização de `AcaoMarcarRecebido` tinha um
+   `return null` antecipado que quebrava o próprio contrato ("sempre
+   montado") — um recebimento integral no detalhe do FRETE matava o aviso de
+   sucesso antes de aparecer. Corrigido e **verificado ao vivo**: o aviso
+   agora sobrevive ao `router.refresh()`, medido com precisão de
+   milissegundos via `performance.now()` no navegador (as duas primeiras
+   tentativas de medir isso deram falso positivo de bug, por causa da
+   latência das próprias ferramentas de automação — só a medição por
+   relógio do navegador provou certo). Também moveu `registrarRecebimentoAction`
+   de import direto para prop `registrar` (componente de `/components/ui`
+   não pode depender de `/app`), e extraiu `CabecalhoDeDetalhe.tsx` (o
+   cabeçalho tinha virado cópia literal do detalhe do frete).
+4. Achou a citação de linha corrigida no passe 2 errada de novo (a inserção
+   em `docs/componentes.md` deslocou 15 linhas, não 12 — corrigido desta vez
+   conferindo por `grep`, não de cabeça), e um comentário com pedido ao
+   Design apagado sem querer no passe 2 (restaurado, ver abaixo).
+
+**Discordância registrada, não aplicada**: o quarto passe marcou o alvo de
+44px do "Voltar" como abaixo do mínimo de 48px — mas `docs/componentes.md`
+já documenta 44px como o alvo de "voltar, fechar", separado do 48px do (+).
+Não é divergência.
+
+**Correções de estado no repositório** (`CLAUDE.md` §13): `docs/navegacao.md`
+(linhas 19, 40, 93) e `docs/especificacao.md` §4.7 não afirmam mais que o
+nome do cliente abre o perfil dele em linha de frete ou cobrança — a
+Cobranças nunca teve esse link (decidido sem remedir, mesmo componente já
+medido no item 4); a frase geral ficou presa ao único caso que existia
+quando foi escrita. `docs/navegacao.md` linha 29 ganhou o destino que
+faltava (Fretes incluídos → Detalhe do frete). `docs/componentes.md` ganhou
+o registro da medição real de altura (não só a do mockup).
+
+**Pedido ao Design:**
+
+1. **Reaberto, da Tarefa 3**: confirmação de posição da etiqueta "Parcial"
+   na linha de Cobranças — nunca respondido, e um comentário que carregava
+   esse pedido quase se perdeu nesta tarefa (restaurado).
+2. **Novo**: o prazo no resumo do detalhe da cobrança reaproveita o
+   tratamento da lista (`text-apoio`, minúsculo, colorido). O mockup desenha
+   maiúsculo e em negrito, sem essa cor de fundo — qual dos dois vale para o
+   resumo do detalhe, que `docs/estilo.md` não nomeia?
+3. Medidas visuais de `DeslizarParaRevelar` (herdado da Tarefa 3, ainda sem
+   resposta).
+
+**Lacunas registradas, não corrigidas agora** (todas inalcançáveis hoje ou
+decisões de navegação do produto inteiro, não desta tela): "Voltar" do
+detalhe não preserva o filtro da lista de origem; título arquivado cai em
+`notFound()` (o detalhe do frete lê arquivado de propósito); `grupoDaCobranca`
+não tem ramo para `status = "cancelado"` — as duas últimas revisitam junto
+do estorno, Tarefa 7. Rótulos e textos do resumo (Vencimento/Situação/Forma
+e as variações de texto) vêm só do mockup, não de `docs/componentes.md` —
+mesma categoria já aceita para a folha de faturamento.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` e `npm run build`
+verdes a cada rodada de correção (quatro passes do `/revisar`). `npm test`
+local completo: 438/438 antes do segundo passe, 440/440 depois (dois testes
+novos de `ultimoRecebimentoEm`). Verificado ao vivo no navegador: faturar com
+vencimento no passado → recebimento parcial → detalhe mostra "Parcial ·
+recebeu X, falta Y" e "venceu há N dias" juntos (o pior caso) → medido com
+`getBoundingClientRect`, ação principal em `533–593px` contra o topo do (+)
+em `711,5px` (viewport 375×812), folga de `≈119px` → completar o
+recebimento → lista e detalhe concordam em "recebido em 27 ago" (a data
+real, não o vencimento) → "Recebido ✓" desabilitado. Esteira deste commit
+ainda não confirmada — ver `/onde-paramos`.
+
+Próximo: Tarefa 5 do item 6 — Chave Pix e o texto da cobrança.
+
+---
+
 ## 26/08/2026 — Tarefa 3 do item 6: Folha de recebimento e recebimento parcial
 
 Fecha o que a Tarefa 2 deixou pendente: até aqui, o único jeito de dinheiro
