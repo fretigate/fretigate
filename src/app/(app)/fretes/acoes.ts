@@ -18,6 +18,7 @@ import {
 import {
   criarTituloJaRecebi,
   editarServicoComProtecaoDeTitulo,
+  estornarTitulo,
   faturarServico,
   registrarCobrancaEnviada,
   registrarRecebimento,
@@ -505,6 +506,29 @@ export const registrarCobrancaEnviadaAction = comoUsuario(async (
     return { ok: true };
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };
+  }
+});
+
+const schemaEstornar = z.object({ tituloId: z.string().uuid() });
+
+/**
+ * "Estornar", no detalhe da cobrança (item 6, Tarefa 6) — a folha de
+ * confirmação (`FolhaDeEstorno`) só chama depois do toque em "Estornar"
+ * dentro dela. `estornarTitulo` (`src/lib/servicos/titulos.ts`) confere
+ * posse do título e recusa um título já cancelado.
+ */
+export const estornarTituloAction = comoUsuario(async (
+  sessao,
+  tituloId: string,
+): Promise<ResultadoSimples> => {
+  const validado = schemaEstornar.safeParse({ tituloId });
+  if (!validado.success) return { ok: false, erro: "Cobrança inválida." };
+
+  try {
+    await estornarTitulo(sessao.empresaId, validado.data.tituloId);
+    return { ok: true };
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para estornar agora." };
   }
 });
 

@@ -169,6 +169,16 @@ confirmação diz o que acontece:
 - o título é **cancelado** (`status = "cancelado"`, nunca apagado — §7);
 - o histórico registra.
 
+**"O histórico registra" precisa, para não ser lido como mais do que é —
+achado do `/revisar` na Tarefa 6, confirmado pelo fundador (27/08/2026):
+significa só que a linha não é apagada (§7), não um registro de autoria.**
+O estorno não grava quem estornou nem quando, além do `atualizado_em` que
+todo `UPDATE` já grava — não existe tela nem consulta que mostre "estornado
+por X em Y". Um registro de autoria seria tabela nova, que ninguém pediu
+para esta tarefa. Se um dia isso incomodar — duas pessoas com acesso à
+mesma conta, uma estornando sem a outra saber —, é decisão própria, não
+herdada por analogia com esta nota.
+
 **Vai ao Design como item novo do inventário de `docs/componentes.md`** — é um
 botão que não está lá, e `CLAUDE.md` §8 proíbe botão fora do inventário. Entra
 na lista de "o que foi pedido ao Design" do diário da tarefa.
@@ -828,6 +838,28 @@ sem mexer nele, mas usaria `arquivado_em` como truque para contornar uma
 restrição, misturando dois significados diferentes de "fora do ar" (§7:
 arquivar é a exclusão do usuário; cancelar é o estorno). O teste da tarefa
 prova o ciclo inteiro: faturar → estornar → **refaturar**.
+
+**Decisão do fundador sobre a confirmação, 27/08/2026.** Folha inferior — o
+mesmo componente já usado no resto do produto (`FolhaInferior`), não um
+componente de confirmação genérico novo, nem janela modal: "já é o padrão do
+produto pra 'algo sobe de baixo, você decide, e volta'. A pessoa já conhece o
+gesto, e não exige componente novo." Conteúdo: título "Estornar esta
+cobrança?"; as consequências em frases curtas, uma por linha ("O frete volta
+para A faturar" · "O que já foi recebido deixa de contar", só quando há
+recebimento — "mostrar isso numa cobrança sem nenhum recebimento diz algo que
+não se aplica, e assusta à toa" · "Não tem como desfazer"); ações principal
+**Estornar** e texto **Agora não**, mesmo par das outras folhas.
+
+**Lacuna registrada para o Design, a pedido do fundador**: a principal aqui é
+destrutiva, diferente do resto do produto — a cor de ação sempre foi verde, e
+o inventário não tem uma variante destrutiva de botão principal. Constrói
+com a principal normal (verde) e pergunta ao Design.
+
+**Primeiro caso de confirmação antes de ação destrutiva no produto** — fica
+registrado por escrito porque muda o precedente: Arquivar frete e Arquivar
+cliente agem direto, sem perguntar antes. Se o Design decidir depois que
+Arquivar também deveria confirmar, isso vira tarefa própria — não herdada
+por analogia com esta.
 
 - `estornarTitulo`: `status: "cancelado"`, nunca apagado (§7). O frete volta a
   **A faturar** sozinho, porque a situação é derivada — nenhum campo de frete

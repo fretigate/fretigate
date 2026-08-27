@@ -135,10 +135,11 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
   // Secundária "Marcar recebido" (item 6, Tarefa 3 —
   // `docs/componentes.md` linha 447): aparece com título **aberto** —
   // "faturado" ou "parcial". "Quitado" não tem mais saldo para receber, e
-  // "a_faturar" não tem título nenhum. Hoje um frete tem no máximo um
-  // título (índice único parcial da migration `20260814150000`), então o
-  // `find` abaixo não escolhe entre vários — é só a forma de achar o único
-  // que existe.
+  // "a_faturar" não tem título nenhum. Um frete tem no máximo um título
+  // integral ATIVO (índice único parcial da migration `20260814150000`,
+  // ajustado na `20260827090000` para excluir cancelado — item 6, Tarefa
+  // 6): pode existir um cancelado ao lado, mas o `find` abaixo já filtra
+  // por `status === "aberto"`, então continua achando no máximo um.
   //
   // **`!servico.arquivado_em` entra na condição** — mesmo motivo de
   // `podeFaturar`, achado do `/revisar`: esta tela lê frete arquivado de

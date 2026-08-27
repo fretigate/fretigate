@@ -197,19 +197,17 @@ export function vencimentoPadrao(
  * certa; quem garante sob concorrência é o índice único parcial
  * `titulo_receber_um_integral_por_servico`.
  *
- * **LACUNA CONHECIDA, para a Tarefa 7 (estorno) resolver — achada aqui, não
- * inventada lá.** O índice único é
- * `WHERE integral = true AND arquivado_em IS NULL` — ele **não** exclui
- * `status = 'cancelado'`. A leitura desta função exclui (procura só título
- * ativo, pelo critério do §7), então as duas camadas discordam: depois de um
- * estorno, esta função deixaria refaturar e o banco recusaria com erro de
- * unicidade, traduzido para "Este frete já foi faturado" — mentira, porque o
- * título anterior está cancelado. Hoje isso é inalcançável (nada cancela
- * título: o estorno é a Tarefa 7). A correção certa é a migration da Tarefa 7
- * acrescentar `AND status <> 'cancelado'` ao índice, fazendo-o dizer o que a
- * regra diz — "no máximo um título integral **ativo** por frete" —, e não
- * arquivar o título estornado para contornar o índice, que misturaria dois
- * significados diferentes de "fora do ar".
+ * **Refaturar depois de um estorno funciona** — resolvido no item 6,
+ * Tarefa 6 (`estornarTitulo`, abaixo). O índice único
+ * `titulo_receber_um_integral_por_servico` (migration
+ * `20260827090000_estorno_indice_exclui_cancelado`) exclui
+ * `status = 'cancelado'`, além de `integral = true AND arquivado_em IS
+ * NULL` — a mesma leitura que esta função já fazia (procura só título
+ * ativo, pelo critério do §7). Antes dessa migration as duas camadas
+ * discordavam: esta função deixaria refaturar e o banco recusaria com erro
+ * de unicidade, traduzido para "Este frete já foi faturado" — mentira,
+ * porque o título anterior estava cancelado. O ciclo faturar → estornar →
+ * refaturar é provado em `tests/titulos.test.ts` (bloco 14).
  */
 export async function faturarServico(
   empresaId: string,
@@ -429,6 +427,70 @@ export async function registrarRecebimento(
   } catch (erro) {
     traduzirFalhaDeRecebimento(erro);
   }
+
+  const atualizado = await buscarTituloReceber(empresaId, tituloId);
+  if (!atualizado) throw new Error("Cobrança não encontrada.");
+  return atualizado;
+}
+
+/**
+ * Estorno (item 6, Tarefa 6 —
+ * `docs/planos/item-6-titulo-e-cobrancas.md`, decisão 4): cancela o título
+ * (`status: "cancelado"`, nunca apagado — `CLAUDE.md` §7) e devolve o frete
+ * a **A faturar** sozinho, porque a situação financeira é derivada — nenhum
+ * campo do `Servico` muda (`CLAUDE.md` §9).
+ *
+ * **Título pago também pode ser estornado** (`docs/especificacao.md` §8,
+ * item 5: "Título pago não é editado. Para corrigir, estorna e cria
+ * outro") — esta função não distingue `aberto` de `pago`, só recusa um
+ * título já `cancelado`. Os recebimentos já registrados não são apagados
+ * (`CLAUDE.md` §7); eles só deixam de contar porque `situacaoFinanceira` e
+ * `totalRecebidoPorTitulo` ignoram título cancelado.
+ *
+ * **Fecha a promessa de `editarServicoComProtecaoDeTitulo`** — as duas
+ * mensagens que dizem "Estorne para corrigir" (`docs/especificacao.md` §8,
+ * item 12) passam a ser verdade a partir daqui.
+ *
+ * **Duas camadas, mesmo desenho do resto do arquivo.** A checagem amigável
+ * abaixo dá a mensagem certa no caso comum; quem garante sob concorrência
+ * real (dois toques simultâneos em "Estornar") é a condição no próprio
+ * `UPDATE` (`status: { not: "cancelado" }`) — só um dos dois pedidos muda
+ * alguma linha, e o outro recebe a mesma mensagem de "já estornado". Não
+ * precisa de função de banco com trava explícita (diferente de
+ * `registrarRecebimento`): não há agregado concorrente para proteger, só a
+ * própria linha do título, e o Postgres já serializa dois `UPDATE`
+ * simultâneos na mesma linha.
+ *
+ * **A migration `titulo_receber_um_integral_por_servico` precisa excluir
+ * `status = 'cancelado'`** (`20260827090000_estorno_indice_exclui_cancelado`)
+ * — sem isso, o `UPDATE` desta função passaria, mas um refaturamento
+ * seguinte (`faturarServico`) esbarraria no índice antigo, que ainda
+ * contava o título cancelado como "integral" existente.
+ *
+ * **Recusa frete arquivado** — decisão do fundador, 27/08/2026, achado do
+ * `/revisar`: mesmo critério de `registrarRecebimento`/
+ * `registrarCobrancaEnviada`, por consistência ("frete arquivado é frete
+ * fora de circulação; agir sobre a cobrança dele é caminho que ninguém
+ * decidiu abrir" — e errar para o lado de menos ação numa operação
+ * destrutiva). A tela já esconde "Estornar cobrança" nesse caso
+ * (`cobrancas/[id]/page.tsx`), mas a tela é a primeira camada, não a
+ * garantia.
+ */
+export async function estornarTitulo(empresaId: string, tituloId: string) {
+  const titulo = await buscarTituloReceber(empresaId, tituloId);
+  if (!titulo || titulo.arquivado_em) throw new Error("Cobrança não encontrada.");
+  if (titulo.status === "cancelado") throw new Error("Esta cobrança já foi estornada.");
+
+  const servico = await buscarServico(empresaId, titulo.servico_id);
+  if (!servico || servico.arquivado_em) {
+    throw new Error("Este frete foi arquivado — não é possível estornar.");
+  }
+
+  const resultado = await db(empresaId).tituloReceber.updateMany({
+    where: { id: tituloId, status: { not: "cancelado" } },
+    data: { status: "cancelado" },
+  });
+  if (resultado.count === 0) throw new Error("Esta cobrança já foi estornada.");
 
   const atualizado = await buscarTituloReceber(empresaId, tituloId);
   if (!atualizado) throw new Error("Cobrança não encontrada.");
@@ -714,8 +776,11 @@ async function comSituacaoEmLote<T extends { id: string }>(
 
   return servicos.map((s) => {
     const titulosDoServico = porServico.get(s.id) ?? [];
-    // Hoje um frete tem no máximo um título integral (índice único parcial
-    // da migration `20260814150000`) — mesmo critério do `find` em
+    // Um frete tem no máximo um título integral ATIVO (índice único
+    // parcial da migration `20260814150000`, ajustado na `20260827090000`
+    // para excluir cancelado — item 6, Tarefa 6): pode existir um
+    // cancelado ao lado depois de um estorno, mas o `find` abaixo já
+    // filtra por status/arquivado, mesmo critério do `find` em
     // `fretes/[id]/page.tsx`. **`arquivado_em === null` entra aqui** —
     // achado do terceiro `/revisar`: `titulos` (acima) não filtra arquivado
     // de propósito (`situacaoFinanceira` precisa da lista inteira para
@@ -769,9 +834,11 @@ export async function listarServicosComSituacao(
 
 /**
  * O `Servico` do detalhe (Tarefa 3 do item 4) mais os títulos associados
- * (hoje, no máximo um) — cada um com `totalRecebido` já somado (item 6,
- * Tarefa 3), para a tela decidir o saldo sem uma consulta própria (a
- * secundária "Marcar recebido" precisa dele para pré-preencher a folha).
+ * — no máximo um **ativo**, mas pode haver também um cancelado ao lado
+ * depois de um estorno (item 6, Tarefa 6) — cada um com `totalRecebido` já
+ * somado (item 6, Tarefa 3), para a tela decidir o saldo sem uma consulta
+ * própria (a secundária "Marcar recebido" precisa dele para pré-preencher
+ * a folha).
  */
 export async function buscarServicoComTitulos(empresaId: string, id: string) {
   const [servico, titulosCrus] = await Promise.all([

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import {
   criarTituloJaRecebi,
+  estornarTitulo,
   faturarServico,
   vencimentoPadrao,
   buscarTituloPorServico,
@@ -58,7 +59,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 70;
+const CONFERENCIAS_ESPERADAS = 80;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -1743,6 +1744,207 @@ describe("13. ultimoEnvioPorTitulo — \"cobrado há X dias por Y\" em lote (ite
     expect(ultimo).toBeDefined();
     expect(ultimo!.usuarioNome).toBe("Monalisa");
     expect(ultimo!.em.getTime()).toBe(hoje.getTime());
+    conferencias++;
+  });
+});
+
+describe("14. estornarTitulo — Estorno (item 6, Tarefa 6)", () => {
+  it("cancela o título, nunca apaga — a linha continua no banco (CLAUDE.md §7)", async () => {
+    const e = await criarEmpresaDeTeste("est1");
+    const titulo = await criarTituloAberto(e);
+
+    const cancelado = await estornarTitulo(e.empresaId, titulo.id);
+    expect(cancelado.status).toBe("cancelado");
+
+    const { rows } = await raiz.query(`SELECT status FROM "titulo_receber" WHERE id = $1`, [
+      titulo.id,
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("cancelado");
+    conferencias++;
+  });
+
+  it("o frete volta a A faturar sozinho — a situação é derivada, nenhum campo do Servico muda (CLAUDE.md §9)", async () => {
+    const e = await criarEmpresaDeTeste("est2");
+    const titulo = await criarTituloAberto(e);
+
+    const antes = await buscarServicoComTitulos(e.empresaId, titulo.servico_id);
+    expect(antes?.situacao_financeira).toBe("faturado");
+
+    await estornarTitulo(e.empresaId, titulo.id);
+
+    const depois = await buscarServicoComTitulos(e.empresaId, titulo.servico_id);
+    expect(depois?.situacao_financeira).toBe("a_faturar");
+    conferencias++;
+  });
+
+  /**
+   * `docs/especificacao.md` §8, item 5: "Título pago não é editado. Para
+   * corrigir, estorna e cria outro." O recebimento já registrado não some
+   * (§7) — só deixa de contar, porque `situacaoFinanceira` ignora título
+   * cancelado.
+   */
+  it("título pago também pode ser estornado — o recebimento não é apagado, só deixa de contar", async () => {
+    const e = await criarEmpresaDeTeste("est3");
+    const titulo = await criarTituloAberto(e);
+    await registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+      valor: e.valorServico,
+      data: new Date(),
+      forma: "Pix",
+    });
+
+    const antes = await buscarServicoComTitulos(e.empresaId, titulo.servico_id);
+    expect(antes?.situacao_financeira).toBe("quitado");
+
+    await estornarTitulo(e.empresaId, titulo.id);
+
+    const { rows } = await raiz.query(
+      `SELECT count(*)::int n FROM "recebimento" WHERE titulo_id = $1`,
+      [titulo.id],
+    );
+    expect(rows[0].n).toBe(1);
+
+    const depois = await buscarServicoComTitulos(e.empresaId, titulo.servico_id);
+    expect(depois?.situacao_financeira).toBe("a_faturar");
+    conferencias++;
+  });
+
+  it("recusa estornar de novo — mensagem amigável, sem tocar o banco de novo", async () => {
+    const e = await criarEmpresaDeTeste("est4");
+    const titulo = await criarTituloAberto(e);
+    await estornarTitulo(e.empresaId, titulo.id);
+
+    await expect(estornarTitulo(e.empresaId, titulo.id)).rejects.toThrow(
+      "Esta cobrança já foi estornada.",
+    );
+    conferencias++;
+  });
+
+  it("recusa título de outra empresa — a conferência de FK (CLAUDE.md §3)", async () => {
+    const a = await criarEmpresaDeTeste("est5a");
+    const b = await criarEmpresaDeTeste("est5b");
+    const tituloDeB = await criarTituloAberto(b);
+
+    await expect(estornarTitulo(a.empresaId, tituloDeB.id)).rejects.toThrow(
+      "Cobrança não encontrada.",
+    );
+
+    const { rows } = await raiz.query(`SELECT status FROM "titulo_receber" WHERE id = $1`, [
+      tituloDeB.id,
+    ]);
+    expect(rows[0].status).toBe("aberto");
+    conferencias++;
+  });
+
+  it("recusa título que não existe", async () => {
+    const e = await criarEmpresaDeTeste("est6");
+    await expect(estornarTitulo(e.empresaId, randomUUID())).rejects.toThrow(
+      "Cobrança não encontrada.",
+    );
+    conferencias++;
+  });
+
+  it("recusa título arquivado", async () => {
+    const e = await criarEmpresaDeTeste("est7");
+    const tituloId = await plantarTitulo(e, e.servicoId, {
+      valor: e.valorServico,
+      valorRecebido: null,
+      status: "aberto",
+      integral: true,
+    });
+    await raiz.query(`UPDATE "titulo_receber" SET arquivado_em = now() WHERE id = $1`, [tituloId]);
+
+    await expect(estornarTitulo(e.empresaId, tituloId)).rejects.toThrow("Cobrança não encontrada.");
+    conferencias++;
+  });
+
+  /**
+   * Decisão do fundador, 27/08/2026, achado do `/revisar`: por
+   * consistência com `registrarRecebimento`/`registrarCobrancaEnviada`
+   * ("frete arquivado é frete fora de circulação; agir sobre a cobrança
+   * dele é caminho que ninguém decidiu abrir").
+   */
+  it("recusa frete arquivado — mesmo critério de registrarRecebimento/registrarCobrancaEnviada", async () => {
+    const e = await criarEmpresaDeTeste("est10");
+    const titulo = await criarTituloAberto(e);
+    await arquivarServico(e.empresaId, titulo.servico_id);
+
+    await expect(estornarTitulo(e.empresaId, titulo.id)).rejects.toThrow(
+      "Este frete foi arquivado — não é possível estornar.",
+    );
+
+    const { rows } = await raiz.query(`SELECT status FROM "titulo_receber" WHERE id = $1`, [
+      titulo.id,
+    ]);
+    expect(rows[0].status).toBe("aberto");
+    conferencias++;
+  });
+
+  /**
+   * Quem garante é o banco, não o `if` — mesmo princípio de `criarTituloJaRecebi`
+   * (bloco 3): dois pedidos simultâneos passam os dois pela checagem amigável
+   * antes de qualquer `UPDATE` terminar. O Postgres serializa os dois
+   * `UPDATE` na mesma linha; o segundo, depois que o primeiro já commitou,
+   * não encontra mais `status <> 'cancelado'` para mudar.
+   */
+  it("concorrência: dois estornos simultâneos resultam em um só cancelado", async () => {
+    const e = await criarEmpresaDeTeste("est8");
+    const titulo = await criarTituloAberto(e);
+
+    const resultados = await Promise.allSettled([
+      estornarTitulo(e.empresaId, titulo.id),
+      estornarTitulo(e.empresaId, titulo.id),
+    ]);
+
+    const sucesso = resultados.filter((r) => r.status === "fulfilled");
+    const falha = resultados.filter((r) => r.status === "rejected");
+    expect(sucesso).toHaveLength(1);
+    expect(falha).toHaveLength(1);
+    expect((falha[0] as PromiseRejectedResult).reason.message).toBe(
+      "Esta cobrança já foi estornada.",
+    );
+    conferencias++;
+  });
+
+  /**
+   * Rigor total: dinheiro (`CLAUDE.md` §2, item 7). Prova a migration
+   * `20260827090000_estorno_indice_exclui_cancelado` — sem ela, o
+   * `faturarServico` do refaturamento bateria no índice único parcial
+   * antigo (que ainda contava o título cancelado como "integral"
+   * existente) e falharia com "Este frete já foi faturado.", mentira
+   * disfarçada de erro de unicidade do banco (docstring de
+   * `estornarTitulo`).
+   */
+  it("faturar → estornar → refaturar: o ciclo inteiro funciona", async () => {
+    const e = await criarEmpresaDeTeste("est9");
+    const servico = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: e.valorServico,
+    });
+    await marcarServicoFinalizado(e.empresaId, servico.id);
+
+    const primeiro = await faturarServico(e.empresaId, servico.id, {
+      vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+      formaPrevista: "outro",
+    });
+    await estornarTitulo(e.empresaId, primeiro.id);
+
+    const segundo = await faturarServico(e.empresaId, servico.id, {
+      vencimento: instanteDoDiaEmFortaleza("2026-09-20"),
+      formaPrevista: "outro",
+    });
+    expect(segundo.status).toBe("aberto");
+    expect(segundo.id).not.toBe(primeiro.id);
+
+    const { rows } = await raiz.query(
+      `SELECT status FROM "titulo_receber" WHERE servico_id = $1 ORDER BY criado_em`,
+      [servico.id],
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[0].status).toBe("cancelado");
+    expect(rows[1].status).toBe("aberto");
     conferencias++;
   });
 });

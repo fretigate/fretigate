@@ -204,9 +204,13 @@ padrão nos perfis de cliente/caminhão/motorista, e é o mesmo aqui.
   cliente, estorne o título.") não está no inventário de avisos, e usa
   "estornar" — palavra fora do vocabulário de `CLAUDE.md` §8 e de
   `docs/especificacao.md`.** Achado do `/revisar` na Tarefa 4. Aponta para
-  uma ação (estorno) que ainda não existe no produto — só chega no item 6.
-  Construído com este texto por não haver outro definido; pedido ao
-  Design: rótulo e redação finais, coerentes com o vocabulário do produto.
+  uma ação (estorno) que ainda não existia no produto — só chegou no item 6.
+
+  **Fechado — decisão do fundador, 27/08/2026, item 6, Tarefa 6.** "Estornar"
+  fica: é a palavra do ramo, o dono da transportadora usa, e não é termo de
+  sistema — é o oposto de "registro" ou "entidade" (`CLAUDE.md` §8:
+  "vocabulário do usuário"). A tela inteira do estorno (`docs/componentes.md`,
+  "Detalhe da cobrança" e "Folha de estorno") foi construída com essa palavra.
 
   **Ampliado no segundo `/revisar`:** o mesmo pedido vale para as duas
   mensagens que o servidor devolve quando a trava é forçada por fora da
@@ -216,8 +220,9 @@ padrão nos perfis de cliente/caminhão/motorista, e é o mesmo aqui.
   também não estão no inventário. Aparecem no campo errado
   (`estado.erros.clienteId`/`valorCentavos`), mesmo mecanismo genérico de
   erro de campo que o resto do formulário já usa, então não pedem entrada
-  própria no inventário de avisos — só a mesma revisão de vocabulário do
-  parágrafo acima, quando o Design responder.
+  própria no inventário de avisos. A palavra "estornar" está resolvida
+  (parágrafo acima); as duas mensagens continuam sem entrada própria no
+  inventário — mesma lacuna menor de sempre, não a do vocabulário.
 
 - **Em Clientes, escolher "Maior valor total" faz o valor substituir a
   cidade na linha — os dois nunca aparecem juntos.** Achados do `/revisar`

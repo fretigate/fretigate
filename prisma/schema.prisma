@@ -691,12 +691,18 @@ model TituloReceber {
   /// que o criou; outro caminho que também cubra o frete inteiro é
   /// igualmente integral.
   ///
-  /// Um frete tem no máximo um título integral — índice único parcial na
-  /// migration, não modelável aqui (mesma limitação de `Cliente.documento`).
-  /// Pode ter qualquer número de títulos não integrais (adiantamento,
-  /// saldo). O banco garante mesmo sob concorrência real: dois `INSERT`
-  /// simultâneos para o mesmo `servico_id`, o segundo estoura erro de
-  /// unicidade — não corrida de aplicação.
+  /// Um frete tem no máximo um título integral ATIVO (não arquivado e
+  /// status <> cancelado) — índice único parcial na migration, não
+  /// modelável aqui (mesma limitação de `Cliente.documento`). Depois de um
+  /// estorno (item 6, Tarefa 6, migration
+  /// 20260827090000_estorno_indice_exclui_cancelado) o título cancelado
+  /// continua na tabela (nada é apagado) e um novo título integral pode
+  /// nascer ao lado dele — a restrição é sobre o que está em circulação,
+  /// não sobre a linha inteira. Pode ter qualquer número de títulos não
+  /// integrais (adiantamento, saldo). O banco garante mesmo sob
+  /// concorrência real: dois `INSERT` simultâneos para o mesmo
+  /// `servico_id`, o segundo estoura erro de unicidade — não corrida de
+  /// aplicação.
   integral Boolean @default(false)
 
   vencimento               DateTime?               @db.Timestamptz(6)

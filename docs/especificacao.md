@@ -1026,7 +1026,11 @@ sobra para qualquer outro uso. Decisão do fundador, 25/08/2026.
 
 `integral` diz se **este título cobre o valor inteiro do frete**, em oposição
 a uma fração dele — adiantamento ou saldo. Um frete tem no máximo um título
-integral; pode ter qualquer número de títulos não integrais. O campo descreve
+integral **ativo** (não arquivado e `status ≠ "cancelado"`) — depois de um
+estorno (item 6, Tarefa 6), o cancelado continua na tabela (§7) e um novo
+título integral pode nascer ao lado dele; a restrição do banco fala do que
+está em circulação, não da linha inteira. Pode ter qualquer número de
+títulos não integrais. O campo descreve
 o título, não como ele nasceu: "Já recebi" sempre cria um título integral,
 mas qualquer outro caminho que também cubra o frete inteiro (sem passar por
 adiantamento) é igualmente integral.
@@ -1200,9 +1204,10 @@ vez de ao lado cancelado.
     continuam livres — não têm reflexo no título. Destrava quando todos os
     títulos do frete estão cancelados (mesmo critério de "título ativo" do
     §7): sem título ativo, não há dinheiro amarrado ao valor antigo. Para
-    corrigir com o título ainda ativo, o caminho é estornar — item 6, ainda
-    não construído. Decisão do fundador, 22/08/2026, achada ao planejar a
-    edição de frete (item 4, tarefa 4).
+    corrigir com o título ainda ativo, o caminho é estornar (item 6, tarefa
+    6, 27/08/2026 — `estornarTitulo`, `src/lib/servicos/titulos.ts`).
+    Decisão do fundador, 22/08/2026, achada ao planejar a edição de frete
+    (item 4, tarefa 4).
 
 ---
 

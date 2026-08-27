@@ -26,7 +26,7 @@ A barra é global: aparece em toda tela de nível 1 e continua visível nas tela
 |---|---|---|
 | Detalhe do frete ✅ | Linha em Fretes · histórico do perfil do cliente | Sem motorista → Escolher motorista → Editar frete · Com motorista, telefone ausente/inválido → Enviar ordem no WhatsApp abre a Folha do campo que falta → conversa · Com motorista e telefone válido → Enviar ordem no WhatsApp → conversa direto, com aviso Enviei/Ainda não ao voltar (resolvido na Tarefa 2 do item 5, 23/08/2026) · Faturar frete · Marcar recebido · Editar frete → Editar frete · Arquivar · Ver relatório → Documento |
 | Editar frete ✅ | Editar frete no detalhe (item 4, Tarefa 4) | Salvar alterações → volta para o detalhe do frete · com título ativo, Cliente e valor ficam travados (sem aviso "Já recebi", que é só da criação) |
-| Detalhe da cobrança ✅ | Linha em Cobranças | Marcar recebido / Receber o resto → folha de recebimento · Fretes incluídos → Detalhe do frete (item 6, Tarefa 4) · Cobrar no WhatsApp → conversa · Ver relatório → Documento |
+| Detalhe da cobrança ✅ | Linha em Cobranças | Marcar recebido / Receber o resto → folha de recebimento · Fretes incluídos → Detalhe do frete (item 6, Tarefa 4) · Cobrar no WhatsApp → conversa · Ver relatório → Documento · Estornar cobrança → folha de confirmação → volta para Cobranças (item 6, Tarefa 6, 27/08/2026) |
 | Relatório — montagem ✅ | Atalho e pendência da dashboard · estado vazio de Cobranças · perfil do cliente | Gerar relatório → Documento A4 |
 | Documento A4 ✅ | Gerar relatório · Ver relatório (frete ou cobrança) | Compartilhar no WhatsApp · Baixar PDF · Imprimir |
 | Modelo de cobrança ✅ | Mais | Salvar modelo → volta para Mais |

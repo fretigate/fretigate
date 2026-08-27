@@ -6,6 +6,120 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 27/08/2026 — Tarefa 6 do item 6: Estorno
+
+Fecha a promessa que a Tarefa 4 do item 4 já fazia na tela de Editar frete
+("Estorne o título para corrigir") e que até agora não dava para cumprir —
+plano em `docs/planos/item-6-titulo-e-cobrancas.md`, decisão 4.
+
+**Construído:**
+
+- `estornarTitulo` (`src/lib/servicos/titulos.ts`) — cancela o título
+  (`status: "cancelado"`, nunca apagado — `CLAUDE.md` §7), aceita título
+  `aberto` ou `pago` (`docs/especificacao.md` §8, item 5), recusa título já
+  cancelado, de outra empresa, arquivado, ou de frete arquivado. Duas
+  camadas: checagem amigável + `status: { not: "cancelado" }` no próprio
+  `UPDATE`, que o Postgres serializa sob concorrência real.
+- Migration `20260827090000_estorno_indice_exclui_cancelado` — o índice
+  único parcial `titulo_receber_um_integral_por_servico` passa a excluir
+  `status = 'cancelado'`. Sem ela, refaturar depois de um estorno esbarraria
+  no índice antigo e falharia com "Este frete já foi faturado" — mentira,
+  já que o título anterior está cancelado. Achado já registrado na Tarefa 1
+  (`docs/planos`), corrigido aqui.
+- `estornarTituloAction` (`fretes/acoes.ts`), `AcaoEstornar.tsx` e
+  `FolhaDeEstorno.tsx` (novos, `src/components/ui`) — botão texto
+  destrutiva "Estornar cobrança" no fim do bloco de ações do detalhe da
+  cobrança, some com frete arquivado (mesmo critério de "Marcar
+  recebido"/"Cobrar no WhatsApp"); abre a folha de confirmação, que lista
+  as três consequências e só sucede com o toque em "Estornar" dentro dela.
+  Sucesso navega para `/cobrancas` (o detalhe passa a devolver 404 para o
+  título cancelado).
+- `cobrancas/[id]/page.tsx`: título cancelado cai em `notFound()`, mesmo
+  tratamento de arquivado — resolve a lacuna gêmea registrada no `/revisar`
+  da Tarefa 4 ("o que a Tarefa 6 precisa decidir sobre título fora de
+  circulação no detalhe da cobrança").
+
+**Decisões do fundador, nesta sessão (27/08/2026):**
+
+- **A confirmação é `FolhaInferior`**, não modal nem componente genérico
+  novo — "já é o padrão do produto pra 'algo sobe de baixo, você decide, e
+  volta'". Conteúdo ditado pelo fundador: título "Estornar esta cobrança?";
+  três consequências em frase curta, a segunda ("o que já foi recebido
+  deixa de contar") só quando há recebimento; principal **Estornar** e
+  texto **Agora não**.
+- **"Estornar" fica no vocabulário** — fecha a pendência aberta desde a
+  Tarefa 4 do item 4 (`docs/planos/item-4-lista-e-detalhe-do-frete.md`):
+  "é a palavra do ramo, o dono da transportadora usa, e não é termo de
+  sistema."
+- **Estornar cobrança bloqueia com frete arquivado**, por consistência com
+  "Marcar recebido"/"Cobrar no WhatsApp": "frete arquivado é frete fora de
+  circulação; agir sobre a cobrança dele é caminho que ninguém decidiu
+  abrir. E é melhor errar pro lado de menos ação numa operação destrutiva."
+- **"O histórico registra" (decisão 4 do plano) significa só que a linha
+  não é apagada (§7)** — não um registro de autoria. Estorno não grava quem
+  estornou nem quando, além do `atualizado_em` que todo `UPDATE` já grava.
+  Registrado no plano para não ser lido como mais do que é; se um dia
+  incomodar (duas pessoas na mesma conta), é decisão própria.
+
+**Achados do primeiro `/revisar`, todos corrigidos no mesmo passe:**
+
+- `docs/especificacao.md` e `prisma/schema.prisma` ainda diziam "um frete
+  tem no máximo um título integral" — deixou de ser verdade (cancelado +
+  ativo convivem depois do estorno). Corrigido para "... **ativo**", frase
+  que o próprio plano já usava.
+- A docstring de `faturarServico` descrevia a lacuna do índice como
+  pendente, apontando para uma "Tarefa 7" que nunca existiu com esse
+  número — reescrita para dizer que está resolvida, apontando para
+  `estornarTitulo` e a migration.
+- Três comentários (`fretes/[id]/page.tsx`, `titulos.ts` ×2) justificavam
+  usar `.find()` em vez de examinar a lista inteira com "hoje um frete tem
+  no máximo um título" — o `.find()` continua certo (filtra por status),
+  só a frase ficou imprecisa. Corrigida nos três lugares.
+- Minha própria docstring nova em `cobrancas/[id]/page.tsx` afirmava que
+  "o histórico continua acessível pelo detalhe do frete" — o detalhe do
+  frete não mostra nada sobre título cancelado nenhum. Reescrita para não
+  prometer uma tela que não existe: a linha sobrevive no banco (§7), sem
+  superfície de interface que a mostre hoje.
+- A docstring de `AcaoEstornar.tsx` comparava com `arquivarServicoAction`
+  (`redirect()` no servidor) como se fosse o mesmo mecanismo de
+  `router.push` no cliente — são diferentes (a folha de confirmação exige
+  decidir a navegação depois de um `await` no cliente). Corrigida a
+  citação; testado ao vivo no navegador, os dois funcionam.
+- `docs/componentes.md`/`docs/navegacao.md` foram editados direto pelo
+  repositório — o `/revisar` apontou que o §13 do `CLAUDE.md` reserva
+  "Desenho" (o que uma tela contém) para o Design, e o próprio plano desta
+  tarefa já dizia isso. Decisão do fundador: o conteúdo é dele (ditado
+  nesta sessão), mas medida e tratamento visual são inferência da
+  construção (copiando `FolhaDeCampoUnico`), não resposta do Design — as
+  duas entradas ficam marcadas **provisório** em `docs/componentes.md`, e
+  entram na lista de pedido ao Design abaixo.
+
+**Segundo `/revisar`:** sem divergências.
+
+**Pedido ao Design** (`docs/componentes.md`, linha "Folha de estorno" e
+linha "Detalhe da cobrança"):
+
+1. Variante destrutiva de botão principal — hoje a cor de ação é sempre
+   verde; a folha usa a principal normal para "Estornar" até existir uma.
+2. Confirmar medida e tratamento visual da Folha de estorno — o conteúdo é
+   do fundador, a construção só copiou o corpo de `FolhaDeCampoUnico`.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` e `npm run
+build` verdes. `tests/titulos.test.ts`: 80/80 (era 70 antes desta tarefa —
+10 testes novos, bloco 14). Uma rodada da suíte completa acusou
+"Transaction API error: Unable to start a transaction in the given time"
+no teste de concorrência do estorno — mesma classe de instabilidade do
+pooler já registrada em 18-20/08; isolado (`-t "14. estornarTitulo"`)
+passou de primeira, e a suíte completa rodada de novo em seguida deu
+80/80 limpo. Testado também ao vivo no navegador, banco de desenvolvimento
+real: estornar título pago → 404 no link antigo → frete volta a "A
+faturar" → refaturar com sucesso. Esteira deste commit ainda não
+confirmada.
+
+Próximo: Tarefa 7 do item 6 — "A receber" e "Vencido" nos perfis.
+
+---
+
 ## 27/08/2026 — Tarefa 5 do item 6, segundo commit: a tela (Cobrar no WhatsApp)
 
 Segunda metade da Tarefa 5 — a tela que aciona a base do commit anterior:

@@ -15,10 +15,16 @@ import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
 import { LinhaDeLista } from "@/components/ui/LinhaDeLista";
 import { AcaoMarcarRecebido } from "@/components/ui/AcaoMarcarRecebido";
 import { AcaoCobrarNoWhatsApp } from "@/components/ui/AcaoCobrarNoWhatsApp";
+import { AcaoEstornar } from "@/components/ui/AcaoEstornar";
 // Mesmas ações de `fretes/acoes.ts` que o detalhe do frete e a lista de
 // Cobranças já usam — recebidas por prop (achado do terceiro `/revisar`),
 // nunca importadas por conta própria dentro de um componente de `ui`.
-import { registrarCobrancaEnviadaAction, registrarRecebimentoAction, salvarChavePixAction } from "../../fretes/acoes";
+import {
+  estornarTituloAction,
+  registrarCobrancaEnviadaAction,
+  registrarRecebimentoAction,
+  salvarChavePixAction,
+} from "../../fretes/acoes";
 import { salvarTelefoneClienteAction } from "../../clientes/acoes";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { formatarRota } from "@/lib/utils/rota";
@@ -53,13 +59,30 @@ import { formatarDataCurta } from "@/lib/utils/periodo";
  * derivada de TODOS os títulos do frete (nunca só este, `CLAUDE.md` §2) e o
  * `totalRecebido` de cada um, o mesmo dado que `totalRecebidoPorTitulo`
  * daria numa consulta à parte.
+ *
+ * **Título cancelado cai em `notFound()`, mesmo tratamento de arquivado**
+ * (item 6, Tarefa 6 — resolve as duas lacunas gêmeas registradas no
+ * `/revisar` da Tarefa 4: "o que a Tarefa 6 precisa decidir sobre título
+ * fora de circulação no detalhe da cobrança"). Um título estornado deixou
+ * de ser cobrança em circulação — `listarCobrancas` já não o lista (só
+ * busca `aberto`/`pago`), e `grupoDaCobranca` não tem ramo para
+ * `"cancelado"` de propósito: não existe "Vencida"/"Em aberto" que faça
+ * sentido para algo cancelado.
+ *
+ * **A linha não é apagada** (`CLAUDE.md` §7) — `buscarServicoComTitulos`
+ * continua trazendo o título cancelado para quem consultar o `Servico`
+ * pelo `servico_id` dele, e nenhuma tela hoje some com o dado. Isso não é
+ * o mesmo que dizer que existe uma tela para **ver** esse título: o
+ * detalhe do frete (`fretes/[id]/page.tsx`) só lê `situacao_financeira` e
+ * o título `aberto` de cada frete, nunca lista os títulos cancelados —
+ * não existe hoje um lugar na interface que mostre um título estornado.
  */
 export default async function Pagina({ params }: { params: Promise<{ id: string }> }) {
   const sessao = await exigirSessao();
   const { id } = await params;
 
   const titulo = await buscarTituloReceber(sessao.empresaId, id);
-  if (!titulo || titulo.arquivado_em) notFound();
+  if (!titulo || titulo.arquivado_em || titulo.status === "cancelado") notFound();
 
   const servicoComTitulos = await buscarServicoComTitulos(sessao.empresaId, titulo.servico_id);
   if (!servicoComTitulos) notFound();
@@ -137,6 +160,15 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
   // `podeReceber`, mais a exclusão de boleto (§8 item 11: "o banco já
   // avisa", sem ação de cobrar por aqui).
   const podeCobrar = podeReceber && tituloAtual.forma_pagamento_prevista !== "boleto";
+
+  // "Estornar cobrança" (item 6, Tarefa 6) — decisão do fundador,
+  // 27/08/2026, achado do `/revisar`: some com frete arquivado, por
+  // consistência com `podeReceber`/`podeCobrar` acima ("frete arquivado é
+  // frete fora de circulação; agir sobre a cobrança dele é caminho que
+  // ninguém decidiu abrir"). Diferente das duas, aqui título `pago`
+  // também pode estornar (`estornarTitulo` já aceita os dois) — por isso
+  // não reaproveita `podeReceber`, que exige `status === "aberto"`.
+  const podeEstornar = !servicoComTitulos.arquivado_em;
   const rota = formatarRota(servicoComTitulos.origem_texto, servicoComTitulos.destino_texto);
 
   return (
@@ -211,6 +243,13 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
               registrar={registrarCobrancaEnviadaAction}
               salvarTelefoneCliente={salvarTelefoneClienteAction}
               salvarChavePix={salvarChavePixAction}
+            />
+          ) : null}
+          {podeEstornar ? (
+            <AcaoEstornar
+              tituloId={tituloAtual.id}
+              jaRecebeuAlgo={recebido > 0}
+              estornar={estornarTituloAction}
             />
           ) : null}
         </div>
