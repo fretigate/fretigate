@@ -79,6 +79,13 @@ model Empresa {
 
   logo_url String?
 
+  /// Texto livre, sem `enum` e sem validação de formato (item 6, Tarefa 5) —
+  /// chave Pix pode ser CPF, CNPJ, e-mail, telefone ou aleatória, e recusar
+  /// uma válida é pior que aceitar uma torta. Aparece na mensagem de
+  /// cobrança (`montarMensagemCobranca`, `src/lib/servicos/mensagens.ts`); o
+  /// bloco some da mensagem quando este campo é nulo.
+  chave_pix String?
+
   plano PlanoEmpresa @default(gratuito)
 
   /// Nulo no gratuito. Existe separado do plano porque é preciso saber quem
@@ -126,9 +133,10 @@ model Empresa {
   clientes        Cliente[]
   veiculos        Veiculo[]
   motoristas      Motorista[]
-  servicos        Servico[]
-  titulos_receber TituloReceber[]
-  recebimentos    Recebimento[]
+  servicos           Servico[]
+  titulos_receber    TituloReceber[]
+  recebimentos       Recebimento[]
+  cobrancas_enviadas CobrancaEnviada[]
 
   @@map("empresa")
 }
@@ -212,8 +220,9 @@ model Usuario {
 
   sessions     Session[]
   accounts     Account[]
-  servicos     Servico[]
-  recebimentos Recebimento[]
+  servicos           Servico[]
+  recebimentos       Recebimento[]
+  cobrancas_enviadas CobrancaEnviada[]
 
   @@index([empresa_id])
   @@map("usuario")
@@ -716,6 +725,10 @@ model TituloReceber {
   /// item-6-titulo-e-cobrancas.md`, decisão 6). Ver `model Recebimento`.
   recebimentos Recebimento[]
 
+  /// Histórico de "Cobrar no WhatsApp" (item 6, Tarefa 5) — cada confirmação
+  /// de "Enviei" planta uma linha própria. Ver `model CobrancaEnviada`.
+  cobrancas_enviadas CobrancaEnviada[]
+
   @@index([empresa_id])
   @@map("titulo_receber")
 }
@@ -779,6 +792,47 @@ model Recebimento {
   @@index([empresa_id])
   @@index([titulo_id])
   @@map("recebimento")
+}
+
+/// Histórico de "Cobrar no WhatsApp" (item 6, Tarefa 5 —
+/// `docs/planos/item-6-titulo-e-cobrancas.md`). Uma linha por confirmação de
+/// "Enviei" ao voltar da conversa — mesmo padrão de `marcarOrdemEnviada`
+/// (item 5), mas repetível: ao contrário da ordem de serviço (uma vez por
+/// frete), a mesma cobrança pode ser cobrada mais de uma vez ao longo do
+/// tempo, e cada envio é um fato próprio, não um flag que a próxima
+/// cobrança sobrescreveria (`CLAUDE.md` §9 — mesmo raciocínio de
+/// `Recebimento` sobre não perder o fato anterior em silêncio).
+///
+/// **`titulo_id` é a única referência conferida contra a empresa antes de
+/// gravar** (`CLAUDE.md` §3 — o Postgres não aplica RLS na checagem de FK):
+/// `src/lib/servicos/titulos.ts` busca o título por `db(empresaId)` antes de
+/// gravar. `usuario_id` nunca é escolhido — vem sempre da sessão.
+model CobrancaEnviada {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  titulo_id String        @db.Uuid
+  titulo    TituloReceber @relation(fields: [titulo_id], references: [id], onDelete: Restrict)
+
+  /// Da sessão que confirmou "Enviei", nunca de input do formulário.
+  usuario_id String
+  usuario    Usuario @relation(fields: [usuario_id], references: [id], onDelete: Restrict)
+
+  /// O instante da confirmação — sempre `new Date()`, nunca escolhido em
+  /// calendário (diferente de `Recebimento.data`): não existe "cobrar
+  /// retroativo".
+  enviado_em DateTime @db.Timestamptz(6)
+
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  /// §7 — nada é apagado. Preenchido = arquivado.
+  arquivado_em DateTime? @db.Timestamptz(6)
+
+  @@index([empresa_id])
+  @@index([titulo_id])
+  @@map("cobranca_enviada")
 }
 
 // ---------------------------------------------------------------------------

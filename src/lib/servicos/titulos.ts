@@ -436,6 +436,98 @@ export async function registrarRecebimento(
 }
 
 /**
+ * "Cobrar no WhatsApp" (item 6, Tarefa 5) — grava a confirmação de "Enviei"
+ * ao voltar da conversa, mesmo padrão de `marcarOrdemEnviada` (item 5), mas
+ * repetível: uma `CobrancaEnviada` por confirmação, nunca um campo único
+ * sobrescrito (`docs/planos/item-6-titulo-e-cobrancas.md`, mesmo raciocínio
+ * da decisão 6 sobre `Recebimento`).
+ *
+ * **A conferência de FK é a mesma de `registrarRecebimento`** (`CLAUDE.md`
+ * §3): `buscarTituloReceber` confere que `tituloId` pertence à empresa antes
+ * de gravar — o Postgres não aplica RLS na checagem de chave estrangeira.
+ * `usuarioId` nunca é escolhido, vem sempre da sessão.
+ *
+ * **Recusa o mesmo que `registrarRecebimento` recusaria** — título de outra
+ * empresa/inexistente/arquivado, já pago ou cancelado, ou frete arquivado —
+ * pelo mesmo motivo: a tela só oferece "Cobrar no WhatsApp" para título
+ * aberto de frete não arquivado, mas a tela é a primeira camada, não a
+ * garantia.
+ */
+export async function registrarCobrancaEnviada(
+  empresaId: string,
+  usuarioId: string,
+  tituloId: string,
+): Promise<void> {
+  const titulo = await buscarTituloReceber(empresaId, tituloId);
+  if (!titulo || titulo.arquivado_em) throw new Error("Cobrança não encontrada.");
+  if (titulo.status !== "aberto") {
+    throw new Error("Esta cobrança já foi recebida ou cancelada.");
+  }
+  // Boleto não cobra por WhatsApp — o banco já avisa (`docs/especificacao.md`
+  // §4.5 e §8, item 11: "boleto não gera pendência nem ação de cobrar"). A
+  // tela nunca oferece o botão nesse caso, mas a tela é a primeira camada,
+  // não a garantia — achado do `/revisar`.
+  if (titulo.forma_pagamento_prevista === "boleto") {
+    throw new Error("Cobrança por boleto — o banco já avisa, sem cobrar por aqui.");
+  }
+
+  const servico = await buscarServico(empresaId, titulo.servico_id);
+  if (!servico || servico.arquivado_em) {
+    throw new Error("Este frete foi arquivado — não é possível registrar o envio.");
+  }
+
+  await db(empresaId).cobrancaEnviada.create({
+    data: {
+      id: uuidv7(),
+      titulo_id: tituloId,
+      usuario_id: usuarioId,
+      enviado_em: new Date(),
+      empresa_id: empresaId,
+    },
+  });
+}
+
+/** O último envio de cada título, com quem cobrou — "cobrado há 2 dias por Monalisa" (§4.5). */
+export type UltimoEnvio = { em: Date; usuarioNome: string };
+
+/**
+ * Em lote, nunca uma consulta por linha — mesmo padrão de
+ * `totalRecebidoPorTitulo`. Como `groupBy` não devolve QUEM mandou o envio
+ * mais recente (só agrega `titulo_id`), a solução é ler todos os envios já
+ * ordenados por data decrescente e ficar com o primeiro de cada título — o
+ * conjunto é pequeno (o teto de 50 da lista, vezes os poucos envios de cada
+ * cobrança), nunca a tabela inteira da empresa.
+ */
+export async function ultimoEnvioPorTitulo(
+  empresaId: string,
+  tituloIds: string[],
+): Promise<Map<string, UltimoEnvio>> {
+  if (tituloIds.length === 0) return new Map();
+  const envios = await db(empresaId).cobrancaEnviada.findMany({
+    where: { titulo_id: { in: tituloIds }, arquivado_em: null },
+    select: { titulo_id: true, enviado_em: true, usuario: { select: { nome: true } } },
+    orderBy: { enviado_em: "desc" },
+  });
+
+  const porTitulo = new Map<string, UltimoEnvio>();
+  for (const envio of envios) {
+    if (!porTitulo.has(envio.titulo_id)) {
+      porTitulo.set(envio.titulo_id, { em: envio.enviado_em, usuarioNome: envio.usuario.nome });
+    }
+  }
+  return porTitulo;
+}
+
+/** O histórico inteiro de um título — "COBRANÇAS ENVIADAS" no detalhe (item 6, Tarefa 5). */
+export function listarEnviosDoTitulo(empresaId: string, tituloId: string) {
+  return db(empresaId).cobrancaEnviada.findMany({
+    where: { titulo_id: tituloId, arquivado_em: null },
+    select: { id: true, enviado_em: true, usuario: { select: { nome: true } } },
+    orderBy: { enviado_em: "desc" },
+  });
+}
+
+/**
  * Frete com título ativo trava `valor` e `cliente_id` na edição
  * (`docs/especificacao.md` §8, item 12) — os dois campos que o título
  * copiou do frete ao nascer (`criarTituloJaRecebi`, acima) e nunca mais

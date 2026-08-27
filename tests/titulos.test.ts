@@ -17,6 +17,9 @@ import {
   listarServicosDoCliente,
   listarServicosDoCaminhao,
   listarServicosDoMotorista,
+  registrarCobrancaEnviada,
+  ultimoEnvioPorTitulo,
+  listarEnviosDoTitulo,
 } from "@/lib/servicos/titulos";
 import {
   criarServico,
@@ -55,7 +58,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 61;
+const CONFERENCIAS_ESPERADAS = 70;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -207,9 +210,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (empresasParaLimpar.length) {
-    // `recebimento` referencia `titulo_receber` (item 6, Tarefa 3) — sai
-    // primeiro. `titulo_receber` referencia servico e cliente — sai antes
-    // deles.
+    // `cobranca_enviada` e `recebimento` referenciam `titulo_receber` (item
+    // 6, Tarefas 3 e 5) — saem primeiro. `titulo_receber` referencia servico
+    // e cliente — sai antes deles.
+    await raiz.query(`DELETE FROM "cobranca_enviada" WHERE empresa_id = ANY($1)`, [
+      empresasParaLimpar,
+    ]);
     await raiz.query(`DELETE FROM "recebimento" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
@@ -1580,6 +1586,163 @@ describe("11. ultimoRecebimentoEm — a data que \"recebido em X\" mostra (item 
     const ultimo = await ultimoRecebimentoEm(e.empresaId, titulo.id);
     expect(ultimo).not.toBeNull();
     expect(diaEmFortaleza(ultimo!)).toBe(diaEmFortaleza(hoje));
+    conferencias++;
+  });
+});
+
+describe("12. registrarCobrancaEnviada — \"Cobrar no WhatsApp\" (item 6, Tarefa 5)", () => {
+  it("recusa título de outra empresa (conferência de FK — CLAUDE.md §3)", async () => {
+    const a = await criarEmpresaDeTeste("cob1a");
+    const b = await criarEmpresaDeTeste("cob1b");
+    const tituloDeB = await criarTituloAberto(b);
+
+    await expect(
+      registrarCobrancaEnviada(a.empresaId, a.usuarioId, tituloDeB.id),
+    ).rejects.toThrow("Cobrança não encontrada.");
+
+    // Nada vazou nem foi gravado para a cobrança de B.
+    const envios = await listarEnviosDoTitulo(b.empresaId, tituloDeB.id);
+    expect(envios).toHaveLength(0);
+    conferencias++;
+  });
+
+  it("recusa título que não existe", async () => {
+    const e = await criarEmpresaDeTeste("cob2");
+    await expect(
+      registrarCobrancaEnviada(e.empresaId, e.usuarioId, randomUUID()),
+    ).rejects.toThrow("Cobrança não encontrada.");
+    conferencias++;
+  });
+
+  it("recusa título já pago", async () => {
+    const e = await criarEmpresaDeTeste("cob3");
+    const titulo = await criarTituloAberto(e);
+    await registrarRecebimento(e.empresaId, e.usuarioId, titulo.id, {
+      valor: e.valorServico,
+      data: new Date(),
+      forma: "Pix",
+    });
+
+    await expect(
+      registrarCobrancaEnviada(e.empresaId, e.usuarioId, titulo.id),
+    ).rejects.toThrow("Esta cobrança já foi recebida ou cancelada.");
+    conferencias++;
+  });
+
+  it("recusa título com forma prevista boleto — o banco já avisa, sem cobrar por aqui", async () => {
+    const e = await criarEmpresaDeTeste("cob3b");
+    const servico = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: e.valorServico,
+    });
+    await marcarServicoFinalizado(e.empresaId, servico.id);
+    const titulo = await faturarServico(e.empresaId, servico.id, {
+      vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+      formaPrevista: "boleto",
+    });
+
+    await expect(
+      registrarCobrancaEnviada(e.empresaId, e.usuarioId, titulo.id),
+    ).rejects.toThrow("Cobrança por boleto — o banco já avisa, sem cobrar por aqui.");
+    conferencias++;
+  });
+
+  it("recusa frete arquivado — mesmo critério de registrarRecebimento", async () => {
+    const e = await criarEmpresaDeTeste("cob4");
+    const titulo = await criarTituloAberto(e);
+    await arquivarServico(e.empresaId, titulo.servico_id);
+
+    await expect(
+      registrarCobrancaEnviada(e.empresaId, e.usuarioId, titulo.id),
+    ).rejects.toThrow("Este frete foi arquivado — não é possível registrar o envio.");
+    conferencias++;
+  });
+
+  it("grava a confirmação — usuário e título certos, isolada por empresa", async () => {
+    const e = await criarEmpresaDeTeste("cob5");
+    const titulo = await criarTituloAberto(e);
+
+    await registrarCobrancaEnviada(e.empresaId, e.usuarioId, titulo.id);
+
+    const { rows } = await raiz.query<{ titulo_id: string; usuario_id: string; empresa_id: string }>(
+      `SELECT titulo_id, usuario_id, empresa_id FROM cobranca_enviada WHERE titulo_id = $1`,
+      [titulo.id],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].usuario_id).toBe(e.usuarioId);
+    expect(rows[0].empresa_id).toBe(e.empresaId);
+    conferencias++;
+  });
+
+  /**
+   * Diferente de `marcarOrdemEnviada` (uma vez por frete): a mesma cobrança
+   * pode ser cobrada mais de uma vez ao longo do tempo, e cada confirmação é
+   * um fato próprio — histórico, não um campo único sobrescrito.
+   */
+  it("permite mais de uma confirmação para o mesmo título — histórico, não flag único", async () => {
+    const e = await criarEmpresaDeTeste("cob6");
+    const titulo = await criarTituloAberto(e);
+
+    await registrarCobrancaEnviada(e.empresaId, e.usuarioId, titulo.id);
+    await registrarCobrancaEnviada(e.empresaId, e.usuarioId, titulo.id);
+
+    const envios = await listarEnviosDoTitulo(e.empresaId, titulo.id);
+    expect(envios).toHaveLength(2);
+    conferencias++;
+  });
+});
+
+describe("13. ultimoEnvioPorTitulo — \"cobrado há X dias por Y\" em lote (item 6, Tarefa 5)", () => {
+  it("título sem nenhum envio não entra no mapa", async () => {
+    const e = await criarEmpresaDeTeste("uenv1");
+    const titulo = await criarTituloAberto(e);
+
+    const mapa = await ultimoEnvioPorTitulo(e.empresaId, [titulo.id]);
+    expect(mapa.has(titulo.id)).toBe(false);
+    conferencias++;
+  });
+
+  /**
+   * Mesma prova de `ultimoRecebimentoEm` (bloco 11): grava fora de ordem
+   * cronológica e confere que a função acha a MAIOR data, não a última
+   * gravada nem a primeira que o banco devolver. `enviado_em` é escrito
+   * direto por SQL aqui — `registrarCobrancaEnviada` sempre usa o instante
+   * do toque, sem permitir escolher a data, então só assim dá para simular
+   * dois envios em datas diferentes de forma determinística.
+   */
+  it("com dois envios fora de ordem, devolve o mais recente e quem enviou", async () => {
+    const e = await criarEmpresaDeTeste("uenv2");
+    const titulo = await criarTituloAberto(e);
+    const hoje = new Date();
+    const semanaPassada = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const outroUsuarioId = `u-outro-${e.empresaId}`;
+    await raiz.query(
+      `INSERT INTO "usuario" (id, nome, email, papel, empresa_id) VALUES ($1, $2, $3, 'operador', $4)`,
+      [outroUsuarioId, "Monalisa", `${outroUsuarioId}@teste.invalido`, e.empresaId],
+    );
+
+    // O envio da SEMANA PASSADA é gravado primeiro (pelo dono), o de HOJE
+    // depois (por Monalisa) — se a função lesse pela ordem de inserção,
+    // acertaria por acaso. A prova real é gravar fora de ordem.
+    await raiz.query(
+      `INSERT INTO "cobranca_enviada" (id, empresa_id, titulo_id, usuario_id, enviado_em)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4)`,
+      [e.empresaId, titulo.id, e.usuarioId, semanaPassada],
+    );
+    await raiz.query(
+      `INSERT INTO "cobranca_enviada" (id, empresa_id, titulo_id, usuario_id, enviado_em)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4)`,
+      [e.empresaId, titulo.id, outroUsuarioId, hoje],
+    );
+
+    const mapa = await ultimoEnvioPorTitulo(e.empresaId, [titulo.id]);
+    const ultimo = mapa.get(titulo.id);
+    expect(ultimo).toBeDefined();
+    expect(ultimo!.usuarioNome).toBe("Monalisa");
+    expect(ultimo!.em.getTime()).toBe(hoje.getTime());
     conferencias++;
   });
 });

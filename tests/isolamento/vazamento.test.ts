@@ -102,6 +102,11 @@ const TABELAS_DO_LACO: Record<
       where: { empresa_id: { in: [A, B] } },
       select: { empresa_id: true },
     }),
+  cobranca_enviada: (empresaId) =>
+    db(empresaId).cobrancaEnviada.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
 };
 
 const semear = async (id: string, nome: string) => {
@@ -190,6 +195,14 @@ const semear = async (id: string, nome: string) => {
      VALUES (gen_random_uuid(), $1, $2, 10000, now(), $3)`,
     [id, tituloId, `u-${id}`],
   );
+  // Uma CobrancaEnviada por empresa (item 6, Tarefa 5), mesma razão acima. A
+  // regra de negócio (conferência de FK de `titulo_id`) é testada em
+  // `tests/titulos.test.ts`.
+  await raiz.query(
+    `INSERT INTO "cobranca_enviada" (id, empresa_id, titulo_id, usuario_id, enviado_em)
+     VALUES (gen_random_uuid(), $1, $2, $3, now())`,
+    [id, tituloId, `u-${id}`],
+  );
 };
 
 beforeAll(async () => {
@@ -201,13 +214,15 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // `cliente`, `veiculo`, `motorista`, `tipo_operacao`, `servico`,
-  // `titulo_receber` e `recebimento` são `RESTRICT`/`CASCADE` de propósito
-  // (`docs/especificacao.md`, `CLAUDE.md` §7). `recebimento` referencia
-  // `titulo_receber` (item 6, Tarefa 3), então sai primeiro; `titulo_receber`
+  // `titulo_receber`, `recebimento` e `cobranca_enviada` são
+  // `RESTRICT`/`CASCADE` de propósito (`docs/especificacao.md`, `CLAUDE.md`
+  // §7). `cobranca_enviada` e `recebimento` referenciam `titulo_receber`
+  // (item 6, Tarefas 3 e 5), então saem primeiro; `titulo_receber`
   // referencia `servico` e `cliente` (tarefa 3 do item 3), então sai antes
   // deles; `servico` referencia os quatro da tarefa 1, então sai antes
   // deles; `motorista` referencia `veiculo` (`veiculo_habitual_id`), então
   // sai antes dele.
+  await raiz.query(`DELETE FROM "cobranca_enviada" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "recebimento" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "titulo_receber" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "servico" WHERE empresa_id IN ($1,$2)`, [A, B]);

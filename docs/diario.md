@@ -6,6 +6,90 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 27/08/2026 — Tarefa 5 do item 6, primeiro commit: a base (chave Pix, mensagem, histórico de cobrança)
+
+Primeira metade da Tarefa 5 fundida ("Cobrar no WhatsApp, chave Pix e o texto
+da cobrança") — a base, sem a tela. Corte em dois commits, como o próprio
+plano já registrava como opção.
+
+**Construído:**
+
+- Migration `20260827080000_cobranca_enviada_e_chave_pix`: `empresa.chave_pix`
+  (texto, nulável, sem validação de formato) e a tabela `cobranca_enviada`
+  (`titulo_id` · `usuario_id` · `enviado_em` · `empresa_id`), com RLS
+  `ENABLE`+`FORCE`, política de isolamento, `GRANT SELECT, INSERT` (sem
+  `DELETE`, sem `UPDATE` — nada muda depois de gravado).
+- `montarMensagemCobranca` (`src/lib/servicos/mensagens.ts`) — o molde
+  aprovado pelo fundador em 26/08/2026, mesma regra de blocos de
+  `montarMensagemOrdem`.
+- `registrarCobrancaEnviada`, `ultimoEnvioPorTitulo`, `listarEnviosDoTitulo`
+  (`src/lib/servicos/titulos.ts`) — grava a confirmação de "Enviei" (com
+  conferência de FK e recusa de título pago/cancelado/arquivado/boleto), e as
+  duas leituras que a tela vai usar (marca "cobrado há X dias por Y" em lote,
+  e o histórico do detalhe).
+- `salvarChavePix` (`src/lib/servicos/empresas.ts`, novo arquivo — primeiro
+  escritor de campo de Empresa fora do cadastro).
+- `FolhaDePix.tsx` — a folha "Falta a chave Pix da sua empresa".
+
+**Achado do primeiro `/revisar`, corrigido:** `FolhaDePix` tinha nascido cópia
+de `FolhaDeTelefone` (`CLAUDE.md` §8). Extraído o miolo comum para
+`FolhaDeCampoUnico.tsx` — `FolhaDeTelefone` virou um wrapper fino em cima
+dele, sem mudar a API que os três chamadores já em produção usam (verificado
+ao vivo: telefone ausente → erro de validação → salvar → "85999998888" salvo
+no cadastro, sem regressão).
+
+**Outros achados do primeiro `/revisar`, corrigidos:**
+
+- `npx prisma format` tinha realinhado `arquivado_em` em seis models que a
+  tarefa não toca (Cliente, Veiculo, Motorista, Servico, TituloReceber,
+  Recebimento) — `git checkout` + reaplicação manual das 5 edições, sem rodar
+  o formatador de novo. Diff agora só toca o que a tarefa mexeu.
+- `registrarCobrancaEnviada` aceitava título com `forma_pagamento_prevista =
+  "boleto"` — boleto nunca cobra por WhatsApp (`docs/especificacao.md` §4.5,
+  §8 item 11). Adicionada a recusa, com teste.
+- `docs/componentes.md` §12 e `docs/especificacao.md` (Empresa) ainda
+  afirmavam o estado antigo (só uma exceção de "Agora não"; `chave_pix`
+  "ninguém lê ainda") — corrigidos para o estado que este commit cria.
+
+**Segundo `/revisar`: sem divergências.** Lacunas registradas, não corrigidas
+agora:
+
+- Nenhuma das exportações desta tarefa tem chamador ainda — esperado, é a
+  metade "base" do corte; a tela é o próximo commit.
+- O teste de `vencido` no fuso de Fortaleza (exigido no plano) só é possível
+  quando o cálculo de `vencido` existir — na tela, reaproveitando
+  `grupoDaCobranca`.
+- Três decisões de redação que pedem confirmação do fundador, marcadas
+  abaixo.
+- `cobranca_enviada.arquivado_em` sem caminho que arquive — mesmo estado que
+  `Recebimento` já tem hoje, não é regressão desta tarefa.
+
+**Pedido ao Design:** `docs/componentes.md` §12 ganhou a segunda exceção de
+"Agora não" (relatório com Pix + Cobrar no WhatsApp sem Pix) e a entrada
+correspondente em "Ainda não construídos" — correção de estado do
+repositório, avisada aqui.
+
+**A confirmar com o fundador** (decisão de produto/redação, não escolhida
+sozinha):
+
+1. Sem rota, a frase da mensagem vira "Passando pra lembrar do frete." — o
+   molde aprovado só mostra a versão com `{rota}`.
+2. Textos da `FolhaDePix` (apoio, placeholder do campo) — provisórios, sem
+   documento, mesma categoria já aceita para a folha de faturamento.
+3. Mensagem de recusa do boleto em `registrarCobrancaEnviada` — texto de
+   produto novo, também provisório.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` e `npm run build`
+verdes. Suíte completa: 459/459 (era 458/458 antes desta tarefa — um teste
+novo por cada bloco). Esteira deste commit ainda não confirmada.
+
+Próximo: segunda metade da Tarefa 5 — a tela (pílula "Cobrar no WhatsApp" na
+lista e secundária no detalhe, aviso "Enviei"/"Ainda não", "cobrado há X dias
+por Y", histórico "Cobranças enviadas", a regra do boleto na interface, e a
+folha de telefone com "Salvar e cobrar").
+
+---
+
 ## 27/08/2026 — Fusão das Tarefas 5 e 6 do item 6, plano atualizado
 
 Antes de construir a Tarefa 5 ("Chave Pix e o texto da cobrança"), a conferência

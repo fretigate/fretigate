@@ -693,8 +693,17 @@ consciente ao critério de "coluna sem tela que a preencha é peso morto": ela
 já tem **quem a leia** no item 2 — o formulário e o perfil do cliente precisam
 dizer "vazio usa o padrão da empresa (15 dias)", e sem a coluna essa frase
 apontaria para nada. Os outros campos de Empresa do item 10 (`patio_*`,
-`chave_pix`, `dados_bancarios`, `modelo_mensagem_*`, `afiliado_id`) continuam
-fora: esses ninguém lê ainda.
+`dados_bancarios`, `modelo_mensagem_*`, `afiliado_id`) continuam fora: esses
+ninguém lê ainda.
+
+**`chave_pix` saiu desta lista em 27/08/2026 (item 6, Tarefa 5)** — mesma
+exceção, adiantada pelo mesmo motivo: a coluna ganhou o primeiro leitor
+(`montarMensagemCobranca`, `src/lib/servicos/mensagens.ts`) e um lugar
+mínimo de preencher (a "folha do campo que falta", `FolhaDePix.tsx`) antes
+da tela que editaria o resto da Conta da empresa (item 10). Frase que
+descrevia o estado por um caso que deixou de ser o único — "esses ninguém lê
+ainda" não vale mais para este campo (`CLAUDE.md` §2, sobre texto que
+envelhece calado quando um estado novo passa a existir).
 
 **`termos_aceitos_em` e `termos_versao`** são obrigatórios — o aceite acontece
 no cadastro, então não existe Empresa sem aceite.

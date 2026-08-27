@@ -52,3 +52,52 @@ export function montarMensagemOrdem(dados: DadosMensagemOrdem): string {
     .filter((bloco) => bloco.length > 0)
     .join("\n\n");
 }
+
+export type DadosMensagemCobranca = {
+  empresa: string;
+  cliente: string;
+  /** `formatarRota` (`src/lib/utils/rota.ts`) — só o que existir, pode ser nulo. */
+  rota: string | null;
+  /** Já formatado — "2.400,00" (`formatarCentavos`), sem o prefixo "R$": a função entrega o prefixo. */
+  valor: string;
+  /** Já formatado — "sexta, 5 de setembro" (`formatarDiaDaSemanaEData`). Esta função nunca formata data. */
+  vencimento: string;
+  /** Muda só a linha do vencimento ("Vencimento:" vira "Venceu") — o resto do texto não muda (decisão do fundador, 26/08/2026). */
+  vencido: boolean;
+  /** `Empresa.chave_pix` — o bloco inteiro some quando nulo, não só a linha. */
+  pix: string | null;
+};
+
+const FRASE_FINAL_COBRANCA = "Se já tiver pago, pode desconsiderar. Obrigado!";
+
+/**
+ * Cobrança por WhatsApp (item 6, Tarefa 5 —
+ * `docs/planos/item-6-titulo-e-cobrancas.md`, decisão 1) — o texto aprovado
+ * pelo fundador em 26/08/2026, mesma regra de blocos de `montarMensagemOrdem`
+ * (nunca duas quebras seguidas, bloco ausente some inteiro).
+ *
+ * **A empresa sozinha na primeira linha** — o cliente recebe de número
+ * desconhecido e precisa saber de quem é antes de abrir. **"Se já tiver
+ * pago, pode desconsiderar."** — cobrança e pagamento se cruzam; sem a
+ * frase, quem já pagou lê como se a empresa não tivesse visto o dinheiro.
+ *
+ * **Sem `{rota}`, a frase perde só a menção da rota** ("Passando pra lembrar
+ * do frete.") — diferente do bloco do Pix, que some inteiro: a frase em si
+ * não é um rótulo órfão, continua fazendo sentido sem o trecho da rota.
+ */
+export function montarMensagemCobranca(dados: DadosMensagemCobranca): string {
+  const linhaVencimento = dados.vencido
+    ? `Venceu ${dados.vencimento}`
+    : `Vencimento: ${dados.vencimento}`;
+
+  const blocos = [
+    dados.empresa,
+    `Oi, ${dados.cliente}. Tudo bem?`,
+    dados.rota ? `Passando pra lembrar do frete ${dados.rota}.` : "Passando pra lembrar do frete.",
+    `Valor: R$ ${dados.valor}\n${linhaVencimento}`,
+    dados.pix ? `Pix: ${dados.pix}` : null,
+    FRASE_FINAL_COBRANCA,
+  ].filter((bloco): bloco is string => bloco !== null);
+
+  return blocos.join("\n\n");
+}

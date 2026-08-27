@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { montarMensagemOrdem, type DadosMensagemOrdem } from "@/lib/servicos/mensagens";
+import {
+  montarMensagemCobranca,
+  montarMensagemOrdem,
+  type DadosMensagemCobranca,
+  type DadosMensagemOrdem,
+} from "@/lib/servicos/mensagens";
 
 /**
  * `montarMensagemOrdem` — função pura (item 5, Tarefa 2). Cobre a regra de
@@ -114,8 +119,90 @@ describe("montarMensagemOrdem", () => {
   });
 });
 
+/**
+ * `montarMensagemCobranca` — função pura (item 6, Tarefa 5). O molde
+ * aprovado pelo fundador (`docs/planos/item-6-titulo-e-cobrancas.md`,
+ * decisão 1): empresa sozinha na primeira linha, saudação, a rota (quando
+ * existir), valor e vencimento juntos, o bloco do Pix (só quando a empresa
+ * tem chave cadastrada) e a frase final, sempre presente.
+ */
+let conferenciasCobranca = 0;
+const CONFERENCIAS_ESPERADAS_COBRANCA = 7;
+
+const BASE_COBRANCA: DadosMensagemCobranca = {
+  empresa: "Transportes Silva",
+  cliente: "Frigorífico São Luiz",
+  rota: "Fortaleza → Sobral",
+  valor: "2.400,00",
+  vencimento: "sexta, 5 de setembro",
+  vencido: false,
+  pix: "12.345.678/0001-90",
+};
+
+describe("montarMensagemCobranca", () => {
+  it("caso cheio — o exemplo do plano, com Pix e rota (verificação obrigatória da Tarefa 5)", () => {
+    const resultado = montarMensagemCobranca(BASE_COBRANCA);
+    expect(resultado).toBe(
+      [
+        "Transportes Silva",
+        "Oi, Frigorífico São Luiz. Tudo bem?",
+        "Passando pra lembrar do frete Fortaleza → Sobral.",
+        "Valor: R$ 2.400,00\nVencimento: sexta, 5 de setembro",
+        "Pix: 12.345.678/0001-90",
+        "Se já tiver pago, pode desconsiderar. Obrigado!",
+      ].join("\n\n"),
+    );
+    conferenciasCobranca++;
+  });
+
+  it("sem Pix — o bloco inteiro some, nunca 'Pix: —' nem linha vazia", () => {
+    const resultado = montarMensagemCobranca({ ...BASE_COBRANCA, pix: null });
+    expect(resultado).not.toContain("Pix");
+    expect(resultado).not.toContain("—");
+    expect(resultado.includes("\n\n\n")).toBe(false);
+    conferenciasCobranca++;
+  });
+
+  it("sem rota — a frase perde só o trecho da rota, continua fazendo sentido", () => {
+    const resultado = montarMensagemCobranca({ ...BASE_COBRANCA, rota: null });
+    expect(resultado).toContain("Passando pra lembrar do frete.");
+    expect(resultado).not.toContain("frete ");
+    conferenciasCobranca++;
+  });
+
+  it("vencido — só a linha do vencimento muda, 'Venceu' no lugar de 'Vencimento:'", () => {
+    const resultado = montarMensagemCobranca({ ...BASE_COBRANCA, vencido: true });
+    expect(resultado).toContain("Venceu sexta, 5 de setembro");
+    expect(resultado).not.toContain("Vencimento:");
+    // O resto do texto não muda — mesma frase final, mesma saudação.
+    expect(resultado).toContain("Se já tiver pago, pode desconsiderar. Obrigado!");
+    expect(resultado).toContain("Oi, Frigorífico São Luiz. Tudo bem?");
+    conferenciasCobranca++;
+  });
+
+  it("a vencer — 'Vencimento:' aparece normalmente, nunca 'Venceu'", () => {
+    const resultado = montarMensagemCobranca({ ...BASE_COBRANCA, vencido: false });
+    expect(resultado).toContain("Vencimento: sexta, 5 de setembro");
+    expect(resultado).not.toContain("Venceu");
+    conferenciasCobranca++;
+  });
+
+  it("a frase final é sempre a mesma, sempre presente, com ou sem Pix/rota", () => {
+    const minimo = montarMensagemCobranca({ ...BASE_COBRANCA, rota: null, pix: null });
+    expect(minimo).toContain("Se já tiver pago, pode desconsiderar. Obrigado!");
+    conferenciasCobranca++;
+  });
+
+  it("empresa sozinha na primeira linha, sem nada antes", () => {
+    const resultado = montarMensagemCobranca(BASE_COBRANCA);
+    expect(resultado.startsWith("Transportes Silva\n\n")).toBe(true);
+    conferenciasCobranca++;
+  });
+});
+
 describe("cobertura", () => {
   it("rodou todas as verificações previstas", () => {
     expect(conferencias).toBe(CONFERENCIAS_ESPERADAS);
+    expect(conferenciasCobranca).toBe(CONFERENCIAS_ESPERADAS_COBRANCA);
   });
 });
