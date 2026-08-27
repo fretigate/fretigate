@@ -117,7 +117,7 @@ export function buscarClientesPorIds(empresaId: string, ids: string[]) {
   if (ids.length === 0) return Promise.resolve([]);
   return db(empresaId).cliente.findMany({
     where: { id: { in: ids } },
-    select: { id: true, nome: true },
+    select: { id: true, nome: true, telefone: true },
   });
 }
 

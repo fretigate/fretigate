@@ -1314,12 +1314,14 @@ Três exigências para quando os itens 5 e 6 chegarem:
    então a regra não protegia nada — mas ela existia, e corrigir isto aqui
    evitou a próxima sessão decidir de novo o que já tinha sido decidido.
    **Desde a Tarefa 1 do item 5 (23/08/2026) isso mudou, e mudou de novo na
-   Tarefa 2 (23/08/2026):** a folha e a validação existem e protegem o
-   gatilho de telefone tocável nos perfis (Tarefa 1) **e** o gatilho "Enviar
-   ordem" no detalhe do frete (Tarefa 2, `AcaoOrdemDeServico.tsx`) — dos dois
-   gatilhos que este parágrafo previa, só "Cobrar no WhatsApp" (item 6)
-   continua sem construir. ~~O que falta decidir é só o DDI~~ — também
-   resolvido na Tarefa 1: fixo em 55 (ver a lista logo abaixo).
+   Tarefa 2 (23/08/2026) e na Tarefa 5 do item 6 (27/08/2026):** a folha e a
+   validação existem e protegem o gatilho de telefone tocável nos perfis
+   (Tarefa 1), o gatilho "Enviar ordem" no detalhe do frete (Tarefa 2,
+   `AcaoOrdemDeServico.tsx`) **e** o gatilho "Cobrar no WhatsApp" em
+   Cobranças (Tarefa 5 do item 6, `AcaoCobrarNoWhatsApp.tsx`) — os três
+   gatilhos que este parágrafo previa estão construídos. ~~O que falta
+   decidir é só o DDI~~ — também resolvido na Tarefa 1: fixo em 55 (ver a
+   lista logo abaixo).
 
    Duas coisas ficavam pendentes até o item 5 chegar — **as duas resolvidas
    na Tarefa 1 do item 5 (23/08/2026)**:
@@ -1362,8 +1364,8 @@ Três exigências para quando os itens 5 e 6 chegarem:
      aplicado no Cadastro rápido (`docs/componentes.md` §11): "a falta
      aparece no momento em que atrapalha, não antes."
    - **A cobrança de verdade continua sendo a Folha do campo que falta**, no
-     momento de usar (telefone tocável nos perfis, já construído; Enviar
-     ordem e Cobrar no WhatsApp, pendentes) — não o formulário de cadastro.
+     momento de usar (telefone tocável nos perfis, Enviar ordem e Cobrar no
+     WhatsApp, todos já construídos) — não o formulário de cadastro.
 
    **Não construído nesta tarefa.** `criarClienteAction`/`editarClienteAction`
    e os equivalentes de motorista continuam sem validar telefone hoje — a

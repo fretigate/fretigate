@@ -1,15 +1,18 @@
 import { exigirSessao } from "@/lib/auth/sessao";
+import { db } from "@/lib/db";
 import {
   contarFretesAFaturar,
   listarCobrancas,
   referenciaDoServico,
   resumoDeCobrancas,
 } from "@/lib/servicos/cobrancas";
-import { grupoDaCobranca, resolverSituacaoDaUrl } from "@/lib/servicos/cobrancas-situacao";
+import { grupoDaCobranca, resolverSituacaoDaUrl, textoCobradoHa } from "@/lib/servicos/cobrancas-situacao";
+import { ultimoEnvioPorTitulo } from "@/lib/servicos/titulos";
 import { buscarClientesPorIds } from "@/lib/servicos/clientes";
 import { buscarServicosPorIds } from "@/lib/servicos/servicos";
-import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { diaEmFortaleza, formatarDiaDaSemanaEData } from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
+import { formatarRota } from "@/lib/utils/rota";
 import {
   resolverLimiteDaLista,
   resolverPeriodoDaUrl,
@@ -55,12 +58,22 @@ export default async function Pagina({
     listarCobrancas(sessao.empresaId, { situacao, periodo, limite, hoje }),
   ]);
 
-  const [clientes, servicos] = await Promise.all([
+  const [clientes, servicos, envios, empresa] = await Promise.all([
     buscarClientesPorIds(sessao.empresaId, [...new Set(titulos.map((t) => t.cliente_id))]),
     buscarServicosPorIds(sessao.empresaId, [...new Set(titulos.map((t) => t.servico_id))]),
+    // Em lote, nunca uma consulta por linha — mesma regra de
+    // `totalRecebidoPorTitulo`/`ultimoEnvioPorTitulo` (`titulos.ts`) e do
+    // resto de `listarCobrancas` — "cobrado há X dias por Y" (item 6,
+    // Tarefa 5).
+    ultimoEnvioPorTitulo(sessao.empresaId, titulos.map((t) => t.id)),
+    db(sessao.empresaId).empresa.findUnique({
+      where: { id: sessao.empresaId },
+      select: { nome_fantasia: true, chave_pix: true },
+    }),
   ]);
 
   const nomeDoCliente = new Map(clientes.map((c) => [c.id, c.nome]));
+  const telefoneDoCliente = new Map(clientes.map((c) => [c.id, c.telefone]));
   const servicoPorId = new Map(servicos.map((s) => [s.id, s]));
 
   const cobrancas: CobrancaParaLista[] = titulos.map((t) => {
@@ -70,6 +83,7 @@ export default async function Pagina({
     // banco (`registrar_recebimento`) só marca "pago" quando a soma dos
     // recebimentos alcança o valor, nunca antes (item 6, Tarefa 3).
     const recebido = t.totalRecebido;
+    const envio = envios.get(t.id) ?? null;
 
     return {
       id: t.id,
@@ -88,6 +102,10 @@ export default async function Pagina({
       // Só faz sentido fora de "Recebidas": um título pago não é "parcial",
       // é o caso normal (item 6, Tarefa 3 — a linha do recebimento parcial).
       parcial: grupo !== "recebidas" && recebido > 0,
+      clienteTelefone: telefoneDoCliente.get(t.cliente_id) ?? null,
+      rota: formatarRota(servico?.origem_texto ?? null, servico?.destino_texto ?? null),
+      vencimentoFormatado: t.vencimento ? formatarDiaDaSemanaEData(t.vencimento) : null,
+      marcaCobrado: envio ? textoCobradoHa(envio, hoje) : null,
     };
   });
 
@@ -122,6 +140,8 @@ export default async function Pagina({
           limitadoA50={limite === 50 && titulos.length === 50}
           rotuloPeriodo={rotuloDoPeriodo(janela, de, ate, "Todas as cobranças")}
           fretesAFaturar={fretesAFaturar}
+          empresaNome={empresa!.nome_fantasia}
+          chavePixEmpresa={empresa!.chave_pix}
         />
       </div>
     </main>

@@ -10,13 +10,19 @@ import { FolhaDeOrdenacao } from "@/components/ui/FolhaDeOrdenacao";
 import { FolhaDePeriodo, type JanelaEscolhida } from "@/components/ui/FolhaDePeriodo";
 import { FolhaDeRecebimento } from "@/components/ui/FolhaDeRecebimento";
 import { LinhaDeLista } from "@/components/ui/LinhaDeLista";
+import { AcaoCobrarNoWhatsApp } from "@/components/ui/AcaoCobrarNoWhatsApp";
 import { Etiqueta } from "@/components/ui/EtiquetaSituacao";
 import { Botao } from "@/components/ui/Botao";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
-// A ação mora em `fretes/acoes.ts`, ao lado de `faturarServicoAction` e
-// `criarTituloJaRecebiAction` — as outras ações de título, mesmo motivo de
-// não terem nascido cada uma no seu próprio domínio de tela.
-import { registrarRecebimentoAction } from "../fretes/acoes";
+// As ações moram em `fretes/acoes.ts`, ao lado de `faturarServicoAction` e
+// `criarTituloJaRecebiAction` — as outras ações de título e cobrança, mesmo
+// motivo de não terem nascido cada uma no seu próprio domínio de tela.
+import {
+  registrarCobrancaEnviadaAction,
+  registrarRecebimentoAction,
+  salvarChavePixAction,
+} from "../fretes/acoes";
+import { salvarTelefoneClienteAction } from "../clientes/acoes";
 // De `cobrancas-situacao`, nunca de `cobrancas`: este é Client Component, e
 // o outro módulo importa `@/lib/db` (`server-only`) — o `npm run build`
 // reprova a cadeia inteira, como reprovou ao escrever esta tarefa.
@@ -69,6 +75,21 @@ export type CobrancaParaLista = {
    * com o grupo "recebidas", que é o caso cheio, não parcial.
    */
   parcial: boolean;
+  /**
+   * As peças de "Cobrar no WhatsApp" (item 6, Tarefa 5) — só usadas fora de
+   * "recebidas"/boleto (`ListaCobrancas` decide se a pílula aparece; estes
+   * campos vêm preenchidos sempre que fazem sentido, `null`/vazio quando não
+   * se aplicam). `clienteTelefone` é o de `Cliente.telefone`, espelho do
+   * cadastro — mesmo cuidado de `docs/componentes.md` § "Fonte única do
+   * dado".
+   */
+  clienteTelefone: string | null;
+  /** `formatarRota` puro, sem o dia — o que `montarMensagemCobranca` espera em `rota`, diferente de `referencia` (rota + dia, para exibição). */
+  rota: string | null;
+  /** "sexta, 5 de setembro" — `null` só quando não há vencimento (título "a vencer" sem data, hoje inalcançável para título aberto). */
+  vencimentoFormatado: string | null;
+  /** "cobrado há 2 dias por Monalisa" (§4.5) — `null` quando ninguém cobrou ainda. */
+  marcaCobrado: string | null;
 };
 
 type Props = {
@@ -86,6 +107,10 @@ type Props = {
    * que o botão abre (decisão do fundador, 26/08/2026, achado do `/revisar`).
    */
   fretesAFaturar: number;
+  /** Nome fantasia — primeira linha do molde de `montarMensagemCobranca` (item 6, Tarefa 5). */
+  empresaNome: string;
+  /** `Empresa.chave_pix` — `null` abre `FolhaDePix` ao cobrar (decisão 2, sem bloquear o envio). */
+  chavePixEmpresa: string | null;
 };
 
 const MESES = [
@@ -122,6 +147,8 @@ export function ListaCobrancas({
   limitadoA50,
   rotuloPeriodo,
   fretesAFaturar,
+  empresaNome,
+  chavePixEmpresa,
 }: Props) {
   const router = useRouter();
   const [clienteFiltro, setClienteFiltro] = useState<string | undefined>();
@@ -323,6 +350,42 @@ export function ListaCobrancas({
                                 saldoCentavos: cobranca.valorCentavos,
                               }),
                           }
+                    }
+                    rodape={
+                      // Boleto e Recebidas não cobram por WhatsApp (§8 item
+                      // 11 · "Recebidas" já está pago) — sem pílula e sem
+                      // marca de cobrado, mesmo critério do protótipo
+                      // (`referencia/.../TelaCobrancas.dc.html`).
+                      cobranca.boleto || cobranca.grupo === "recebidas" ? undefined : (
+                        <div className="flex items-center gap-12">
+                          <AcaoCobrarNoWhatsApp
+                            variante="pilula"
+                            tituloId={cobranca.id}
+                            cliente={{
+                              id: cobranca.clienteId,
+                              nome: cobranca.cliente,
+                              telefone: cobranca.clienteTelefone,
+                            }}
+                            dadosMensagem={{
+                              empresa: empresaNome,
+                              cliente: cobranca.cliente,
+                              rota: cobranca.rota,
+                              valor: formatarCentavos(cobranca.valorCentavos),
+                              vencimento: cobranca.vencimentoFormatado ?? "",
+                              vencido: cobranca.grupo === "vencidas",
+                            }}
+                            chavePixEmpresa={chavePixEmpresa}
+                            registrar={registrarCobrancaEnviadaAction}
+                            salvarTelefoneCliente={salvarTelefoneClienteAction}
+                            salvarChavePix={salvarChavePixAction}
+                          />
+                          {cobranca.marcaCobrado ? (
+                            <span className="text-apoio font-medium text-tinta-apoio">
+                              {cobranca.marcaCobrado}
+                            </span>
+                          ) : null}
+                        </div>
+                      )
                     }
                   />
                 ))}

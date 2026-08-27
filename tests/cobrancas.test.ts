@@ -6,7 +6,7 @@ import {
   listarCobrancas,
   resumoDeCobrancas,
 } from "@/lib/servicos/cobrancas";
-import { grupoDaCobranca, resolverSituacaoDaUrl } from "@/lib/servicos/cobrancas-situacao";
+import { grupoDaCobranca, resolverSituacaoDaUrl, textoCobradoHa } from "@/lib/servicos/cobrancas-situacao";
 import {
   criarTituloJaRecebi,
   faturarServico,
@@ -37,7 +37,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 24;
+const CONFERENCIAS_ESPERADAS = 26;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -769,6 +769,60 @@ describe("5. contarFretesAFaturar — o número do estado vazio", () => {
     // passaria com zero dos dois lados, sem medir nada.
     expect(naLista.map((s) => s.id).sort()).toEqual(
       [emAndamento, finalizado, comCancelado].sort(),
+    );
+    conferencias++;
+  });
+});
+
+/**
+ * `textoCobradoHa` (item 6, Tarefa 5) — a marca "cobrado há X dias por Y"
+ * (§4.5). Mesma conta em dias de Fortaleza de `grupoDaCobranca`/`textoDoPrazo`
+ * acima, e o fuso já rendeu dois defeitos neste projeto por parecer trivial —
+ * decisão do fundador, 27/08/2026, ao pedir este teste: função nova, na
+ * tarefa que a criou, não é a mesma lacuna de `textoDoPrazo` (que já existia
+ * sem teste antes desta tarefa e fica registrada à parte, não corrigida aqui).
+ */
+describe("6. textoCobradoHa — cobrado há X dias por Y", () => {
+  const hoje = "2026-08-26";
+
+  it("hoje, ontem, e há N dias", () => {
+    expect(
+      textoCobradoHa({ em: instanteDoDiaEmFortaleza(hoje), usuarioNome: "Monalisa" }, hoje),
+    ).toBe("cobrado hoje por Monalisa");
+    expect(
+      textoCobradoHa(
+        { em: instanteDoDiaEmFortaleza(deslocarDias(hoje, -1)), usuarioNome: "Monalisa" },
+        hoje,
+      ),
+    ).toBe("cobrado ontem por Monalisa");
+    expect(
+      textoCobradoHa(
+        { em: instanteDoDiaEmFortaleza(deslocarDias(hoje, -5)), usuarioNome: "Monalisa" },
+        hoje,
+      ),
+    ).toBe("cobrado há 5 dias por Monalisa");
+    conferencias++;
+  });
+
+  /**
+   * O mesmo contraste de fuso do teste de `grupoDaCobranca` acima: às 23h de
+   * Fortaleza (UTC-3) o servidor em UTC já vê o dia seguinte. Um "Enviei"
+   * confirmado nesse horário não pode virar "cobrado ontem" só porque o
+   * relógio do servidor já virou a página.
+   */
+  it("continua 'cobrado hoje' às 23h de Fortaleza, com o servidor em UTC no dia seguinte", () => {
+    const instante = new Date("2026-08-27T02:00:00.000Z");
+    const diaFortaleza = diaEmFortaleza(instante);
+    const diaUtc = instante.toISOString().slice(0, 10);
+    expect(diaFortaleza).toBe("2026-08-26");
+    expect(diaUtc).toBe("2026-08-27");
+
+    expect(textoCobradoHa({ em: instante, usuarioNome: "Monalisa" }, diaFortaleza)).toBe(
+      "cobrado hoje por Monalisa",
+    );
+    // Com o dia errado (UTC), a mesma confirmação pareceria "cobrado ontem".
+    expect(textoCobradoHa({ em: instante, usuarioNome: "Monalisa" }, diaUtc)).toBe(
+      "cobrado ontem por Monalisa",
     );
     conferencias++;
   });

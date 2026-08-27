@@ -326,6 +326,16 @@ você escreve.** O padrão é o meu.
    afirma "pendente" sobre algo já confirmado é a mesma classe de erro que
    o §13 já nomeia (afirmação que engana por dizer o que não é mais
    verdade).
+
+   **Essa atualização nunca vira commit próprio — vai junto do próximo
+   commit real.** Decisão do fundador, 27/08/2026: um commit só para
+   corrigir uma linha do diário dispara uma execução inteira da esteira e
+   ocupa a mesma fila de concorrência que qualquer outro push (§2, sobre
+   rerun em fila — `cancel-in-progress` no `group` de `.github/workflows/
+   ci.yml`), custo que a correção não justifica. A entrada de diário
+   descreve o momento em que foi escrita; corrigi-la depois, com a
+   informação que chegou tarde, é ajuste de registro, não trabalho novo —
+   por isso espera o próximo commit que já ia acontecer.
 10. **Ao fechar uma tarefa, feche a sessão junto.** Depois do push (item 9),
     termine a resposta com uma linha só, avisando que é hora de eu dar
     `/clear` e dizendo **qual comando mandar ao reabrir** — junto do status

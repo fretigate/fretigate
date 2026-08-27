@@ -19,8 +19,10 @@ import {
   criarTituloJaRecebi,
   editarServicoComProtecaoDeTitulo,
   faturarServico,
+  registrarCobrancaEnviada,
   registrarRecebimento,
 } from "@/lib/servicos/titulos";
+import { salvarChavePix } from "@/lib/servicos/empresas";
 import { buscarMunicipios, type Municipio } from "@/lib/servicos/municipios";
 import { nomeCaminhao, TIPOS_VEICULO } from "@/lib/utils/caminhao";
 import { instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
@@ -480,5 +482,64 @@ export const registrarRecebimentoAction = comoUsuario(async (
     return { ok: true };
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para registrar agora." };
+  }
+});
+
+const schemaRegistrarCobrancaEnviada = z.object({ tituloId: z.string().uuid() });
+
+/**
+ * "Enviei", no aviso de confirmação que aparece ao voltar do WhatsApp de uma
+ * cobrança (item 6, Tarefa 5) — mesmo padrão de `marcarOrdemEnviadaAction`.
+ * `registrarCobrancaEnviada` (`src/lib/servicos/titulos.ts`) confere posse do
+ * título, recusa boleto/já pago/cancelado e frete arquivado.
+ */
+export const registrarCobrancaEnviadaAction = comoUsuario(async (
+  sessao,
+  tituloId: string,
+): Promise<ResultadoSimples> => {
+  const validado = schemaRegistrarCobrancaEnviada.safeParse({ tituloId });
+  if (!validado.success) return { ok: false, erro: "Cobrança inválida." };
+
+  try {
+    await registrarCobrancaEnviada(sessao.empresaId, sessao.usuarioId, validado.data.tituloId);
+    return { ok: true };
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };
+  }
+});
+
+const schemaSalvarChavePix = z.object({ chavePix: z.string().trim().min(1) });
+
+/**
+ * `FolhaDePix` (item 6, Tarefa 5), aberta a partir de "Cobrar no WhatsApp"
+ * sem chave Pix cadastrada. Fica aqui, ao lado das outras ações de título e
+ * cobrança, pelo mesmo motivo delas (comentário de `ListaCobrancas.tsx`):
+ * não nasce domínio próprio por ter um único gatilho. Texto livre, sem
+ * validação de formato — `salvarChavePix`
+ * (`src/lib/servicos/empresas.ts`).
+ *
+ * **`comoUsuario`, não `comoDono` — decisão do fundador, 27/08/2026, achado
+ * do `/revisar`.** A chave nasce do fluxo de "Cobrar no WhatsApp", que é
+ * acesso comum a Dono e Operador (`docs/especificacao.md` §4.9: os dois têm
+ * "o mesmo acesso a... cobranças"); a lista de restrições a Dono no mesmo
+ * parágrafo (assinatura, forma de pagamento, gestão de usuários) não nomeia
+ * chave Pix. Quando a tela de Configurações (item 9) nascer e passar a
+ * editar `chave_pix` por ali também, esta decisão precisa ser revisitada —
+ * não herdada por analogia — porque aquela tela mexe em "Conta da empresa"
+ * como um todo, campo diferente do gatilho único de cobrança que motivou
+ * esta escolha.
+ */
+export const salvarChavePixAction = comoUsuario(async (
+  sessao,
+  chavePix: string,
+): Promise<ResultadoSimples> => {
+  const validado = schemaSalvarChavePix.safeParse({ chavePix });
+  if (!validado.success) return { ok: false, erro: "Diga a chave Pix." };
+
+  try {
+    await salvarChavePix(sessao.empresaId, validado.data.chavePix);
+    return { ok: true };
+  } catch {
+    return { ok: false, erro: "Não deu para salvar agora." };
   }
 });

@@ -72,6 +72,17 @@ type PropsBase = {
    * (`DeslizarParaRevelar`).
    */
   aoDeslizar?: { rotulo: string; onRevelar: () => void };
+  /**
+   * Terceira linha, fora do alvo de navegação — a pílula "Cobrar no
+   * WhatsApp" e a marca "cobrado há X dias" de Cobranças (item 6, Tarefa 5).
+   * **Nunca aninhada dentro do `<a>`/`<button>` da linha** — um `<button>`
+   * dentro de `<a>` é HTML inválido, e o toque nele acabaria também
+   * navegando (o clique borbulha para o elemento que o React/Next trata como
+   * o link). Em vez disso, `rodape` é **irmão** do alvo de navegação, dentro
+   * do mesmo cartão: o toque nele nunca alcança o `<a>`/`<button>`, porque
+   * não está dentro dele.
+   */
+  rodape?: ReactNode;
 };
 
 type PropsLink = PropsBase & { href: string; onClick?: undefined };
@@ -81,6 +92,10 @@ type Props = PropsLink | PropsBotao;
 
 const CLASSE =
   "flex min-h-78 w-full rounded-linha bg-separacao px-18 py-14 text-left active:bg-principal-desabilitado";
+
+/** Mesma aparência de `CLASSE`, mas sem o raio/fundo — quando `rodape` existe, o cartão (raio + fundo) sobe para o `<div>` que envolve o alvo de navegação e o rodapé juntos. */
+const CLASSE_COM_RODAPE =
+  "flex min-h-78 w-full px-18 py-14 text-left active:bg-principal-desabilitado";
 
 function ConteudoClassico({ iniciais, nome, apoio }: PropsBase): ReactNode {
   return (
@@ -137,28 +152,37 @@ function Conteudo(props: PropsBase): ReactNode {
   return <ConteudoClassico {...props} />;
 }
 
-function linha(props: Props): ReactNode {
+function linha(props: Props, classe: string): ReactNode {
   if (props.href !== undefined) {
     return (
-      <Link href={props.href} className={CLASSE}>
+      <Link href={props.href} className={classe}>
         <Conteudo {...props} />
       </Link>
     );
   }
 
   return (
-    <button type="button" onClick={props.onClick} className={CLASSE}>
+    <button type="button" onClick={props.onClick} className={classe}>
       <Conteudo {...props} />
     </button>
   );
 }
 
 export function LinhaDeLista(props: Props): ReactNode {
-  if (!props.aoDeslizar) return linha(props);
+  const nucleo = props.rodape ? (
+    <div className="overflow-hidden rounded-linha bg-separacao">
+      {linha(props, CLASSE_COM_RODAPE)}
+      <div className="px-18 pb-14">{props.rodape}</div>
+    </div>
+  ) : (
+    linha(props, CLASSE)
+  );
+
+  if (!props.aoDeslizar) return nucleo;
 
   return (
     <DeslizarParaRevelar rotulo={props.aoDeslizar.rotulo} onRevelar={props.aoDeslizar.onRevelar}>
-      {linha(props)}
+      {nucleo}
     </DeslizarParaRevelar>
   );
 }

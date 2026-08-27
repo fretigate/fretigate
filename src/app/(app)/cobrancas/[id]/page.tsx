@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { exigirSessao } from "@/lib/auth/sessao";
+import { db } from "@/lib/db";
 import {
   buscarServicoComTitulos,
   buscarTituloReceber,
+  listarEnviosDoTitulo,
   ultimoRecebimentoEm,
 } from "@/lib/servicos/titulos";
 import { buscarCliente } from "@/lib/servicos/clientes";
@@ -12,13 +14,19 @@ import { CabecalhoDeDetalhe } from "@/components/ui/CabecalhoDeDetalhe";
 import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
 import { LinhaDeLista } from "@/components/ui/LinhaDeLista";
 import { AcaoMarcarRecebido } from "@/components/ui/AcaoMarcarRecebido";
-// Mesma ação de `fretes/acoes.ts` que "Marcar recebido" já usa no detalhe do
-// frete — `AcaoMarcarRecebido` recebe por prop (achado do terceiro
-// `/revisar`), nunca importa Server Action por conta própria.
-import { registrarRecebimentoAction } from "../../fretes/acoes";
+import { AcaoCobrarNoWhatsApp } from "@/components/ui/AcaoCobrarNoWhatsApp";
+// Mesmas ações de `fretes/acoes.ts` que o detalhe do frete e a lista de
+// Cobranças já usam — recebidas por prop (achado do terceiro `/revisar`),
+// nunca importadas por conta própria dentro de um componente de `ui`.
+import { registrarCobrancaEnviadaAction, registrarRecebimentoAction, salvarChavePixAction } from "../../fretes/acoes";
+import { salvarTelefoneClienteAction } from "../../clientes/acoes";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { formatarRota } from "@/lib/utils/rota";
-import { diaEmFortaleza, formatarDiaDaSemanaDataEAno } from "@/lib/utils/data-fortaleza";
+import {
+  diaEmFortaleza,
+  formatarDiaDaSemanaEData,
+  formatarDiaDaSemanaDataEAno,
+} from "@/lib/utils/data-fortaleza";
 import { formatarDataCurta } from "@/lib/utils/periodo";
 
 /**
@@ -59,7 +67,14 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
   const tituloAtual = servicoComTitulos.titulos.find((t) => t.id === id);
   if (!tituloAtual) notFound();
 
-  const cliente = await buscarCliente(sessao.empresaId, titulo.cliente_id);
+  const [cliente, empresa, envios] = await Promise.all([
+    buscarCliente(sessao.empresaId, titulo.cliente_id),
+    db(sessao.empresaId).empresa.findUnique({
+      where: { id: sessao.empresaId },
+      select: { nome_fantasia: true, chave_pix: true },
+    }),
+    listarEnviosDoTitulo(sessao.empresaId, id),
+  ]);
 
   const hoje = diaEmFortaleza(new Date());
   const grupo = grupoDaCobranca(tituloAtual, hoje);
@@ -118,6 +133,12 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
   const podeReceber = tituloAtual.status === "aberto" && !servicoComTitulos.arquivado_em;
   const jaRecebido = tituloAtual.status === "pago";
 
+  // "Cobrar no WhatsApp" secundária (item 6, Tarefa 5) — mesma condição de
+  // `podeReceber`, mais a exclusão de boleto (§8 item 11: "o banco já
+  // avisa", sem ação de cobrar por aqui).
+  const podeCobrar = podeReceber && tituloAtual.forma_pagamento_prevista !== "boleto";
+  const rota = formatarRota(servicoComTitulos.origem_texto, servicoComTitulos.destino_texto);
+
   return (
     <main
       className="mx-auto flex min-h-full max-w-[480px] flex-col"
@@ -169,6 +190,29 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
             hoje={hoje}
             registrar={registrarRecebimentoAction}
           />
+          {podeCobrar ? (
+            <AcaoCobrarNoWhatsApp
+              variante="secundaria"
+              tituloId={tituloAtual.id}
+              cliente={{
+                id: titulo.cliente_id,
+                nome: cliente?.nome ?? "Cliente",
+                telefone: cliente?.telefone ?? null,
+              }}
+              dadosMensagem={{
+                empresa: empresa!.nome_fantasia,
+                cliente: cliente?.nome ?? "Cliente",
+                rota,
+                valor: formatarCentavos(saldo),
+                vencimento: tituloAtual.vencimento ? formatarDiaDaSemanaEData(tituloAtual.vencimento) : "",
+                vencido: grupo === "vencidas",
+              }}
+              chavePixEmpresa={empresa!.chave_pix}
+              registrar={registrarCobrancaEnviadaAction}
+              salvarTelefoneCliente={salvarTelefoneClienteAction}
+              salvarChavePix={salvarChavePixAction}
+            />
+          ) : null}
         </div>
 
         {/* FRETES INCLUÍDOS — sempre 1 linha hoje (o agrupamento por
@@ -182,11 +226,44 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           <LinhaDeLista
             href={`/fretes/${servicoComTitulos.id}`}
             nome={formatarDataCurta(diaEmFortaleza(servicoComTitulos.data_servico))}
-            apoio={formatarRota(servicoComTitulos.origem_texto, servicoComTitulos.destino_texto) ?? undefined}
+            apoio={rota ?? undefined}
             valorCentavos={servicoComTitulos.valor}
             situacao={servicoComTitulos.situacao_financeira}
           />
         </div>
+
+        {/* COBRANÇAS ENVIADAS — o histórico de "Enviei" confirmados
+            (`registrarCobrancaEnviada`, item 6, Tarefa 5). Linha estática,
+            sem `LinhaDeLista`: não existe destino para navegar a partir de
+            um envio, e forçar `href`/`onClick` nela criaria um alvo tocável
+            sem ação nenhuma por trás (`CLAUDE.md` §8). Mesmo fundo/raio de
+            "Fretes incluídos" (`bg-separacao rounded-linha`), sem a fonte
+            mono do protótipo (`referencia/.../TelaCobrancas.dc.html`) —
+            `docs/estilo.md` reserva Azeret Mono só para a placa do
+            caminhão e o impresso, nunca para uma data na tela. */}
+        {envios.length > 0 ? (
+          <div className="mt-26 flex flex-col gap-6">
+            <span className="px-4 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
+              Cobranças enviadas
+            </span>
+            <div className="flex flex-col gap-6">
+              {envios.map((envio) => (
+                <div
+                  key={envio.id}
+                  className="flex items-center gap-12 rounded-linha bg-separacao px-18 py-13"
+                >
+                  <span className="flex-none text-apoio font-normal text-tinta-apoio">
+                    {formatarDataCurta(diaEmFortaleza(envio.enviado_em))}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-apoio font-medium text-tinta-apoio">
+                    {envio.usuario.nome}
+                  </span>
+                  <span className="flex-none text-apoio font-medium text-tinta-apoio">WhatsApp</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </main>
   );

@@ -84,7 +84,8 @@ export function grupoDaCobranca(
   return "a_vencer";
 }
 
-function diferencaEmDias(de: string, ate: string): number {
+/** Exportada — `ultimoEnvioPorTitulo`/`textoCobradoHa`, abaixo, precisam da mesma conta em dias de Fortaleza. */
+export function diferencaEmDias(de: string, ate: string): number {
   const umDia = 24 * 60 * 60 * 1000;
   return Math.round(
     (instanteDoDiaEmFortaleza(ate).getTime() - instanteDoDiaEmFortaleza(de).getTime()) / umDia,
@@ -133,3 +134,18 @@ export const CLASSE_DO_PRAZO: Record<GrupoDeCobranca, string> = {
   a_vencer: "text-tinta-apoio",
   recebidas: "text-acao",
 };
+
+/**
+ * "Cobrado há 2 dias por Monalisa" (§4.5) — a marca que acompanha a pílula
+ * "Cobrar no WhatsApp" quando já existe um envio confirmado
+ * (`UltimoEnvio`, `src/lib/servicos/titulos.ts`). Mesma conta em dias de
+ * Fortaleza de `textoDoPrazo`, nunca diferença de instante: o envio
+ * confirmado às 23h de Fortaleza de ontem não pode virar "cobrado há 0
+ * dias" só porque o servidor, em UTC, já está no dia seguinte.
+ */
+export function textoCobradoHa(envio: { em: Date; usuarioNome: string }, hoje: string): string {
+  const dia = diaEmFortaleza(envio.em);
+  const dias = diferencaEmDias(dia, hoje);
+  const relativo = dias <= 0 ? "hoje" : dias === 1 ? "ontem" : `há ${dias} dias`;
+  return `cobrado ${relativo} por ${envio.usuarioNome}`;
+}

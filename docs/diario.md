@@ -6,6 +6,96 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 27/08/2026 — Tarefa 5 do item 6, segundo commit: a tela (Cobrar no WhatsApp)
+
+Segunda metade da Tarefa 5 — a tela que aciona a base do commit anterior:
+pílula "Cobrar no WhatsApp" na lista, secundária no detalhe, aviso "Enviei" /
+"Ainda não", "cobrado há X dias por Y", histórico "Cobranças enviadas", e a
+regra do boleto na interface.
+
+**Construído:**
+
+- `AcaoCobrarNoWhatsApp.tsx` (novo, `src/components/ui`) — componente único
+  para os dois lugares (pílula em linha na lista, secundária no detalhe),
+  mesmo padrão de `AcaoMarcarRecebido`. Resolve telefone do cliente
+  ausente/inválido (bloqueia, `FolhaDeTelefone`) e chave Pix ausente (não
+  bloqueia, `FolhaDePix`, decisão 2) — telefone primeiro quando os dois
+  faltam.
+- `registrarCobrancaEnviadaAction`, `salvarChavePixAction`
+  (`fretes/acoes.ts`) — ao lado das outras ações de título/cobrança.
+- `LinhaDeLista` ganhou `rodape` — terceira linha fora do alvo de navegação
+  (nunca aninhada em `<a>`/`<button>`), para a pílula e a marca "cobrado há X
+  dias" na lista de Cobranças.
+- `textoCobradoHa` (`cobrancas-situacao.ts`) — mesma conta de dias de
+  Fortaleza que `textoDoPrazo`.
+- "Cobranças enviadas" no detalhe — histórico estático (sem `LinhaDeLista`:
+  não há destino para navegar a partir de um envio).
+- `buscarClientesPorIds`/`buscarCliente` passam a trazer telefone onde
+  faltava.
+
+**Achado do primeiro `/revisar`, o que importa — bug real de posicionamento.**
+A pílula em linha nasce dentro do `rodape` de `LinhaDeLista`, que pode estar
+dentro de `DeslizarParaRevelar` — e esse componente aplica `transform:
+translateX(...)` no `<div>` que envolve a linha inteira, **sempre**, mesmo
+parado (`translateX(0px)` continua sendo um `transform`). Um ancestral com
+`transform` vira o "viewport" de qualquer elemento `fixed` dentro dele —
+exatamente o problema que `FolhaInferior.tsx` registra ter conferido que não
+existia (Tarefa 1 do item 5, 23/08/2026: medido que não havia
+`transform`/`filter`/`perspective`/`will-change` em nenhum ancestral, do
+layout raiz até `globals.css`). A linha que desliza (Tarefa 3 do item 6,
+26/08/2026) criou esse ancestral depois — sem que a verificação de 23/08 fosse
+refeita, porque nada avisa quando um componente novo introduz `transform`.
+Corrigido levando as folhas/avisos de `AcaoCobrarNoWhatsApp` para
+`document.body` via `createPortal`.
+
+**Padrão a reconferir, registrado a pedido do fundador:** toda vez que um
+componente novo aplicar `transform`/`filter`/`perspective`/`will-change` a um
+ancestral — mesmo condicionalmente, mesmo em valor "neutro" como
+`translateX(0px)` — a garantia de `FolhaInferior.tsx` ("nenhum ancestral tem
+isso") precisa ser reconferida, porque foi medida uma vez, num estado da
+árvore que não é mais o de hoje. É o mesmo padrão que `CLAUDE.md` §2 já nomeia
+("texto que está certo só por coincidência de estado envelhece calado"),
+aplicado a uma verificação de CSS em vez de uma frase.
+
+Outros achados do primeiro `/revisar`, corrigidos: tamanho de fonte inventado
+(`11.5px` → `text-apoio`, já usado ao lado); citação errada num comentário;
+`min-h-56` inventado para a linha de "Cobranças enviadas" (removido — a linha
+usa só o padding).
+
+**Segundo `/revisar`:** nome de quem cobrou, no histórico de "Cobranças
+enviadas", estava em tratamento Primário (`text-nome-linha`/`text-tinta`) —
+`docs/estilo.md` classifica essa linha como Terciário; corrigido para
+`text-apoio`/`text-tinta-apoio`. Achado do fundador ao decidir: "competiria
+visualmente com o dado da cobrança, que é o que a linha existe pra mostrar."
+Três documentos ainda diziam "Cobrar no WhatsApp" pendente
+(`docs/navegacao.md`, `docs/especificacao.md` ×2) — corrigidos para o estado
+atual (`CLAUDE.md` §13).
+
+**Lacunas registradas, não corrigidas:**
+
+- Aviso "Mandou a cobrança pro cliente?" não nomeia o cliente, diferente do
+  único exemplo documentado ("Cobrou o Frigorífico São Luiz?"). Decisão do
+  fundador: mantém genérico, consistente com "Mandou a ordem pro motorista?"
+  já em produção — o exemplo documentado nomeava porque foi escrito pensando
+  numa tela só, antes do segundo gatilho existir. Registrado em
+  `docs/componentes.md` §07 para o Design confirmar.
+- Vencimento nulo na mensagem de cobrança viraria "Vencimento: " órfão —
+  inalcançável hoje (só `faturarServico` cria título aberto, sempre com
+  vencimento), mesma classe de "inalcançável hoje" que `grupoDaCobranca` já
+  aceita sem tratamento extra.
+- Texto de apoio da folha de telefone no gatilho de cobrança — provisório,
+  mesma categoria da `FolhaDePix` no commit anterior.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` e `npm run build`
+verdes. Suíte completa: 461/461 (era 459/459 antes desta tarefa — dois testes
+novos, `textoCobradoHa`, pedidos pelo fundador no segundo `/revisar`: função
+nova com conta de dias de Fortaleza, fuso que já mordeu duas vezes neste
+projeto). Esteira deste commit ainda não confirmada.
+
+Próximo: Tarefa 6 do item 6 — Estorno.
+
+---
+
 ## 27/08/2026 — Tarefa 5 do item 6, primeiro commit: a base (chave Pix, mensagem, histórico de cobrança)
 
 Primeira metade da Tarefa 5 fundida ("Cobrar no WhatsApp, chave Pix e o texto
@@ -81,7 +171,8 @@ sozinha):
 
 **Verificação: local.** `npx tsc --noEmit`, `npm run lint` e `npm run build`
 verdes. Suíte completa: 459/459 (era 458/458 antes desta tarefa — um teste
-novo por cada bloco). Esteira deste commit ainda não confirmada.
+novo por cada bloco). Esteira deste commit confirmada verde (`gh run list`,
+commit `d419842`).
 
 Próximo: segunda metade da Tarefa 5 — a tela (pílula "Cobrar no WhatsApp" na
 lista e secundária no detalhe, aviso "Enviei"/"Ainda não", "cobrado há X dias
