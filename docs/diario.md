@@ -6,6 +6,56 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 28/08/2026 — plano do item 7, aprovado: Relatório do cliente, PDF e compartilhamento
+
+Item 6 fechado (commit `8b7d894`). Planejamento do item 7 antes de qualquer
+código, conforme `CLAUDE.md` §2.
+
+**Medição real na Vercel, pedida pelo fundador antes de decidir a
+arquitetura do PDF** (dois experimentos descartáveis, nunca commitados,
+projetos Vercel apagados depois): navegador invisível (headless Chromium,
+`puppeteer-core` + `@sparticuz/chromium`) funciona, sem precisar da versão
+enxuta do pacote. Tempo: ≈2,9s "frio" (o caso comum — o dono gera relatório
+cerca de uma vez por semana) · ≈0,4s "quente". Achado real de fonte: a seta
+(`→`) que `formatarRota` usa não vem na fonte carregada por Google Fonts —
+corrigida auto-hospedando os arquivos de fonte, sem chamada de rede na hora
+de gerar.
+
+**Duas decisões do fundador, trazidas com o caso na frente:**
+
+1. **Frete cancelado nunca entra na montagem do relatório; frete em
+   andamento entra, mas não aceita a marca de cobrança** — princípio
+   registrado: "somar é diferente de cobrar" (`em_andamento` conta nas
+   somas desde o item 4, mas cobrar exige serviço já prestado). Vai também
+   para `docs/especificacao.md`, e volta no item 8 (dashboard). **Exigência,
+   não só lacuna de Design:** quando isso deixar o total do documento e o
+   total cobrável divergirem, os dois números aparecem ao vivo na tela de
+   montagem, antes de gerar — só o tratamento visual fica em aberto.
+2. **Mensagem de cobrança com vários fretes do mesmo relatório** cita o
+   **período** no lugar da rota ("dos fretes de agosto" / "de 20/08 a
+   10/09") — nunca a contagem. Frete único continua citando a rota, sem
+   mudança.
+
+Plano completo em `docs/planos/item-7-relatorio.md`, cinco tarefas:
+fundamentos (entidade `Relatorio`, `RelatorioServico`, fecha a FK pendente
+de `titulo_receber.relatorio_id` desde o item 3) · gerador de PDF (cedo e
+isolado, a pedido do fundador — testado antes da tela de montagem existir)
+· tela de montagem · geração do relatório + Documento A4 · entradas no
+fluxo (Fretes, Cobranças, perfil do cliente, dashboard, Mais).
+
+**Verificação:** nenhum código de produto ainda — só o documento do plano.
+Os dois experimentos de medição rodaram fora do repositório (nunca
+commitados) e foram desfeitos por completo (projetos Vercel removidos,
+árvore local revertida) antes deste commit.
+
+**Esteira deste commit (`2b91c49`), disparada, ainda rodando, sem
+confirmação.**
+
+Próximo: Tarefa 1 do item 7 — Fundamentos: a entidade `Relatorio` e o que
+ela amarra.
+
+---
+
 ## 27/08/2026 — Tarefa 7 do item 6: "A receber" e "Vencido" nos perfis
 
 Fecha a pendência deixada de propósito no item 4 e no item 6 — plano
