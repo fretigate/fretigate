@@ -1567,7 +1567,7 @@ Não invente resposta. Pergunte.
 - **CONFERIR ANTES DE PUBLICAR — `outputFileTracingIncludes` para a rota que
   gera o PDF do relatório.** Achado do `/revisar` na Tarefa 2 do item 7
   (28/08/2026), registrado como requisito explícito para quem construir a
-  Tarefa 4 (`src/lib/documentos/gerador.ts`, comentário de `gerarDocumento`):
+  Tarefa 3 (`src/lib/documentos/gerador.ts`, comentário de `gerarDocumento`):
   o binário do Chromium (`node_modules/@sparticuz/chromium/bin/chromium.br`)
   **e** os três arquivos de fonte auto-hospedados
   (`src/lib/documentos/fontes/*.woff2`) só embarcam na função da Vercel se
@@ -1590,7 +1590,7 @@ Não invente resposta. Pergunte.
   (`docs/planos/item-7-relatorio.md`, "A medição": ≈2,9s frio), custo real
   por pedido. Decisão do fundador, 28/08/2026: registra como requisito da
   rota, junto do `outputFileTracingIncludes` acima — quem construir a
-  Tarefa 4 aplica os dois no mesmo commit, mesma razão de os dois só fazerem
+  Tarefa 3 aplica os dois no mesmo commit, mesma razão de os dois só fazerem
   sentido quando o caminho da rota existir.
 - **ATENÇÃO AO RODAR — o gerador de PDF do relatório não roda no Windows
   local.** Item 7, Tarefa 2 (`docs/planos/item-7-relatorio.md`), 28/08/2026.

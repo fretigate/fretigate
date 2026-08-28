@@ -11,10 +11,12 @@ import { buscarCliente } from "@/lib/servicos/clientes";
  * `db(empresaId)`/`emTransacao(empresaId)`, a única porta de acesso a dados
  * (`CLAUDE.md` §3).
  *
- * A montagem (Tarefa 3), o gerador de PDF (Tarefa 2) e `gerarRelatorio` — a
+ * A montagem, o gerador de PDF (Tarefa 2, já pronto) e `gerarRelatorio` — a
  * ação completa, que também cria título quando "Gerar cobrança" está ativo e
- * grava `pdf_url` (Tarefa 4) — vêm depois. `criarRelatorio` é a fundação que
- * essas tarefas usam: grava a entidade e o que ela amarra, nada mais.
+ * grava `pdf_url` — tudo dentro da Tarefa 3 (fundida com a antiga Tarefa 4,
+ * decisão do fundador, 28/08/2026) — vêm depois. `criarRelatorio` é a
+ * fundação que essas tarefas usam: grava a entidade e o que ela amarra, nada
+ * mais.
  */
 
 const CAMPOS = {
@@ -36,7 +38,7 @@ const CAMPOS = {
  * aplica RLS na checagem de chave estrangeira). Devolve `null` para
  * relatório de outra empresa, do mesmo jeito que `buscarServico`/
  * `buscarTituloReceber`. **Requisito para quem construir `gerarRelatorio`
- * (Tarefa 4)**: usar isto antes de gravar `titulo_receber.relatorio_id` —
+ * (Tarefa 3)**: usar isto antes de gravar `titulo_receber.relatorio_id` —
  * hoje nenhum caminho grava esse campo, então a conferência ainda não tem
  * chamador, só a garantia testada de que ela recusa direito.
  */

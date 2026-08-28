@@ -22,7 +22,7 @@ import { FIO_FORTE, FONTE_ARCHIVO, FONTE_AZERET_MONO, TINTA_APOIO, TINTA_MARCA_D
  * e `react-dom/server` se recusa a carregar nela por desenho do próprio
  * React (medido com uma rota de teste descartável, removida depois). Uma
  * função que devolve string comum não tem esse problema, e continua sendo
- * **uma implementação só** (`CLAUDE.md` §8): a Tarefa 4 (prévia em tela)
+ * **uma implementação só** (`CLAUDE.md` §8): a Tarefa 3 (prévia em tela)
  * chama a mesma função e injeta o resultado com `dangerouslySetInnerHTML`,
  * em vez de compor via `children` do React.
  *

@@ -146,7 +146,7 @@ cobrar. Quem construir o item 8 revisita este princípio, não reabre a
 pergunta do zero.
 
 Isto **fecha** o "ponto em aberto" que a primeira versão deste plano deixava
-para a Tarefa 4: com `em_andamento` nunca virando título e `cancelado` nunca
+para a Tarefa 3: com `em_andamento` nunca virando título e `cancelado` nunca
 aparecendo, não sobra frete incluído no documento que a marcação de
 cobrança possa tentar faturar sem poder.
 
@@ -259,7 +259,7 @@ registrada junto do código, mesmo padrão de `{pix}` no item 6.
   duas tabelas novas; a numeração sequencial por empresa sob concorrência
   (mesmo teste que já existe para `Servico.numero`); `buscarRelatorio`
   recusando (devolvendo nulo) um relatório de outra empresa — a peça de
-  código que vai proteger `relatorio_id` do título quando a Tarefa 4
+  código que vai proteger `relatorio_id` do título quando a Tarefa 3
   gravar nele, já que a FK do banco sozinha não filtra por empresa
   (`CLAUDE.md` §3: "o Postgres não aplica RLS ao verificar chave
   estrangeira"); cada recusa acima, com um teste próprio; o retrato
@@ -300,10 +300,10 @@ testada antes da tela de montagem ser construída em cima dela.
   `next.config.ts` ganha `outputFileTracingIncludes` para a rota que gera o
   PDF — sem isso o binário do Chromium não embarca na função (achado da
   medição, § acima).
-- A marcação HTML do documento é a **mesma** que a Tarefa 4 usa para a
+- A marcação HTML do documento é a **mesma** que a Tarefa 3 usa para a
   prévia em tela (`DocumentoA4`) — nunca duas implementações do mesmo
   desenho (`CLAUDE.md` §8, "componente existe uma vez"). Esta tarefa entrega
-  a marcação **e** a função que a imprime em PDF; a Tarefa 4 é quem constrói
+  a marcação **e** a função que a imprime em PDF; a Tarefa 3 é quem constrói
   a tela que a exibe.
 - Upload do PDF gerado ao storage — mesmo padrão de `comprovantes.ts` (item
   5): nome de arquivo aleatório, fora de pasta pública (balde `relatorios`,
@@ -315,7 +315,7 @@ testada antes da tela de montagem ser construída em cima dela.
   verdade: hoje não há nenhum chamador que precise LER o PDF (só gravar).
   Construir a leitura sem quem a use seria a mesma armadilha da `FolhaDePix`
   no item 6 Tarefa 5 — peça pronta, sem uso, não testável de verdade. Mudou
-  para requisito explícito da Tarefa 4, abaixo — provavelmente reaproveitando
+  para requisito explícito da Tarefa 3, abaixo — provavelmente reaproveitando
   o padrão de `gerarUrlComprovante` (`src/lib/servicos/comprovantes.ts`, item
   5 Tarefa 4): caminho gravado no banco, URL assinada gerada na hora da
   leitura, nunca guardada.
@@ -340,7 +340,7 @@ Router rodam sob a condição `react-server`, que `react-dom/server` recusa
 por desenho do próprio React. A correção: `moldeDocumentoA4.ts`/
 `corpoRelatorio.ts` montam HTML por template string, sem React. **"Nunca
 duas implementações do mesmo desenho" continua valendo** — é a mesma função
-que a Tarefa 4 chama para a prévia em tela, só que ela injeta o resultado
+que a Tarefa 3 chama para a prévia em tela, só que ela injeta o resultado
 com `dangerouslySetInnerHTML` em vez de compor via `children` do React.
 Toda string interpolada passa por `escaparHtml` (`src/lib/utils/html.ts`,
 nova nesta tarefa) — a proteção contra marcação quebrada/injetada que o JSX
@@ -398,7 +398,21 @@ nenhuma (`CLAUDE.md` §8, exceção nomeada).
   registrado em `CLAUDE.md` §14, "CONFERIR ANTES DE PUBLICAR", não repetido
   aqui para não ter duas fontes da mesma pendência.
 
-### Tarefa 3 — Tela "Relatório — montagem"
+### Tarefa 3 — Tela "Relatório — montagem" + gerar relatório + tela "Documento A4"
+
+**Fundida com a antiga Tarefa 4 — decisão do fundador, 28/08/2026,** achado
+ao planejar a construção: um botão principal que chama o servidor não pode
+ficar sem função real por trás — é a mesma armadilha da `FolhaDePix` no item
+6 (peça pronta, sem uso, não testável de verdade), e aqui seria pior, porque
+não haveria nem para onde navegar depois de gerar (a tela "Documento A4" era
+da antiga Tarefa 4). O motivo de fundo, nas palavras do fundador: montagem,
+geração e documento são um fluxo só — a pessoa monta, gera e vê. Cortar no
+meio cria dois pedaços que não funcionam sozinhos. **Se durante a construção
+ficar claro que dá para dividir em dois commits, dividir** — a geração num, a
+tela noutro, mesmo padrão que já funcionou nos três perfis do item 4 e na
+base da Tarefa 5 do item 6.
+
+**A tela de montagem:**
 
 - Escolher cliente e período (chips: este mês · mês passado · últimos 30
   dias · personalizado — `docs/especificacao.md` §4.4).
@@ -427,11 +441,8 @@ nenhuma (`CLAUDE.md` §8, exceção nomeada).
   quando zero linhas estiverem marcadas (documento sem fretes não faz
   sentido, mesmo racional de outros principais desabilitados por dado
   incompleto).
-- Testes: contagem/total batendo com o que a Tarefa 1 vai gravar; chip de
-  período calculando as datas certas (reaproveitar o que Cobranças/dashboard
-  já usam, não duplicar).
 
-### Tarefa 4 — Gerar o relatório (ação) + tela "Documento A4"
+**A ação de gerar:**
 
 - **Requisito explícito, não opcional — movido da Tarefa 2** (achado do
   `/revisar`, decisão do fundador, 28/08/2026): a URL assinada para LER o PDF
@@ -463,16 +474,16 @@ nenhuma (`CLAUDE.md` §8, exceção nomeada).
     não de dado — evita reabrir o desenho de `TituloReceber`, que hoje
     aponta para exatamente um frete (`servico_id` obrigatório).
   - **Só cria título para frete `finalizado`** — `em_andamento` nunca vira
-    título (decisão acima), e `cancelado` nunca chega aqui porque a Tarefa 3
-    já não o lista. Não sobra frete incluído que a marcação de cobrança
-    tente faturar sem poder.
+    título (decisão acima), e `cancelado` nunca chega aqui porque a tela de
+    montagem já não o lista. Não sobra frete incluído que a marcação de
+    cobrança tente faturar sem poder.
   - Chama o gerador da Tarefa 2, grava `pdf_url`.
   - **Detalhe menor, ainda sem resposta — mecânico, não de política:** um
     frete `finalizado` incluído pode já ter um título ativo (faturado antes,
     fora deste relatório) — `faturarServico` recusa o segundo integral pelo
     índice único (item 6). O que a montagem faz com esse caso (pula
     silenciosamente ao gerar, avisa, ou já chega desmarcado da cobrança na
-    Tarefa 3) fica para resolver na construção, sem precisar de decisão do
+    tela) fica para resolver na construção, sem precisar de decisão do
     fundador — é tratar um erro esperado, não uma pergunta de política como
     a de cima.
 - `ListaCobrancas`/`resumoDeCobrancas` (item 6): agrupar títulos com o
@@ -481,21 +492,28 @@ nenhuma (`CLAUDE.md` §8, exceção nomeada).
 - `montarMensagemCobranca`: a variação de período no lugar da rota, decidida
   acima, ativada quando o título pertence a um grupo de 2+ (via
   `relatorio_id`).
-- Tela "Documento A4": a mesma marcação da Tarefa 2, em `scale(0.466)`
-  (`docs/estilo.md`, seção Impresso). Ações: **Compartilhar no WhatsApp**
-  (Web Share API com o arquivo, quando o navegador suportar; sem isso, cai
-  para baixar) · **Baixar PDF** · **Imprimir**.
+
+**A tela "Documento A4":**
+
+- A mesma marcação da Tarefa 2, em `scale(0.466)` (`docs/estilo.md`, seção
+  Impresso). Ações: **Compartilhar no WhatsApp** (Web Share API com o
+  arquivo, quando o navegador suportar; sem isso, cai para baixar) ·
+  **Baixar PDF** · **Imprimir**.
 - Folha de campo faltante (chave Pix) quando `gerarCobranca` estiver
   marcado e a empresa não tiver Pix cadastrado — reaproveita o componente do
   item 6 Tarefa 5; "Agora não" **não bloqueia** (mesma exceção já registrada
   em `docs/componentes.md`, linha 355 — gera sem o Pix, aviso "Relatório
   gerado sem a chave Pix.").
-- Testes: número sequencial sob concorrência; o `TituloReceber` de cada
-  frete incluído carregando `relatorio_id`; agrupamento em Cobranças batendo
-  com o total do relatório; a mensagem de cobrança nos dois casos (um frete
-  · vários fretes, dentro do mês · atravessando mês).
 
-### Tarefa 5 — Entradas no fluxo
+**Testes:** contagem/total da prévia batendo com o que `criarRelatorio`
+grava; chip de período calculando as datas certas (reaproveitar o que
+Cobranças/dashboard já usam, não duplicar); número sequencial sob
+concorrência; o `TituloReceber` de cada frete incluído carregando
+`relatorio_id`; agrupamento em Cobranças batendo com o total do relatório; a
+mensagem de cobrança nos dois casos (um frete · vários fretes, dentro do mês
+· atravessando mês).
+
+### Tarefa 4 — Entradas no fluxo
 
 Liga as pontas que `docs/navegacao.md` já marca com `⚠️` apontando pra cá:
 

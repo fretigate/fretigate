@@ -6,6 +6,62 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 28/08/2026 — Esteira: rerun por instabilidade, e plano do item 7 atualizado — funde Tarefa 3 e Tarefa 4
+
+**Rerun por instabilidade, registrado por `CLAUDE.md` §2.** A esteira do
+commit `36554ef` (Tarefa 1 do item 7) tinha ficado `failure` — achado ao
+rodar `/onde-paramos`: `tests/relatorios.test.ts`, o teste de concorrência da
+numeração sequencial, estourou `PrismaClientKnownRequestError P2028`
+("A commit cannot be executed on an expired transaction" — 5717ms contra um
+limite de 5000ms), o mesmo padrão de timeout de pool/transação já
+documentado. `gh run rerun --failed`, disparado só depois de o run do
+commit seguinte (`4a70311`) terminar (nunca dois em voo ao mesmo tempo,
+`CLAUDE.md` §2) — **sucesso** na segunda tentativa, confirmando instabilidade,
+não defeito.
+
+**Plano do item 7 atualizado, antes de começar a Tarefa 3.** Ao planejar a
+construção, ficou claro que a antiga Tarefa 3 ("Tela — montagem") não podia
+ficar sozinha: um botão principal chamando o servidor sem função real por
+trás é a mesma armadilha da `FolhaDePix` no item 6, e aqui seria pior — não
+haveria nem para onde navegar depois de gerar. **Decisão do fundador: funde
+a antiga Tarefa 3 com a antiga Tarefa 4** (motivo dele: "montagem, geração e
+documento são um fluxo só — a pessoa monta, gera e vê. Cortar no meio cria
+dois pedaços que não funcionam sozinhos"), com a ressalva de dividir em dois
+commits durante a construção se ficar claro que dá — a geração num, a tela
+noutro, mesmo padrão dos três perfis do item 4 e da base da Tarefa 5 do item
+6.
+
+Renumeração: nova Tarefa 3 = tela de montagem + `gerarRelatorio` + tela
+"Documento A4"; antiga Tarefa 5 ("Entradas no fluxo") vira Tarefa 4.
+**Referências cruzadas conferidas e corrigidas em código e schema, não só no
+plano** — pedido explícito do fundador, pela mesma armadilha quase repetida
+na renumeração do item 6: `CLAUDE.md` §14 (duas pendências "quem construir a
+Tarefa 4"), `prisma/schema.prisma` (comentário do `model Relatorio`), e seis
+comentários em `src/lib/documentos/` (`gerador.ts`, `moldeDocumentoA4.ts`,
+`fontesEmbutidas.ts`, `estiloImpresso.ts`, `armazenamento.ts` ×2) e
+`src/lib/servicos/relatorios.ts` ×2.
+
+**Duas decisões já registradas no plano, para não perder na construção:**
+- Os dois totais (o do documento e o que vira título) aparecem **juntos, ao
+  vivo**, quando um frete `em_andamento` incluído os fizer divergir — não é
+  acabamento visual, é dinheiro: sem isso, quem gera um relatório com frete
+  em andamento acha que cobrou tudo, e só descobre o contrário quando o
+  cliente pagar a menos.
+- A geração leva **~3 segundos no caso comum** (função "fria" do gerador de
+  PDF, medido no plano) — o desenho assume isso como normal, não como
+  exceção rara. O estado carregando do botão "Gerar relatório" deveria
+  comunicar isso, não só girar (pendência de confirmação do Design sobre o
+  texto exato, já registrada no plano).
+
+**Verificação: local.** Só documentação/comentário, nenhum código de
+produto mudou — `npx tsc --noEmit` e `npm run lint` verdes. Esteira
+disparada, ainda rodando, sem confirmação.
+
+Próximo: Tarefa 3 do item 7 — Tela "Relatório — montagem" + gerar relatório
++ tela "Documento A4".
+
+---
+
 ## 28/08/2026 — Tarefa 2 do item 7: Gerador de PDF
 
 `src/lib/documentos/` — `gerador.ts` (ponto de entrada genérico, `CLAUDE.md`

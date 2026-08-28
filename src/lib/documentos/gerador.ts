@@ -98,9 +98,9 @@ export type TipoDocumento = "relatorio";
 /**
  * O ponto de entrada genérico. Gera o PDF e grava no storage — devolve os
  * dois: `pdf` para quem precisar dos bytes na hora (teste, por exemplo) e
- * `caminho` para quem for persistir (`Relatorio.pdf_url`, Tarefa 4).
+ * `caminho` para quem for persistir (`Relatorio.pdf_url`, Tarefa 3).
  *
- * **Requisito explícito para a Tarefa 3/4, não feito aqui de propósito:**
+ * **Requisito explícito para a Tarefa 3, não feito aqui de propósito:**
  * `next.config.ts` precisa ganhar `outputFileTracingIncludes` para a rota
  * (Server Action ou API) que primeiro importar esta função — sem isso, o
  * binário do Chromium (`node_modules/@sparticuz/chromium/bin/chromium.br`)

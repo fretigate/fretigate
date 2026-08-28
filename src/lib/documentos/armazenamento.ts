@@ -21,7 +21,7 @@ import { uuidv7 } from "uuidv7";
  * do resto do produto. A garantia real é inteiramente do lado de quem
  * chama: `empresaId` precisa vir sempre da sessão autenticada, nunca de
  * entrada externa. Hoje (Tarefa 2) **nenhum chamador existe ainda** — quem
- * escrever a Tarefa 4 (`gerarRelatorio`) é responsável por passar o
+ * escrever a Tarefa 3 (`gerarRelatorio`) é responsável por passar o
  * `empresaId` certo, com o mesmo cuidado que `criarRelatorio` já tem para
  * `cliente_id`/`servico_id` (`CLAUDE.md` §3) — não é uma garantia que já
  * está encadeada, é um requisito para quem encadear.
@@ -65,7 +65,7 @@ if (process.env.NODE_ENV !== "production") cache.clienteStorageRelatorios = clie
  * Grava o PDF no balde e devolve o CAMINHO (nunca uma URL) — mesma razão de
  * `Servico.comprovante_url`: a URL assinada é gerada a cada leitura, não
  * guardada. Quem chama grava o caminho devolvido em `Relatorio.pdf_url`
- * (Tarefa 4).
+ * (Tarefa 3).
  */
 export async function enviarRelatorioAoStorage(empresaId: string, pdf: Buffer): Promise<string> {
   const caminho = `${empresaId}/${uuidv7()}.pdf`;

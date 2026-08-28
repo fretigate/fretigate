@@ -32,7 +32,7 @@ function comoDataUri(nomeDoArquivo: string): string {
  * `:root` deste documento standalone — os mesmos nomes que
  * `src/app/layout.tsx` expõe no `<html>` do app (ver `estiloImpresso.ts`,
  * na mesma pasta), para `moldeDocumentoA4.ts`/`corpoRelatorio.ts`
- * resolverem a fonte certa nos dois contextos (prévia em tela via Tarefa 4,
+ * resolverem a fonte certa nos dois contextos (prévia em tela via Tarefa 3,
  * ou aqui, standalone) sem saber em qual dos dois estão rodando.
  */
 let estiloDeFontesCache: string | null = null;

@@ -25,7 +25,7 @@ export const FIO_MOLDURA = `1.5px solid ${TINTA_PRINCIPAL}`;
  * expõe no `<html>` para o resto do app (`--fonte-interface`,
  * `--fonte-placa`) — é o mesmo Archivo/Azeret Mono, só que "Impresso" é
  * outro contexto de tamanho, não outra família. Quando a marcação roda
- * dentro do app (Tarefa 4, prévia em tela), essas variáveis já existem no
+ * dentro do app (Tarefa 3, prévia em tela), essas variáveis já existem no
  * `<html>` do `RootLayout`. Quando roda isolada para o Puppeteer
  * (`gerador.ts`), o próprio gerador define as duas no `<html>` que constrói
  * (`fontesEmbutidas.ts`).

@@ -858,10 +858,11 @@ model CobrancaEnviada {
 
 /// O documento que o dono hoje monta à mão no Canva (`CLAUDE.md` §1) — item
 /// 7 (`docs/planos/item-7-relatorio.md`, Tarefa 1). Fundamentos: a entidade
-/// e o que ela amarra. A montagem (Tarefa 3), o gerador de PDF (Tarefa 2) e
-/// a ação `gerarRelatorio` que cria título quando `gerarCobranca` está
-/// ativo (Tarefa 4) vêm depois — este model só grava o que já existe no
-/// momento em que o relatório é gerado.
+/// e o que ela amarra. A montagem, o gerador de PDF (Tarefa 2) e a ação
+/// `gerarRelatorio` que cria título quando `gerarCobranca` está ativo —
+/// tudo dentro da Tarefa 3 (fundida com a antiga Tarefa 4, decisão do
+/// fundador, 28/08/2026) — vêm depois; este model só grava o que já existe
+/// no momento em que o relatório é gerado.
 ///
 /// **`cliente_id` é a única referência conferida contra a empresa antes de
 /// gravar** (`CLAUDE.md` §3 — o Postgres não aplica RLS na checagem de FK).
@@ -872,7 +873,7 @@ model CobrancaEnviada {
 /// de `Servico.numero`.
 ///
 /// `pdf_url` nasce nulo — só é gravado depois que o gerador de PDF (Tarefa
-/// 2) roda, num segundo passo dentro da mesma transação (Tarefa 4). Mesmo
+/// 2) roda, num segundo passo dentro da mesma transação (Tarefa 3). Mesmo
 /// padrão de `Servico.comprovante_url`.
 model Relatorio {
   id String @id @default(uuid(7)) @db.Uuid
