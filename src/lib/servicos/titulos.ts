@@ -10,7 +10,7 @@ import {
   type DadosServico,
   type Periodo,
 } from "@/lib/servicos/servicos";
-import { deslocarDias } from "@/lib/utils/data-fortaleza";
+import { deslocarDias, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 
 /**
@@ -864,12 +864,19 @@ export async function buscarServicoComTitulos(empresaId: string, id: string) {
 }
 
 /**
- * Resumo do cliente (Tarefa 6 do item 4) — **dois números, não quatro**: já
- * rodado (soma de `Servico.valor` no período) e recebido no período (soma
- * de `Recebimento.valor`, com `Recebimento.data` no período — item 6,
- * Tarefa 3; antes desta tarefa era `valor_recebido`/`data_pagamento` do
- * próprio título). Sem "a receber" nem "vencido" nesta fatia — os dois
- * pertencem à tela de Cobranças (`src/lib/servicos/cobrancas.ts`).
+ * Resumo do cliente (Tarefa 6 do item 4; ganhou "a receber"/"vencido" na
+ * Tarefa 7 do item 6) — **quatro números, dois pares diferentes**: já rodado
+ * e recebido no período respondem ao chip de período (`periodo`); a receber
+ * e vencido são **situação atual, sempre** — mesmo princípio já decidido
+ * para Cobranças e a dashboard (`docs/especificacao.md` §4.6: "'a receber' e
+ * 'vencido' são situação atual, e um filtro tornaria o significado deles
+ * ambíguo"), por isso pedem `hoje` e não `periodo`. Decisão do fundador,
+ * 27/08/2026, plano da Tarefa 7 (`docs/planos/item-6-titulo-e-cobrancas.md`).
+ *
+ * **`jaRodado`/`recebidoNoPeriodo`**: já rodado é soma de `Servico.valor` no
+ * período; recebido no período é soma de `Recebimento.valor`, com
+ * `Recebimento.data` no período (item 6, Tarefa 3; antes desta tarefa era
+ * `valor_recebido`/`data_pagamento` do próprio título).
  *
  * Título cancelado não conta para "recebido" — mesmo raciocínio de
  * `situacaoFinanceira`, aplicado pelo filtro na relação `titulo` abaixo.
@@ -887,36 +894,98 @@ export async function buscarServicoComTitulos(empresaId: string, id: string) {
  * `/revisar` (o achado perguntava se as duas somas deveriam ser
  * simétricas; a resposta é que não, por natureza — uma é sobre operação,
  * a outra é sobre caixa).
+ *
+ * **`aReceber`/`vencido`**: mesmo desenho de `resumoDeCobrancas`
+ * (`cobrancas.ts`), escopado a um cliente em vez da empresa inteira — somam
+ * o SALDO (valor menos já recebido) de títulos `aberto`, nunca o valor
+ * cheio; "vencido" é o recorte de "a receber" com `vencimento` antes de
+ * hoje; frete arquivado não conta (dinheiro fora de circulação); título
+ * cancelado não entra (não é `aberto`). Quatro consultas a mais, nunca uma
+ * por título.
  */
 export async function resumoFinanceiroDoCliente(
   empresaId: string,
   clienteId: string,
   periodo: Periodo,
+  hoje: string,
 ) {
-  const [jaRodado, recebido] = await Promise.all([
-    db(empresaId).servico.aggregate({
-      where: {
-        cliente_id: clienteId,
-        arquivado_em: null,
-        status_operacional: { not: "cancelado" },
-        data_servico: { gte: periodo.inicio, lte: periodo.fim },
-      },
-      _sum: { valor: true },
-    }),
-    db(empresaId).recebimento.aggregate({
-      where: {
-        arquivado_em: null,
-        data: { gte: periodo.inicio, lte: periodo.fim },
-        titulo: { cliente_id: clienteId, arquivado_em: null, status: { not: "cancelado" } },
-      },
-      _sum: { valor: true },
-    }),
-  ]);
+  const inicioDeHoje = instanteDoDiaEmFortaleza(hoje);
+  const whereAbertas = {
+    cliente_id: clienteId,
+    arquivado_em: null,
+    status: "aberto" as const,
+    servico: { arquivado_em: null },
+  };
+  const whereVencidas = { ...whereAbertas, vencimento: { lt: inicioDeHoje } };
+
+  const [jaRodado, recebidoNoPeriodo, totalAbertas, recebidoAbertas, totalVencidas, recebidoVencidas] =
+    await Promise.all([
+      db(empresaId).servico.aggregate({
+        where: {
+          cliente_id: clienteId,
+          arquivado_em: null,
+          status_operacional: { not: "cancelado" },
+          data_servico: { gte: periodo.inicio, lte: periodo.fim },
+        },
+        _sum: { valor: true },
+      }),
+      db(empresaId).recebimento.aggregate({
+        where: {
+          arquivado_em: null,
+          data: { gte: periodo.inicio, lte: periodo.fim },
+          titulo: { cliente_id: clienteId, arquivado_em: null, status: { not: "cancelado" } },
+        },
+        _sum: { valor: true },
+      }),
+      db(empresaId).tituloReceber.aggregate({ where: whereAbertas, _sum: { valor: true } }),
+      db(empresaId).recebimento.aggregate({
+        where: { arquivado_em: null, titulo: whereAbertas },
+        _sum: { valor: true },
+      }),
+      db(empresaId).tituloReceber.aggregate({ where: whereVencidas, _sum: { valor: true } }),
+      db(empresaId).recebimento.aggregate({
+        where: { arquivado_em: null, titulo: whereVencidas },
+        _sum: { valor: true },
+      }),
+    ]);
 
   return {
     jaRodado: jaRodado._sum.valor ?? 0,
-    recebidoNoPeriodo: recebido._sum.valor ?? 0,
+    recebidoNoPeriodo: recebidoNoPeriodo._sum.valor ?? 0,
+    aReceber: (totalAbertas._sum.valor ?? 0) - (recebidoAbertas._sum.valor ?? 0),
+    vencido: (totalVencidas._sum.valor ?? 0) - (recebidoVencidas._sum.valor ?? 0),
   };
+}
+
+/**
+ * Saldo em aberto de **todos** os clientes de uma vez (Tarefa 7 do item 6) —
+ * para o critério de ordenação "Maior valor em aberto" (`docs/
+ * especificacao.md` §4.7) e para o apoio "R$ X em aberto" da lista de
+ * Clientes. Situação atual, sempre — mesmo recorte de `resumoFinanceiroDoCliente.
+ * aReceber`, só que para a empresa inteira, agrupado por cliente.
+ *
+ * **Duas consultas, nunca uma por cliente**: os títulos `aberto` com serviço
+ * ativo (id, cliente, valor) — não dá para `groupBy` o saldo direto, porque
+ * o valor já recebido mora em `Recebimento`, sem `cliente_id` próprio — e
+ * `totalRecebidoPorTitulo` sobre os ids encontrados, reduzidos em memória por
+ * `cliente_id`. Mesmo padrão de `comSituacaoEmLote`, acima.
+ */
+export async function valorEmAbertoPorCliente(empresaId: string): Promise<Map<string, number>> {
+  const titulos = await db(empresaId).tituloReceber.findMany({
+    where: { arquivado_em: null, status: "aberto", servico: { arquivado_em: null } },
+    select: { id: true, cliente_id: true, valor: true },
+  });
+  const totalPorTitulo = await totalRecebidoPorTitulo(
+    empresaId,
+    titulos.map((t) => t.id),
+  );
+
+  const mapa = new Map<string, number>();
+  for (const t of titulos) {
+    const saldo = t.valor - (totalPorTitulo.get(t.id) ?? 0);
+    mapa.set(t.cliente_id, (mapa.get(t.cliente_id) ?? 0) + saldo);
+  }
+  return mapa;
 }
 
 /**

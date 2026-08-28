@@ -19,10 +19,12 @@ import { normalizarParaBusca } from "@/lib/utils/texto";
  * aqui. A busca "enquanto digita" com ida ao banco é outra — a de município,
  * em `src/lib/servicos/municipios.ts`, dentro do lançamento de frete.
  *
- * **Ordenação (item 4, Tarefa 5):** só dois critérios, não três —
- * `docs/especificacao.md` §4.7, "no item 4, maior valor em aberto nasce sem
- * servir": depende de título em aberto, que só existe pago (item 6). Nesta
- * fatia, Clientes ordena por mais recente · maior valor total.
+ * **Ordenação:** três critérios — mais recente · maior valor em aberto ·
+ * maior valor total (`docs/especificacao.md` §4.7). "Maior valor em aberto"
+ * ficou de fora até a Tarefa 5 do item 4 ("nasce sem servir": depende de
+ * título em aberto, que só existia pago) — passou a valer de verdade na
+ * Tarefa 7 do item 6, quando título aberto nasceu de verdade (faturar
+ * frete). Mesmo padrão de três critérios que Caminhões já usa.
  *
  * **"no total" no apoio, não só "R$ X"** — achado na verificação da Tarefa
  * 6 (planejamento, 22/08/2026): o mesmo cliente mostra `valorTotalCentavos`
@@ -33,6 +35,15 @@ import { normalizarParaBusca } from "@/lib/utils/texto";
  * perfil mostrava "R$ 1.000,00" ao lado do chip "Este mês" — o chip sozinho
  * não bastava para quem olhasse só a lista primeiro. O qualificador aqui
  * resolve sem precisar que o perfil carregue o peso todo da explicação.
+ *
+ * **"Em aberto" NÃO leva "no total"** (Tarefa 7 do item 6, 27/08/2026,
+ * decisão do fundador) — o qualificador acima existe para distinguir dois
+ * recortes do MESMO conceito (vida inteira × período). "Valor em aberto" só
+ * tem um recorte em todo o produto: situação atual, sempre, tanto aqui
+ * quanto no perfil (`resumoFinanceiroDoCliente.aReceber`) — não existe o
+ * outro recorte para confundir, então não existe qualificador para
+ * escrever. Se um dia "valor em aberto" ganhar uma versão por período, esta
+ * decisão se reabre — não se herda por analogia.
  */
 
 type Cliente = {
@@ -41,12 +52,15 @@ type Cliente = {
   cidade: string | null;
   /** Soma de `Servico.valor`, fretes cancelados fora (`valoresTotaisPorCliente`). */
   valorTotalCentavos: number;
+  /** Saldo em aberto, situação atual (`valorEmAbertoPorCliente`). */
+  valorEmAbertoCentavos: number;
 };
 
-type CriterioOrdenacao = "recente" | "valor";
+type CriterioOrdenacao = "recente" | "aberto" | "valor";
 
 const CRITERIOS: CriterioDeOrdenacao<CriterioOrdenacao>[] = [
   { valor: "recente", rotulo: "Mais recente" },
+  { valor: "aberto", rotulo: "Maior valor em aberto" },
   { valor: "valor", rotulo: "Maior valor total" },
 ];
 
@@ -70,8 +84,18 @@ export function ListaClientes({ clientes }: { clientes: Cliente[] }) {
   // preserva essa mesma ordem, sem precisar de desempate escrito à mão.
   const ordenados = useMemo(() => {
     if (criterio === "recente") return filtrados;
+    if (criterio === "aberto") {
+      return [...filtrados].sort((a, b) => b.valorEmAbertoCentavos - a.valorEmAbertoCentavos);
+    }
     return [...filtrados].sort((a, b) => b.valorTotalCentavos - a.valorTotalCentavos);
   }, [filtrados, criterio]);
+
+  const rotuloCriterioAtivo =
+    criterio === "aberto"
+      ? "Maior valor em aberto"
+      : criterio === "valor"
+        ? "Maior valor total"
+        : "Ordenar por";
 
   if (clientes.length === 0) {
     return (
@@ -97,7 +121,7 @@ export function ListaClientes({ clientes }: { clientes: Cliente[] }) {
 
       <div className="flex gap-8 overflow-x-auto">
         <ChipFiltro
-          rotulo={criterio === "recente" ? "Ordenar por" : "Maior valor total"}
+          rotulo={rotuloCriterioAtivo}
           ativo={criterio !== "recente"}
           altura={48}
           onClick={() => setFolhaAberta(true)}
@@ -114,7 +138,9 @@ export function ListaClientes({ clientes }: { clientes: Cliente[] }) {
             apoio={
               criterio === "valor"
                 ? `R$ ${formatarCentavos(cliente.valorTotalCentavos)} no total`
-                : (cliente.cidade ?? undefined)
+                : criterio === "aberto"
+                  ? `R$ ${formatarCentavos(cliente.valorEmAbertoCentavos)} em aberto`
+                  : (cliente.cidade ?? undefined)
             }
           />
         ))}

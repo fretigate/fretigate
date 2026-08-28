@@ -102,6 +102,22 @@ type Props = {
   limitadoA50: boolean;
   rotuloPeriodo: string | null;
   /**
+   * `?cliente=` da URL (Tarefa 7 do item 6, 27/08/2026) — semeia o filtro de
+   * cliente que já existe (`clienteFiltro`, abaixo), para "A receber"/
+   * "Vencido" do perfil do cliente linkarem direto para cá já filtrado. O
+   * filtro continua local, sobre o que já veio — isto só decide o valor
+   * inicial, não muda a consulta ao servidor.
+   */
+  clienteInicial?: string;
+  /**
+   * Nome do `clienteInicial`, buscado no servidor mesmo que ele não tenha
+   * nenhuma cobrança nesta situação (`clientesUnicos`, abaixo, só enxerga
+   * quem está na lista carregada) — sem isso, um cliente com zero cobranças
+   * na situação aberta pelo link (ex.: "Vencido" com R$ 0,00) mostrava o
+   * chip ativo com o rótulo neutro "Cliente". Achado do segundo `/revisar`.
+   */
+  clienteInicialNome?: string | null;
+  /**
    * Fretes na situação **A faturar** — só o estado vazio usa. Mesmo critério
    * da etiqueta de "Meus fretes", para o número aqui nunca discordar da lista
    * que o botão abre (decisão do fundador, 26/08/2026, achado do `/revisar`).
@@ -146,12 +162,14 @@ export function ListaCobrancas({
   filtroDePeriodoAtivo,
   limitadoA50,
   rotuloPeriodo,
+  clienteInicial,
+  clienteInicialNome,
   fretesAFaturar,
   empresaNome,
   chavePixEmpresa,
 }: Props) {
   const router = useRouter();
-  const [clienteFiltro, setClienteFiltro] = useState<string | undefined>();
+  const [clienteFiltro, setClienteFiltro] = useState<string | undefined>(clienteInicial);
   const [folhaAberta, setFolhaAberta] = useState<"periodo" | "cliente" | "situacao" | null>(null);
   // Deslizar → folha de recebimento (item 6, Tarefa 3, decisão do
   // fundador, 26/08/2026: as duas listas que revelam "Marcar recebido"
@@ -284,7 +302,9 @@ export function ListaCobrancas({
         <ChipFiltro
           rotulo={
             clienteFiltro
-              ? (clientesUnicos.find((c) => c.id === clienteFiltro)?.nome ?? "Cliente")
+              ? (clientesUnicos.find((c) => c.id === clienteFiltro)?.nome ??
+                (clienteFiltro === clienteInicial ? clienteInicialNome : null) ??
+                "Cliente")
               : "Cliente"
           }
           ativo={clienteFiltro !== undefined}

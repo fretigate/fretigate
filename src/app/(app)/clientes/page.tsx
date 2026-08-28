@@ -2,6 +2,7 @@ import Link from "next/link";
 import { exigirSessao } from "@/lib/auth/sessao";
 import { listarClientes } from "@/lib/servicos/clientes";
 import { valoresTotaisPorCliente } from "@/lib/servicos/servicos";
+import { valorEmAbertoPorCliente } from "@/lib/servicos/titulos";
 import { PilulaCabecalho } from "@/components/ui/PilulaCabecalho";
 import { ListaClientes } from "./ListaClientes";
 
@@ -10,15 +11,17 @@ import { ListaClientes } from "./ListaClientes";
  * leva ao perfil, "+ Novo" leva ao cadastro. Tela de nível 2 (reaproveita o
  * ícone `voltar.svg` do topo — `docs/componentes.md` § 09).
  *
- * `valoresTotaisPorCliente` busca em paralelo com `listarClientes` (item 4,
- * Tarefa 5) — nunca em sequência, mesmo padrão já usado para
+ * `valoresTotaisPorCliente`/`valorEmAbertoPorCliente` buscam em paralelo com
+ * `listarClientes` (item 4, Tarefa 5; a segunda entrou na Tarefa 7 do item
+ * 6) — nunca em sequência, mesmo padrão já usado para
  * `resumoDoCaminhao`/`historicoPorEntidade`.
  */
 export default async function Pagina() {
   const sessao = await exigirSessao();
-  const [clientes, valoresTotais] = await Promise.all([
+  const [clientes, valoresTotais, valoresEmAberto] = await Promise.all([
     listarClientes(sessao.empresaId),
     valoresTotaisPorCliente(sessao.empresaId),
+    valorEmAbertoPorCliente(sessao.empresaId),
   ]);
 
   return (
@@ -68,6 +71,7 @@ export default async function Pagina() {
             nome: c.nome,
             cidade: c.municipio ? `${c.municipio.nome}/${c.municipio.uf}` : null,
             valorTotalCentavos: valoresTotais.get(c.id) ?? 0,
+            valorEmAbertoCentavos: valoresEmAberto.get(c.id) ?? 0,
           }))}
         />
       </div>

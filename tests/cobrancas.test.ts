@@ -11,7 +11,10 @@ import {
   criarTituloJaRecebi,
   faturarServico,
   listarServicosComSituacao,
+  resumoFinanceiroDoCliente,
+  valorEmAbertoPorCliente,
 } from "@/lib/servicos/titulos";
+import type { Periodo } from "@/lib/servicos/servicos";
 import { arquivarServico, criarServico, marcarServicoFinalizado } from "@/lib/servicos/servicos";
 import { criarCliente } from "@/lib/servicos/clientes";
 import {
@@ -37,7 +40,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 26;
+const CONFERENCIAS_ESPERADAS = 27;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -373,6 +376,72 @@ describe("3. resumoDeCobrancas — os três números do topo", () => {
 
     expect((await resumoDeCobrancas(a.empresaId, hoje)).aReceber).toBe(10000);
     expect((await resumoDeCobrancas(b.empresaId, hoje)).aReceber).toBe(999999);
+    conferencias++;
+  });
+});
+
+/**
+ * Três leituras diferentes do mesmo "em aberto" — `resumoDeCobrancas`
+ * (empresa inteira), `resumoFinanceiroDoCliente.aReceber` (um cliente) e
+ * `valorEmAbertoPorCliente` (todos os clientes, em mapa) — cada uma com sua
+ * própria consulta. Achado do segundo `/revisar` da Tarefa 7 do item 6:
+ * nenhum teste media uma contra a outra, mesmo risco já registrado em
+ * `contarFretesAFaturar` ("o número nunca discorda da tela que ele mesmo
+ * abre") e provado para `valoresTotaisPorCliente`/`resumoFinanceiroDoCliente.
+ * jaRodado` (`tests/servicos.test.ts`, bloco 7) — a mesma técnica, aplicada
+ * aqui às três leituras de saldo em aberto.
+ */
+describe("3b. três leituras de \"em aberto\" batem exatamente (Tarefa 7 do item 6)", () => {
+  it("resumoDeCobrancas, resumoFinanceiroDoCliente e valorEmAbertoPorCliente concordam", async () => {
+    const e = await criarEmpresaDeTeste("x1");
+    const outroCliente = await criarCliente(e.empresaId, { nome: "Outro cliente x1" });
+    const hoje = diaEmFortaleza(new Date());
+    const periodoAmplo: Periodo = {
+      inicio: instanteDoDiaEmFortaleza(deslocarDias(hoje, -400)),
+      fim: instanteDoDiaEmFortaleza(deslocarDias(hoje, 400)),
+    };
+
+    // Cliente principal: um aberto parcial (vencido) + um a vencer.
+    await plantarTitulo(e, await criarFrete(e, 100000), {
+      valor: 100000,
+      valorRecebido: 40000,
+      status: "aberto",
+      vencimento: deslocarDias(hoje, -5),
+      dataPagamento: new Date(),
+    });
+    await plantarTitulo(e, await criarFrete(e, 30000), {
+      valor: 30000,
+      status: "aberto",
+      vencimento: deslocarDias(hoje, 5),
+    });
+    // Outro cliente, mesma empresa: um aberto integral.
+    const freteOutro = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: outroCliente.id,
+      data_servico: new Date(),
+      valor: 15000,
+    });
+    await plantarTitulo(
+      { ...e, clienteId: outroCliente.id },
+      freteOutro.id,
+      { valor: 15000, status: "aberto", vencimento: deslocarDias(hoje, 5) },
+    );
+
+    const [resumoEmpresa, resumoPrincipal, resumoOutro, mapaEmAberto] = await Promise.all([
+      resumoDeCobrancas(e.empresaId, hoje),
+      resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoAmplo, hoje),
+      resumoFinanceiroDoCliente(e.empresaId, outroCliente.id, periodoAmplo, hoje),
+      valorEmAbertoPorCliente(e.empresaId),
+    ]);
+
+    const somaDoMapa = [...mapaEmAberto.values()].reduce((soma, v) => soma + v, 0);
+
+    expect(mapaEmAberto.get(e.clienteId)).toBe(resumoPrincipal.aReceber);
+    expect(mapaEmAberto.get(outroCliente.id)).toBe(resumoOutro.aReceber);
+    expect(somaDoMapa).toBe(resumoEmpresa.aReceber);
+    // Confere um valor de verdade, não só que os três concordam entre si —
+    // três leituras erradas do mesmo jeito também "concordariam".
+    expect(resumoEmpresa.aReceber).toBe(60000 + 30000 + 15000);
     conferencias++;
   });
 });

@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { listarClientes } from "@/lib/servicos/clientes";
 import { listarCaminhoes } from "@/lib/servicos/caminhoes";
 import { listarMotoristas } from "@/lib/servicos/motoristas";
+import { resumoDeCobrancas } from "@/lib/servicos/cobrancas";
+import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { ItemMenu } from "@/components/ui/ItemMenu";
 import { sairDaConta } from "../acoes";
 import { BotaoSairDaConta } from "../BotaoSairDaConta";
@@ -23,8 +26,9 @@ import { BotaoSairDaConta } from "../BotaoSairDaConta";
  */
 export default async function Pagina() {
   const sessao = await exigirSessao();
+  const hoje = diaEmFortaleza(new Date());
 
-  const [empresa, clientes, caminhoes, motoristas] = await Promise.all([
+  const [empresa, clientes, caminhoes, motoristas, resumoCobrancas] = await Promise.all([
     db(sessao.empresaId).empresa.findUnique({
       where: { id: sessao.empresaId },
       select: { nome_fantasia: true },
@@ -32,16 +36,20 @@ export default async function Pagina() {
     listarClientes(sessao.empresaId),
     listarCaminhoes(sessao.empresaId),
     listarMotoristas(sessao.empresaId),
+    resumoDeCobrancas(sessao.empresaId, hoje),
   ]);
 
   // O protótipo (referencia/TelaMais.dc.html) também mostra "· R$ X em
-  // aberto" no apoio desta linha — fora daqui de propósito: esse número
-  // depende de TituloReceber, que só nasce no item 4, e o CLAUDE.md §8 é
-  // direto sobre número incompleto ("mostram convite, não valor").
+  // aberto" no apoio desta linha — ficou de fora até a Tarefa 7 do item 6,
+  // porque esse número dependia de TituloReceber aberto, que só nasce no
+  // item 6 (`CLAUDE.md` §8: número incompleto "mostra convite, não valor").
+  // Reaproveita `resumoDeCobrancas(...).aReceber` (o mesmo "A receber" do
+  // topo de Cobranças, situação atual da empresa inteira) em vez de somar
+  // de novo — uma função só decide o que "em aberto" significa.
   const subtituloClientes =
     clientes.length === 0
       ? "Nenhum cadastrado ainda"
-      : `${clientes.length} ${clientes.length === 1 ? "cadastrado" : "cadastrados"}`;
+      : `${clientes.length} ${clientes.length === 1 ? "cadastrado" : "cadastrados"} · R$ ${formatarCentavos(resumoCobrancas.aReceber)} em aberto`;
   const subtituloCaminhoes =
     caminhoes.length === 0
       ? "Nenhum cadastrado ainda"

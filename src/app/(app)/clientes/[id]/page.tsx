@@ -20,9 +20,15 @@ import { salvarTelefoneClienteAction } from "../acoes";
 /**
  * Perfil do cliente — `docs/navegacao.md` linha 39. Ganha resumo financeiro
  * e histórico de fretes na Tarefa 6 do item 4
- * (`docs/planos/item-4-lista-e-detalhe-do-frete.md`). Continua **sem**
- * "Gerar relatório" nem "Cobrar no WhatsApp" — as duas dependem de dado que
- * só existe a partir do item 6/7 (relatório, valor em aberto).
+ * (`docs/planos/item-4-lista-e-detalhe-do-frete.md`), e "a receber"/"vencido"
+ * no resumo na Tarefa 7 do item 6. Continua **sem** "Gerar relatório" nem
+ * "Cobrar no WhatsApp" — por motivos diferentes agora, e é importante não
+ * confundir os dois: "Gerar relatório" ainda depende de dado que só existe a
+ * partir do item 7 (relatório); "Cobrar no WhatsApp" já tem o dado que
+ * faltava (valor em aberto, Tarefa 7) mas não foi construído aqui — é escopo
+ * que ninguém pediu ainda, não falta de dado. Achado ao revisar o pedido do
+ * fundador, 27/08/2026: o texto antigo dava a mesma razão para os dois, e
+ * deixaria de ser verdade para o segundo sem ninguém perceber.
  */
 export default async function Pagina({
   params,
@@ -45,8 +51,9 @@ export default async function Pagina({
   if (!cliente) notFound();
 
   const { periodo, janelaEfetiva } = resolverPeriodoDoPerfil(janelaParam, de, ate);
+  const hoje = diaEmFortaleza(new Date());
   const [resumo, historico] = await Promise.all([
-    resumoFinanceiroDoCliente(sessao.empresaId, id, periodo),
+    resumoFinanceiroDoCliente(sessao.empresaId, id, periodo, hoje),
     listarServicosDoCliente(sessao.empresaId, id, periodo),
   ]);
 
@@ -114,7 +121,7 @@ export default async function Pagina({
           chipPeriodo={
             <ChipDePeriodoPerfil
               caminhoBase={`/clientes/${id}`}
-              hoje={diaEmFortaleza(new Date())}
+              hoje={hoje}
               janelaAtual={janelaEfetiva}
               rotuloPeriodo={rotuloDoPeriodo(janelaEfetiva, de, ate) ?? "Este mês"}
             />
@@ -128,6 +135,26 @@ export default async function Pagina({
             {
               rotulo: "Recebido no período",
               valor: `R$ ${formatarCentavos(resumo.recebidoNoPeriodo)}`,
+            },
+          ]}
+          numerosAtuais={[
+            {
+              rotulo: "A receber",
+              valor: `R$ ${formatarCentavos(resumo.aReceber)}`,
+              // `periodo=todos` não filtra data nenhuma (mesmo efeito de
+              // omitir o parâmetro) — a única diferença é tirar o teto de 50
+              // (`resolverLimiteDaLista`). Sem isso, achado do /revisar: numa
+              // empresa com mais de 50 títulos abertos, a lista cortada por
+              // vencimento (de TODOS os clientes) podia não incluir nenhum
+              // deste cliente, e o número aqui discordaria da tela que ele
+              // mesmo abre — mesmo defeito já corrigido em
+              // `contarFretesAFaturar`.
+              href: `/cobrancas?situacao=em_aberto&periodo=todos&cliente=${id}`,
+            },
+            {
+              rotulo: "Vencido",
+              valor: `R$ ${formatarCentavos(resumo.vencido)}`,
+              href: `/cobrancas?situacao=vencidas&periodo=todos&cliente=${id}`,
             },
           ]}
         />

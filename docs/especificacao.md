@@ -274,6 +274,17 @@ incorretamente, que é do período. A regra vale para todo critério de
 ordenação que apareça daqui para frente, nas três listas de cadastro
 (Clientes, Caminhões, Motoristas) — não precisa ser redescoberta a cada uma.
 
+**Exceção, restrita a "valor em aberto" — Tarefa 7 do item 6, 27/08/2026.**
+As duas regras gerais acima (lista = vida inteira + "no total"; perfil =
+período) valem para um número que tem **dois recortes** do mesmo conceito —
+é a divergência entre os dois recortes que o qualificador existe para
+prevenir. "Valor em aberto" só tem um recorte em todo o produto: situação
+atual, sempre, tanto na lista de Clientes quanto no perfil (ver abaixo) — sem
+o outro recorte, não há o que o qualificador precisaria distinguir. Detalhe
+em `src/app/(app)/clientes/ListaClientes.tsx`, docstring. Não se estende a
+nenhum outro critério por analogia — só reabre se "valor em aberto" ganhar
+uma versão por período.
+
 **"Maior valor transportado", não "maior valor rodado"** — corrigido em
 22/08/2026, planejamento da Tarefa 5 do item 4: mesma palavra que já valia
 para o resumo do perfil do motorista (`docs/planos/item-4-lista-e-detalhe-do-
@@ -292,9 +303,20 @@ valor total") não dependem de título, então funcionam desde o item 4. O
 critério "maior valor em aberto" passa a valer de verdade a partir do item 6.
 
 **Perfil do cliente:** nome e cidade; resumo com **já rodado · a receber ·
-vencido · recebido no período**, com filtro de período que recalcula os
-quatro, e os três primeiros tocáveis para as listas filtradas; dados
-cadastrais; histórico de fretes. Ações: **Gerar relatório** (principal),
+vencido · recebido no período** — **só já rodado e recebido no período
+respondem ao chip de período**; a receber e vencido são situação atual,
+sempre (mesmo princípio de Cobranças e da dashboard, §4.6: "um filtro
+tornaria o significado deles ambíguo" — corrigido em 27/08/2026, Tarefa 7 do
+item 6; a frase anterior dizia que o período recalculava os quatro, o que
+nunca chegou a ser construído dessa forma). **Já rodado, a receber e vencido
+são tocáveis; recebido no período não** (nomeados, não "os três primeiros" —
+o resumo é uma grade de duas linhas, §4.7 abaixo em "Cadastros", e a posição
+não segue a ordem de leitura: recebido no período, o não tocável, fica entre
+já rodado e a receber). Já rodado leva a Fretes filtrado por este cliente e o
+mesmo período; a receber e vencido levam a Cobranças filtrado por este
+cliente, **sem** período — mesma coerência de serem situação atual. Dados
+cadastrais;
+histórico de fretes. Ações: **Gerar relatório** (principal),
 **Editar** (cabeçalho), **Cobrar no WhatsApp** (só com valor em aberto), e
 **Lançar frete para este cliente**, entre os campos cadastrais e o
 histórico — corrigido em 22/08/2026 (planejamento da Tarefa 6, achado do
@@ -315,7 +337,9 @@ período** — os únicos dois que não dependem de título em aberto — com s�
 "já rodado" tocável (era um dos três tocáveis originais; "recebido" nunca
 foi). "A receber" e "Vencido" entram no item 6, junto do resto de
 Cobranças — o mesmo vale para o apoio "· R$ X em aberto" da linha Clientes
-em "Mais" (`src/app/(app)/mais/page.tsx`), cortado pelo mesmo motivo.
+em "Mais" (`src/app/(app)/mais/page.tsx`), cortado pelo mesmo motivo. **Os
+dois construídos na Tarefa 7 do item 6, 27/08/2026** — ver o parágrafo acima
+para o comportamento final (situação atual, sempre, não período).
 
 **Campo vazio tocado no perfil do cliente, antes do item 3:** o inventário
 (`docs/componentes.md` 12) manda abrir a "folha do campo que falta" — ela só

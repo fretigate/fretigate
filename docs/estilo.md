@@ -194,6 +194,17 @@ imagem" entre os usos. Junta com a lacuna de altura (`h-180`, seção
 "Alturas fixas" abaixo) na
 mesma resposta do Design — as duas são a mesma peça.
 
+**Mesma lacuna, quarto caso: a segunda linha do cartão de resumo do cliente**
+(Tarefa 7 do item 6, 27/08/2026, achado do segundo `/revisar`). Com "a
+receber"/"vencido" passando a existir de verdade, `ResumoDoPerfil.tsx` ganhou
+uma segunda fileira — decisão do fundador: a linha de cima responde ao chip
+de período, a de baixo é situação atual, sempre, e a separação existe para
+essa diferença ficar legível, não por estética. Nem o raio/cor (já em
+aberto, parágrafo acima) nem o vão entre as duas linhas (`gap-8`, reaproveita
+a escala de espaçamento, não é valor novo) nem um rótulo diferenciando as
+duas fileiras têm confirmação do Design — fica registrado até a próxima
+resposta.
+
 **Sombra** — só existe em um lugar: o aviso do sistema.
 `box-shadow: 0 14px 34px rgba(20,26,23,.30), 0 3px 10px rgba(20,26,23,.16)`.
 Nenhum outro elemento tem sombra.

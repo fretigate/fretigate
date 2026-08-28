@@ -29,7 +29,10 @@ import { ListaCobrancas, type CobrancaParaLista } from "./ListaCobrancas";
  * **Situação e Período viajam pela URL** (`?situacao=`, `?periodo=`) — os
  * dois trocam o que é lido do banco, e a dashboard do item 8 vai linkar para
  * cá já filtrada ("Pastilha Vencido → Cobranças filtrado",
- * `docs/navegacao.md`). Cliente filtra no navegador, sobre o que já veio.
+ * `docs/navegacao.md`). Cliente filtra no navegador, sobre o que já veio —
+ * `?cliente=` (Tarefa 7 do item 6, 27/08/2026) só semeia o valor inicial
+ * desse filtro local, para "A receber"/"Vencido" do perfil do cliente
+ * linkarem direto para cá já filtrados; não vira consulta nova.
  *
  * **A tela abre sem filtro de período** — decisão do fundador, 26/08/2026:
  * abrir no mês esconderia a cobrança vencida em junho, que é justamente a que
@@ -43,10 +46,21 @@ export default async function Pagina({
     periodo?: string;
     de?: string;
     ate?: string;
+    cliente?: string;
   }>;
 }) {
   const sessao = await exigirSessao();
-  const { situacao: situacaoUrl, periodo: janela, de, ate } = await searchParams;
+  const { situacao: situacaoUrl, periodo: janela, de, ate, cliente: clienteUrl } = await searchParams;
+
+  // `cliente` nunca chega a uma consulta ao banco — só semeia o filtro local
+  // (`ListaCobrancas`, `clienteFiltro`), comparado por igualdade contra os
+  // clientes já carregados, com *fallback* seguro se não bater com nenhum.
+  // Ainda assim, validar o formato aqui é consistente com `situacao` e
+  // `de`/`ate` (`CLAUDE.md` §4) e barato — achado do `/revisar`.
+  const clienteInicial =
+    clienteUrl && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clienteUrl)
+      ? clienteUrl
+      : undefined;
 
   const situacao = resolverSituacaoDaUrl(situacaoUrl);
   const periodo = resolverPeriodoDaUrl(janela, de, ate);
@@ -58,8 +72,16 @@ export default async function Pagina({
     listarCobrancas(sessao.empresaId, { situacao, periodo, limite, hoje }),
   ]);
 
+  // `clienteInicial` entra no mesmo lote — achado do segundo `/revisar`: sem
+  // isso, um cliente sem NENHUMA cobrança nesta situação (ex.: "Vencido" com
+  // R$ 0,00, tocado no perfil) chegava aqui sem nome, e o chip ficava
+  // "ativo" mostrando o rótulo neutro "Cliente" — mentindo sobre o que está
+  // em vigor (`docs/componentes.md`, "Chips de seleção › Filtro").
+  const idsDeClientes = new Set(titulos.map((t) => t.cliente_id));
+  if (clienteInicial) idsDeClientes.add(clienteInicial);
+
   const [clientes, servicos, envios, empresa] = await Promise.all([
-    buscarClientesPorIds(sessao.empresaId, [...new Set(titulos.map((t) => t.cliente_id))]),
+    buscarClientesPorIds(sessao.empresaId, [...idsDeClientes]),
     buscarServicosPorIds(sessao.empresaId, [...new Set(titulos.map((t) => t.servico_id))]),
     // Em lote, nunca uma consulta por linha — mesma regra de
     // `totalRecebidoPorTitulo`/`ultimoEnvioPorTitulo` (`titulos.ts`) e do
@@ -139,6 +161,8 @@ export default async function Pagina({
           filtroDePeriodoAtivo={periodo !== null}
           limitadoA50={limite === 50 && titulos.length === 50}
           rotuloPeriodo={rotuloDoPeriodo(janela, de, ate, "Todas as cobranças")}
+          clienteInicial={clienteInicial}
+          clienteInicialNome={clienteInicial ? (nomeDoCliente.get(clienteInicial) ?? null) : null}
           fretesAFaturar={fretesAFaturar}
           empresaNome={empresa!.nome_fantasia}
           chavePixEmpresa={empresa!.chave_pix}

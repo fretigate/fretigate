@@ -34,6 +34,17 @@ import type { ReactNode } from "react";
  * as duas regras ao mesmo tempo: ~62,5px de célula (bem acima do mínimo de
  * toque) e 14px de padding (dentro da faixa documentada, mesmo valor do
  * cartão vizinho).
+ *
+ * **`numerosAtuais` (Tarefa 7 do item 6, 27/08/2026)** — segunda linha,
+ * usada só pelo perfil do cliente ("a receber", "vencido"). Não é uma
+ * escolha estética de caber quatro números: a linha de cima (`numeros`)
+ * responde ao `chipPeriodo`; a de baixo é situação atual, sempre, e não
+ * muda quando o período troca. Separar em duas linhas é o que deixa esse
+ * comportamento legível — embaralhados numa fileira só, trocar o período
+ * mudaria dois números e deixaria dois parados, e quem olha lê como
+ * travamento. Decisão do fundador; rótulo/tratamento visual da segunda
+ * linha ficam **provisórios**, registrados como lacuna para o Design
+ * confirmar, com este mesmo motivo.
  */
 
 type Numero = {
@@ -46,6 +57,8 @@ type Numero = {
 type Props = {
   chipPeriodo: ReactNode;
   numeros: Numero[];
+  /** Segunda linha, situação atual — não responde a `chipPeriodo`. Ver docstring acima. */
+  numerosAtuais?: Numero[];
   /** Nota de cobertura parcial (ex.: "3 de 5 fretes com km") — abaixo do cartão. */
   nota?: string;
 };
@@ -65,7 +78,25 @@ function ConteudoDoNumero({ rotulo, valor, convite }: Numero) {
   );
 }
 
-export function ResumoDoPerfil({ chipPeriodo, numeros, nota }: Props) {
+function FileiraDeNumeros({ numeros }: { numeros: Numero[] }) {
+  return (
+    <div className="flex gap-16 rounded-campo bg-separacao px-18">
+      {numeros.map((numero) =>
+        numero.href ? (
+          <Link key={numero.rotulo} href={numero.href} className="flex min-w-0 flex-1 py-14">
+            <ConteudoDoNumero {...numero} />
+          </Link>
+        ) : (
+          <div key={numero.rotulo} className="flex min-w-0 flex-1 py-14">
+            <ConteudoDoNumero {...numero} />
+          </div>
+        ),
+      )}
+    </div>
+  );
+}
+
+export function ResumoDoPerfil({ chipPeriodo, numeros, numerosAtuais, nota }: Props) {
   return (
     <div className="flex flex-col pt-26">
       <div className="flex items-center justify-between gap-10 px-4 pb-6">
@@ -74,18 +105,9 @@ export function ResumoDoPerfil({ chipPeriodo, numeros, nota }: Props) {
         </span>
         {chipPeriodo}
       </div>
-      <div className="flex gap-16 rounded-campo bg-separacao px-18">
-        {numeros.map((numero) =>
-          numero.href ? (
-            <Link key={numero.rotulo} href={numero.href} className="flex min-w-0 flex-1 py-14">
-              <ConteudoDoNumero {...numero} />
-            </Link>
-          ) : (
-            <div key={numero.rotulo} className="flex min-w-0 flex-1 py-14">
-              <ConteudoDoNumero {...numero} />
-            </div>
-          ),
-        )}
+      <div className="flex flex-col gap-8">
+        <FileiraDeNumeros numeros={numeros} />
+        {numerosAtuais ? <FileiraDeNumeros numeros={numerosAtuais} /> : null}
       </div>
       {nota ? (
         <span className="px-4 pt-6 text-total-contextual font-medium text-tinta-apoio">

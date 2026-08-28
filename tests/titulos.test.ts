@@ -15,6 +15,7 @@ import {
   listarServicosComSituacao,
   buscarServicoComTitulos,
   resumoFinanceiroDoCliente,
+  valorEmAbertoPorCliente,
   listarServicosDoCliente,
   listarServicosDoCaminhao,
   listarServicosDoMotorista,
@@ -34,7 +35,7 @@ import {
 import { criarCliente } from "@/lib/servicos/clientes";
 import { criarCaminhao } from "@/lib/servicos/caminhoes";
 import { criarMotorista } from "@/lib/servicos/motoristas";
-import { diaEmFortaleza, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { deslocarDias, diaEmFortaleza, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 
 /**
@@ -59,7 +60,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 80;
+const CONFERENCIAS_ESPERADAS = 85;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -92,20 +93,41 @@ function periodoAmplo(): Periodo {
  * (item 6, Tarefa 3) — desde que essa tarefa saiu de `TituloReceber`, é
  * essa a única forma de simular "já entrou dinheiro" que `situacaoFinanceira`
  * e `resumoFinanceiroDoCliente` enxergam.
+ *
+ * **`vencimento`** (Tarefa 7 do item 6) — mesmo recurso que
+ * `tests/cobrancas.test.ts` já usa para plantar título vencido sem passar
+ * por `faturarServico` (que só aceita vencimento futuro num teste sem viajar
+ * no tempo).
  */
 async function plantarTitulo(
   e: { empresaId: string; clienteId: string; usuarioId: string },
   servicoId: string,
-  dados: { valor: number; valorRecebido: number | null; status: "aberto" | "pago" | "cancelado"; integral: boolean; dataPagamento?: Date },
+  dados: {
+    valor: number;
+    valorRecebido: number | null;
+    status: "aberto" | "pago" | "cancelado";
+    integral: boolean;
+    dataPagamento?: Date;
+    vencimento?: string | null;
+  },
 ): Promise<string> {
   // Sem DEFAULT para "id" (migration `20260814140000_titulo_receber`) — a
   // aplicação gera o uuid antes do INSERT, como em toda tabela do domínio.
   const tituloId = randomUUID();
   await raiz.query(
     `INSERT INTO "titulo_receber"
-       (id, servico_id, cliente_id, valor, status, integral, empresa_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [tituloId, servicoId, e.clienteId, dados.valor, dados.status, dados.integral, e.empresaId],
+       (id, servico_id, cliente_id, valor, status, integral, vencimento, empresa_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [
+      tituloId,
+      servicoId,
+      e.clienteId,
+      dados.valor,
+      dados.status,
+      dados.integral,
+      dados.vencimento ? instanteDoDiaEmFortaleza(dados.vencimento) : null,
+      e.empresaId,
+    ],
   );
 
   if (dados.valorRecebido !== null && dados.valorRecebido > 0) {
@@ -697,9 +719,10 @@ describe("5. buscarServicoComTitulos", () => {
   });
 });
 
-describe("6. resumoFinanceiroDoCliente — dois números, título cancelado não conta para recebido", () => {
+describe("6. resumoFinanceiroDoCliente — quatro números, dois pares diferentes (Tarefa 7 do item 6)", () => {
   it("soma já rodado e recebido no período, ignorando título cancelado", async () => {
     const e = await criarEmpresaDeTeste("u1");
+    const hoje = diaEmFortaleza(new Date());
     // e.servicoId (150000, sem título) já conta para "já rodado".
 
     const servicoRecebido = await criarServico(e.empresaId, e.usuarioId, {
@@ -724,7 +747,7 @@ describe("6. resumoFinanceiroDoCliente — dois números, título cancelado não
       dataPagamento: new Date(),
     });
 
-    const resumo = await resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoAmplo());
+    const resumo = await resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoAmplo(), hoje);
     // "Já rodado" é o valor do frete em si — não depende do título nem do
     // seu status, por isso inclui o serviço com título cancelado.
     expect(resumo.jaRodado).toBe(e.valorServico + 50000 + 30000);
@@ -735,6 +758,7 @@ describe("6. resumoFinanceiroDoCliente — dois números, título cancelado não
 
   it("fora do período não conta", async () => {
     const e = await criarEmpresaDeTeste("u2");
+    const hoje = diaEmFortaleza(new Date());
     const haUmAno = new Date();
     haUmAno.setUTCFullYear(haUmAno.getUTCFullYear() - 1);
 
@@ -752,7 +776,7 @@ describe("6. resumoFinanceiroDoCliente — dois números, título cancelado não
       dataPagamento: haUmAno,
     });
 
-    const resumo = await resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoAmplo());
+    const resumo = await resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoAmplo(), hoje);
     // e.servicoId (auto-criado, dentro do período) ainda conta.
     expect(resumo.jaRodado).toBe(e.valorServico);
     expect(resumo.recebidoNoPeriodo).toBe(0);
@@ -761,6 +785,7 @@ describe("6. resumoFinanceiroDoCliente — dois números, título cancelado não
 
   it("frete cancelado (status_operacional) não conta para já rodado — decisão do fundador, 20/08/2026", async () => {
     const e = await criarEmpresaDeTeste("u3");
+    const hoje = diaEmFortaleza(new Date());
     const cancelado = await criarServico(e.empresaId, e.usuarioId, {
       tipo_operacao_id: e.tipoOperacaoId,
       cliente_id: e.clienteId,
@@ -772,7 +797,7 @@ describe("6. resumoFinanceiroDoCliente — dois números, título cancelado não
       [cancelado.id],
     );
 
-    const resumo = await resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoAmplo());
+    const resumo = await resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoAmplo(), hoje);
     // Só e.servicoId (auto-criado) conta — o cancelado não vai acontecer.
     expect(resumo.jaRodado).toBe(e.valorServico);
     conferencias++;
@@ -781,10 +806,208 @@ describe("6. resumoFinanceiroDoCliente — dois números, título cancelado não
   it("isolamento: resumoFinanceiroDoCliente não enxerga cliente de outra empresa, mesmo com id real", async () => {
     const a = await criarEmpresaDeTeste("u4a");
     const b = await criarEmpresaDeTeste("u4b");
+    const hoje = diaEmFortaleza(new Date());
 
-    const resumo = await resumoFinanceiroDoCliente(a.empresaId, b.clienteId, periodoAmplo());
+    const resumo = await resumoFinanceiroDoCliente(a.empresaId, b.clienteId, periodoAmplo(), hoje);
     expect(resumo.jaRodado).toBe(0);
     expect(resumo.recebidoNoPeriodo).toBe(0);
+    expect(resumo.aReceber).toBe(0);
+    expect(resumo.vencido).toBe(0);
+    conferencias++;
+  });
+
+  /**
+   * A receber soma o SALDO (valor menos já recebido) dos títulos abertos
+   * deste cliente; vencido é o recorte com vencimento antes de hoje — mesmo
+   * desenho de `resumoDeCobrancas` (`tests/cobrancas.test.ts`, bloco 3),
+   * medido de novo aqui porque é uma consulta nova, escopada por cliente.
+   */
+  it("A receber soma o saldo aberto deste cliente; Vencido é o recorte vencido", async () => {
+    const e = await criarEmpresaDeTeste("u5");
+    const hoje = diaEmFortaleza(new Date());
+
+    const freteVencido = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 100000,
+    });
+    // Parcial: 40000 já entraram, sobram 60000 — o saldo, não o valor cheio.
+    await plantarTitulo(e, freteVencido.id, {
+      valor: 100000,
+      valorRecebido: 40000,
+      status: "aberto",
+      integral: true,
+      dataPagamento: new Date(),
+      vencimento: deslocarDias(hoje, -10),
+    });
+
+    const freteAVencer = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 40000,
+    });
+    await plantarTitulo(e, freteAVencer.id, {
+      valor: 40000,
+      valorRecebido: null,
+      status: "aberto",
+      integral: true,
+      vencimento: deslocarDias(hoje, 10),
+    });
+
+    const resumo = await resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoAmplo(), hoje);
+    // e.servicoId (auto-criado, sem título) não conta para nenhum dos dois.
+    expect(resumo.aReceber).toBe(60000 + 40000);
+    expect(resumo.vencido).toBe(60000);
+    conferencias++;
+  });
+
+  it("frete arquivado com título ainda aberto não entra em A receber nem em Vencido", async () => {
+    const e = await criarEmpresaDeTeste("u6");
+    const hoje = diaEmFortaleza(new Date());
+    const frete = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 80000,
+    });
+    await plantarTitulo(e, frete.id, {
+      valor: 80000,
+      valorRecebido: null,
+      status: "aberto",
+      integral: true,
+      vencimento: deslocarDias(hoje, -2),
+    });
+    await arquivarServico(e.empresaId, frete.id);
+
+    const resumo = await resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoAmplo(), hoje);
+    expect(resumo.aReceber).toBe(0);
+    expect(resumo.vencido).toBe(0);
+    conferencias++;
+  });
+
+  /**
+   * A decisão do fundador, 27/08/2026: a receber/vencido são situação
+   * atual, sempre — não respondem ao chip de período, diferente de já
+   * rodado/recebido. Prova: um período que exclui a data de hoje (mês
+   * passado) continua vendo o título aberto de hoje inteiro.
+   */
+  it("A receber e Vencido não respondem ao período — só já rodado e recebido respondem", async () => {
+    const e = await criarEmpresaDeTeste("u7");
+    const hoje = diaEmFortaleza(new Date());
+    const frete = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 50000,
+    });
+    await plantarTitulo(e, frete.id, {
+      valor: 50000,
+      valorRecebido: null,
+      status: "aberto",
+      integral: true,
+      vencimento: deslocarDias(hoje, -1),
+    });
+
+    const mesPassado: Periodo = {
+      inicio: instanteDoDiaEmFortaleza(deslocarDias(hoje, -400)),
+      fim: instanteDoDiaEmFortaleza(deslocarDias(hoje, -370)),
+    };
+    const resumo = await resumoFinanceiroDoCliente(e.empresaId, e.clienteId, mesPassado, hoje);
+    // "Já rodado" respeita o período pedido — nada dentro dele.
+    expect(resumo.jaRodado).toBe(0);
+    // "A receber"/"Vencido" ignoram o período — o título de hoje continua aqui.
+    expect(resumo.aReceber).toBe(50000);
+    expect(resumo.vencido).toBe(50000);
+    conferencias++;
+  });
+});
+
+describe("6b. valorEmAbertoPorCliente — saldo em aberto de todos os clientes, situação atual (Tarefa 7 do item 6)", () => {
+  it("soma o saldo por cliente, ignora cancelado, pago e frete arquivado", async () => {
+    const e = await criarEmpresaDeTeste("v1");
+    const outroCliente = await criarCliente(e.empresaId, { nome: "Outro cliente v1" });
+
+    const freteA1 = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 100000,
+    });
+    await plantarTitulo(e, freteA1.id, {
+      valor: 100000,
+      valorRecebido: 30000,
+      status: "aberto",
+      integral: true,
+      dataPagamento: new Date(),
+    });
+
+    const freteA2 = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 20000,
+    });
+    await plantarTitulo(e, freteA2.id, { valor: 20000, valorRecebido: null, status: "cancelado", integral: true });
+
+    const freteAArquivado = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: new Date(),
+      valor: 999999,
+    });
+    await plantarTitulo(e, freteAArquivado.id, {
+      valor: 999999,
+      valorRecebido: null,
+      status: "aberto",
+      integral: true,
+    });
+    await arquivarServico(e.empresaId, freteAArquivado.id);
+
+    const freteB = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: outroCliente.id,
+      data_servico: new Date(),
+      valor: 50000,
+    });
+    await criarTituloJaRecebi(e.empresaId, e.usuarioId, freteB.id); // nasce pago — não é "em aberto"
+
+    const freteB2 = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: outroCliente.id,
+      data_servico: new Date(),
+      valor: 15000,
+    });
+    // `plantarTitulo` grava `cliente_id` do objeto `e` que recebe — passa o
+    // outro cliente aqui, não `e` (que gravaria no cliente principal).
+    await plantarTitulo(
+      { empresaId: e.empresaId, clienteId: outroCliente.id, usuarioId: e.usuarioId },
+      freteB2.id,
+      { valor: 15000, valorRecebido: null, status: "aberto", integral: true },
+    );
+
+    const mapa = await valorEmAbertoPorCliente(e.empresaId);
+    expect(mapa.get(e.clienteId)).toBe(100000 - 30000);
+    expect(mapa.get(outroCliente.id)).toBe(15000);
+    conferencias++;
+  });
+
+  it("isolamento: não enxerga saldo em aberto de outra empresa", async () => {
+    const a = await criarEmpresaDeTeste("v2a");
+    const b = await criarEmpresaDeTeste("v2b");
+
+    const freteB = await criarServico(b.empresaId, b.usuarioId, {
+      tipo_operacao_id: b.tipoOperacaoId,
+      cliente_id: b.clienteId,
+      data_servico: new Date(),
+      valor: 777777,
+    });
+    await plantarTitulo(b, freteB.id, { valor: 777777, valorRecebido: null, status: "aberto", integral: true });
+
+    const mapaA = await valorEmAbertoPorCliente(a.empresaId);
+    expect(mapaA.get(b.clienteId)).toBeUndefined();
+    expect(mapaA.size).toBe(0);
     conferencias++;
   });
 });

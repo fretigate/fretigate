@@ -6,6 +6,112 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 27/08/2026 — Tarefa 7 do item 6: "A receber" e "Vencido" nos perfis
+
+Fecha a pendência deixada de propósito no item 4 e no item 6 — plano
+detalhado em `docs/planos/item-6-titulo-e-cobrancas.md`, commitado antes da
+construção (`2dd7462`).
+
+**Construído:**
+
+- `resumoFinanceiroDoCliente` (`titulos.ts`) passa de dois números para
+  quatro. Decisão do fundador, antes de escrever código: "a receber" e
+  "vencido" são **situação atual, sempre** — não respondem ao chip de
+  período, mesmo princípio já valendo em Cobranças/dashboard. Só "já rodado"
+  e "recebido no período" continuam respondendo ao período.
+- `valorEmAbertoPorCliente` (nova, `titulos.ts`) — saldo em aberto de todos
+  os clientes de uma vez, para o critério de ordenação novo e o apoio da
+  lista.
+- `ListaClientes`: terceiro critério "Maior valor em aberto"; apoio "R$ X em
+  aberto" **sem** "no total" — decisão registrada em `docs/especificacao.md`
+  §4.7: o qualificador existe para distinguir dois recortes do mesmo número
+  (vida inteira × período), e "valor em aberto" só tem um recorte em todo o
+  produto.
+- Perfil do cliente: `ResumoDoPerfil` ganha grade de duas linhas — em cima
+  os que respondem ao período (já rodado, recebido), embaixo os de situação
+  atual (a receber, vencido). "A receber"/"Vencido" levam a
+  `/cobrancas?situacao=...&periodo=todos&cliente=<id>` (sem período de
+  verdade — `periodo=todos` só tira o teto de 50, achado do primeiro
+  `/revisar`).
+- "Mais > Clientes" reaproveita `resumoDeCobrancas(...).aReceber` para o
+  total da empresa — não duplica a lógica de saldo.
+- `cobrancas/page.tsx` aceita `?cliente=` para semear o filtro que já existe
+  (validado por formato de UUID, achado do primeiro `/revisar`); busca o
+  nome do cliente inicial mesmo sem título na situação aberta (achado do
+  segundo `/revisar` — sem isso, "Vencido" com R$ 0,00 abria o chip "ativo"
+  com rótulo neutro "Cliente").
+
+**Achados do primeiro `/revisar`, todos corrigidos no mesmo passe:**
+
+- Links de "A receber"/"Vencido" sem `periodo=todos` cortavam a lista em 50
+  títulos de TODA a empresa antes de filtrar por cliente — o número do
+  perfil podia discordar da tela que ele mesmo abre. Corrigido, e resolveu
+  junto os dois achados derivados (aviso "50 que vencem antes" sumindo sem
+  explicação; chip "ativo" com rótulo neutro).
+- `cliente` da URL sem validação, diferente de `situacao`/`periodo` — o
+  valor nunca chega ao banco (filtro só no navegador), então não é o mesmo
+  risco que motivou a regra do `CLAUDE.md` §4 para consultas; corrigido por
+  consistência mesmo assim, com o motivo escrito para não parecer risco de
+  injeção que não havia.
+- `docs/componentes.md` ("os três primeiros números do resumo são
+  tocáveis") não descrevia mais a tela — a grade de duas linhas trocou a
+  ordem de leitura. Corrigido para nomear os três, não contar posição.
+
+**Segundo `/revisar`, todos corrigidos no mesmo passe (nenhum abriu
+terceiro — nenhum achado novo de rigor total):**
+
+- Duas regras gerais do §4.7 ("todo critério de ordenação... leva 'no
+  total'"; "resumo do perfil é sempre do período") ficaram contradizendo as
+  exceções escritas no mesmo diff. Corrigido com um parágrafo de exceção
+  explícito, para não ser aplicado por analogia depois.
+- A mesma frase "os três primeiros são tocáveis" sobrevivia em
+  `docs/especificacao.md` — só `componentes.md` tinha sido corrigido no
+  primeiro passe.
+- **Rigor total (dinheiro):** três leituras diferentes de "em aberto"
+  (`resumoDeCobrancas`, `resumoFinanceiroDoCliente.aReceber`,
+  `valorEmAbertoPorCliente`) sem teste medindo uma contra a outra. Corrigido
+  com teste novo (`tests/cobrancas.test.ts`, bloco 3b) — as três batem
+  exatamente, contra um valor de verdade, não só entre si.
+- Achado real (não só de texto): "Vencido" com R$ 0,00 podia abrir Cobranças
+  filtrado para um cliente sem nenhum título vencido — chip "ativo" com
+  rótulo neutro "Cliente". Corrigido (ver acima).
+- `docs/componentes.md` afirmava como fato o tratamento visual da grade de
+  duas linhas — corrigido para marcar como provisório, mesmo padrão da
+  Folha de Estorno (item 6, Tarefa 6).
+
+**Lacunas registradas, não corrigidas — decisão de domínio do Design:**
+
+- "Vencido" não anuncia no rótulo que é recorte de "A receber" no resumo do
+  perfil (§4.5 exige isso só nos três números do topo de Cobranças).
+- Raio/cor do cartão de resumo (lacuna já aberta em `docs/estilo.md`) ganhou
+  um quarto caso: a segunda linha, o vão entre elas, e um rótulo
+  diferenciando as duas.
+
+**Pedido ao Design** (`docs/componentes.md`/`docs/estilo.md`, as duas lacunas
+acima): confirmar o tratamento visual da grade de duas linhas do resumo do
+cliente, e decidir se "Vencido" precisa de rótulo próprio anunciando que é
+recorte de "A receber".
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` e `npm run build`
+verdes. Suíte completa: 477/477 (era 476/476 antes desta tarefa — 5 testes
+novos em `tests/titulos.test.ts` (85/85, `CONFERENCIAS_ESPERADAS` 80 → 85) e
+1 teste novo em `tests/cobrancas.test.ts` (28/28, `CONFERENCIAS_ESPERADAS`
+26 → 27) para a leitura cruzada de "em aberto"). Testado ao vivo no
+navegador: os três critérios de ordenação, o apoio "R$ X em aberto", as
+duas linhas do resumo com os links corretos, o deep-link para Cobranças já
+filtrado (com e sem cobrança na situação), o apoio em "Mais", e a validação
+do `?cliente=` recusando entrada malformada sem quebrar a tela — medido por
+`getBoundingClientRect` em viewport mobile (375px), sem rolagem horizontal,
+todos os alvos ≥48px.
+
+**Esteira do commit anterior (`11a4654`), rerun confirmado verde nesta
+sessão** — ver entrada abaixo.
+
+Próximo: item 7 da ordem de construção do produto (`docs/especificacao.md`
+§9) — Relatório.
+
+---
+
 ## 27/08/2026 — instabilidade na esteira do commit `11a4654`, rerun disparado
 
 Achado ao rodar `/onde-paramos`: a esteira do commit `11a4654` (Tarefa 5 do

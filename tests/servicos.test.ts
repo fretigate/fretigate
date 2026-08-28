@@ -18,6 +18,7 @@ import {
   type Periodo,
 } from "@/lib/servicos/servicos";
 import { resumoFinanceiroDoCliente } from "@/lib/servicos/titulos";
+import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { criarCliente, arquivarCliente } from "@/lib/servicos/clientes";
 import { criarCaminhao, arquivarCaminhao } from "@/lib/servicos/caminhoes";
 import { criarMotorista, arquivarMotorista } from "@/lib/servicos/motoristas";
@@ -666,7 +667,7 @@ describe("7. valoresTotaisPorCliente — mesmo número do resumo do perfil (Tare
 
     const [mapa, resumo] = await Promise.all([
       valoresTotaisPorCliente(e.empresaId),
-      resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoLargo),
+      resumoFinanceiroDoCliente(e.empresaId, e.clienteId, periodoLargo, diaEmFortaleza(new Date())),
     ]);
 
     expect(mapa.get(e.clienteId)).toBe(resumo.jaRodado);
