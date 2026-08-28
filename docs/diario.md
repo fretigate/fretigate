@@ -6,6 +6,75 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 28/08/2026 — Tarefa 1 do item 7: Fundamentos — a entidade Relatorio e o que ela amarra
+
+`model Relatorio` e `model RelatorioServico` (migration
+`20260828060000_relatorio_fundamentos`), `Empresa.proximo_numero_relatorio`
+(mesmo padrão atômico de `proximo_numero_servico`), e a FK de
+`titulo_receber.relatorio_id` — pendência aberta desde o item 3 (tarefa 3),
+fechada aqui. `src/lib/servicos/relatorios.ts`: `criarRelatorio` e
+`buscarRelatorio`, tudo por `db(empresaId)`/`emTransacao(empresaId)`.
+
+**Retrato congelado — decisão do fundador, achado do primeiro `/revisar`.**
+A primeira versão de `RelatorioServico` só linkava o frete (`relatorio_id`,
+`servico_id`). `docs/especificacao.md` §4.4/§8 regra 6 dizem que "o
+relatório fica gravado com os valores da época" — e `Servico` continua
+editável enquanto não tiver título ativo (§8 regra 12), então um relatório
+sem retrato próprio mudaria de conteúdo por baixo do cliente que já o
+recebeu. `RelatorioServico` ganhou `data_servico`, `origem_texto`,
+`destino_texto`, `carga_texto` e `valor` — cópia do que a tabela do
+documento exibe, gravada uma vez, nunca recalculada. Provado com teste
+próprio: editar o `Servico` depois de gerado o relatório não muda a linha
+já gravada.
+
+**`criarRelatorio` recusa, nunca confia em quem chama — decisão do
+fundador, achado do primeiro `/revisar`.** A função grava dinheiro
+(`valor_total`), e a tela de montagem (Tarefa 3) não será o único chamador
+possível — mesmo princípio do `CLAUDE.md` §3, de a proteção morar onde a
+gravação acontece. Recusa: lista de fretes vazia; período com data final
+antes da inicial; frete de outra empresa, de outro cliente, `cancelado`,
+arquivado, ou com `data_servico` fora do período. `em_andamento` **passa** —
+"em andamento entra na lista, mas não aceita cobrança" é decisão de
+Tarefa 3/4, não do que pode aparecer no documento. Levado também para
+`docs/especificacao.md` §4.4 ("somar é diferente de cobrar"), que ainda não
+tinha o princípio por fora do plano.
+
+**Dois passes do `/revisar`.** Primeiro: três divergências — as duas acima
+(retrato congelado, aceito integralmente; e a validação em lote, aceita) e
+um comentário do schema afirmando como fato um comportamento da Tarefa 4
+que ainda não existe (corrigido para linguagem de expectativa, `CLAUDE.md`
+§13). Mais uma lacuna sobre `titulo_receber.relatorio_id` ainda sem
+chamador — registrada como requisito explícito no plano da Tarefa 4, não
+como código pendente desta tarefa.
+
+Segundo passe: três divergências, todas de precisão de documento/comentário
+— a frase acima sobre "somar é diferente de cobrar" ainda fora de
+`docs/especificacao.md` (corrigida); uma linha do plano prometendo um teste
+de "a FK de `relatorio_id` recusando..." que descrevia errado o que o teste
+prova (é `buscarRelatorio`, código, não a FK do banco — `CLAUDE.md` §3: "o
+Postgres não aplica RLS ao verificar chave estrangeira"; corrigida); e o
+comentário do schema de `RelatorioServico` afirmando uma "conferência"
+contra a empresa para `relatorio_id` que não existe nem faz falta —
+`relatorio_id` nasce da criação aninhada do próprio `Relatorio` na mesma
+chamada, nunca é entrada externa (comentário corrigido, sem mudança de
+código). Duas lacunas registradas no plano, com a nuance do fundador: o
+mesmo frete pode entrar em mais de um relatório (cobrar duas vezes já é
+bloqueado pelo índice único de título, item 6; o que sobra é o mesmo frete
+aparecer em dois documentos enviados ao cliente — comportamento, não
+detalhe técnico); e `Relatorio.pdf_url` (caminho ou URL assinada?) —
+`Servico.comprovante_url` já resolveu essa mesma pergunta e a Tarefa 2
+deve reaproveitar, não decidir de novo.
+
+**Verificação: local.** `npm run lint`, `npx tsc --noEmit`, `npm run build`
+verdes. `npm test` local rodou **duas vezes** nesta sessão — antes e depois
+das correções dos dois passes de `/revisar` — 506/506 as duas vezes, contra
+o Supabase de desenvolvimento de verdade. Esteira ainda não disparada:
+commit e push seguem este registro.
+
+Próximo: Tarefa 2 do item 7 — Gerador de PDF.
+
+---
+
 ## 28/08/2026 — plano do item 7, aprovado: Relatório do cliente, PDF e compartilhamento
 
 Item 6 fechado (commit `8b7d894`). Planejamento do item 7 antes de qualquer
@@ -48,8 +117,11 @@ Os dois experimentos de medição rodaram fora do repositório (nunca
 commitados) e foram desfeitos por completo (projetos Vercel removidos,
 árvore local revertida) antes deste commit.
 
-**Esteira deste commit (`2b91c49`), disparada, ainda rodando, sem
-confirmação.**
+**Esteira confirmada verde**, no commit `f72206a` (que grava esta entrada) —
+`gh run list`, `conclusion: success`. Corrigido aqui, junto do próximo
+commit real (`CLAUDE.md` §2, item 9): quando este parágrafo foi escrito
+ainda dizia "disparada, ainda rodando, sem confirmação", e o status já era
+conhecido antes do commit seguinte.
 
 Próximo: Tarefa 1 do item 7 — Fundamentos: a entidade `Relatorio` e o que
 ela amarra.

@@ -131,6 +131,8 @@ const POLITICAS_ESPERADAS: Record<string, Politica[]> = {
   titulo_receber: [politicaDeIsolamento("titulo_receber", "empresa_id")],
   recebimento: [politicaDeIsolamento("recebimento", "empresa_id")],
   cobranca_enviada: [politicaDeIsolamento("cobranca_enviada", "empresa_id")],
+  relatorio: [politicaDeIsolamento("relatorio", "empresa_id")],
+  relatorio_servico: [politicaDeIsolamento("relatorio_servico", "empresa_id")],
   // Único caso do produto com `USING` e `WITH CHECK` DIFERENTES de propósito:
   // todo mundo lê (dado oficial, igual para todas as empresas), ninguém
   // grava — ver `SEM_EMPRESA_ID.municipio` acima.

@@ -107,6 +107,16 @@ const TABELAS_DO_LACO: Record<
       where: { empresa_id: { in: [A, B] } },
       select: { empresa_id: true },
     }),
+  relatorio: (empresaId) =>
+    db(empresaId).relatorio.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
+  relatorio_servico: (empresaId) =>
+    db(empresaId).relatorioServico.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
 };
 
 const semear = async (id: string, nome: string) => {
@@ -203,6 +213,21 @@ const semear = async (id: string, nome: string) => {
      VALUES (gen_random_uuid(), $1, $2, $3, now())`,
     [id, tituloId, `u-${id}`],
   );
+  // Um Relatorio + uma linha de RelatorioServico por empresa (item 7, Tarefa
+  // 1), mesma razão acima. A regra de negócio (as duas conferências de FK,
+  // o contador de número) é testada em `tests/relatorios.test.ts`.
+  const relatorioId = randomUUID();
+  await raiz.query(
+    `INSERT INTO "relatorio"
+       (id, empresa_id, numero, cliente_id, data_inicial, data_final, valor_total, gerado_em)
+     VALUES ($1, $2, 1, $3, now(), now(), 10000, now())`,
+    [relatorioId, id, clienteId],
+  );
+  await raiz.query(
+    `INSERT INTO "relatorio_servico" (id, empresa_id, relatorio_id, servico_id, data_servico, valor)
+     VALUES (gen_random_uuid(), $1, $2, $3, now(), 10000)`,
+    [id, relatorioId, servicoId],
+  );
 };
 
 beforeAll(async () => {
@@ -214,17 +239,22 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // `cliente`, `veiculo`, `motorista`, `tipo_operacao`, `servico`,
-  // `titulo_receber`, `recebimento` e `cobranca_enviada` são
-  // `RESTRICT`/`CASCADE` de propósito (`docs/especificacao.md`, `CLAUDE.md`
-  // §7). `cobranca_enviada` e `recebimento` referenciam `titulo_receber`
-  // (item 6, Tarefas 3 e 5), então saem primeiro; `titulo_receber`
-  // referencia `servico` e `cliente` (tarefa 3 do item 3), então sai antes
-  // deles; `servico` referencia os quatro da tarefa 1, então sai antes
+  // `titulo_receber`, `recebimento`, `cobranca_enviada`, `relatorio` e
+  // `relatorio_servico` são `RESTRICT`/`CASCADE` de propósito
+  // (`docs/especificacao.md`, `CLAUDE.md` §7). `cobranca_enviada` e
+  // `recebimento` referenciam `titulo_receber` (item 6, Tarefas 3 e 5),
+  // então saem primeiro; `relatorio_servico` referencia `relatorio` e
+  // `servico` (item 7, Tarefa 1), então sai antes dos dois;
+  // `titulo_receber` referencia `servico` e `cliente` (tarefa 3 do item 3),
+  // então sai antes deles; `relatorio` referencia `cliente`, então sai
+  // antes dele; `servico` referencia os quatro da tarefa 1, então sai antes
   // deles; `motorista` referencia `veiculo` (`veiculo_habitual_id`), então
   // sai antes dele.
   await raiz.query(`DELETE FROM "cobranca_enviada" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "recebimento" WHERE empresa_id IN ($1,$2)`, [A, B]);
+  await raiz.query(`DELETE FROM "relatorio_servico" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "titulo_receber" WHERE empresa_id IN ($1,$2)`, [A, B]);
+  await raiz.query(`DELETE FROM "relatorio" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "servico" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "motorista" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "cliente" WHERE empresa_id IN ($1,$2)`, [A, B]);

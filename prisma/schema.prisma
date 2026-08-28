@@ -113,6 +113,10 @@ model Empresa {
   /// concorrência). `docs/planos/item-3-lancamento-frete.md`, Tarefa 1.
   proximo_numero_servico Int @default(1)
 
+  /// Mesmo padrão de `proximo_numero_servico`, para `Relatorio.numero`.
+  /// `docs/planos/item-7-relatorio.md`, Tarefa 1.
+  proximo_numero_relatorio Int @default(1)
+
   /// §11 — a única pergunta declarada do produto, mais a origem por primeiro
   /// toque. Nenhum outro campo de pesquisa existe em lugar nenhum.
   origem_cadastro  String?
@@ -137,6 +141,8 @@ model Empresa {
   titulos_receber    TituloReceber[]
   recebimentos       Recebimento[]
   cobrancas_enviadas CobrancaEnviada[]
+  relatorios         Relatorio[]
+  relatorio_servicos RelatorioServico[]
 
   @@map("empresa")
 }
@@ -341,6 +347,7 @@ model Cliente {
 
   servicos        Servico[]
   titulos_receber TituloReceber[]
+  relatorios      Relatorio[]
 
   @@index([empresa_id])
   @@map("cliente")
@@ -629,7 +636,8 @@ model Servico {
   /// §7 — nada é apagado. Preenchido = arquivado.
   arquivado_em DateTime? @db.Timestamptz(6)
 
-  titulos_receber TituloReceber[]
+  titulos_receber    TituloReceber[]
+  relatorio_servicos RelatorioServico[]
 
   @@unique([empresa_id, numero])
   @@index([empresa_id])
@@ -668,10 +676,15 @@ enum FormaPagamentoPrevista {
 /// ninguém pergunta isso na tela ainda; nascem preenchidos quando o item 6
 /// (título automático via relatório) e a tela de cobrança existirem.
 ///
-/// **`relatorio_id` é um identificador solto, SEM chave estrangeira** — a
-/// tabela `Relatorio` só nasce no item 7. Pendência registrada em
-/// `docs/diario.md` (tarefa 3 do item 3): quem construir o item 7 adiciona a
-/// FK por migration própria.
+/// **`relatorio_id` ganhou chave estrangeira no item 7** (`docs/planos/
+/// item-7-relatorio.md`, Tarefa 1) — a pendência registrada em
+/// `docs/diario.md` (tarefa 3 do item 3) fechou aqui. Ainda SEM conferência
+/// própria em código: nenhum caminho grava este campo hoje (nasce na Tarefa
+/// 4, com `gerarRelatorio`). Quando esse caminho existir, `CLAUDE.md` §3
+/// exige a mesma conferência de posse contra a empresa que toda referência
+/// nova exige — usando `buscarRelatorio` (`src/lib/servicos/relatorios.ts`),
+/// com teste próprio. Requisito explícito para quem construir a Tarefa 4, não
+/// promessa de que já está feito.
 model TituloReceber {
   id String @id @default(uuid(7)) @db.Uuid
 
@@ -710,8 +723,10 @@ model TituloReceber {
 
   status StatusTituloReceber @default(aberto)
 
-  /// Sem relação — ver o comentário do model.
-  relatorio_id String? @db.Uuid
+  /// Ver o comentário do model — FK desde o item 7, Tarefa 1. Nunca é
+  /// escolha do usuário: gravado por `gerarRelatorio`.
+  relatorio_id String?    @db.Uuid
+  relatorio    Relatorio? @relation(fields: [relatorio_id], references: [id], onDelete: Restrict)
 
   empresa_id String  @db.Uuid
   empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
@@ -839,6 +854,134 @@ model CobrancaEnviada {
   @@index([empresa_id])
   @@index([titulo_id])
   @@map("cobranca_enviada")
+}
+
+/// O documento que o dono hoje monta à mão no Canva (`CLAUDE.md` §1) — item
+/// 7 (`docs/planos/item-7-relatorio.md`, Tarefa 1). Fundamentos: a entidade
+/// e o que ela amarra. A montagem (Tarefa 3), o gerador de PDF (Tarefa 2) e
+/// a ação `gerarRelatorio` que cria título quando `gerarCobranca` está
+/// ativo (Tarefa 4) vêm depois — este model só grava o que já existe no
+/// momento em que o relatório é gerado.
+///
+/// **`cliente_id` é a única referência conferida contra a empresa antes de
+/// gravar** (`CLAUDE.md` §3 — o Postgres não aplica RLS na checagem de FK).
+/// Ver `src/lib/servicos/relatorios.ts`.
+///
+/// `numero` é sequencial por empresa, via o contador atômico
+/// `Empresa.proximo_numero_relatorio` — nunca `MAX(numero)+1`, mesmo padrão
+/// de `Servico.numero`.
+///
+/// `pdf_url` nasce nulo — só é gravado depois que o gerador de PDF (Tarefa
+/// 2) roda, num segundo passo dentro da mesma transação (Tarefa 4). Mesmo
+/// padrão de `Servico.comprovante_url`.
+model Relatorio {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  numero Int
+
+  cliente_id String  @db.Uuid
+  cliente    Cliente @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
+
+  data_inicial DateTime @db.Timestamptz(6)
+  data_final   DateTime @db.Timestamptz(6)
+
+  /// Centavos, inteiro (CLAUDE.md §7). Soma exata das linhas incluídas
+  /// (`RelatorioServico`) — nunca recebido de input, sempre recalculado a
+  /// partir dos próprios `Servico` no momento da criação.
+  valor_total Int
+
+  /// Se "Gerar cobrança para estes fretes" estava marcado ao gerar. Não diz
+  /// que TODO frete incluído virou título — um `em_andamento` incluído soma
+  /// no documento mas nunca vira título (`docs/planos/item-7-relatorio.md`,
+  /// "somar é diferente de cobrar").
+  gerou_cobranca Boolean @default(false)
+
+  /// O instante em que o PDF foi gerado — sempre `new Date()` dentro da
+  /// mesma transação que cria a linha, nunca escolhido.
+  gerado_em DateTime @db.Timestamptz(6)
+
+  pdf_url String?
+
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  /// §7 — nada é apagado. Preenchido = arquivado.
+  arquivado_em DateTime? @db.Timestamptz(6)
+
+  servicos        RelatorioServico[]
+  titulos_receber TituloReceber[]
+
+  @@unique([empresa_id, numero])
+  @@index([empresa_id])
+  @@map("relatorio")
+}
+
+/// Quais fretes exatamente entraram num `Relatorio` — necessário porque cada
+/// linha da montagem é desmarcável (`docs/especificacao.md` §4.4): sem esta
+/// tabela não dá para saber depois se um frete ficou de fora por estar fora
+/// do período ou porque alguém desmarcou a linha, nem resolver "Ver
+/// relatório" a partir de um frete. `docs/planos/item-7-relatorio.md`,
+/// Tarefa 1.
+///
+/// **Retrato congelado do que aparece no documento** (`docs/especificacao.md`
+/// §4.4, "O documento fica gravado com os valores da época"; §8, regra 6) —
+/// decisão do fundador, 28/08/2026: se está no A4 (data · rota · descrição da
+/// carga · valor), está congelado aqui, e nunca recalculado a partir do
+/// `Servico` depois de gravado. `Servico` continua editável enquanto não tiver
+/// título ativo (`docs/especificacao.md` §8, regra 12) — sem este retrato, um
+/// relatório já entregue ao cliente mudaria de conteúdo por baixo dele. O
+/// vínculo com `servico_id` continua existindo, para quem quiser ver o dado ao
+/// vivo e comparar com o congelado, e para "Ver relatório" a partir do frete.
+///
+/// **`servico_id` é a referência conferida contra a empresa antes de
+/// gravar** (`CLAUDE.md` §3 — o Postgres não aplica RLS na checagem de FK).
+/// Ver `src/lib/servicos/relatorios.ts`. `relatorio_id` não tem conferência
+/// própria, e não é omissão: nasce da criação aninhada do `Relatorio` que a
+/// própria chamada acabou de gravar, na mesma transação — nunca é entrada
+/// externa, então não há o que conferir contra a empresa aqui.
+///
+/// Uma linha nunca muda depois de gravada — mesmo padrão de
+/// `CobrancaEnviada`, sem `UPDATE` concedido.
+model RelatorioServico {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  relatorio_id String    @db.Uuid
+  relatorio    Relatorio @relation(fields: [relatorio_id], references: [id], onDelete: Restrict)
+
+  servico_id String  @db.Uuid
+  servico    Servico @relation(fields: [servico_id], references: [id], onDelete: Restrict)
+
+  /// Congelado do `Servico.data_servico` no momento da criação.
+  data_servico DateTime @db.Timestamptz(6)
+
+  /// Congelados de `Servico.origem_texto`/`destino_texto` — nunca do
+  /// município resolvido, mesmo padrão de `formatarRota` em toda tela que já
+  /// exibe rota (`src/lib/utils/rota.ts`).
+  origem_texto  String?
+  destino_texto String?
+
+  /// Congelado de `Servico.carga_texto`.
+  carga_texto String?
+
+  /// Congelado de `Servico.valor`. Centavos, inteiro (CLAUDE.md §7). A soma
+  /// destes valores é `Relatorio.valor_total`.
+  valor Int
+
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  /// §7 — nada é apagado. Preenchido = arquivado.
+  arquivado_em DateTime? @db.Timestamptz(6)
+
+  /// Nunca duas linhas do mesmo frete no mesmo relatório.
+  @@unique([relatorio_id, servico_id])
+  @@index([empresa_id])
+  @@index([servico_id])
+  @@map("relatorio_servico")
 }
 
 // ---------------------------------------------------------------------------

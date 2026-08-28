@@ -164,6 +164,17 @@ interface — é a palavra que o usuário usa. Nunca "extrato".
 dias · personalizado). Prévia com os fretes, cada linha desmarcável, e o
 **total somando ao vivo**.
 
+**Frete `cancelado` nunca entra na lista — mesmo motivo de já sair de toda
+soma derivada desde o item 4 (§7: "a razão é 'não vai acontecer', não 'ainda
+não aconteceu'"). Frete `em_andamento` entra, mas não aceita a marca de
+cobrança** (item 7, decisão do fundador, 28/08/2026): como conferência do
+mês, o dono quer ver o período inteiro, inclusive o que está rodando agora;
+como cobrança, só se cobra o que já foi prestado. **Somar é diferente de
+cobrar** — um frete `em_andamento` soma no total do documento, mas nunca
+gera título, mesmo com "Gerar cobrança" ativo. Quando isso divergir o total
+do documento do total cobrável, os dois números aparecem na tela de
+montagem, ao vivo, antes de gerar.
+
 Marcação **"Gerar cobrança para estes fretes"**, **desmarcada por padrão**, com
 o sistema lembrando a última escolha. Quando marcada, mostra o vencimento
 calculado (editável) e a escolha entre **Boleto** e **Outro**.

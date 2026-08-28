@@ -220,6 +220,19 @@ registrada junto do código, mesmo padrão de `{pix}` no item 6.
   alguém desmarcou a linha, nem resolver "Ver relatório" a partir de um
   frete. RLS igual às demais; índice único em `(relatorio_id, servico_id)`
   para não duplicar a mesma linha.
+
+  **Retrato congelado — acrescentado na construção, achado do `/revisar`,
+  decisão do fundador, 28/08/2026:** a versão acima só linkava o frete, sem
+  copiar nada dele. `docs/especificacao.md` §4.4 diz "o documento fica
+  gravado com os valores da época", e §8 regra 6 repete a mesma regra — mas
+  `Servico` continua editável enquanto não tiver título ativo (§8 regra 12),
+  então um relatório sem retrato próprio mudaria de conteúdo por baixo do
+  cliente que já recebeu o PDF. `RelatorioServico` ganhou `data_servico`,
+  `origem_texto`, `destino_texto`, `carga_texto` e `valor` — cópia exata do
+  que a tabela do documento exibe (§4.4: "data · rota · descrição da carga ·
+  valor"), gravada uma vez, nunca recalculada. `servico_id` continua
+  existindo, para comparar com o dado ao vivo ou resolver "Ver relatório" a
+  partir do frete.
 - **Fecha a pendência do item 3:** `titulo_receber.relatorio_id` ganha a
   chave estrangeira para `relatorio.id` (`onDelete: Restrict`, mesmo padrão
   do resto do domínio), como o próprio comentário no schema já previa.
@@ -230,10 +243,44 @@ registrada junto do código, mesmo padrão de `{pix}` no item 6.
   aplica RLS em chave estrangeira) em toda referência nova: `cliente_id` do
   relatório, `servico_id` de cada linha de `RelatorioServico`,
   `relatorio_id` do título.
+- **`criarRelatorio` recusa, nunca confia em quem chama — acrescentado na
+  construção, achado do `/revisar`, decisão do fundador, 28/08/2026:** a
+  versão inicial só conferia FK (cliente e serviço pertencerem à empresa).
+  Como a função grava dinheiro (`valor_total`) e a Tarefa 3 (montagem) não
+  será o único chamador possível (itens 9 e 15 podem gerar relatório por
+  outro caminho), a proteção mora na função, não na tela que a chama —
+  mesmo princípio do `CLAUDE.md` §3. `criarRelatorio` recusa: lista de
+  fretes vazia; período com data final antes da inicial; frete de outra
+  empresa, de outro cliente, `cancelado`, arquivado, ou com `data_servico`
+  fora do período informado. `em_andamento` **passa** — a decisão "em
+  andamento entra na lista, mas não aceita cobrança" (acima) é sobre a
+  Tarefa 3/4, não sobre o que pode aparecer no documento.
 - Testes: isolamento (contraste, concorrência, os três jeitos de negar) nas
   duas tabelas novas; a numeração sequencial por empresa sob concorrência
-  (mesmo teste que já existe para `Servico.numero`); a FK de
-  `relatorio_id` recusando um id de relatório de outra empresa.
+  (mesmo teste que já existe para `Servico.numero`); `buscarRelatorio`
+  recusando (devolvendo nulo) um relatório de outra empresa — a peça de
+  código que vai proteger `relatorio_id` do título quando a Tarefa 4
+  gravar nele, já que a FK do banco sozinha não filtra por empresa
+  (`CLAUDE.md` §3: "o Postgres não aplica RLS ao verificar chave
+  estrangeira"); cada recusa acima, com um teste próprio; o retrato
+  congelado provado editando o `Servico` depois de gerado o relatório e
+  conferindo que a linha gravada não mudou.
+
+**Lacunas registradas na Tarefa 1, não corrigidas agora — achado do segundo
+`/revisar`, 28/08/2026:**
+
+- **O mesmo frete pode entrar em mais de um relatório.** Cobrar duas vezes já
+  não acontece — o índice único de título (item 6) recusa o segundo título
+  integral para o mesmo frete. O que sobra não é técnico: o mesmo frete pode
+  aparecer em dois documentos **enviados ao cliente**, e isso gera pergunta
+  dele. Não decidido se deve ser impedido, avisado, ou deixado como está.
+- **`Relatorio.pdf_url` — caminho ou URL assinada?** Ainda sempre nulo nesta
+  tarefa (só a Tarefa 2/4 escrevem nele), então não decidido agora. Mas
+  `Servico.comprovante_url` já resolveu a mesma pergunta (`docs/
+  especificacao.md` §6): guarda o **caminho** no balde privado, e a URL
+  assinada é gerada na hora, com expiração (`CLAUDE.md` §4). Quem construir
+  a Tarefa 2 reaproveita esse padrão em vez de decidir de novo, a menos que
+  surja um motivo concreto para divergir.
 
 ### Tarefa 2 — Gerador de PDF (a peça que a medição validou)
 
@@ -305,6 +352,15 @@ testada antes da tela de montagem ser construída em cima dela.
 
 ### Tarefa 4 — Gerar o relatório (ação) + tela "Documento A4"
 
+- **Requisito explícito, não opcional** (`CLAUDE.md` §3 — achado do
+  `/revisar` na Tarefa 1, 28/08/2026): antes de gravar `titulo_receber.
+  relatorio_id`, confira com `buscarRelatorio(empresaId, relatorio.id)`
+  que o relatório pertence à empresa — mesma exigência de toda referência
+  nova, já que o Postgres não aplica RLS na checagem de FK. Como
+  `gerarRelatorio` acabou de criar o `Relatorio` na própria transação, a
+  conferência é sobre o valor que a própria função gerou, não sobre
+  entrada externa — mas a chamada precisa existir, com teste próprio,
+  não ser assumida.
 - `gerarRelatorio(empresaId, {clienteId, dataInicial, dataFinal,
   servicoIds, gerarCobranca, vencimento, formaPrevista})` — dentro de uma
   transação: incrementa `proximo_numero_relatorio`, grava `Relatorio` +
