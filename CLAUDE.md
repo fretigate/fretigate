@@ -998,6 +998,17 @@ Vieram de defeitos reais encontrados nos protótipos. São obrigatórias.
 - Interface clara, não escura — o app é usado no pátio, sob sol forte.
 - Vocabulário do usuário: frete, cliente, caminhão, motorista, **relatório**.
   Nunca "registro", "entidade", "item", "transação", "extrato".
+
+  **Exceção nomeada, e só ela: dentro do documento impresso (o A4 do
+  relatório), "frete" vira "serviço".** Decisão do fundador, achado do
+  `/revisar` na Tarefa 2 do item 7, 28/08/2026: o documento se chama
+  "RELATÓRIO DE SERVIÇOS" (abaixo, §9) — um corpo que continuasse contando
+  "2 fretes" estaria falando duas línguas na mesma folha, na frente do
+  cliente do cliente. Na **interface** a regra desta linha continua inteira
+  — "frete" é a palavra que o usuário usa, em toda tela, todo botão, toda
+  mensagem. O impresso é o único lugar do produto lido em papel, formal, e
+  onde o rótulo preso a "frete" pagaria o mesmo preço que "transportadora"
+  já pagou (linha abaixo) no dia em que guincho/reboque existirem.
 - **Dentro do produto é "empresa", nunca "transportadora".** "Transportadora" é
   palavra de marketing, e só lá. O `tipo_operacao` já prevê guincho e reboque
   (§9): rótulo preso a um ramo é a amarra mais barata de criar e a mais cara de
@@ -1014,7 +1025,11 @@ duas fontes de verdade divergem e o cliente vê frete quitado com boleto aberto.
 
 **`Servico`, não `Frete`.** A entidade central tem `tipo_operacao`, para
 comportar guincho e reboque depois sem reescrever nada. Na interface do MVP
-aparece como "Frete", porque é o único tipo ativo.
+aparece como "Frete", porque é o único tipo ativo. **Uma exceção, nomeada em
+§8**: o documento impresso do relatório (item 7) usa "serviço" — título
+"RELATÓRIO DE SERVIÇOS", corpo contando "N serviços". É formal, vai para o
+cliente do cliente, e é justamente o registro que não pode prender o produto
+a um ramo só quando guincho/reboque chegarem.
 
 **Título a receber é entidade própria**, não flag no frete. Um frete pode gerar
 mais de um título (adiantamento e saldo).
@@ -1549,20 +1564,73 @@ Não invente resposta. Pergunte.
   do `package.json`) o pacote resolve para a versão que lança sempre, em vez
   do no-op que o bundler do Next.js ativa. Rodar via `npm run
   medir:municipios -- --empresa=<id>` evita o problema por construção.
+- **CONFERIR ANTES DE PUBLICAR — `outputFileTracingIncludes` para a rota que
+  gera o PDF do relatório.** Achado do `/revisar` na Tarefa 2 do item 7
+  (28/08/2026), registrado como requisito explícito para quem construir a
+  Tarefa 4 (`src/lib/documentos/gerador.ts`, comentário de `gerarDocumento`):
+  o binário do Chromium (`node_modules/@sparticuz/chromium/bin/chromium.br`)
+  **e** os três arquivos de fonte auto-hospedados
+  (`src/lib/documentos/fontes/*.woff2`) só embarcam na função da Vercel se
+  `next.config.ts` declarar `outputFileTracingIncludes` para o caminho da
+  rota (Server Action ou API) que primeiro importar `gerarDocumento`. Não foi
+  feito na Tarefa 2 porque a chave da configuração é esse caminho, e nenhuma
+  rota chama a função ainda (Tarefa 2 é isolada de propósito) — escrever a
+  chave apontando para um caminho que não existe seria texto que parece
+  proteger e não protege (`CLAUDE.md` §3).
+
+  **Se esquecer:** mesmo padrão dos outros itens desta lista — `next build`
+  **termina com sucesso**, porque Server Action não é avaliada no build. O
+  erro só aparece no primeiro pedido real que gerar um relatório, com
+  cliente pagante já tentando usar a função.
+
+  **Requisito irmão, mesma rota, achado do segundo `/revisar` da mesma
+  tarefa: rate limit.** `CLAUDE.md` §4 exige "rate limit em... toda rota que
+  gere custo (importação com IA, geração de PDF, cálculo de distância)" — a
+  rota que chamar `gerarDocumento` abre um Chromium inteiro por chamada
+  (`docs/planos/item-7-relatorio.md`, "A medição": ≈2,9s frio), custo real
+  por pedido. Decisão do fundador, 28/08/2026: registra como requisito da
+  rota, junto do `outputFileTracingIncludes` acima — quem construir a
+  Tarefa 4 aplica os dois no mesmo commit, mesma razão de os dois só fazerem
+  sentido quando o caminho da rota existir.
+- **ATENÇÃO AO RODAR — o gerador de PDF do relatório não roda no Windows
+  local.** Item 7, Tarefa 2 (`docs/planos/item-7-relatorio.md`), 28/08/2026.
+  `puppeteer-core` + `@sparticuz/chromium` — a combinação medida contra a
+  Vercel de verdade antes deste plano — empacota **um único binário,
+  Linux x64** (`node_modules/@sparticuz/chromium/bin/chromium.br`), o mesmo
+  tanto na Vercel quanto na esteira (`ubuntu-latest`). **Não existe binário
+  Windows dentro do pacote.**
+
+  `tests/documentos/gerador.test.ts` pula (`it.skipIf`, nunca reportado como
+  "passou" — `CLAUDE.md` §3, item 4) os três testes que abrem um Chromium de
+  verdade quando `process.platform === "win32"` — a máquina de quem
+  programa hoje. Rodar `npm test` localmente é normal e esperado mostrar
+  esses três como "skipped", nunca vermelho; a esteira (Linux) roda os três
+  de verdade. Se algum dia um deles ficar vermelho *localmente* em vez de
+  pular, o sintoma mais provável é `process.platform` não ter sido lido
+  corretamente — não um defeito do gerador em si.
 - **PRAZO — trava de 2 GB por empresa no storage (§10) ainda não existe.**
   Achado do `/revisar` na Tarefa 5 do item 5 (25/08/2026), quando o upload de
   comprovante (`src/lib/servicos/comprovantes.ts`, `enviarComprovante`)
-  nasceu como o primeiro (e hoje único) escritor de storage do produto. Cada
-  envio confere só o próprio tamanho (10 MB) — nada soma o espaço que a
-  empresa já ocupa contra o teto de 2 GB do §10. **Sem ela**, nada impede uma
-  empresa de ocupar espaço sem limite; o custo de armazenamento extra é do
-  FretiGate, não dela. **Trocar de comprovante acumula objeto órfão** — o
-  antigo fica no balde, sem apagar (§7, "Nada é apagado"; corrigido no
-  segundo passe do `/revisar` da mesma tarefa, que primeiro tentou apagar e
-  achou a contradição), então o espaço cresce a cada troca, não só no
-  primeiro comprovante de cada frete. Decisão do fundador, 25/08/2026: não
-  é urgente com zero clientes pagantes — vira tarefa própria **antes de
-  ligar anúncio**, junto das outras pendências desta lista.
+  nasceu como o primeiro escritor de storage do produto. Cada envio confere
+  só o próprio tamanho (10 MB) — nada soma o espaço que a empresa já ocupa
+  contra o teto de 2 GB do §10. **Sem ela**, nada impede uma empresa de
+  ocupar espaço sem limite; o custo de armazenamento extra é do FretiGate,
+  não dela. **Trocar de comprovante acumula objeto órfão** — o antigo fica
+  no balde, sem apagar (§7, "Nada é apagado"; corrigido no segundo passe do
+  `/revisar` da mesma tarefa, que primeiro tentou apagar e achou a
+  contradição), então o espaço cresce a cada troca, não só no primeiro
+  comprovante de cada frete. Decisão do fundador, 25/08/2026: não é urgente
+  com zero clientes pagantes — vira tarefa própria **antes de ligar
+  anúncio**, junto das outras pendências desta lista.
+
+  **Deixou de ser único em 28/08/2026** (item 7, Tarefa 2): o PDF do
+  relatório (`src/lib/documentos/armazenamento.ts`, `enviarRelatorioAoStorage`,
+  balde `relatorios`) é o segundo escritor — achado do `/revisar` na mesma
+  tarefa, que a frase anterior ("primeiro e hoje único") já não descrevia
+  corretamente (`CLAUDE.md` §2, "texto que está certo só por coincidência de
+  estado envelhece calado"). O PDF do relatório soma ao mesmo problema — mais
+  um tipo de arquivo crescendo sem teto — e não tem o problema do objeto
+  órfão (um relatório nunca é regravado, cada geração é um arquivo novo).
 - **Modelo de IA da importação** — testar a extração com o material real do
   usuário antes de escolher. Decidir por acerto, não por preço: a diferença de
   custo entre os candidatos é inferior a 2% da receita por cliente.

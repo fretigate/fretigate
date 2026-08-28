@@ -17,10 +17,11 @@ const MSG_SESSAO_POR_CABECALHO =
   "comentário no arquivo (docs/planos/auditoria-3-mecanismo-de-sessao.md).";
 const MSG_SUPABASE_SERVICE_ROLE =
   "@supabase/supabase-js só pode ser importado por " +
-  "src/lib/servicos/comprovantes.ts — é o cliente com a chave service_role, " +
-  "que ignora RLS por atributo (CLAUDE.md §4, item 5 Tarefa 4). Um segundo " +
-  "cliente construído em outro arquivo teria a mesma chave e nenhuma " +
-  "checagem de posse — a garantia de gerarUrlComprovante ficaria presa a " +
+  "src/lib/servicos/comprovantes.ts e src/lib/documentos/armazenamento.ts " +
+  "— é o cliente com a chave service_role, que ignora RLS por atributo " +
+  "(CLAUDE.md §4, item 5 Tarefa 4; item 7 Tarefa 2). Um cliente construído " +
+  "num terceiro arquivo teria a mesma chave e nenhuma checagem de posse — a " +
+  "garantia de gerarUrlComprovante/enviarRelatorioAoStorage ficaria presa a " +
   "uma linha de código, não a algo impossível de esquecer.";
 
 const eslintConfig = defineConfig([
@@ -178,13 +179,15 @@ const eslintConfig = defineConfig([
       ],
     },
   },
-  // Exceção nomeada, só para este arquivo — é onde o cliente `service_role`
-  // legitimamente mora (item 5, Tarefa 4). Reabre só `@supabase/supabase-js`;
-  // as outras travas do bloco `src/**` continuam valendo aqui (SQL cru,
-  // cliente Prisma próprio, sem-filtro-de-empresa, sessao-por-cabecalho —
-  // nenhuma delas faz sentido neste arquivo, e não há motivo para abri-las).
+  // Exceção nomeada, só para estes dois arquivos — é onde o cliente
+  // `service_role` legitimamente mora, um por balde de storage
+  // (`comprovantes`, item 5 Tarefa 4; `relatorios`, item 7 Tarefa 2). Reabre
+  // só `@supabase/supabase-js`; as outras travas do bloco `src/**` continuam
+  // valendo aqui (SQL cru, cliente Prisma próprio, sem-filtro-de-empresa,
+  // sessao-por-cabecalho — nenhuma delas faz sentido nestes arquivos, e não
+  // há motivo para abri-las).
   {
-    files: ["src/lib/servicos/comprovantes.ts"],
+    files: ["src/lib/servicos/comprovantes.ts", "src/lib/documentos/armazenamento.ts"],
     rules: {
       "no-restricted-imports": [
         "error",

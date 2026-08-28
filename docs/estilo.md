@@ -517,8 +517,9 @@ vertical por linha de frete · `20–22px` acima do total e do bloco de cobranç
 | Razão social | `21px/700`, `wdth 96%` (≈16 pt) |
 | Dados da empresa | `12px/400` (≈9 pt) |
 | Título do documento | `13px/700`, `ls .16em`, maiúsculas |
+| Número do documento (Nº) | Azeret Mono `13px/500` — mesma regra da placa: número identificador, lido caractere por caractere e citado por telefone ("o relatório 12"), vai em mono. Decisão do fundador, achado do `/revisar` na Tarefa 2 do item 7, 28/08/2026 |
 | Nome do cliente | `22px/700`, `wdth 96%` |
-| Rótulo de coluna e de bloco | `11px/700`, `ls .14–.16em`, maiúsculas |
+| Rótulo de coluna e de bloco | `11px/700`, `ls .14–.16em`, maiúsculas — **exceção: "TOTAL DO PERÍODO" usa o peso de "Título do documento" (`13px/700`), não este valor.** Introduz o número-herói da página (o total), função diferente de um rótulo de coluna ou de "VENCIMENTO"/"PAGAMENTO VIA PIX" — o documento impresso tem hierarquia própria, é o único lugar do produto lido em papel. Decisão do fundador, mesma tarefa acima |
 | Corpo da tabela | `14–15px/500` (≈11 pt) |
 | Total | `34px/800`, `wdth 94%`, tabular |
 | Vencimento | `22px/700` |

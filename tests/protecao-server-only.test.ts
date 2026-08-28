@@ -9,8 +9,13 @@ import { fileURLToPath } from "node:url";
  * 25/08/2026) em todo arquivo do produto que a tem — os dois que conectam no
  * banco com privilégio (`src/lib/db/index.ts`,
  * `src/lib/db/sem-filtro-de-empresa.ts`), o que assina sessão
- * (`src/lib/auth/index.ts`) e o que guarda a chave `service_role`
- * (`src/lib/servicos/comprovantes.ts`, protegido desde a Tarefa 4).
+ * (`src/lib/auth/index.ts`), os dois que guardam chave `service_role`
+ * (`src/lib/servicos/comprovantes.ts`, protegido desde a Tarefa 4;
+ * `src/lib/documentos/armazenamento.ts`, item 7 Tarefa 2), e os dois que
+ * abrem um Chromium isolado ou montam a marcação do PDF
+ * (`src/lib/documentos/navegador.ts`, `gerador.ts`) — nenhum dos dois deve
+ * ser arrastado para o lado do navegador, mesmo raciocínio de
+ * `comprovantes.ts`, item 7 Tarefa 2.
  *
  * POR QUE PROVA O EFEITO, NÃO A PRESENÇA DA LINHA
  * Checar `readFileSync(...).includes('import "server-only"')` provaria que a
@@ -77,6 +82,9 @@ const ARQUIVOS_PROTEGIDOS = [
   "src/lib/db/sem-filtro-de-empresa.ts",
   "src/lib/auth/index.ts",
   "src/lib/servicos/comprovantes.ts",
+  "src/lib/documentos/armazenamento.ts",
+  "src/lib/documentos/navegador.ts",
+  "src/lib/documentos/gerador.ts",
 ];
 
 const ARQUIVO_SEM_PROTECAO = "tests/fixtures/sem-server-only.ts";

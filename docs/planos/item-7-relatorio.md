@@ -306,8 +306,19 @@ testada antes da tela de montagem ser construída em cima dela.
   a marcação **e** a função que a imprime em PDF; a Tarefa 4 é quem constrói
   a tela que a exibe.
 - Upload do PDF gerado ao storage — mesmo padrão de `comprovantes.ts` (item
-  5): nome de arquivo aleatório, fora de pasta pública, URL assinada com
-  expiração.
+  5): nome de arquivo aleatório, fora de pasta pública (balde `relatorios`,
+  migration `20260828070000_balde_relatorios_storage`).
+
+  **A URL assinada de leitura NÃO nasce aqui — decisão do fundador, achado do
+  `/revisar`, 28/08/2026.** Esta redação original prometia "URL assinada com
+  expiração" na Tarefa 2, mas foi escrita antes de a Tarefa 2 existir de
+  verdade: hoje não há nenhum chamador que precise LER o PDF (só gravar).
+  Construir a leitura sem quem a use seria a mesma armadilha da `FolhaDePix`
+  no item 6 Tarefa 5 — peça pronta, sem uso, não testável de verdade. Mudou
+  para requisito explícito da Tarefa 4, abaixo — provavelmente reaproveitando
+  o padrão de `gerarUrlComprovante` (`src/lib/servicos/comprovantes.ts`, item
+  5 Tarefa 4): caminho gravado no banco, URL assinada gerada na hora da
+  leitura, nunca guardada.
 - Testes: o PDF sai válido (cabeçalho de arquivo, tamanho não vazio); os
   caracteres achados na medição (`→` em particular) saem corretos — não dá
   para abrir um PDF em teste automatizado e "olhar", mas dá para conferir
@@ -316,6 +327,76 @@ testada antes da tela de montagem ser construída em cima dela.
   conhecida; tempo de geração dentro do que a medição encontrou (não deixar
   regredir para o caminho antigo — Google Fonts por rede — sem ninguém
   notar).
+
+**Correção na própria construção, medida contra o Next.js de verdade — a
+marcação NÃO é componente React.** A primeira versão desta tarefa escreveu
+`MoldeDocumentoA4`/`CorpoRelatorio` como componentes React, impressos via
+`renderToStaticMarkup` (`react-dom/server`). Uma rota de teste descartável
+(`src/app/api/testegerador`, criada e removida na mesma sessão) mostrou o
+`next dev` real recusando importar: "You're importing a component that
+imports react-dom/server. To fix it, render or return the content directly
+as a Server Component instead" — Server Action e Route Handler do App
+Router rodam sob a condição `react-server`, que `react-dom/server` recusa
+por desenho do próprio React. A correção: `moldeDocumentoA4.ts`/
+`corpoRelatorio.ts` montam HTML por template string, sem React. **"Nunca
+duas implementações do mesmo desenho" continua valendo** — é a mesma função
+que a Tarefa 4 chama para a prévia em tela, só que ela injeta o resultado
+com `dangerouslySetInnerHTML` em vez de compor via `children` do React.
+Toda string interpolada passa por `escaparHtml` (`src/lib/utils/html.ts`,
+nova nesta tarefa) — a proteção contra marcação quebrada/injetada que o JSX
+dava de graça e uma função por concatenação precisa fazer à mão. Confirmado
+de novo, pela mesma rota descartável, que a versão corrigida carrega sem
+erro dentro do Next.js real, e que `escaparHtml` funciona (nome de empresa
+com `&`/`<`/`>` saiu escapado no HTML produzido).
+
+**O título impresso é "RELATÓRIO DE SERVIÇOS" — decisão do fundador, achado
+do `/revisar`, 28/08/2026, não pergunta em aberto.** O texto só existia no
+protótipo (`referencia/.../DocumentoA4.dc.html`), nunca escrito em
+`docs/especificacao.md`/`docs/estilo.md` — o `/revisar` apontou a lacuna. O
+motivo de manter "serviços", e não "fretes": é o vocabulário do produto, não
+do ramo — a entidade se chama `Servico`, não `Frete`, justamente para
+comportar guincho e reboque depois sem reescrever nada (`CLAUDE.md` §9), e
+`tipo_operacao` já existe no schema para isso. Um título "de fretes" prenderia
+o documento a um ramo só, a mesma armadilha que fez "Nome da transportadora"
+virar "Nome da empresa" em toda a interface (`CLAUDE.md` §8). Vai ao Design
+como confirmação da decisão, não como pergunta aberta.
+
+**Segundo `/revisar` da mesma tarefa: o corpo também muda para "serviço(s)",
+não só o título.** A contagem (`corpoRelatorio.ts`, "N fretes") ainda dizia
+"frete" sob um título "de Serviços" — o produto falando duas línguas na
+mesma folha, na frente do cliente do cliente. Corrigido para "serviço(s)" no
+corpo inteiro. **A exceção vale só dentro do documento impresso** — a
+interface do produto continua dizendo "frete" em toda tela, sem mudança
+nenhuma (`CLAUDE.md` §8, exceção nomeada).
+
+**Lacunas registradas na Tarefa 2, não corrigidas agora — achado do
+`/revisar`, 28/08/2026:**
+
+- **Sem paginação — medido, não estimado, e é caso normal, não borda.** A
+  página é altura fixa (`docs/estilo.md` § Impresso: 1123px) e a tabela de
+  fretes nunca quebra em página nova. Medido de verdade (Chromium real, via
+  o navegador desta sessão, não conta de cabeça): **sem bloco de cobrança,
+  cabem 16 fretes na página — o 17º já ultrapassa a borda inferior. Com
+  bloco de cobrança (vencimento + Pix no rodapé), o limite cai para 14 — o
+  15º ultrapassa.** Um cliente com frete quase diário e relatório mensal
+  passa desse número no mês comum, não só no excepcional — é exatamente por
+  isso que o fundador pediu destaque: não é a mesma classe de lacuna que "o
+  mesmo frete em dois relatórios" (acima, na Tarefa 1), rara e de política;
+  esta acontece na operação normal de um cliente ativo. Nada em
+  `docs/estilo.md`, `docs/especificacao.md` §4.4 ou neste plano decide o que
+  fazer (múltiplas páginas do mesmo PDF? limitar linhas com aviso na
+  montagem? encolher a fonte da tabela?) — decisão de Design/produto para a
+  Tarefa 3, não técnica.
+- **`logoUrl` sem caminho de rede.** `montarMoldeDocumentoA4` grava
+  `<img src>` direto quando a empresa tem logo — mas o Chromium do gerador
+  roda isolado, sem rede (é por isso que as fontes foram embutidas em
+  `data:` URI, `fontesEmbutidas.ts`). Hoje inalcançável: nenhum upload de
+  logo existe no produto (`Empresa.logo_url` nunca é preenchido). Quem
+  construir a tela de upload de logo revisita este ponto — provavelmente
+  embutindo os bytes da logo em `data:` URI também, mesmo padrão das fontes.
+- **`outputFileTracingIncludes` e o risco de tracing das fontes** — já
+  registrado em `CLAUDE.md` §14, "CONFERIR ANTES DE PUBLICAR", não repetido
+  aqui para não ter duas fontes da mesma pendência.
 
 ### Tarefa 3 — Tela "Relatório — montagem"
 
@@ -352,6 +433,14 @@ testada antes da tela de montagem ser construída em cima dela.
 
 ### Tarefa 4 — Gerar o relatório (ação) + tela "Documento A4"
 
+- **Requisito explícito, não opcional — movido da Tarefa 2** (achado do
+  `/revisar`, decisão do fundador, 28/08/2026): a URL assinada para LER o PDF
+  do balde `relatorios` nasce aqui, não na Tarefa 2 — é aqui que existe pela
+  primeira vez quem precisa ler (a tela "Documento A4", abaixo). Mesmo padrão
+  de `gerarUrlComprovante` (`src/lib/servicos/comprovantes.ts`, item 5 Tarefa
+  4): confere posse (`buscarRelatorio(empresaId, relatorio.id)`) antes de
+  assinar, caminho vem de `Relatorio.pdf_url`, URL curta e gerada na hora,
+  nunca guardada.
 - **Requisito explícito, não opcional** (`CLAUDE.md` §3 — achado do
   `/revisar` na Tarefa 1, 28/08/2026): antes de gravar `titulo_receber.
   relatorio_id`, confira com `buscarRelatorio(empresaId, relatorio.id)`

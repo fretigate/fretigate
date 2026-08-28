@@ -6,6 +6,116 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 28/08/2026 — Tarefa 2 do item 7: Gerador de PDF
+
+`src/lib/documentos/` — `gerador.ts` (ponto de entrada genérico, `CLAUDE.md`
+§9), `moldeDocumentoA4.ts`/`corpoRelatorio.ts` (a marcação, por template
+string), `navegador.ts` (Puppeteer isolado), `armazenamento.ts` (upload ao
+balde `relatorios`, migration `20260828070000_balde_relatorios_storage`),
+`fontesEmbutidas.ts` + `fontes/` (Archivo, Azeret Mono e um subconjunto de
+Inter de 736 bytes, só para os dois glifos que o Archivo não tem — `→` e
+`✓`, medido com `fontTools`/`fontkit`, não suposto; procedência completa em
+`fontes/PROCEDENCIA.md`). `src/lib/utils/html.ts` (`escaparHtml`) nasceu
+junto. Motor: `puppeteer-core` + `@sparticuz/chromium`, exatamente como a
+medição do plano validou.
+
+**Um episódio de origem não esclarecida, registrado como o fundador pediu —
+sem inventar certeza.** No meio da sessão, os arquivos acima apareceram
+reescritos no disco (React/JSX virou template string) sem nenhuma edição
+minha visível no meu próprio histórico de ferramentas. Investigação: a
+sessão irmã do mesmo computador negou (confirmado por mensagem direta —
+trabalhou só no projeto LETRAR); toda a árvore de processos da máquina
+(node, vite, chrome-devtools-mcp) rastreada até esse mesmo projeto ou até
+navegador/apps sem relação; `git reflog` sem operação estranha; nenhum
+`next dev` do FRETIGATE rodando. **Não foi possível identificar a origem.**
+A hipótese mais compatível com as evidências, levantada pelo fundador: a
+própria sessão fez a correção, num jeito que não ficou visível no que este
+agente enxerga do próprio histórico — sessão longa, muitas ferramentas.
+**Reforço encontrado depois, no fechamento da tarefa:** um segundo arquivo do
+mesmo episódio, `tests/protecao-server-only.test.ts`, apareceu também
+reescrito — registrando `armazenamento.ts`/`navegador.ts`/`gerador.ts` na
+lista de arquivos protegidos por `import "server-only"`, exatamente como a
+regra escrita no próprio arquivo de teste manda fazer ("arquivo novo com
+`server-only` entra na lista no mesmo commit"). Quem editou conhecia a regra
+e a seguiu — o que pesa mais para "é a própria sessão trabalhando" do que
+para intervenção externa: um agente de fora não teria motivo para conhecer
+(nem seguir) uma convenção interna deste projeto, escrita num comentário de
+um arquivo de teste específico. Decisão do fundador, 28/08/2026: manter o
+código, por três razões — (1)
+resolve um problema real e verificável (`react-dom/server` não carrega
+dentro de Server Action/Route Handler do App Router, condição
+`react-server` do próprio React, medida contra o `next dev` de verdade,
+numa rota descartável criada e removida na mesma sessão); (2) passa em
+tipos, lint e testes contra o estado atual; (3) reverter voltaria a uma
+versão que quebraria na Tarefa 4, quando a rota existir. Condição anexada:
+auditar `escaparHtml` a fundo antes de aceitar — feito, com teste de
+regressão (payload `<script>`, atributo `src`, campos de texto livre):
+nenhuma lacuna encontrada, todo campo de usuário passa pelo escape.
+
+**Dois passes do `/revisar`, nenhum achado de rigor total — fecha no
+segundo, por regra do §2.**
+
+Primeiro passe, seis divergências e quatro lacunas — decisões do fundador:
+- `CLAUDE.md` §14 dizia que `enviarComprovante` era "o primeiro e hoje
+  único" escritor de storage — corrigido (é o segundo agora).
+- `outputFileTracingIncludes` para o Chromium/fontes: mantido fora de
+  `next.config.ts` (a chave depende de uma rota que não existe), mas
+  cruzado com a lista "CONFERIR ANTES DE PUBLICAR" do §14.
+- URL assinada de leitura do PDF: **movida da Tarefa 2 para a Tarefa 4** no
+  plano — sem chamador, construir agora seria a mesma armadilha da
+  `FolhaDePix` no item 6 (peça sem uso, não testável de verdade).
+- Cores literais (`#3C443E`/`#6E7770`) em vez das constantes
+  `TINTA_APOIO`/`TINTA_TERCIARIA`: corrigido.
+- Valores de layout do protótipo sem entrada em `docs/estilo.md`: aceito
+  como precedente já coberto por `PlacaBadge.tsx`.
+- Título "RELATÓRIO DE SERVIÇOS": mantido, registrado como decisão (não
+  pergunta) no plano — vocabulário do produto (`Servico`), não do ramo.
+- Sem paginação: registrado como lacuna, **medido de verdade** (Chromium
+  real, via o navegador desta sessão, não estimado de cabeça) — cabem 16
+  fretes sem bloco de cobrança, 14 com — é caso normal do produto, não
+  borda, por pedido explícito do fundador.
+- `logoUrl` sem caminho de rede: lacuna registrada, hoje inalcançável (sem
+  upload de logo no produto).
+- Comentário de `armazenamento.ts` prometendo uma cadeia de proteção via
+  `criarRelatorio` que não está de fato encadeada: corrigido para não
+  afirmar o que ainda não existe.
+
+Segundo passe, seis divergências e três lacunas — decisões do fundador:
+- Rótulo "TOTAL DO PERÍODO" em `13px/700` (peso de "Título do documento",
+  não de "rótulo de bloco"): **exceção deliberada**, registrada em
+  `docs/estilo.md` § Impresso — o bloco introduz o número-herói da página,
+  função diferente de um rótulo comum.
+- Título "de Serviços" com corpo dizendo "fretes": **corrigido** — o corpo
+  passa a dizer "serviço(s)" também. `CLAUDE.md` §8/§9 ganharam a exceção
+  nomeada: dentro do documento impresso é "serviço"; na interface continua
+  "frete", sem mudança.
+- Rate limit na futura rota que gera PDF (`CLAUDE.md` §4): registrado junto
+  do `outputFileTracingIncludes`, mesmo lugar, mesma razão de esperar a
+  rota existir.
+- "Nº do documento" em Archivo: **trocado para Azeret Mono** — mesma regra
+  da placa do caminhão (número identificador, lido caractere por
+  caractere, citado por telefone). Registrado em `docs/estilo.md`.
+- Dois comentários imprecisos que eu mesmo escrevi (sobre `imprimirPdf` não
+  precisar do Supabase, e sobre `armazenamento.test.ts` supor um chamador
+  que não existe): corrigidos.
+
+**Verificação: local.** `npm run lint`, `npx tsc --noEmit` verdes. `npm test`
+local rodou contra o Supabase de desenvolvimento de verdade três vezes nesta
+sessão: a primeira, antes das correções dos dois passes de `/revisar`,
+528/528 (3 puladas, Windows); a segunda, já com parte das correções, teve 6
+falhas isoladas em `tests/servicos.test.ts` (arquivo sem relação nenhuma com
+esta tarefa, todas por "unable to start a transaction in the given time" —
+timeout de transação, mesmo padrão de instabilidade de pool já documentado
+no `CLAUDE.md` §2); o arquivo sozinho, rodado de novo, passou limpo
+(53/53) — confirmado transitório, não regressão. A terceira, depois de
+todas as correções acima aplicadas, **533/533** (3 puladas, Windows) —
+esta é a que vale para o commit. Esteira ainda não disparada: commit e push
+seguem este registro.
+
+Próximo: Tarefa 3 do item 7 — Tela "Relatório — montagem".
+
+---
+
 ## 28/08/2026 — Tarefa 1 do item 7: Fundamentos — a entidade Relatorio e o que ela amarra
 
 `model Relatorio` e `model RelatorioServico` (migration
