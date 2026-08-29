@@ -5,7 +5,7 @@ import {
   resolverPeriodoDoPerfil,
   rotuloDoPeriodo,
 } from "@/lib/utils/periodo";
-import { diaEmFortaleza, instanteDoDiaEmFortaleza, deslocarMes } from "@/lib/utils/data-fortaleza";
+import { diaEmFortaleza, instanteDoDiaEmFortaleza, deslocarMes, deslocarDias } from "@/lib/utils/data-fortaleza";
 
 /**
  * Filtro de Período da lista "Meus fretes" (item 4, Tarefa 2) — função pura,
@@ -16,7 +16,7 @@ import { diaEmFortaleza, instanteDoDiaEmFortaleza, deslocarMes } from "@/lib/uti
  */
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 27;
+const CONFERENCIAS_ESPERADAS = 29;
 
 describe("resolverPeriodoDaUrl", () => {
   it("sem janela nenhuma → sem filtro (null)", () => {
@@ -91,6 +91,21 @@ describe("resolverPeriodoDaUrl", () => {
     expect(resolverPeriodoDaUrl("personalizado", "2026-01-10", "outra-coisa")).toBeNull();
     conferencias++;
   });
+
+  /**
+   * Item 7 (`docs/planos/item-7-relatorio.md`, Tarefa 3) — a montagem do
+   * relatório usa esta janela no lugar de "todos". 30 dias incluindo hoje.
+   */
+  it("ultimos-30-dias → de hoje-29 até o fim do dia de hoje, em Fortaleza", () => {
+    const hoje = diaEmFortaleza(new Date());
+    const periodo = resolverPeriodoDaUrl("ultimos-30-dias", undefined, undefined);
+    expect(periodo).not.toBeNull();
+    expect(periodo!.inicio.getTime()).toBe(instanteDoDiaEmFortaleza(deslocarDias(hoje, -29)).getTime());
+    expect(periodo!.fim.getTime()).toBe(
+      instanteDoDiaEmFortaleza(deslocarDias(hoje, 1)).getTime() - 1,
+    );
+    conferencias++;
+  });
 });
 
 describe("resolverLimiteDaLista", () => {
@@ -158,6 +173,11 @@ describe("rotuloDoPeriodo", () => {
 
   it("todos → 'Todos os fretes'", () => {
     expect(rotuloDoPeriodo("todos", undefined, undefined)).toBe("Todos os fretes");
+    conferencias++;
+  });
+
+  it("ultimos-30-dias → 'Últimos 30 dias' (item 7)", () => {
+    expect(rotuloDoPeriodo("ultimos-30-dias", undefined, undefined)).toBe("Últimos 30 dias");
     conferencias++;
   });
 

@@ -91,9 +91,9 @@ const MESES = [
  * "segunda, 25 de agosto" — dia da semana + dia do mês, sem ano. Para a
  * mensagem da ordem de serviço (`src/lib/servicos/mensagens.ts`, item 5
  * Tarefa 2), lida pelo motorista — não é o mesmo formatador de
- * `formatarDataPorExtenso` (local em `fretes/[id]/page.tsx`, sem dia da
- * semana e com ano, lido pelo dono na tela): leitores diferentes, formatos
- * diferentes (`docs/planos/item-5-ordem-de-servico.md`, Tarefa 2).
+ * `formatarDataPorExtenso` (abaixo, sem dia da semana e com ano, lido pelo
+ * dono na tela): leitores diferentes, formatos diferentes (`docs/planos/
+ * item-5-ordem-de-servico.md`, Tarefa 2).
  */
 export function formatarDiaDaSemanaEData(instante: Date): string {
   const dia = diaEmFortaleza(instante);
@@ -122,4 +122,82 @@ export function formatarDiaDaSemanaEData(instante: Date): string {
 export function formatarDiaDaSemanaDataEAno(dia: string): string {
   const [ano, mes, diaDoMes] = dia.split("-").map(Number);
   return `${DIAS_SEMANA[diaDaSemana(dia)]}, ${diaDoMes} de ${MESES[mes - 1]} de ${ano}`;
+}
+
+/**
+ * "5 de agosto de 2026" — dia do mês + ano, sem dia da semana. Nasceu para a
+ * data de emissão do documento impresso (item 7, `gerador.ts`: "'Emitido em
+ * {emissao}'"), lida em papel formal — diferente de `formatarDiaDaSemanaEData`
+ * (mensagem de WhatsApp, informal) e de `formatarDiaDaSemanaDataEAno`
+ * (vencimento, que precisa do dia da semana para orientar "hoje é terça,
+ * vence sexta"). Promovida para cá no mesmo commit, de uma cópia idêntica
+ * que só existia local em `fretes/[id]/page.tsx` (detalhe do frete, item 4)
+ * — `CLAUDE.md` §8, "componente existe uma vez".
+ */
+export function formatarDataPorExtenso(dia: string): string {
+  const [ano, mes, diaDoMes] = dia.split("-").map(Number);
+  return `${diaDoMes} de ${MESES[mes - 1]} de ${ano}`;
+}
+
+/**
+ * "20/08/2026" — o vencimento do bloco de cobrança do documento impresso
+ * (`corpoRelatorio.ts`, `DadosCobrancaDocumento.vencimento`: "já formatado").
+ * Numérico de propósito, diferente dos formatadores por extenso acima — é
+ * lido em papel, rápido, junto do valor e da chave Pix, não em frase.
+ */
+export function formatarDataNumerica(dia: string): string {
+  const [ano, mes, diaDoMes] = dia.split("-");
+  return `${diaDoMes}/${mes}/${ano}`;
+}
+
+/**
+ * "agosto" (período dentro de um mês só) ou "20/08 a 10/09" (atravessando
+ * meses) — a variação de `montarMensagemCobranca` para uma cobrança que
+ * cobre vários fretes de um relatório (item 7, `docs/planos/
+ * item-7-relatorio.md`, "Mensagem de cobrança quando o relatório junta
+ * vários fretes"): "Passando pra lembrar dos fretes de {período}." no lugar
+ * da rota, porque a rota não faz sentido para mais de um frete.
+ *
+ * **Atravessando ano, o formato curto some com o ano em cada ponta** — o
+ * próprio plano registra isto como extrapolação da construção, não decisão
+ * do fundador, e pede para o Design confirmar outro formato se quiser.
+ */
+export function formatarPeriodoDeCobranca(dataInicial: Date, dataFinal: Date): string {
+  const inicio = diaEmFortaleza(dataInicial);
+  const fim = diaEmFortaleza(dataFinal);
+  const [anoInicio, mesInicio] = inicio.split("-").map(Number);
+  const [anoFim, mesFim] = fim.split("-").map(Number);
+
+  if (anoInicio === anoFim && mesInicio === mesFim) return MESES[mesInicio - 1];
+
+  const curto = (dia: string) => {
+    const [, mes, diaDoMes] = dia.split("-");
+    return `${diaDoMes}/${mes}`;
+  };
+  return `${curto(inicio)} a ${curto(fim)}`;
+}
+
+/**
+ * "1 a 31 de julho de 2026" (mesmo mês) · "20 de agosto a 10 de setembro de
+ * 2026" (atravessando mês) · "20 de dezembro de 2026 a 10 de janeiro de
+ * 2027" (atravessando ano) — o "Cliente e período coberto" do documento
+ * impresso (`docs/especificacao.md` §4.4, `corpoRelatorio.ts`). Diferente de
+ * `formatarPeriodoDeCobranca` (a linha compacta da mensagem de WhatsApp):
+ * este sempre nomeia o mês por extenso nas duas pontas quando elas
+ * divergem, porque aqui o período é o próprio conteúdo do documento formal,
+ * não uma referência de passagem numa frase.
+ */
+export function formatarPeriodoDoDocumento(dataInicial: Date, dataFinal: Date): string {
+  const inicio = diaEmFortaleza(dataInicial);
+  const fim = diaEmFortaleza(dataFinal);
+  const [anoInicio, mesInicio, diaInicio] = inicio.split("-").map(Number);
+  const [anoFim, mesFim, diaFim] = fim.split("-").map(Number);
+
+  if (anoInicio === anoFim && mesInicio === mesFim) {
+    return `${diaInicio} a ${diaFim} de ${MESES[mesInicio - 1]} de ${anoInicio}`;
+  }
+  if (anoInicio === anoFim) {
+    return `${diaInicio} de ${MESES[mesInicio - 1]} a ${diaFim} de ${MESES[mesFim - 1]} de ${anoInicio}`;
+  }
+  return `${diaInicio} de ${MESES[mesInicio - 1]} de ${anoInicio} a ${diaFim} de ${MESES[mesFim - 1]} de ${anoFim}`;
 }

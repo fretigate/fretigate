@@ -56,8 +56,17 @@ export function montarMensagemOrdem(dados: DadosMensagemOrdem): string {
 export type DadosMensagemCobranca = {
   empresa: string;
   cliente: string;
-  /** `formatarRota` (`src/lib/utils/rota.ts`) — só o que existir, pode ser nulo. */
+  /** `formatarRota` (`src/lib/utils/rota.ts`) — só o que existir, pode ser nulo. Ignorado quando `periodo` está presente. */
   rota: string | null;
+  /**
+   * Presente só quando a cobrança cobre 2+ fretes de um relatório (item 7,
+   * `docs/planos/item-7-relatorio.md`) — `formatarPeriodoDeCobranca`
+   * (`src/lib/utils/data-fortaleza.ts`). Substitui `rota` na frase de
+   * lembrança inteira: "dos fretes de {periodo}" no lugar de "do frete
+   * {rota}" — contar quantos fretes daria uma informação que o cliente já
+   * confere no PDF anexo (decisão do fundador).
+   */
+  periodo: string | null;
   /** Já formatado — "2.400,00" (`formatarCentavos`), sem o prefixo "R$": a função entrega o prefixo. */
   valor: string;
   /** Já formatado — "sexta, 5 de setembro" (`formatarDiaDaSemanaEData`). Esta função nunca formata data. */
@@ -84,16 +93,26 @@ const FRASE_FINAL_COBRANCA = "Se já tiver pago, pode desconsiderar. Obrigado!";
  * **Sem `{rota}`, a frase perde só a menção da rota** ("Passando pra lembrar
  * do frete.") — diferente do bloco do Pix, que some inteiro: a frase em si
  * não é um rótulo órfão, continua fazendo sentido sem o trecho da rota.
+ *
+ * **Com `{periodo}` (item 7), a frase vira "dos fretes de {periodo}."** — o
+ * singular ("do frete {rota}") nunca aparece junto de `periodo`; um cobre o
+ * caso de um frete só, o outro o de vários, nunca os dois ao mesmo tempo.
  */
 export function montarMensagemCobranca(dados: DadosMensagemCobranca): string {
   const linhaVencimento = dados.vencido
     ? `Venceu ${dados.vencimento}`
     : `Vencimento: ${dados.vencimento}`;
 
+  const fraseLembranca = dados.periodo
+    ? `Passando pra lembrar dos fretes de ${dados.periodo}.`
+    : dados.rota
+      ? `Passando pra lembrar do frete ${dados.rota}.`
+      : "Passando pra lembrar do frete.";
+
   const blocos = [
     dados.empresa,
     `Oi, ${dados.cliente}. Tudo bem?`,
-    dados.rota ? `Passando pra lembrar do frete ${dados.rota}.` : "Passando pra lembrar do frete.",
+    fraseLembranca,
     `Valor: R$ ${dados.valor}\n${linhaVencimento}`,
     dados.pix ? `Pix: ${dados.pix}` : null,
     FRASE_FINAL_COBRANCA,

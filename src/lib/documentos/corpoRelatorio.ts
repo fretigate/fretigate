@@ -38,8 +38,15 @@ export type LinhaFreteDocumento = {
 export type DadosCobrancaDocumento = {
   /** Já formatado — "20/08/2026". */
   vencimento: string;
-  /** `Empresa.chave_pix`, cru — texto livre, sem tipo nem formatação própria. */
-  chavePix: string;
+  /**
+   * `Empresa.chave_pix`, cru — texto livre, sem tipo nem formatação própria.
+   * `null` quando a empresa não tem chave cadastrada — exceção do §12
+   * (`docs/componentes.md`): "Gerar relatório" com cobrança ativa não
+   * bloqueia por falta de Pix, o documento sai só sem o bloco de pagamento
+   * (item 7, Tarefa 3). Diferente do `cobranca` do molde inteiro ser `null`
+   * — aqui o vencimento continua aparecendo, só a coluna do Pix some.
+   */
+  chavePix: string | null;
 };
 
 export type CorpoRelatorioProps = {
@@ -70,15 +77,19 @@ function montarLinha(linha: LinhaFreteDocumento): string {
 }
 
 function montarBlocoCobranca(cobranca: DadosCobrancaDocumento): string {
+  const colunaPix = cobranca.chavePix
+    ? `<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
+      <span style="font:700 11px/1 ${FONTE_ARCHIVO};letter-spacing:.16em;color:${TINTA_APOIO}">PAGAMENTO VIA PIX</span>
+      <span style="display:inline-flex;align-self:flex-start;padding:9px 13px;border:${FIO_MOLDURA};font:600 15px/1.2 ${FONTE_AZERET_MONO};letter-spacing:.02em">${escaparHtml(cobranca.chavePix)}</span>
+    </div>`
+    : "";
+
   return `<div style="display:flex;gap:40px;padding:22px 0 0;border-top:${FIO_FORTE}">
     <div style="flex:none;display:flex;flex-direction:column;gap:7px">
       <span style="font:700 11px/1 ${FONTE_ARCHIVO};letter-spacing:.16em;color:${TINTA_APOIO}">VENCIMENTO</span>
       <span style="font:700 22px/1 ${FONTE_ARCHIVO};font-stretch:96%;letter-spacing:-.01em">${escaparHtml(cobranca.vencimento)}</span>
     </div>
-    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
-      <span style="font:700 11px/1 ${FONTE_ARCHIVO};letter-spacing:.16em;color:${TINTA_APOIO}">PAGAMENTO VIA PIX</span>
-      <span style="display:inline-flex;align-self:flex-start;padding:9px 13px;border:${FIO_MOLDURA};font:600 15px/1.2 ${FONTE_AZERET_MONO};letter-spacing:.02em">${escaparHtml(cobranca.chavePix)}</span>
-    </div>
+    ${colunaPix}
   </div>`;
 }
 

@@ -1303,8 +1303,8 @@ Três exigências para quando os itens 5 e 6 chegarem:
    o `CLAUDE.md` §6 manda regra de negócio morar), já com
    as variáveis no formato final — `{cliente}` `{valor}` `{vencimento}`
    `{rota}` `{empresa}` `{motorista}` `{carga}` `{origem}` `{destino}`
-   `{data}` `{caminhao}` `{pix}`. Quando a tela de edição entrar, é **ligar o
-   campo ao que já existe**, não refazer.
+   `{data}` `{caminhao}` `{pix}` `{periodo}`. Quando a tela de edição entrar, é
+   **ligar o campo ao que já existe**, não refazer.
 
    `{caminhao}` entrou em 23/08/2026, planejamento do item 5: o texto da
    ordem de serviço precisa identificar o caminhão para o motorista (nome +
@@ -1318,6 +1318,17 @@ Três exigências para quando os itens 5 e 6 chegarem:
    de `Empresa.chave_pix`, e o bloco inteiro some quando a empresa não tem
    chave cadastrada (`docs/planos/item-6-titulo-e-cobrancas.md`, decisões 1
    e 2).
+
+   `{periodo}` entrou em 28/08/2026, planejamento do item 7: uma cobrança
+   gerada por relatório cobre vários fretes, e `{rota}` não faz sentido para
+   mais de um. Substitui `{rota}` na frase inteira quando o título pertence a
+   um relatório de 2+ fretes — "dos fretes de {periodo}" no lugar de "do
+   frete {rota}", nunca os dois juntos. Contar quantos fretes daria uma
+   informação que o cliente já confere no PDF anexo (decisão do fundador,
+   `docs/planos/item-7-relatorio.md`, "Mensagem de cobrança quando o
+   relatório junta vários fretes"). Formato: nome do mês quando o período cabe
+   num mês só ("agosto"), "dd/mm a dd/mm" quando atravessa mês
+   (`formatarPeriodoDeCobranca`, `src/lib/utils/data-fortaleza.ts`).
 
    **Lacuna, achada no `/revisar` da Tarefa 2 do item 5 (23/08/2026):**
    `montarMensagemOrdem` (a primeira função de `mensagens.ts` a existir de

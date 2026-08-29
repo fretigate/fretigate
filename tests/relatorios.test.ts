@@ -1,8 +1,18 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
-import { criarRelatorio, buscarRelatorio } from "@/lib/servicos/relatorios";
-import { criarServico, editarServico, arquivarServico } from "@/lib/servicos/servicos";
+import { createClient } from "@supabase/supabase-js";
+import {
+  criarRelatorio,
+  buscarRelatorio,
+  formatarNumeroRelatorio,
+  listarServicosParaRelatorio,
+  gerarUrlRelatorio,
+  gerarRelatorio,
+} from "@/lib/servicos/relatorios";
+import { enviarRelatorioAoStorage } from "@/lib/documentos/armazenamento";
+import { faturarServico } from "@/lib/servicos/titulos";
+import { criarServico, editarServico, arquivarServico, marcarServicoFinalizado } from "@/lib/servicos/servicos";
 import { criarCliente } from "@/lib/servicos/clientes";
 
 /**
@@ -27,8 +37,19 @@ const marca = process.hrtime.bigint().toString(16).slice(-8);
 let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
+// `gerarRelatorio` (Tarefa 3) chama `gerarDocumento`, que abre um Chromium de
+// verdade (`@sparticuz/chromium`, só empacota Linux) — mesmo critério de
+// `tests/documentos/gerador.test.ts`: pula no Windows, nunca reportado como
+// "passou" (`CLAUDE.md` §3, item 4).
+const RODA_CHROMIUM = process.platform !== "win32";
+
+const clienteStorage = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  auth: { persistSession: false },
+});
+const caminhosGravados: string[] = [];
+
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 27;
+const CONFERENCIAS_ESPERADAS = 27 + 1 + 4 + 4 + 1 + (RODA_CHROMIUM ? 16 : 0);
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -88,6 +109,12 @@ function periodo() {
   };
 }
 
+/** Mesma janela de `periodo()`, na forma `{inicio, fim}` que `listarServicosParaRelatorio` espera. */
+function janela() {
+  const p = periodo();
+  return { inicio: p.dataInicial, fim: p.dataFinal };
+}
+
 beforeAll(async () => {
   raiz = new Client({ connectionString: process.env.DIRECT_URL });
   await raiz.connect();
@@ -95,9 +122,19 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (empresasParaLimpar.length) {
-    // `relatorio_servico` referencia `relatorio` e `servico` — sai primeiro.
-    // `relatorio` referencia `cliente` — sai antes dele. `servico` referencia
+    // `titulo_receber` referencia `relatorio` (`relatorio_id`, item 7) além
+    // de `servico`/`cliente` — sai primeiro, senão o `DELETE` de `relatorio`
+    // abaixo esbarra na FK `ON DELETE RESTRICT` (achado do segundo `/revisar`:
+    // os testes de `gerarRelatorio` com `gerarCobranca: true`, bloco 7,
+    // criam títulos de verdade, e sem esta linha o `afterAll` estourava —
+    // só não aparecia localmente porque esses testes pulam no Windows,
+    // CLAUDE.md §2, "suíte verde local ≠ esteira verde"). `relatorio_servico`
+    // referencia `relatorio` e `servico` — sai em seguida. `relatorio`
+    // referencia `cliente` — sai antes dele. `servico` referencia
     // `tipo_operacao`/`cliente`/`usuario` — sai antes deles.
+    await raiz.query(`DELETE FROM "titulo_receber" WHERE empresa_id = ANY($1)`, [
+      empresasParaLimpar,
+    ]);
     await raiz.query(`DELETE FROM "relatorio_servico" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
@@ -117,6 +154,12 @@ afterAll(async () => {
     await raiz.query(`DELETE FROM "empresa" WHERE id = ANY($1)`, [
       empresasParaLimpar,
     ]);
+  }
+  if (caminhosGravados.length) {
+    // Mesmo padrão de `tests/documentos/armazenamento.test.ts` — os PDFs
+    // (falsos, só para testar a URL assinada) que `gerarUrlRelatorio` e
+    // `gerarRelatorio` gravam de verdade no balde `relatorios`.
+    await clienteStorage.storage.from("relatorios").remove(caminhosGravados);
   }
   await raiz.end();
 });
@@ -480,7 +523,7 @@ describe("3. buscarRelatorio — a conferência de FK para `relatorio_id`", () =
     conferencias++;
   });
 
-  it("retorna null para relatório de outra empresa — a garantia que `gerarRelatorio` (Tarefa 4) vai usar antes de gravar `titulo_receber.relatorio_id`", async () => {
+  it("retorna null para relatório de outra empresa — a garantia que `gerarRelatorio` (Tarefa 3) usa antes de gravar `titulo_receber.relatorio_id`", async () => {
     const a = await criarEmpresaDeTeste("l1");
     const b = await criarEmpresaDeTeste("l2");
     const sb = await criarServicoDe(b, { valor: 10000 });
@@ -497,6 +540,320 @@ describe("3. buscarRelatorio — a conferência de FK para `relatorio_id`", () =
   it("retorna null para id que não existe", async () => {
     const e = await criarEmpresaDeTeste("m1");
     expect(await buscarRelatorio(e.empresaId, randomUUID())).toBeNull();
+    conferencias++;
+  });
+});
+
+describe("4. formatarNumeroRelatorio", () => {
+  it("preenche com zero à esquerda até 4 dígitos", () => {
+    expect(formatarNumeroRelatorio(1)).toBe("0001");
+    expect(formatarNumeroRelatorio(142)).toBe("0142");
+    conferencias++;
+  });
+});
+
+describe("5. listarServicosParaRelatorio — a prévia da montagem (Tarefa 3)", () => {
+  it("lista finalizado e em_andamento, exclui cancelado", async () => {
+    const e = await criarEmpresaDeTeste("w1");
+    const s1 = await criarServicoDe(e, { valor: 10000 }); // em_andamento
+    const s2 = await criarServicoDe(e, { valor: 20000 });
+    await marcarServicoFinalizado(e.empresaId, s2.id);
+    const s3 = await criarServicoDe(e, { valor: 30000 });
+    await raiz.query(`UPDATE "servico" SET status_operacional = 'cancelado' WHERE id = $1`, [s3.id]);
+
+    const lista = await listarServicosParaRelatorio(e.empresaId, e.clienteId, janela());
+    expect(lista.map((s) => s.id).sort()).toEqual([s1.id, s2.id].sort());
+    conferencias++;
+
+    expect(lista.find((s) => s.id === s1.id)?.statusOperacional).toBe("em_andamento");
+    conferencias++;
+  });
+
+  it("exclui arquivado, frete de outro cliente e fora do período", async () => {
+    const e = await criarEmpresaDeTeste("w2");
+    const outroCliente = await criarCliente(e.empresaId, { nome: "Outro" });
+    const arquivado = await criarServicoDe(e, { valor: 10000 });
+    await arquivarServico(e.empresaId, arquivado.id);
+    const deOutroCliente = await criarServico(e.empresaId, e.usuarioId, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: outroCliente.id,
+      data_servico: new Date(),
+      valor: 10000,
+    });
+    const foraDoPeriodo = await criarServicoDe(e, {
+      valor: 10000,
+      data_servico: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+
+    const lista = await listarServicosParaRelatorio(e.empresaId, e.clienteId, janela());
+    const ids = lista.map((s) => s.id);
+    expect(ids).not.toContain(arquivado.id);
+    expect(ids).not.toContain(deOutroCliente.id);
+    expect(ids).not.toContain(foraDoPeriodo.id);
+    conferencias++;
+  });
+
+  it("ordena por data_servico crescente", async () => {
+    const e = await criarEmpresaDeTeste("w3");
+    const agora = Date.now();
+    const depois = await criarServicoDe(e, { valor: 10000, data_servico: new Date(agora + 1000) });
+    const antes = await criarServicoDe(e, { valor: 10000, data_servico: new Date(agora - 1000) });
+
+    const lista = await listarServicosParaRelatorio(e.empresaId, e.clienteId, janela());
+    const ids = lista.map((s) => s.id);
+    expect(ids.indexOf(antes.id)).toBeLessThan(ids.indexOf(depois.id));
+    conferencias++;
+  });
+});
+
+describe("6. gerarUrlRelatorio — a URL assinada de leitura (Tarefa 3)", () => {
+  it("recusa relatório de outra empresa — mesma mensagem de 'não encontrado'", async () => {
+    const a = await criarEmpresaDeTeste("x1");
+    const b = await criarEmpresaDeTeste("x2");
+    const sb = await criarServicoDe(b, { valor: 10000 });
+    const relatorioDeB = await criarRelatorio(b.empresaId, {
+      clienteId: b.clienteId,
+      ...periodo(),
+      servicoIds: [sb.id],
+    });
+
+    await expect(gerarUrlRelatorio(a.empresaId, relatorioDeB.id)).rejects.toThrow("Relatório não encontrado.");
+    conferencias++;
+  });
+
+  it("recusa relatório que não existe", async () => {
+    const e = await criarEmpresaDeTeste("x3");
+    await expect(gerarUrlRelatorio(e.empresaId, randomUUID())).rejects.toThrow("Relatório não encontrado.");
+    conferencias++;
+  });
+
+  it("recusa relatório sem documento gerado ainda — só criarRelatorio rodou", async () => {
+    const e = await criarEmpresaDeTeste("x4");
+    const s1 = await criarServicoDe(e, { valor: 10000 });
+    const relatorio = await criarRelatorio(e.empresaId, {
+      clienteId: e.clienteId,
+      ...periodo(),
+      servicoIds: [s1.id],
+    });
+
+    await expect(gerarUrlRelatorio(e.empresaId, relatorio.id)).rejects.toThrow(
+      "Este relatório ainda não tem documento gerado.",
+    );
+    conferencias++;
+  });
+
+  it("com pdf_url gravado, devolve uma URL assinada de verdade — sem precisar do Chromium", async () => {
+    const e = await criarEmpresaDeTeste("x5");
+    const s1 = await criarServicoDe(e, { valor: 10000 });
+    const relatorio = await criarRelatorio(e.empresaId, {
+      clienteId: e.clienteId,
+      ...periodo(),
+      servicoIds: [s1.id],
+    });
+
+    const caminho = await enviarRelatorioAoStorage(e.empresaId, Buffer.from("%PDF-1.4 conteúdo de teste"));
+    caminhosGravados.push(caminho);
+    await raiz.query(`UPDATE "relatorio" SET pdf_url = $1 WHERE id = $2`, [caminho, relatorio.id]);
+
+    const url = await gerarUrlRelatorio(e.empresaId, relatorio.id);
+    expect(url).toMatch(/^https?:\/\//);
+    conferencias++;
+  });
+});
+
+describe("7. gerarRelatorio — a ação completa (Tarefa 3)", () => {
+  it("recusa gerarCobranca sem vencimento/formaPrevista — antes de tocar o gerador de PDF", async () => {
+    const e = await criarEmpresaDeTeste("y4");
+    const s1 = await criarServicoDe(e, { valor: 10000 });
+    await marcarServicoFinalizado(e.empresaId, s1.id);
+
+    await expect(
+      gerarRelatorio(e.empresaId, {
+        clienteId: e.clienteId,
+        ...periodo(),
+        servicoIds: [s1.id],
+        gerarCobranca: true,
+      }),
+    ).rejects.toThrow("Informe o vencimento e a forma de cobrança.");
+    conferencias++;
+  });
+
+  // Os cinco testes abaixo chamam `gerarDocumento` (Chromium de verdade,
+  // `@sparticuz/chromium` só empacota Linux) — pulam no Windows, mesmo
+  // critério de `tests/documentos/gerador.test.ts`.
+  it.skipIf(!RODA_CHROMIUM)("sem cobrança: cria o relatório, grava pdf_url, nenhum título nasce", async () => {
+    const e = await criarEmpresaDeTeste("y1");
+    const s1 = await criarServicoDe(e, { valor: 10000 });
+    await marcarServicoFinalizado(e.empresaId, s1.id);
+
+    const relatorio = await gerarRelatorio(e.empresaId, {
+      clienteId: e.clienteId,
+      ...periodo(),
+      servicoIds: [s1.id],
+      gerarCobranca: false,
+    });
+    if (relatorio.pdf_url) caminhosGravados.push(relatorio.pdf_url);
+
+    expect(relatorio.pdf_url).not.toBeNull();
+    conferencias++;
+    expect(relatorio.gerou_cobranca).toBe(false);
+    conferencias++;
+
+    const titulos = await raiz.query(`SELECT count(*)::int n FROM "titulo_receber" WHERE servico_id = $1`, [
+      s1.id,
+    ]);
+    expect(titulos.rows[0].n).toBe(0);
+    conferencias++;
+  });
+
+  it.skipIf(!RODA_CHROMIUM)(
+    "com cobrança: um título por frete finalizado, com relatorio_id — em_andamento soma mas não vira título",
+    async () => {
+      const e = await criarEmpresaDeTeste("y2");
+      const finalizado = await criarServicoDe(e, { valor: 10000 });
+      await marcarServicoFinalizado(e.empresaId, finalizado.id);
+      const emAndamento = await criarServicoDe(e, { valor: 20000 });
+
+      const relatorio = await gerarRelatorio(e.empresaId, {
+        clienteId: e.clienteId,
+        ...periodo(),
+        servicoIds: [finalizado.id, emAndamento.id],
+        gerarCobranca: true,
+        vencimento: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        formaPrevista: "outro",
+      });
+      if (relatorio.pdf_url) caminhosGravados.push(relatorio.pdf_url);
+
+      // Soma os dois — "somar é diferente de cobrar" (docs/planos/item-7-relatorio.md).
+      expect(relatorio.valor_total).toBe(30000);
+      conferencias++;
+      expect(relatorio.gerou_cobranca).toBe(true);
+      conferencias++;
+
+      const tituloDoFinalizado = await raiz.query(
+        `SELECT relatorio_id FROM "titulo_receber" WHERE servico_id = $1`,
+        [finalizado.id],
+      );
+      expect(tituloDoFinalizado.rowCount).toBe(1);
+      conferencias++;
+      expect(tituloDoFinalizado.rows[0].relatorio_id).toBe(relatorio.id);
+      conferencias++;
+
+      const tituloDoEmAndamento = await raiz.query(
+        `SELECT count(*)::int n FROM "titulo_receber" WHERE servico_id = $1`,
+        [emAndamento.id],
+      );
+      expect(tituloDoEmAndamento.rows[0].n).toBe(0);
+      conferencias++;
+
+      // A prova por VALOR, não só por contagem (`docs/planos/item-7-relatorio.md`,
+      // "O que este item exige de teste"): o total que virou título é a soma
+      // só dos `finalizado` — diverge do `valor_total` do documento exatamente
+      // pelo valor do `em_andamento` (20000), nunca por qualquer outro motivo.
+      const somaDosTitulos = await raiz.query<{ soma: number }>(
+        `SELECT coalesce(sum(valor), 0)::int soma FROM "titulo_receber" WHERE relatorio_id = $1`,
+        [relatorio.id],
+      );
+      expect(somaDosTitulos.rows[0].soma).toBe(10000);
+      conferencias++;
+      expect(relatorio.valor_total - somaDosTitulos.rows[0].soma).toBe(emAndamento.valor);
+      conferencias++;
+    },
+  );
+
+  it.skipIf(!RODA_CHROMIUM)(
+    "frete já faturado fora deste relatório é pulado — não interrompe o resto (decisão de construção do plano)",
+    async () => {
+      const e = await criarEmpresaDeTeste("y3");
+      const jaFaturado = await criarServicoDe(e, { valor: 10000 });
+      await marcarServicoFinalizado(e.empresaId, jaFaturado.id);
+      await faturarServico(e.empresaId, jaFaturado.id, {
+        vencimento: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+        formaPrevista: "outro",
+      });
+      const outroFinalizado = await criarServicoDe(e, { valor: 20000 });
+      await marcarServicoFinalizado(e.empresaId, outroFinalizado.id);
+
+      const relatorio = await gerarRelatorio(e.empresaId, {
+        clienteId: e.clienteId,
+        ...periodo(),
+        servicoIds: [jaFaturado.id, outroFinalizado.id],
+        gerarCobranca: true,
+        vencimento: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        formaPrevista: "outro",
+      });
+      if (relatorio.pdf_url) caminhosGravados.push(relatorio.pdf_url);
+
+      expect(relatorio.pdf_url).not.toBeNull();
+      conferencias++;
+
+      const titulosDoOutro = await raiz.query(
+        `SELECT count(*)::int n FROM "titulo_receber" WHERE servico_id = $1`,
+        [outroFinalizado.id],
+      );
+      expect(titulosDoOutro.rows[0].n).toBe(1);
+      conferencias++;
+    },
+  );
+
+  it.skipIf(!RODA_CHROMIUM)(
+    "TODO frete finalizado incluído já estava faturado — nenhum título nasce, gerou_cobranca fica false (achado do segundo /revisar)",
+    async () => {
+      const e = await criarEmpresaDeTeste("y6");
+      const jaFaturado = await criarServicoDe(e, { valor: 10000 });
+      await marcarServicoFinalizado(e.empresaId, jaFaturado.id);
+      await faturarServico(e.empresaId, jaFaturado.id, {
+        vencimento: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+        formaPrevista: "outro",
+      });
+
+      const relatorio = await gerarRelatorio(e.empresaId, {
+        clienteId: e.clienteId,
+        ...periodo(),
+        servicoIds: [jaFaturado.id],
+        gerarCobranca: true,
+        vencimento: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        formaPrevista: "outro",
+      });
+      if (relatorio.pdf_url) caminhosGravados.push(relatorio.pdf_url);
+
+      // Nenhum título nasceu DESTA geração (o único já existia, de antes) —
+      // o documento não pode prometer uma cobrança que não criou.
+      expect(relatorio.gerou_cobranca).toBe(false);
+      conferencias++;
+
+      // Ainda assim o PDF sai — o relatório em si é válido, só sem o bloco
+      // de cobrança (achado do segundo `/revisar`, decisão do fundador).
+      expect(relatorio.pdf_url).not.toBeNull();
+      conferencias++;
+
+      // Continua existindo só o título antigo — nenhum segundo nasceu.
+      const totalTitulos = await raiz.query(
+        `SELECT count(*)::int n FROM "titulo_receber" WHERE servico_id = $1`,
+        [jaFaturado.id],
+      );
+      expect(totalTitulos.rows[0].n).toBe(1);
+      conferencias++;
+    },
+  );
+
+  it.skipIf(!RODA_CHROMIUM)("sem chave Pix da empresa e cobrança ativa — gera do mesmo jeito, sem travar", async () => {
+    const e = await criarEmpresaDeTeste("y5");
+    const s1 = await criarServicoDe(e, { valor: 10000 });
+    await marcarServicoFinalizado(e.empresaId, s1.id);
+    // `criarEmpresaDeTeste` nunca preenche `chave_pix` — a empresa já nasce sem ela.
+
+    const relatorio = await gerarRelatorio(e.empresaId, {
+      clienteId: e.clienteId,
+      ...periodo(),
+      servicoIds: [s1.id],
+      gerarCobranca: true,
+      vencimento: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      formaPrevista: "outro",
+    });
+    if (relatorio.pdf_url) caminhosGravados.push(relatorio.pdf_url);
+
+    expect(relatorio.pdf_url).not.toBeNull();
     conferencias++;
   });
 });

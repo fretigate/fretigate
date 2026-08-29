@@ -390,6 +390,10 @@ export function ListaCobrancas({
                               empresa: empresaNome,
                               cliente: cobranca.cliente,
                               rota: cobranca.rota,
+                              // Mesma nota de `cobrancas/[id]/page.tsx`: o
+                              // agrupamento por relatório ainda não chegou
+                              // aqui — `null` mantém a frase de um frete só.
+                              periodo: null,
                               valor: formatarCentavos(cobranca.valorCentavos),
                               vencimento: cobranca.vencimentoFormatado ?? "",
                               vencido: cobranca.grupo === "vencidas",

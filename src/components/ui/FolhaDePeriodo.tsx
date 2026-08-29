@@ -19,7 +19,7 @@ import { FolhaDeCalendario } from "./FolhaDeCalendario";
  */
 
 export type JanelaEscolhida =
-  | { tipo: "mes-atual" | "mes-passado" | "todos" }
+  | { tipo: "mes-atual" | "mes-passado" | "todos" | "ultimos-30-dias" }
   | { tipo: "personalizado"; de: string; ate: string };
 
 type Props = {
@@ -31,9 +31,18 @@ type Props = {
    * O texto da terceira opção — "Todos os fretes" em "Meus fretes", "Todas as
    * cobranças" em Cobranças (item 6, Tarefa 2). Só o nome do que está sendo
    * listado muda; a janela em si (`"todos"`) é a mesma, e por isso a folha é
-   * a mesma (`CLAUDE.md` §8: componente existe uma vez).
+   * a mesma (`CLAUDE.md` §8: componente existe uma vez). Ignorado quando
+   * `ultimosTrintaDias` está ativo.
    */
   rotuloTodos?: string;
+  /**
+   * Troca a terceira opção de "Todos os X" para "Últimos 30 dias" — a
+   * montagem do relatório (item 7) não tem noção de "todos" (`docs/
+   * especificacao.md` §4.4: "este mês · mês passado · últimos 30 dias ·
+   * personalizado"). Extensão do componente existente, não cópia (`CLAUDE.md`
+   * §8) — as duas primeiras opções e "Personalizado" continuam idênticas.
+   */
+  ultimosTrintaDias?: boolean;
 };
 
 export function FolhaDePeriodo({
@@ -42,11 +51,14 @@ export function FolhaDePeriodo({
   onEscolher,
   onFechar,
   rotuloTodos = "Todos os fretes",
+  ultimosTrintaDias = false,
 }: Props) {
-  const OPCOES: { valor: "mes-atual" | "mes-passado" | "todos"; rotulo: string }[] = [
+  const OPCOES: { valor: "mes-atual" | "mes-passado" | "todos" | "ultimos-30-dias"; rotulo: string }[] = [
     { valor: "mes-atual", rotulo: "Este mês" },
     { valor: "mes-passado", rotulo: "Mês passado" },
-    { valor: "todos", rotulo: rotuloTodos },
+    ultimosTrintaDias
+      ? { valor: "ultimos-30-dias", rotulo: "Últimos 30 dias" }
+      : { valor: "todos", rotulo: rotuloTodos },
   ];
   const [passo, setPasso] = useState<"opcoes" | "inicio" | "fim">("opcoes");
   const [dataInicio, setDataInicio] = useState<string | null>(null);

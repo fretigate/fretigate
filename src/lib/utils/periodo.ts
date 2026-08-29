@@ -12,8 +12,19 @@ import type { Periodo } from "@/lib/servicos/servicos";
  * `janela` é o valor de `?periodo=` na URL — decisão do plano (Tarefa 2):
  * "o filtro de Período precisa funcionar por parâmetro de URL", porque o
  * item 8 (dashboard) vai linkar direto para uma janela específica.
+ *
+ * `"ultimos-30-dias"` entrou no item 7 (`docs/planos/item-7-relatorio.md`,
+ * Tarefa 3) — a montagem do relatório usa este conjunto de janelas, nunca
+ * `"todos"` (`docs/especificacao.md` §4.4: "este mês · mês passado ·
+ * últimos 30 dias · personalizado"), confirmado pelo protótipo
+ * (`referencia/.../TelaRelatorio.dc.html`, `PERIODOS`).
  */
-export type JanelaDePeriodo = "mes-atual" | "mes-passado" | "todos" | "personalizado";
+export type JanelaDePeriodo =
+  | "mes-atual"
+  | "mes-passado"
+  | "ultimos-30-dias"
+  | "todos"
+  | "personalizado";
 
 /**
  * `de`/`ate` chegam da URL, texto arbitrário — mesma validação de formato já
@@ -57,6 +68,12 @@ export function resolverPeriodoDaUrl(
       return periodoDoMes(primeiroDiaDoMesAtual);
     case "mes-passado":
       return periodoDoMes(deslocarMes(primeiroDiaDoMesAtual, -1));
+    case "ultimos-30-dias":
+      // 30 dias incluindo hoje — de hoje-29 até o fim do dia de hoje.
+      return {
+        inicio: instanteDoDiaEmFortaleza(deslocarDias(hoje, -29)),
+        fim: finalDoDia(deslocarDias(hoje, 1)),
+      };
     case "personalizado":
       if (de && ate && REGEX_DIA.test(de) && REGEX_DIA.test(ate)) {
         return { inicio: instanteDoDiaEmFortaleza(de), fim: finalDoDia(deslocarDias(ate, 1)) };
@@ -187,6 +204,8 @@ export function rotuloDoPeriodo(
       return "Este mês";
     case "mes-passado":
       return "Mês passado";
+    case "ultimos-30-dias":
+      return "Últimos 30 dias";
     case "todos":
       return rotuloTodos;
     case "personalizado":

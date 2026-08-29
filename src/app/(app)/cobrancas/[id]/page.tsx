@@ -235,6 +235,11 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
                 empresa: empresa!.nome_fantasia,
                 cliente: cliente?.nome ?? "Cliente",
                 rota,
+                // O agrupamento de títulos por relatório (item 7, "uma
+                // cobrança gerada por relatório é uma linha só") ainda não
+                // chegou a esta tela — `null` preserva a frase de um frete só
+                // (`montarMensagemCobranca`), igual a antes desta mudança.
+                periodo: null,
                 valor: formatarCentavos(saldo),
                 vencimento: tituloAtual.vencimento ? formatarDiaDaSemanaEData(tituloAtual.vencimento) : "",
                 vencido: grupo === "vencidas",

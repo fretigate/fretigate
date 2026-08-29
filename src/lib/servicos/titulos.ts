@@ -175,17 +175,26 @@ export function vencimentoPadrao(
  *
  * `docs/especificacao.md` §7 ("Como um serviço vira título") lista dois
  * caminhos; este é o **manual**. O automático (relatório com a marcação de
- * cobrança) é o item 7, e é por isso que `relatorio_id` fica nulo aqui.
+ * cobrança, item 7) reaproveita esta mesma função — `docs/planos/
+ * item-7-relatorio.md`, Tarefa 3: "sem alterar sua forma, só passando o
+ * `relatorio_id` junto". `dados.relatorioId` é opcional e só quem gera
+ * relatório o passa (`gerarRelatorio`, `relatorios.ts`); "Faturar frete"
+ * continua chamando sem ele, e `relatorio_id` continua nulo nesse caminho.
  *
  * **`cliente_id` e `valor` vêm do próprio `Servico`, nunca do formulário** —
  * mesma razão de `criarTituloJaRecebi`, e é o que a trava do §8 item 12
  * (`editarServicoComProtecaoDeTitulo`, abaixo) protege depois: o título
  * copia os dois ao nascer e nunca mais sincroniza.
  *
- * **Uma conferência de FK, não duas** (`CLAUDE.md` §3): `servico_id` é o
- * único identificador que chega de fora, e `buscarServico` o confere contra
- * a empresa. `cliente_id` nunca é escolhido — vem de `servico.cliente_id`,
- * já conferido quando o `Servico` nasceu.
+ * **Duas conferências de FK, não uma** (`CLAUDE.md` §3, achado do `/revisar`
+ * no item 7): `servico_id` é o primeiro identificador que chega de fora, e
+ * `buscarServico` o confere contra a empresa; `dados.relatorioId` (item 7) é
+ * o segundo — mesmo vindo só de `gerarRelatorio`, que já confere antes de
+ * chamar, a proteção mora aqui dentro, não em quem chama (mesmo raciocínio
+ * já registrado três vezes no `CLAUDE.md` §3, para `veiculo_habitual_id`,
+ * para a política de RLS, e agora para este campo). `cliente_id` continua
+ * sendo o único que nunca precisa de conferência própria — vem de
+ * `servico.cliente_id`, já conferido quando o `Servico` nasceu.
  *
  * **Só frete finalizado.** A tela só oferece o botão nesse estado
  * (`docs/componentes.md`: "finalizado e sem cobrança → Faturar frete"), mas
@@ -212,12 +221,34 @@ export function vencimentoPadrao(
 export async function faturarServico(
   empresaId: string,
   servicoId: string,
-  dados: { vencimento: Date; formaPrevista: FormaPagamentoPrevista },
+  dados: {
+    vencimento: Date;
+    formaPrevista: FormaPagamentoPrevista;
+    /**
+     * Item 7 — `gerarRelatorio` passa o `Relatorio` que acabou de criar.
+     * Ausente = caminho manual ("Faturar frete"), `relatorio_id` fica nulo.
+     */
+    relatorioId?: string;
+  },
 ) {
   const servico = await buscarServico(empresaId, servicoId);
   if (!servico || servico.arquivado_em) throw new Error("Frete não encontrado.");
   if (servico.status_operacional !== "finalizado") {
     throw new Error("Só dá para faturar um frete finalizado.");
+  }
+
+  // Confere `relatorioId` contra a empresa antes de gravar — mesmo quando
+  // `gerarRelatorio` já conferiu antes de chamar (`CLAUDE.md` §3). Consulta
+  // direta em vez de `buscarRelatorio` (`relatorios.ts`) para não fechar um
+  // import circular: `relatorios.ts` já importa `faturarServico` daqui.
+  // `db(empresaId)` sozinho já basta — devolve nulo para um `relatorio_id`
+  // de outra empresa, mesma garantia que `buscarRelatorio` daria.
+  if (dados.relatorioId) {
+    const relatorio = await db(empresaId).relatorio.findUnique({
+      where: { id: dados.relatorioId },
+      select: { id: true },
+    });
+    if (!relatorio) throw new Error("Relatório não encontrado.");
   }
 
   const jaFaturado = await db(empresaId).tituloReceber.findFirst({
@@ -236,6 +267,7 @@ export async function faturarServico(
         integral: true,
         vencimento: dados.vencimento,
         forma_pagamento_prevista: dados.formaPrevista,
+        relatorio_id: dados.relatorioId ?? null,
         empresa_id: empresaId,
       },
       select: CAMPOS,

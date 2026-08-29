@@ -478,17 +478,33 @@ base da Tarefa 5 do item 6.
     montagem já não o lista. Não sobra frete incluído que a marcação de
     cobrança tente faturar sem poder.
   - Chama o gerador da Tarefa 2, grava `pdf_url`.
-  - **Detalhe menor, ainda sem resposta — mecânico, não de política:** um
-    frete `finalizado` incluído pode já ter um título ativo (faturado antes,
-    fora deste relatório) — `faturarServico` recusa o segundo integral pelo
-    índice único (item 6). O que a montagem faz com esse caso (pula
-    silenciosamente ao gerar, avisa, ou já chega desmarcado da cobrança na
-    tela) fica para resolver na construção, sem precisar de decisão do
-    fundador — é tratar um erro esperado, não uma pergunta de política como
-    a de cima.
-- `ListaCobrancas`/`resumoDeCobrancas` (item 6): agrupar títulos com o
-  mesmo `relatorio_id` numa linha só, com o total somado — a mudança de
-  exibição que a regra acima empurra pra cá.
+  - **Resolvido na construção, sem precisar de decisão do fundador — é
+    tratar um erro esperado, não uma pergunta de política:** um frete
+    `finalizado` incluído pode já ter um título ativo (faturado antes, fora
+    deste relatório) — `faturarServico` recusa o segundo integral pelo
+    índice único (item 6). `gerarRelatorio` pula esse frete em silêncio ao
+    gerar, sem interromper o resto. **Achado do segundo `/revisar`, decisão
+    do fundador, 28/08/2026, sobre uma consequência que a escolha acima
+    abriu:** se TODO frete `finalizado` incluído já estava faturado fora
+    deste relatório, nenhum título nasce desta geração — gravar
+    `gerou_cobranca: true` e imprimir vencimento/Pix nesse caso cobraria, em
+    papel, um valor sem título correspondente, com vencimento que pode
+    discordar do vencimento real do título antigo. Por isso `gerou_cobranca`
+    e o bloco de cobrança do documento seguem se **pelo menos um título
+    nasceu de verdade nesta chamada**, nunca a marcação "Gerar cobrança"
+    sozinha — o relatório sai do mesmo jeito, só sem esse bloco.
+- **Requisito explícito do segundo commit, não observação** (achado do
+  terceiro `/revisar`, 28/08/2026): `ListaCobrancas`/`resumoDeCobrancas`
+  (item 6) precisam agrupar títulos com o mesmo `relatorio_id` numa linha
+  só, com o total somado. O primeiro commit (`gerarRelatorio`,
+  `src/lib/servicos/relatorios.ts`) já cria um `TituloReceber` por frete
+  incluído, todos com o mesmo `relatorio_id` — sem o agrupamento, o *dado*
+  contradiz `docs/especificacao.md` §4.5 ("uma cobrança gerada por
+  relatório é uma linha só, não uma por frete") assim que a tela de
+  montagem existir e alguém gerar a primeira cobrança de 2+ fretes. Hoje é
+  peça sem uso (mesma classe do `comoDono`: "com uso previsto e datado",
+  não "pode ser que precise um dia") — mas o segundo commit fecha isso,
+  nunca deixa a contradição só registrada.
 - `montarMensagemCobranca`: a variação de período no lugar da rota, decidida
   acima, ativada quando o título pertence a um grupo de 2+ (via
   `relatorio_id`).

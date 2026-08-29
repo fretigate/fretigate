@@ -678,13 +678,11 @@ enum FormaPagamentoPrevista {
 ///
 /// **`relatorio_id` ganhou chave estrangeira no item 7** (`docs/planos/
 /// item-7-relatorio.md`, Tarefa 1) — a pendência registrada em
-/// `docs/diario.md` (tarefa 3 do item 3) fechou aqui. Ainda SEM conferência
-/// própria em código: nenhum caminho grava este campo hoje (nasce na Tarefa
-/// 4, com `gerarRelatorio`). Quando esse caminho existir, `CLAUDE.md` §3
-/// exige a mesma conferência de posse contra a empresa que toda referência
-/// nova exige — usando `buscarRelatorio` (`src/lib/servicos/relatorios.ts`),
-/// com teste próprio. Requisito explícito para quem construir a Tarefa 4, não
-/// promessa de que já está feito.
+/// `docs/diario.md` (tarefa 3 do item 3) fechou aqui. `gerarRelatorio`
+/// (`src/lib/servicos/relatorios.ts`, Tarefa 3) grava este campo via
+/// `faturarServico` (`src/lib/servicos/titulos.ts`) — as duas funções
+/// conferem o `relatorio_id` contra a empresa antes de gravar, cada uma
+/// com teste próprio (`CLAUDE.md` §3).
 model TituloReceber {
   id String @id @default(uuid(7)) @db.Uuid
 
@@ -857,12 +855,11 @@ model CobrancaEnviada {
 }
 
 /// O documento que o dono hoje monta à mão no Canva (`CLAUDE.md` §1) — item
-/// 7 (`docs/planos/item-7-relatorio.md`, Tarefa 1). Fundamentos: a entidade
-/// e o que ela amarra. A montagem, o gerador de PDF (Tarefa 2) e a ação
-/// `gerarRelatorio` que cria título quando `gerarCobranca` está ativo —
-/// tudo dentro da Tarefa 3 (fundida com a antiga Tarefa 4, decisão do
-/// fundador, 28/08/2026) — vêm depois; este model só grava o que já existe
-/// no momento em que o relatório é gerado.
+/// 7 (`docs/planos/item-7-relatorio.md`). `criarRelatorio` (Tarefa 1) grava
+/// a entidade e o que ela amarra; o gerador de PDF (Tarefa 2) e
+/// `gerarRelatorio` (Tarefa 3, fundida com a antiga Tarefa 4, decisão do
+/// fundador, 28/08/2026) já existem, em `src/lib/servicos/relatorios.ts` —
+/// só a tela de montagem (a última peça da Tarefa 3) ainda não.
 ///
 /// **`cliente_id` é a única referência conferida contra a empresa antes de
 /// gravar** (`CLAUDE.md` §3 — o Postgres não aplica RLS na checagem de FK).
@@ -873,8 +870,12 @@ model CobrancaEnviada {
 /// de `Servico.numero`.
 ///
 /// `pdf_url` nasce nulo — só é gravado depois que o gerador de PDF (Tarefa
-/// 2) roda, num segundo passo dentro da mesma transação (Tarefa 3). Mesmo
-/// padrão de `Servico.comprovante_url`.
+/// 2) roda, num `UPDATE` próprio, fora da transação que cria a linha
+/// (`gerarRelatorio`, `src/lib/servicos/relatorios.ts`, Tarefa 3: prender
+/// uma transação de banco durante uma chamada externa de segundos — o
+/// Chromium do gerador — é o mesmo risco de timeout já medido em
+/// `docs/diario.md`, 18/08/2026, só que maior). Mesmo padrão de
+/// `Servico.comprovante_url` quanto ao formato (caminho, não URL).
 model Relatorio {
   id String @id @default(uuid(7)) @db.Uuid
 
@@ -891,10 +892,17 @@ model Relatorio {
   /// partir dos próprios `Servico` no momento da criação.
   valor_total Int
 
-  /// Se "Gerar cobrança para estes fretes" estava marcado ao gerar. Não diz
-  /// que TODO frete incluído virou título — um `em_andamento` incluído soma
-  /// no documento mas nunca vira título (`docs/planos/item-7-relatorio.md`,
-  /// "somar é diferente de cobrar").
+  /// **Não é a marcação "Gerar cobrança para estes fretes" — é se pelo menos
+  /// um título nasceu de verdade nesta geração.** `gerarRelatorio`
+  /// (`src/lib/servicos/relatorios.ts`) grava `true` só quando
+  /// `algumTituloCriado`: se a marcação estava ativa mas todo frete
+  /// `finalizado` incluído já tinha título de outra geração, nenhum nasce
+  /// aqui, e este campo fica `false` — o documento não pode prometer, em
+  /// papel, uma cobrança que não criou (achado do `/revisar`, decisão do
+  /// fundador, 28/08/2026). Um `em_andamento` incluído nunca vira título de
+  /// qualquer jeito, mas continua somando no documento (`docs/planos/
+  /// item-7-relatorio.md`, "somar é diferente de cobrar") — isso não afeta
+  /// este campo.
   gerou_cobranca Boolean @default(false)
 
   /// O instante em que o PDF foi gerado — sempre `new Date()` dentro da

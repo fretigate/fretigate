@@ -6,6 +6,67 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 28/08/2026 — Tarefa 3 do item 7, primeiro commit: `gerarRelatorio` (servidor)
+
+**Dividida em dois commits**, como o plano já previa ("a geração num, a tela
+noutro"). Este fecha a metade de servidor: `gerarRelatorio`
+(`src/lib/servicos/relatorios.ts`) — orquestra `criarRelatorio` (Tarefa 1),
+cria um `TituloReceber` por frete `finalizado` quando "Gerar cobrança" está
+ativo (reaproveitando `faturarServico`, que ganhou `relatorioId` opcional),
+chama o gerador de PDF (Tarefa 2) e grava `pdf_url`/`gerou_cobranca`. Junto:
+janela "últimos 30 dias" (`periodo.ts`, `FolhaDePeriodo`), a variação de
+período na mensagem de cobrança de vários fretes (`montarMensagemCobranca`,
+`{periodo}` registrado em `docs/especificacao.md` §9), `listarServicosParaRelatorio`
+(prévia da montagem), `gerarUrlRelatorio` (URL assinada de leitura) e o
+suporte a "sem chave Pix" no corpo do documento (`corpoRelatorio.ts`).
+
+**`/revisar` rodou três passes — registro porque o fundador pediu para
+destacar o padrão, não só o resultado.** Os dois primeiros trouxeram achados
+de dinheiro, que mudavam comportamento:
+
+- **1º passe:** cabeçalho do documento usava `nome_fantasia` em vez de razão
+  social (`docs/especificacao.md` §4.4 exige a segunda); e o achado mais
+  sério — `faturarServico` gravava `relatorio_id` confiando que quem chama
+  já conferiu, contrariando `CLAUDE.md` §3 ao pé da letra ("a proteção mora
+  onde o dado é gravado, nunca em quem chama") — mesmo raciocínio já visto
+  para `veiculo_habitual_id` e a política de RLS. Os dois corrigidos, com
+  teste de recusa novo.
+- **2º passe:** `gerou_cobranca: true` e o bloco de vencimento/Pix do
+  documento saíam mesmo quando **zero títulos nasceram** da geração (todo
+  frete incluído já estava faturado fora dali) — o papel prometeria uma
+  cobrança que não existe, com vencimento que podia discordar do título
+  antigo. Corrigido: os dois só acontecem se pelo menos um título nasceu de
+  verdade (`algumTituloCriado`). Também achou um bug de teste real (o
+  `afterAll` de `relatorios.test.ts` não limpava `titulo_receber`, que teria
+  quebrado a limpeza na esteira — os testes que criam título pulam no
+  Windows, então nunca apareceu aqui) e comentários que a própria mudança
+  tinha deixado desatualizados.
+- **3º passe:** só achou texto — nenhum achado que mudasse comportamento.
+  **O critério funcionou como desenhado: os passes pararam quando pararam de
+  aparecer achados de dinheiro/comportamento**, não por contagem arbitrária.
+
+**Registrado como requisito explícito do segundo commit, não só observação**
+(pedido do fundador): `gerarRelatorio` já grava vários `TituloReceber` com o
+mesmo `relatorio_id`, mas `ListaCobrancas`/`resumoDeCobrancas` ainda não os
+agrupam numa linha só — contradiz `docs/especificacao.md` §4.5 no *dado*,
+mesmo hoje inalcançável pela tela. Ver `docs/planos/item-7-relatorio.md`.
+Mesmo precedente do `comoDono`: peça de um item só, com uso previsto e
+datado no próximo commit — não abstração especulativa.
+
+**Verificação: local.** `npx tsc --noEmit` e `npm run lint` verdes.
+`tests/mensagens.test.ts`, `tests/data-fortaleza.test.ts`,
+`tests/periodo.test.ts`, `tests/documentos/gerador.test.ts`,
+`tests/titulos.test.ts` (88/88) e `tests/relatorios.test.ts` (32 passed + 5
+skipped no Windows — Chromium, `CLAUDE.md` §14) verdes. Esteira disparada,
+ainda rodando, sem confirmação.
+
+Próximo: Tarefa 3 do item 7, segundo commit — Tela "Relatório — montagem" +
+`gerarRelatorioAction` + tela "Documento A4", mais os requisitos que só
+fazem sentido quando a rota existir (`outputFileTracingIncludes`, rate
+limit, `CLAUDE.md` §14) e o agrupamento por `relatorio_id` em Cobranças.
+
+---
+
 ## 28/08/2026 — Esteira: rerun por instabilidade, e plano do item 7 atualizado — funde Tarefa 3 e Tarefa 4
 
 **Rerun por instabilidade, registrado por `CLAUDE.md` §2.** A esteira do

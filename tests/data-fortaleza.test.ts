@@ -7,6 +7,10 @@ import {
   diasNoMes,
   formatarDiaDaSemanaEData,
   formatarDiaDaSemanaDataEAno,
+  formatarDataPorExtenso,
+  formatarDataNumerica,
+  formatarPeriodoDeCobranca,
+  formatarPeriodoDoDocumento,
   instanteDoDiaEmFortaleza,
 } from "@/lib/utils/data-fortaleza";
 
@@ -29,7 +33,7 @@ import {
  */
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 18;
+const CONFERENCIAS_ESPERADAS = 26;
 
 beforeAll(() => {
   vi.stubEnv("TZ", "UTC");
@@ -129,6 +133,69 @@ describe("formatarDiaDaSemanaDataEAno", () => {
    */
   it("mostra o ano seguinte quando o vencimento cruza o ano", () => {
     expect(formatarDiaDaSemanaDataEAno("2027-01-04")).toBe("segunda, 4 de janeiro de 2027");
+    conferencias++;
+  });
+});
+
+describe("formatarDataPorExtenso", () => {
+  it("dia do mês + ano, sem dia da semana — a emissão do documento impresso (item 7)", () => {
+    expect(formatarDataPorExtenso("2026-08-05")).toBe("5 de agosto de 2026");
+    conferencias++;
+  });
+});
+
+describe("formatarDataNumerica", () => {
+  it("dd/mm/aaaa — o vencimento do bloco de cobrança no documento impresso (item 7)", () => {
+    expect(formatarDataNumerica("2026-08-20")).toBe("20/08/2026");
+    conferencias++;
+  });
+});
+
+describe("formatarPeriodoDeCobranca", () => {
+  it("período dentro de um mês só — só o nome do mês, sem dia nem ano", () => {
+    expect(
+      formatarPeriodoDeCobranca(new Date("2026-08-01T03:00:00.000Z"), new Date("2026-08-31T03:00:00.000Z")),
+    ).toBe("agosto");
+    conferencias++;
+  });
+
+  it("período atravessando meses — dd/mm a dd/mm", () => {
+    expect(
+      formatarPeriodoDeCobranca(new Date("2026-08-20T03:00:00.000Z"), new Date("2026-09-10T03:00:00.000Z")),
+    ).toBe("20/08 a 10/09");
+    conferencias++;
+  });
+
+  it("usa o dia de Fortaleza para decidir o mês, não o de UTC", () => {
+    // 2026-08-31T23:30 em Fortaleza = 2026-09-01T02:30Z: em UTC já é
+    // setembro, mas em Fortaleza ainda é agosto — os dois extremos precisam
+    // cair no mesmo mês de Fortaleza para o resultado ser só "agosto".
+    expect(
+      formatarPeriodoDeCobranca(new Date("2026-08-01T12:00:00.000Z"), new Date("2026-09-01T02:30:00.000Z")),
+    ).toBe("agosto");
+    conferencias++;
+  });
+});
+
+describe("formatarPeriodoDoDocumento", () => {
+  it("mesmo mês — dia a dia, um mês e ano só", () => {
+    expect(
+      formatarPeriodoDoDocumento(new Date("2026-07-01T03:00:00.000Z"), new Date("2026-07-31T03:00:00.000Z")),
+    ).toBe("1 a 31 de julho de 2026");
+    conferencias++;
+  });
+
+  it("atravessando mês, mesmo ano — mês por extenso nas duas pontas", () => {
+    expect(
+      formatarPeriodoDoDocumento(new Date("2026-08-20T03:00:00.000Z"), new Date("2026-09-10T03:00:00.000Z")),
+    ).toBe("20 de agosto a 10 de setembro de 2026");
+    conferencias++;
+  });
+
+  it("atravessando ano — ano em cada ponta, nunca só no fim", () => {
+    expect(
+      formatarPeriodoDoDocumento(new Date("2026-12-20T03:00:00.000Z"), new Date("2027-01-10T03:00:00.000Z")),
+    ).toBe("20 de dezembro de 2026 a 10 de janeiro de 2027");
     conferencias++;
   });
 });

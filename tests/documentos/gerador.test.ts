@@ -31,7 +31,7 @@ function abrirFonte(nomeDoArquivo: string): Font {
 const RODA_CHROMIUM = process.platform !== "win32";
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 27 + (RODA_CHROMIUM ? 4 : 0);
+const CONFERENCIAS_ESPERADAS = 30 + (RODA_CHROMIUM ? 4 : 0);
 
 const DADOS_SEM_COBRANCA: DadosDocumentoRelatorio = {
   numero: "0142",
@@ -130,6 +130,22 @@ describe("montarHtmlRelatorio — marcação e fontes embutidas", () => {
     expect(html).not.toContain("Chave CNPJ");
     conferencias++;
     expect(html).not.toContain("Banco");
+    conferencias++;
+  });
+
+  it("com cobrança mas sem chave Pix (item 7, Tarefa 3) — mostra vencimento, some só a coluna do Pix", () => {
+    const html = montarHtmlRelatorio({
+      ...DADOS_SEM_COBRANCA,
+      corpo: {
+        ...DADOS_SEM_COBRANCA.corpo,
+        cobranca: { vencimento: "20/08/2026", chavePix: null },
+      },
+    });
+    expect(html).toContain("VENCIMENTO");
+    conferencias++;
+    expect(html).toContain("20/08/2026");
+    conferencias++;
+    expect(html).not.toContain("PAGAMENTO VIA PIX");
     conferencias++;
   });
 });

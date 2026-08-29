@@ -14,17 +14,15 @@ import { uuidv7 } from "uuidv7";
  * (`gerador.ts`), nunca por upload de terceiro — não há conteúdo hostil a
  * filtrar, só um arquivo a guardar.
  *
- * **Sem checagem de posse aqui** — decisão de desenho, não descuido, mas sem
- * cadeia de proteção para provar ainda: esta função só grava em
- * `{empresaId}/{uuid}.pdf`, sem referenciar nenhuma linha do banco — não há
- * "posse de quê" para conferir, mesma natureza de qualquer `db(empresaId)`
- * do resto do produto. A garantia real é inteiramente do lado de quem
- * chama: `empresaId` precisa vir sempre da sessão autenticada, nunca de
- * entrada externa. Hoje (Tarefa 2) **nenhum chamador existe ainda** — quem
- * escrever a Tarefa 3 (`gerarRelatorio`) é responsável por passar o
- * `empresaId` certo, com o mesmo cuidado que `criarRelatorio` já tem para
- * `cliente_id`/`servico_id` (`CLAUDE.md` §3) — não é uma garantia que já
- * está encadeada, é um requisito para quem encadear.
+ * **Sem checagem de posse aqui** — decisão de desenho, não descuido: esta
+ * função só grava em `{empresaId}/{uuid}.pdf`, sem referenciar nenhuma linha
+ * do banco — não há "posse de quê" para conferir, mesma natureza de
+ * qualquer `db(empresaId)` do resto do produto. A garantia real é
+ * inteiramente do lado de quem chama: `empresaId` precisa vir sempre da
+ * sessão autenticada, nunca de entrada externa. `gerarRelatorio`
+ * (`src/lib/servicos/relatorios.ts`, Tarefa 3, via `gerarDocumento`) é o
+ * chamador de verdade hoje, com o mesmo cuidado que `criarRelatorio` já tem
+ * para `cliente_id`/`servico_id` (`CLAUDE.md` §3).
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -80,4 +78,34 @@ export async function enviarRelatorioAoStorage(empresaId: string, pdf: Buffer): 
     throw new Error("Não deu para gerar o relatório agora.");
   }
   return caminho;
+}
+
+/**
+ * 5 minutos — mais longa que os 60s de `gerarUrlComprovante`
+ * (`src/lib/servicos/comprovantes.ts`) de propósito: lá a URL só precisa
+ * durar o tempo de uma miniatura carregar; aqui a pessoa abre a tela
+ * "Documento A4" e pode demorar para decidir entre Compartilhar/Baixar/
+ * Imprimir — uma URL de 60s podia expirar no meio dessa decisão.
+ */
+const EXPIRACAO_URL_RELATORIO_SEGUNDOS = 300;
+
+/**
+ * Assina a URL de leitura de um PDF já gravado no balde — nível baixo,
+ * **sem checagem de posse**: quem confere que o relatório pertence à
+ * empresa é `gerarUrlRelatorio` (`src/lib/servicos/relatorios.ts`), antes de
+ * chamar esta função com o caminho já lido de `Relatorio.pdf_url`. Separado
+ * em vez de a checagem morar aqui (como em `comprovantes.ts`) para não criar
+ * um import circular: `relatorios.ts` já importa `gerador.ts`, que importa
+ * este arquivo — se este arquivo importasse `buscarRelatorio` de volta de
+ * `relatorios.ts`, fecharia o ciclo.
+ */
+export async function assinarUrlRelatorio(caminho: string): Promise<string | null> {
+  const { data, error } = await clienteStorage.storage
+    .from(BALDE_RELATORIOS)
+    .createSignedUrl(caminho, EXPIRACAO_URL_RELATORIO_SEGUNDOS);
+  if (error) {
+    console.error("[documentos] falha ao assinar URL do relatório", error.message);
+    return null;
+  }
+  return data.signedUrl;
 }

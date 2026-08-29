@@ -1589,9 +1589,18 @@ Não invente resposta. Pergunte.
   rota que chamar `gerarDocumento` abre um Chromium inteiro por chamada
   (`docs/planos/item-7-relatorio.md`, "A medição": ≈2,9s frio), custo real
   por pedido. Decisão do fundador, 28/08/2026: registra como requisito da
-  rota, junto do `outputFileTracingIncludes` acima — quem construir a
-  Tarefa 3 aplica os dois no mesmo commit, mesma razão de os dois só fazerem
+  rota, junto do `outputFileTracingIncludes` acima — os dois só fazem
   sentido quando o caminho da rota existir.
+
+  **A Tarefa 3 nasceu dividida em dois commits** (decisão do fundador,
+  28/08/2026, `docs/planos/item-7-relatorio.md`: "a geração num, a tela
+  noutro"). O primeiro constrói `gerarRelatorio` (`src/lib/servicos/
+  relatorios.ts`) — ainda nenhuma rota chama a função, então esta pendência
+  continua igual à de cima. **Quem escrever o segundo commit (a tela de
+  montagem + a Server Action) é quem aplica os dois requisitos**, no mesmo
+  commit que cria a rota — achado do terceiro `/revisar`, para esta entrada
+  não continuar apontando para "quem construir a Tarefa 3" como se fosse um
+  commit só.
 - **ATENÇÃO AO RODAR — o gerador de PDF do relatório não roda no Windows
   local.** Item 7, Tarefa 2 (`docs/planos/item-7-relatorio.md`), 28/08/2026.
   `puppeteer-core` + `@sparticuz/chromium` — a combinação medida contra a
@@ -1608,6 +1617,27 @@ Não invente resposta. Pergunte.
   de verdade. Se algum dia um deles ficar vermelho *localmente* em vez de
   pular, o sintoma mais provável é `process.platform` não ter sido lido
   corretamente — não um defeito do gerador em si.
+
+  **`tests/relatorios.test.ts` pula mais cinco, pelo mesmo motivo** — item
+  7, Tarefa 3 (28/08/2026, achado do segundo `/revisar`): os testes de
+  `gerarRelatorio` chamam `gerarDocumento` por baixo, então o mesmo
+  `RODA_CHROMIUM`/`it.skipIf` se aplica lá. Registrado aqui porque esta
+  entrada, ao nomear "os três testes" de um arquivo só, ficaria enganosa
+  assim que outro arquivo passasse a pular pelo mesmo motivo — o defeito que
+  o `CLAUDE.md` §2 já registrou duas vezes para outros textos.
+- **`gerarRelatorio` pode deixar título(s) criado(s) sem PDF, sem caminho de
+  recuperação.** Item 7, Tarefa 3 (`src/lib/servicos/relatorios.ts`,
+  28/08/2026), achado do `/revisar`. A função não é uma única transação de
+  banco (decisão de construção, comentário na própria função: prender uma
+  transação durante a chamada do Chromium seria o mesmo risco de timeout já
+  medido em `docs/diario.md`, 18/08/2026, só que maior) — se a geração do PDF
+  falhar depois de criar os títulos, o `Relatorio` fica com `pdf_url` nulo e
+  os títulos já em circulação (visíveis em Cobranças, dinheiro sendo cobrado
+  sem o documento que o explica). Não existe hoje um "tentar de novo": quem
+  vir esse estado precisa gerar um relatório novo, à mão. Decisão do
+  fundador, 28/08/2026: fica registrado como lacuna, não corrige agora — se
+  se mostrar alcançável com frequência real (não só teórica), vira tarefa
+  própria; se for raro, permanece assim.
 - **PRAZO — trava de 2 GB por empresa no storage (§10) ainda não existe.**
   Achado do `/revisar` na Tarefa 5 do item 5 (25/08/2026), quando o upload de
   comprovante (`src/lib/servicos/comprovantes.ts`, `enviarComprovante`)

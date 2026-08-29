@@ -127,12 +127,13 @@ describe("montarMensagemOrdem", () => {
  * tem chave cadastrada) e a frase final, sempre presente.
  */
 let conferenciasCobranca = 0;
-const CONFERENCIAS_ESPERADAS_COBRANCA = 7;
+const CONFERENCIAS_ESPERADAS_COBRANCA = 9;
 
 const BASE_COBRANCA: DadosMensagemCobranca = {
   empresa: "Transportes Silva",
   cliente: "Frigorífico São Luiz",
   rota: "Fortaleza → Sobral",
+  periodo: null,
   valor: "2.400,00",
   vencimento: "sexta, 5 de setembro",
   vencido: false,
@@ -196,6 +197,20 @@ describe("montarMensagemCobranca", () => {
   it("empresa sozinha na primeira linha, sem nada antes", () => {
     const resultado = montarMensagemCobranca(BASE_COBRANCA);
     expect(resultado.startsWith("Transportes Silva\n\n")).toBe(true);
+    conferenciasCobranca++;
+  });
+
+  it("com período (item 7, relatório de vários fretes) — a frase vira 'dos fretes de {periodo}', nunca conta quantos", () => {
+    const resultado = montarMensagemCobranca({ ...BASE_COBRANCA, periodo: "agosto" });
+    expect(resultado).toContain("Passando pra lembrar dos fretes de agosto.");
+    expect(resultado).not.toMatch(/\d+ fretes/);
+    conferenciasCobranca++;
+  });
+
+  it("período presente vence a rota — nunca 'do frete {rota}' quando periodo está preenchido", () => {
+    const resultado = montarMensagemCobranca({ ...BASE_COBRANCA, periodo: "20/08 a 10/09" });
+    expect(resultado).toContain("Passando pra lembrar dos fretes de 20/08 a 10/09.");
+    expect(resultado).not.toContain("Fortaleza → Sobral");
     conferenciasCobranca++;
   });
 });

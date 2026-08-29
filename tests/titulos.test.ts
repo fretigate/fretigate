@@ -23,6 +23,7 @@ import {
   ultimoEnvioPorTitulo,
   listarEnviosDoTitulo,
 } from "@/lib/servicos/titulos";
+import { criarRelatorio } from "@/lib/servicos/relatorios";
 import {
   criarServico,
   arquivarServico,
@@ -60,7 +61,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 85;
+const CONFERENCIAS_ESPERADAS = 88;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -234,8 +235,8 @@ beforeAll(async () => {
 afterAll(async () => {
   if (empresasParaLimpar.length) {
     // `cobranca_enviada` e `recebimento` referenciam `titulo_receber` (item
-    // 6, Tarefas 3 e 5) — saem primeiro. `titulo_receber` referencia servico
-    // e cliente — sai antes deles.
+    // 6, Tarefas 3 e 5) — saem primeiro. `titulo_receber` referencia servico,
+    // cliente e `relatorio` (item 7) — sai antes deles.
     await raiz.query(`DELETE FROM "cobranca_enviada" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
@@ -243,6 +244,17 @@ afterAll(async () => {
       empresasParaLimpar,
     ]);
     await raiz.query(`DELETE FROM "titulo_receber" WHERE empresa_id = ANY($1)`, [
+      empresasParaLimpar,
+    ]);
+    // `relatorio_servico` referencia `relatorio` e `servico` (item 7) — sai
+    // antes dos dois; `relatorio` referencia `cliente` — sai antes dele.
+    // Entraram aqui quando `faturarServico` ganhou `relatorioId` (item 7,
+    // Tarefa 3) e um teste deste arquivo passou a criar `Relatorio` de
+    // verdade — mesma ordem de `tests/relatorios.test.ts`.
+    await raiz.query(`DELETE FROM "relatorio_servico" WHERE empresa_id = ANY($1)`, [
+      empresasParaLimpar,
+    ]);
+    await raiz.query(`DELETE FROM "relatorio" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
     await raiz.query(`DELETE FROM "servico" WHERE empresa_id = ANY($1)`, [
@@ -1343,6 +1355,63 @@ describe("9. faturarServico — cria o título EM ABERTO", () => {
     expect(titulo.valor).toBe(e.valorServico);
     // O automático é o item 7 (relatório); este caminho é o manual.
     expect(titulo.relatorio_id).toBeNull();
+    conferencias++;
+  });
+
+  it("relatorioId (item 7) grava relatorio_id no título — o caminho manual segue sem ele", async () => {
+    const e = await criarEmpresaDeTeste("f1b");
+    await marcarServicoFinalizado(e.empresaId, e.servicoId);
+
+    const relatorio = await criarRelatorio(e.empresaId, {
+      clienteId: e.clienteId,
+      dataInicial: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      dataFinal: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      servicoIds: [e.servicoId],
+    });
+
+    const titulo = await faturarServico(e.empresaId, e.servicoId, {
+      vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+      formaPrevista: "outro",
+      relatorioId: relatorio.id,
+    });
+
+    expect(titulo.relatorio_id).toBe(relatorio.id);
+    conferencias++;
+  });
+
+  it("relatorioId (item 7) recusa relatório de outra empresa — a proteção mora onde grava, não em quem chama (CLAUDE.md §3)", async () => {
+    const a = await criarEmpresaDeTeste("f1c1");
+    const b = await criarEmpresaDeTeste("f1c2");
+    await marcarServicoFinalizado(a.empresaId, a.servicoId);
+
+    const relatorioDeB = await criarRelatorio(b.empresaId, {
+      clienteId: b.clienteId,
+      dataInicial: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      dataFinal: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      servicoIds: [b.servicoId],
+    });
+
+    await expect(
+      faturarServico(a.empresaId, a.servicoId, {
+        vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+        formaPrevista: "outro",
+        relatorioId: relatorioDeB.id,
+      }),
+    ).rejects.toThrow("Relatório não encontrado.");
+    conferencias++;
+  });
+
+  it("relatorioId (item 7) recusa relatório que não existe", async () => {
+    const e = await criarEmpresaDeTeste("f1d");
+    await marcarServicoFinalizado(e.empresaId, e.servicoId);
+
+    await expect(
+      faturarServico(e.empresaId, e.servicoId, {
+        vencimento: instanteDoDiaEmFortaleza("2026-09-10"),
+        formaPrevista: "outro",
+        relatorioId: randomUUID(),
+      }),
+    ).rejects.toThrow("Relatório não encontrado.");
     conferencias++;
   });
 

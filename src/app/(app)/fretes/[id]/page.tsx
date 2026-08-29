@@ -13,7 +13,7 @@ import { CabecalhoDeDetalhe } from "@/components/ui/CabecalhoDeDetalhe";
 import { EtiquetaSituacao } from "@/components/ui/EtiquetaSituacao";
 import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
 import { nomeCaminhao } from "@/lib/utils/caminhao";
-import { diaEmFortaleza, formatarDiaDaSemanaEData } from "@/lib/utils/data-fortaleza";
+import { diaEmFortaleza, formatarDataPorExtenso, formatarDiaDaSemanaEData } from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { BotaoArquivarFrete } from "../BotaoArquivarFrete";
 import { registrarRecebimentoAction } from "../acoes";
@@ -62,16 +62,6 @@ import { AnexarComprovante } from "./AnexarComprovante";
  * `/fretes/[id]/editar`, construída na Tarefa 4
  * (`docs/planos/item-4-lista-e-detalhe-do-frete.md`).
  */
-
-const MESES = [
-  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
-];
-
-function formatarDataPorExtenso(dia: string): string {
-  const [ano, mes, diaDoMes] = dia.split("-").map(Number);
-  return `${diaDoMes} de ${MESES[mes - 1]} de ${ano}`;
-}
 
 /** Mesma lógica de `formatarRota` em `fretes/page.tsx` — só o que existir. */
 function formatarRota(origem: string | null, destino: string | null): string | null {
