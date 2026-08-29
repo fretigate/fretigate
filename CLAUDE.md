@@ -1639,13 +1639,20 @@ Não invente resposta. Pergunte.
 
   **A Tarefa 3 nasceu dividida em dois commits** (decisão do fundador,
   28/08/2026, `docs/planos/item-7-relatorio.md`: "a geração num, a tela
-  noutro"). O primeiro constrói `gerarRelatorio` (`src/lib/servicos/
-  relatorios.ts`) — ainda nenhuma rota chama a função, então esta pendência
-  continua igual à de cima. **Quem escrever o segundo commit (a tela de
-  montagem + a Server Action) é quem aplica os dois requisitos**, no mesmo
-  commit que cria a rota — achado do terceiro `/revisar`, para esta entrada
-  não continuar apontando para "quem construir a Tarefa 3" como se fosse um
-  commit só.
+  noutro"). O primeiro construiu `gerarRelatorio` (`src/lib/servicos/
+  relatorios.ts`) — ainda nenhuma rota chamava a função, então a pendência
+  continuava igual à de cima.
+
+  **Os dois requisitos foram aplicados no segundo commit (29/08/2026)** — a
+  tela de montagem (`/relatorio`) e a Server Action (`gerarRelatorioAction`,
+  `src/app/(app)/relatorio/acoes.ts`) existem agora: `next.config.ts` ganhou
+  `outputFileTracingIncludes` para `/relatorio`, e a ação confere
+  `travaDeGerarRelatorio` (`src/lib/servicos/trava-de-relatorio.ts`, 10 por 5
+  minutos — `docs/especificacao.md` § "Trava de tentativas") antes de gerar.
+  **O que ainda falta é só a confirmação em produção de verdade** — o
+  binário e as fontes embarcando na função publicada na Vercel; local e
+  esteira não passam por essa etapa (o gerador de PDF nem roda no Windows,
+  ver abaixo), então continua sem confirmação até o primeiro deploy real.
 - **ATENÇÃO AO RODAR — o gerador de PDF do relatório não roda no Windows
   local.** Item 7, Tarefa 2 (`docs/planos/item-7-relatorio.md`), 28/08/2026.
   `puppeteer-core` + `@sparticuz/chromium` — a combinação medida contra a

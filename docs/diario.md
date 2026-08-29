@@ -6,6 +6,131 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 29/08/2026 — Tarefa 3 do item 7, segundo commit: montagem, Documento A4 e agrupamento em Cobranças
+
+Fecha o item 7, Tarefa 3 inteira — a tela "Relatório — montagem", a Server
+Action `gerarRelatorioAction`, a tela "Documento A4", e os três requisitos
+que o fundador pediu para garantir nesta rodada: os dois totais divergentes,
+o agrupamento em Cobranças, e `outputFileTracingIncludes` + rate limit
+(`docs/planos/item-7-relatorio.md`).
+
+**Tela de montagem** (`src/app/(app)/relatorio/`): cliente e período viajam
+pela URL (mesmo padrão de Cobranças/Meus fretes — trocar qualquer um pede
+fretes diferentes ao servidor). Sem período na URL, o padrão é **mês
+passado** — evidência corroborante do protótipo (`TelaRelatorio.dc.html`,
+`CLAUDE.md` §13), diferente do padrão "mês atual" dos resumos de perfil.
+Nova função `resolverPeriodoDoRelatorio` (`src/lib/utils/periodo.ts`),
+mesmo formato de `resolverPeriodoDoPerfil` mas com esse padrão diferente e
+sem o modo "sem fim" de `"todos"` (nunca é opção aqui). Cada linha
+desmarcável, tudo marcado por padrão. "Gerar cobrança" revela forma prevista
+(Boleto/Outro) e vencimento editável (`FolhaDeCalendario`, mesmo padrão de
+`FolhaDeFaturamento`).
+
+**Os dois totais** — `calcularTotaisDoRelatorio`
+(`src/lib/utils/totais-relatorio.ts`, função pura, testada): total do
+documento soma tudo marcado, total cobrável soma só o `finalizado`; os dois
+aparecem juntos só quando divergem de verdade (cobrança ativa + algum
+`em_andamento` marcado).
+
+**Documento A4** (`src/app/(app)/relatorio/[id]/`): reconstrói a mesma
+marcação do gerador de PDF a partir do banco — `buscarDadosParaPreviaDocumento`
+(nova, `relatorios.ts`), extraída de dentro de `gerarRelatorio` para as duas
+pontas (gerar o PDF, mostrar a prévia) usarem a mesma montagem, nunca duas
+implementações do mesmo desenho (`CLAUDE.md` §8). Ações: Compartilhar no
+WhatsApp (Web Share API com o arquivo, cai para baixar sem suporte) · Baixar
+PDF · Imprimir.
+
+**Agrupamento em Cobranças** (`docs/especificacao.md` §4.5) — a peça que mais
+cresceu durante a construção. `agruparPorRelatorio`
+(`src/lib/servicos/cobrancas-situacao.ts`, pura, testada) junta títulos do
+mesmo `relatorio_id` numa linha só, valor somado, preservando a posição do
+primeiro membro na lista. Perguntando "como ela recebe o dinheiro dali"
+apareceu uma peça que a regra escrita não cobria: **sem "Marcar recebido" na
+linha agrupada** — registrar contra um só dos N títulos receberia uma fração
+em silêncio (`CLAUDE.md` §2, rigor total). Decisão do fundador: um chevron
+expande a linha e revela cada título como uma linha normal, com o próprio
+deslizar que já funciona — peça nova, `LinhaCobrancaAgrupada.tsx`. "Cobrar no
+WhatsApp" continua na linha agrupada e registra em TODOS os títulos do grupo
+no mesmo instante (`registrarCobrancaEnviadaEmGrupo`, `titulos.ts` — tudo ou
+nada, testado: um título inválido no meio recusa o grupo inteiro, nenhum
+fica gravado). `AcaoCobrarNoWhatsApp` generalizada de `tituloId: string` para
+`tituloIds: string[]` (extensão, não duplicação — os dois call sites
+antigos passam `[id]`).
+
+**O achado que motivou tudo, vale registrar como método:** o caminho de
+receber já existia — pela tela de Fretes, frete por frete — só não na tela
+onde a pendência aparece. Isso só apareceu perguntando "como ela faz isso"
+durante a construção; nenhum teste automatizado teria achado, porque
+tecnicamente o dinheiro sempre teve um caminho.
+
+**`outputFileTracingIncludes` + rate limit** — os dois aplicados nesta
+tarefa: `next.config.ts` ganhou a chave para `/relatorio`;
+`travaDeGerarRelatorio` (`src/lib/servicos/trava-de-relatorio.ts`, 10 por 5
+minutos, número aprovado pelo fundador na sessão) roda antes de gerar.
+`CLAUDE.md` §14 atualizado — o que faltava era só a rota existir, e agora
+existe; falta só a confirmação em produção de verdade.
+
+**Erro achado e corrigido durante a construção, vale registrar.** Escrevi
+`formatarPeriodoDeCobranca` do zero, sem checar que já existia — comitada
+no primeiro commit da Tarefa 3. Pior: minha versão estava errada — li "o
+formatador **some** com o ano" (`docs/planos/item-7-relatorio.md`) como
+"**soma** o ano" (adiciona), quando "some" ali é do verbo *sumir*
+("desaparece com o ano" — omite, não adiciona). A versão já existente,
+correta, ficou; a minha foi removida. Dois agentes de pesquisa despachados
+na sessão erraram ao afirmar que a função "não existia" — não confirmei
+antes de escrever por cima.
+
+**Peça extraída, não copiada:** `LinhaRecolhida` (linha "RÓTULO · valor ·
+seta", nascida em "Lançar frete") virou componente próprio
+(`src/components/ui/LinhaRecolhida.tsx`) no segundo uso real — mesmo
+critério de `Etiqueta`/`EtiquetaSituacao.tsx` (`CLAUDE.md` §6).
+
+**Pendências registradas ao Design** (`docs/planos/item-7-relatorio.md`,
+"O que precisa chegar ao Design"): o tratamento visual do chevron (medido
+contra o CSS compilado — alvo de 48×78px — mas não confirmado ao vivo num
+navegador autenticado, sem conta de teste à mão nesta sessão); como o grupo
+aberto se distingue visualmente das outras linhas (hoje só recuo + rótulo,
+nenhuma cor nova); a etiqueta de `em_andamento` na prévia (mesma lacuna já
+registrada no item 4 para "cancelado").
+
+**Dois passes do `/revisar`, achados corrigidos antes do commit.** O
+primeiro (12 divergências + 6 lacunas) corrigiu o teto de 50 cortando
+relatório ao meio (`completarGruposDeRelatorio`), a mesma checagem de
+WhatsApp faltando no boleto/recebidas do caminho agrupado, e estendeu
+`LinhaDeLista` em vez de duplicar `LinhaCobrancaAgrupada` (`CLAUDE.md` §8) —
+maior fix, seis telas conferidas. O segundo (9 divergências + 7 lacunas)
+achou uma regressão do primeiro: `cobrancas/[id]/page.tsx` (Server
+Component) passava uma closure (`(ids) => registrarCobrancaEnviadaAction
+(ids[0])`) como prop para o Client Component `AcaoCobrarNoWhatsApp` —
+closure não atravessa a fronteira de serialização do RSC, a tela de detalhe
+da cobrança quebraria ao renderizar. Corrigido eliminando a ação de
+um-título-só: `registrarCobrancaEnviadaEmGrupoAction` (já aceita
+`tituloIds: string[]`) serve os dois casos, código morto removido
+(`registrarCobrancaEnviada`/`registrarCobrancaEnviadaAction`). Também deste
+passe: `marcaCobrado` do grupo pegava só `itens[0]` em vez do envio mais
+recente (terceira ocorrência do padrão "regra fala de todos os itens da
+coleção, código olha um", `CLAUDE.md` §2); `limitadoA50` ficava errado
+depois da completude do grupo (`listarCobrancas` agora devolve `{ titulos,
+cortado }`, `cortado` calculado antes de completar); "Baixar PDF" não
+baixava de verdade (URL assinada é de outra origem, `<a download>` não
+funciona cross-origin — corrigido buscando o PDF como blob); o aviso "sem
+chave Pix" era perdido porque `setAviso` + `router.push` na mesma função
+abandonava a tela que mostraria o aviso — agora viaja pela URL
+(`?semPix=1`) até o Documento A4.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` verdes. `npm test`
+— suíte inteira, 30/30 arquivos, **588 passaram, 8 puladas** (Chromium não
+roda no Windows — mesma lacuna já registrada em `CLAUDE.md` §14). Contra o
+banco de **desenvolvimento**, não o de teste da esteira (`CLAUDE.md` §2,
+"suíte verde local ≠ esteira verde") — a esteira roda só depois do push,
+confirmação pendente na próxima sessão.
+
+Próximo: item 7, Tarefa 4 — "Entradas no fluxo" (liga as pontas que
+`docs/navegacao.md` já marca com ⚠️: perfil do cliente, estado vazio de
+Cobranças, detalhe do frete, detalhe da cobrança, Mais, dashboard).
+
+---
+
 ## 29/08/2026 — Esteira vermelha do commit `5fd6700`, investigada: fila serializada, não instabilidade genérica
 
 **Achado ao rodar `/onde-paramos`:** o commit `5fd6700` (só plano/comentário,

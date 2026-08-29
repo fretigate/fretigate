@@ -36,7 +36,8 @@ export type DadosDocumentoRelatorio = {
   corpo: CorpoRelatorioProps;
 };
 
-const TITULO_RELATORIO = "RELATÓRIO DE SERVIÇOS";
+/** Exportado para a prévia em tela do Documento A4 (item 7, Tarefa 3, segundo commit) montar o mesmo molde — só o servidor importa este módulo (`server-only`), então isto nunca chega ao navegador direto: quem usa é `page.tsx`, repassando como prop de texto simples. */
+export const TITULO_RELATORIO = "RELATÓRIO DE SERVIÇOS";
 
 /** Exportada para teste (`tests/documentos/gerador.test.ts`) — confere a marcação e as fontes embutidas sem precisar abrir um Chromium. */
 export function montarHtmlRelatorio(dados: DadosDocumentoRelatorio): string {

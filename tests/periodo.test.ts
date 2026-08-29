@@ -3,6 +3,7 @@ import {
   resolverPeriodoDaUrl,
   resolverLimiteDaLista,
   resolverPeriodoDoPerfil,
+  resolverPeriodoDoRelatorio,
   rotuloDoPeriodo,
 } from "@/lib/utils/periodo";
 import { diaEmFortaleza, instanteDoDiaEmFortaleza, deslocarMes, deslocarDias } from "@/lib/utils/data-fortaleza";
@@ -16,7 +17,8 @@ import { diaEmFortaleza, instanteDoDiaEmFortaleza, deslocarMes, deslocarDias } f
  */
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 29;
+// +7 (item 7, segundo commit): describe "resolverPeriodoDoRelatorio".
+const CONFERENCIAS_ESPERADAS = 29 + 7;
 
 describe("resolverPeriodoDaUrl", () => {
   it("sem janela nenhuma → sem filtro (null)", () => {
@@ -261,6 +263,85 @@ describe("resolverPeriodoDoPerfil", () => {
     const dezAnosNoFuturo = new Date();
     dezAnosNoFuturo.setFullYear(dezAnosNoFuturo.getFullYear() + 10);
     expect(periodo.fim.getTime()).toBeGreaterThan(dezAnosNoFuturo.getTime());
+    conferencias++;
+  });
+});
+
+/**
+ * `resolverPeriodoDoRelatorio` (item 7, segundo commit) — mesmo formato de
+ * `resolverPeriodoDoPerfil` acima, mas com padrão "mês passado" (não "mês
+ * atual") e sem o modo "sem fim" de `"todos"` (a montagem do relatório
+ * nunca oferece essa janela, `docs/especificacao.md` §4.4).
+ */
+describe("resolverPeriodoDoRelatorio", () => {
+  it("sem janela → mes-passado, mesmo período de resolverPeriodoDaUrl('mes-passado')", () => {
+    const esperado = resolverPeriodoDaUrl("mes-passado", undefined, undefined)!;
+    const { periodo, janelaEfetiva } = resolverPeriodoDoRelatorio(undefined, undefined, undefined);
+    expect(janelaEfetiva).toBe("mes-passado");
+    expect(periodo.inicio.getTime()).toBe(esperado.inicio.getTime());
+    expect(periodo.fim.getTime()).toBe(esperado.fim.getTime());
+    conferencias++;
+  });
+
+  it("mes-atual → passa direto (o chip nunca discorda do número)", () => {
+    const esperado = resolverPeriodoDaUrl("mes-atual", undefined, undefined)!;
+    const { periodo, janelaEfetiva } = resolverPeriodoDoRelatorio("mes-atual", undefined, undefined);
+    expect(janelaEfetiva).toBe("mes-atual");
+    expect(periodo.inicio.getTime()).toBe(esperado.inicio.getTime());
+    expect(periodo.fim.getTime()).toBe(esperado.fim.getTime());
+    conferencias++;
+  });
+
+  it("ultimos-30-dias → passa direto (janela própria do item 7)", () => {
+    const esperado = resolverPeriodoDaUrl("ultimos-30-dias", undefined, undefined)!;
+    const { periodo, janelaEfetiva } = resolverPeriodoDoRelatorio(
+      "ultimos-30-dias",
+      undefined,
+      undefined,
+    );
+    expect(janelaEfetiva).toBe("ultimos-30-dias");
+    expect(periodo.inicio.getTime()).toBe(esperado.inicio.getTime());
+    expect(periodo.fim.getTime()).toBe(esperado.fim.getTime());
+    conferencias++;
+  });
+
+  it("personalizado com de/ate válidos → passa direto", () => {
+    const esperado = resolverPeriodoDaUrl("personalizado", "2026-01-10", "2026-01-15")!;
+    const { periodo, janelaEfetiva } = resolverPeriodoDoRelatorio(
+      "personalizado",
+      "2026-01-10",
+      "2026-01-15",
+    );
+    expect(janelaEfetiva).toBe("personalizado");
+    expect(periodo.inicio.getTime()).toBe(esperado.inicio.getTime());
+    expect(periodo.fim.getTime()).toBe(esperado.fim.getTime());
+    conferencias++;
+  });
+
+  it("personalizado sem de/ate válidos → cai para mes-passado, não personalizado sem período", () => {
+    const esperado = resolverPeriodoDaUrl("mes-passado", undefined, undefined)!;
+    const { periodo, janelaEfetiva } = resolverPeriodoDoRelatorio("personalizado", undefined, undefined);
+    expect(janelaEfetiva).toBe("mes-passado");
+    expect(periodo.inicio.getTime()).toBe(esperado.inicio.getTime());
+    expect(periodo.fim.getTime()).toBe(esperado.fim.getTime());
+    conferencias++;
+  });
+
+  it("\"todos\" nunca é opção aqui — cai para mes-passado, não vira sem-fim", () => {
+    const esperado = resolverPeriodoDaUrl("mes-passado", undefined, undefined)!;
+    const { periodo, janelaEfetiva } = resolverPeriodoDoRelatorio("todos", undefined, undefined);
+    expect(janelaEfetiva).toBe("mes-passado");
+    expect(periodo.inicio.getTime()).toBe(esperado.inicio.getTime());
+    expect(periodo.fim.getTime()).toBe(esperado.fim.getTime());
+    conferencias++;
+  });
+
+  it("valor de janela desconhecido → cai para mes-passado", () => {
+    const esperado = resolverPeriodoDaUrl("mes-passado", undefined, undefined)!;
+    const { periodo, janelaEfetiva } = resolverPeriodoDoRelatorio("qualquer-coisa", undefined, undefined);
+    expect(janelaEfetiva).toBe("mes-passado");
+    expect(periodo.inicio.getTime()).toBe(esperado.inicio.getTime());
+    expect(periodo.fim.getTime()).toBe(esperado.fim.getTime());
     conferencias++;
   });
 });

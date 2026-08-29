@@ -6,7 +6,13 @@ import {
   listarCobrancas,
   resumoDeCobrancas,
 } from "@/lib/servicos/cobrancas";
-import { grupoDaCobranca, resolverSituacaoDaUrl, textoCobradoHa } from "@/lib/servicos/cobrancas-situacao";
+import {
+  agruparPorRelatorio,
+  grupoDaCobranca,
+  resolverSituacaoDaUrl,
+  textoCobradoHa,
+  type CobrancaParaLista,
+} from "@/lib/servicos/cobrancas-situacao";
 import {
   criarTituloJaRecebi,
   faturarServico,
@@ -17,6 +23,7 @@ import {
 import type { Periodo } from "@/lib/servicos/servicos";
 import { arquivarServico, criarServico, marcarServicoFinalizado } from "@/lib/servicos/servicos";
 import { criarCliente } from "@/lib/servicos/clientes";
+import { criarRelatorio } from "@/lib/servicos/relatorios";
 import {
   deslocarDias,
   diaEmFortaleza,
@@ -40,7 +47,13 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 27;
+// +8 (item 7, segundo commit; +1 no segundo passe do /revisar, marcaCobrado
+// do grupo): describe "1b. agruparPorRelatorio".
+// +2 (item 7, segundo commit, achado do segundo /revisar): teto de 50 não
+// corta relatório ao meio.
+// +1 (segundo passe do /revisar): `cortado` continua true depois da
+// completude do grupo.
+const CONFERENCIAS_ESPERADAS = 27 + 8 + 2 + 1;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -157,9 +170,14 @@ beforeAll(async () => {
 afterAll(async () => {
   if (empresasParaLimpar.length) {
     // `recebimento` referencia `titulo_receber` (item 6, Tarefa 3) — sai
-    // primeiro.
+    // primeiro. `titulo_receber.relatorio_id` e `relatorio_servico`
+    // referenciam `relatorio` (item 7, segundo commit — `criarRelatorio` no
+    // teste de `completarGruposDeRelatorio`) — os dois saem antes de
+    // `relatorio`, que sai antes de `servico`.
     await raiz.query(`DELETE FROM "recebimento" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
     await raiz.query(`DELETE FROM "titulo_receber" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
+    await raiz.query(`DELETE FROM "relatorio_servico" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
+    await raiz.query(`DELETE FROM "relatorio" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
     await raiz.query(`DELETE FROM "servico" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
     await raiz.query(`DELETE FROM "cliente" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
     await raiz.query(`DELETE FROM "usuario" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
@@ -217,6 +235,156 @@ describe("1. grupoDaCobranca — Vencidas · Vence hoje · A vencer", () => {
     expect(grupoDaCobranca(vence26, diaFortaleza)).toBe("vence_hoje");
     // Com o dia errado (UTC), a mesma cobrança apareceria como vencida.
     expect(grupoDaCobranca(vence26, diaUtc)).toBe("vencidas");
+    conferencias++;
+  });
+});
+
+/**
+ * `agruparPorRelatorio` (item 7, segundo commit —
+ * `docs/especificacao.md` §4.5: "uma cobrança gerada por relatório é uma
+ * linha só, não uma por frete"). Pura, sem banco — mesma família de
+ * `grupoDaCobranca` acima.
+ */
+describe("1b. agruparPorRelatorio", () => {
+  function item(sobrescreve: Partial<CobrancaParaLista> = {}): CobrancaParaLista {
+    return {
+      id: randomUUID(),
+      clienteId: "cliente-1",
+      cliente: "Cliente Um",
+      referencia: "Fortaleza → Sobral · 5 ago",
+      valorCentavos: 10000,
+      grupo: "a_vencer",
+      dia: "2026-08-20",
+      boleto: false,
+      parcial: false,
+      clienteTelefone: null,
+      rota: "Fortaleza → Sobral",
+      vencimentoFormatado: "quinta, 20 de agosto",
+      marcaCobrado: null,
+      marcaCobradoEm: null,
+      relatorioId: null,
+      ...sobrescreve,
+    };
+  }
+
+  it("sem relatorio_id, cada título fica na própria linha", () => {
+    const a = item();
+    const b = item();
+    const resultado = agruparPorRelatorio([a, b], new Map());
+    expect(resultado).toHaveLength(2);
+    expect(resultado[0].agrupado).toBeUndefined();
+    expect(resultado[1].agrupado).toBeUndefined();
+    conferencias++;
+  });
+
+  it("relatório de um frete só não agrupa — fica como título normal", () => {
+    const a = item({ relatorioId: "rel-1" });
+    const resultado = agruparPorRelatorio([a], new Map([["rel-1", "agosto"]]));
+    expect(resultado).toHaveLength(1);
+    expect(resultado[0].agrupado).toBeUndefined();
+    expect(resultado[0].id).toBe(a.id);
+    conferencias++;
+  });
+
+  it("2+ títulos do mesmo relatório viram uma linha só, valor somado", () => {
+    const a = item({ relatorioId: "rel-1", valorCentavos: 10000 });
+    const b = item({ relatorioId: "rel-1", valorCentavos: 25000 });
+    const c = item({ relatorioId: "rel-1", valorCentavos: 5000 });
+    const resultado = agruparPorRelatorio([a, b, c], new Map([["rel-1", "agosto"]]));
+
+    expect(resultado).toHaveLength(1);
+    const grupo = resultado[0];
+    expect(grupo.agrupado).toBeDefined();
+    expect(grupo.valorCentavos).toBe(40000);
+    expect(grupo.agrupado!.fretes).toBe(3);
+    expect(grupo.agrupado!.tituloIds.sort()).toEqual([a.id, b.id, c.id].sort());
+    expect(grupo.agrupado!.periodo).toBe("agosto");
+    // A referência textual e a rota de UM frete não sobrevivem ao grupo —
+    // "3 fretes" substitui, `rota` fica null (usado só para mensagem de
+    // frete único).
+    expect(grupo.referencia).toBe("3 fretes");
+    expect(grupo.rota).toBeNull();
+    conferencias++;
+  });
+
+  it("a linha do grupo aparece na posição do primeiro membro, nunca no fim da lista", () => {
+    const solto1 = item({ id: "solto-1" });
+    const membro1 = item({ id: "m1", relatorioId: "rel-1" });
+    const solto2 = item({ id: "solto-2" });
+    const membro2 = item({ id: "m2", relatorioId: "rel-1" });
+
+    const resultado = agruparPorRelatorio(
+      [solto1, membro1, solto2, membro2],
+      new Map([["rel-1", "agosto"]]),
+    );
+
+    expect(resultado.map((r) => r.id === "m1" || r.agrupado ? "grupo" : r.id)).toEqual([
+      "solto-1",
+      "grupo",
+      "solto-2",
+    ]);
+    conferencias++;
+  });
+
+  it("parcial é true se QUALQUER título do grupo tiver recebido parte — nunca só o primeiro", () => {
+    const semParcial = item({ relatorioId: "rel-1", parcial: false });
+    const comParcial = item({ relatorioId: "rel-1", parcial: true });
+    const resultado = agruparPorRelatorio([semParcial, comParcial], new Map([["rel-1", "agosto"]]));
+    expect(resultado[0].parcial).toBe(true);
+    conferencias++;
+  });
+
+  /**
+   * Achado do segundo `/revisar`: uma primeira versão fazia `...itens[0]`
+   * herdar `marcaCobrado` do primeiro membro do grupo, escolhido por acaso
+   * pela ordem da lista — igual ao defeito de `TipoOperacao`/
+   * `veiculo_habitual_id` que `CLAUDE.md` §2 já nomeia ("a regra fala de
+   * TODOS os itens de uma coleção, o código olha um"). O segundo membro
+   * (cobrado 1 dia atrás) precisa vencer o primeiro (cobrado 5 dias atrás),
+   * mesmo aparecendo depois na lista.
+   */
+  it("marcaCobrado do grupo é o envio mais recente — nunca o do primeiro membro", () => {
+    const antigo = item({
+      relatorioId: "rel-1",
+      marcaCobrado: "cobrado há 5 dias por Ana",
+      marcaCobradoEm: new Date("2026-08-15T12:00:00Z"),
+    });
+    const recente = item({
+      relatorioId: "rel-1",
+      marcaCobrado: "cobrado há 1 dia por Beto",
+      marcaCobradoEm: new Date("2026-08-19T12:00:00Z"),
+    });
+    const resultado = agruparPorRelatorio([antigo, recente], new Map([["rel-1", "agosto"]]));
+    expect(resultado[0].marcaCobrado).toBe("cobrado há 1 dia por Beto");
+    conferencias++;
+  });
+
+  it("os itens revelados ao expandir não carregam relatorioId — nunca reagrupam sozinhos", () => {
+    const a = item({ relatorioId: "rel-1" });
+    const b = item({ relatorioId: "rel-1" });
+    const resultado = agruparPorRelatorio([a, b], new Map([["rel-1", "agosto"]]));
+    const filhos = resultado[0].agrupado!.itens;
+    expect(filhos).toHaveLength(2);
+    expect(filhos.every((f) => f.relatorioId === null && f.agrupado === undefined)).toBe(true);
+    conferencias++;
+  });
+
+  it("dois relatórios diferentes viram duas linhas, cada uma com o próprio total", () => {
+    const a = item({ relatorioId: "rel-1", valorCentavos: 10000 });
+    const b = item({ relatorioId: "rel-1", valorCentavos: 10000 });
+    const c = item({ relatorioId: "rel-2", valorCentavos: 30000 });
+    const d = item({ relatorioId: "rel-2", valorCentavos: 30000 });
+    const resultado = agruparPorRelatorio(
+      [a, b, c, d],
+      new Map([
+        ["rel-1", "agosto"],
+        ["rel-2", "20/08 a 10/09"],
+      ]),
+    );
+    expect(resultado).toHaveLength(2);
+    expect(resultado[0].valorCentavos).toBe(20000);
+    expect(resultado[1].valorCentavos).toBe(60000);
+    expect(resultado[1].agrupado!.periodo).toBe("20/08 a 10/09");
     conferencias++;
   });
 });
@@ -329,7 +497,7 @@ describe("3. resumoDeCobrancas — os três números do topo", () => {
     expect(resumo.aReceber).toBe(0);
     expect(resumo.vencido).toBe(0);
 
-    const listados = await listarCobrancas(e.empresaId, { situacao: "vencidas", periodo: null, hoje });
+    const { titulos: listados } = await listarCobrancas(e.empresaId, { situacao: "vencidas", periodo: null, hoje });
     expect(listados.find((t) => t.valor === 80000)).toBeUndefined();
     conferencias++;
   });
@@ -468,7 +636,7 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
       dataPagamento: new Date(),
     });
 
-    const lista = await listarCobrancas(e.empresaId, {
+    const { titulos: lista } = await listarCobrancas(e.empresaId, {
       situacao: "em_aberto",
       periodo: null,
       hoje,
@@ -492,7 +660,7 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
       vencimento: deslocarDias(hoje, -1),
     });
 
-    const lista = await listarCobrancas(e.empresaId, { situacao: "vencidas", periodo: null, hoje });
+    const { titulos: lista } = await listarCobrancas(e.empresaId, { situacao: "vencidas", periodo: null, hoje });
     expect(lista.map((t) => t.valor)).toEqual([22000]);
     conferencias++;
   });
@@ -514,8 +682,8 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
       formaPrevista: "outro",
     });
 
-    const boleto = await listarCobrancas(e.empresaId, { situacao: "boleto", periodo: null, hoje });
-    const aberto = await listarCobrancas(e.empresaId, {
+    const { titulos: boleto } = await listarCobrancas(e.empresaId, { situacao: "boleto", periodo: null, hoje });
+    const { titulos: aberto } = await listarCobrancas(e.empresaId, {
       situacao: "em_aberto",
       periodo: null,
       hoje,
@@ -540,7 +708,7 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
       vencimento: deslocarDias(hoje, 60),
     });
 
-    const lista = await listarCobrancas(e.empresaId, {
+    const { titulos: lista } = await listarCobrancas(e.empresaId, {
       situacao: "em_aberto",
       periodo: {
         inicio: instanteDoDiaEmFortaleza(hoje),
@@ -565,7 +733,7 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
     const titulo = await criarTituloJaRecebi(e.empresaId, e.usuarioId, servicoId);
     expect(titulo.vencimento).toBeNull();
 
-    const lista = await listarCobrancas(e.empresaId, {
+    const { titulos: lista } = await listarCobrancas(e.empresaId, {
       situacao: "recebidas",
       periodo: {
         inicio: instanteDoDiaEmFortaleza(deslocarDias(hoje, -1)),
@@ -602,7 +770,7 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
       dataPagamento: haQuarentaDias,
     });
 
-    const dentroDosUltimos2Dias = await listarCobrancas(e.empresaId, {
+    const { titulos: dentroDosUltimos2Dias } = await listarCobrancas(e.empresaId, {
       situacao: "recebidas",
       periodo: {
         inicio: instanteDoDiaEmFortaleza(deslocarDias(hoje, -1)),
@@ -614,7 +782,7 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
     // título apareceria aqui — e não deveria, porque foi recebido há 40 dias.
     expect(dentroDosUltimos2Dias.map((t) => t.valor)).not.toContain(44400);
 
-    const semFiltro = await listarCobrancas(e.empresaId, {
+    const { titulos: semFiltro } = await listarCobrancas(e.empresaId, {
       situacao: "recebidas",
       periodo: null,
       hoje,
@@ -662,7 +830,7 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
       dataPagamento: ha20Dias,
     });
 
-    const semTeto = await listarCobrancas(e.empresaId, {
+    const { titulos: semTeto } = await listarCobrancas(e.empresaId, {
       situacao: "recebidas",
       periodo: null,
       hoje,
@@ -671,7 +839,7 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
     // criação (10001, 10003, 10002).
     expect(semTeto.map((t) => t.valor)).toEqual([10003, 10001, 10002]);
 
-    const comTeto = await listarCobrancas(e.empresaId, {
+    const { titulos: comTeto } = await listarCobrancas(e.empresaId, {
       situacao: "recebidas",
       periodo: null,
       limite: 2,
@@ -706,7 +874,7 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
     const resumo = await resumoDeCobrancas(e.empresaId, hoje);
     expect(resumo.recebidoNoMes).toBe(55500);
 
-    const recebidas = await listarCobrancas(e.empresaId, {
+    const { titulos: recebidas } = await listarCobrancas(e.empresaId, {
       situacao: "recebidas",
       periodo: null,
       hoje,
@@ -730,7 +898,7 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
       vencimento: deslocarDias(hoje, 5),
     });
 
-    const lista = await listarCobrancas(e.empresaId, {
+    const { titulos: lista } = await listarCobrancas(e.empresaId, {
       situacao: "em_aberto",
       periodo: null,
       limite: 1,
@@ -751,12 +919,67 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
       vencimento: deslocarDias(hoje, 1),
     });
 
-    const lista = await listarCobrancas(a.empresaId, {
+    const { titulos: lista } = await listarCobrancas(a.empresaId, {
       situacao: "em_aberto",
       periodo: null,
       hoje,
     });
     expect(lista).toHaveLength(0);
+    conferencias++;
+  });
+
+  /**
+   * O teto de 50 (aqui, 3, pra medir sem plantar 50 títulos) corta
+   * TÍTULOS, não relatórios — achado do `/revisar` na Tarefa 3, item 7,
+   * segundo commit, 29/08/2026: um relatório de 5 fretes podia entrar com
+   * só 3, a linha agrupada mostrando 3/5 do valor e "Cobrar no WhatsApp"
+   * registrando só esses 3, em silêncio (`CLAUDE.md` §2, rigor total —
+   * dinheiro). `completarGruposDeRelatorio` (`cobrancas.ts`) busca de novo,
+   * sem teto, qualquer relatório que apareceu cortado.
+   */
+  it("teto de 3 não corta um relatório de 5 fretes ao meio — o grupo sempre vem completo", async () => {
+    const e = await criarEmpresaDeTeste("l8");
+    const hoje = diaEmFortaleza(new Date());
+    const vencimento = instanteDoDiaEmFortaleza(deslocarDias(hoje, 5));
+
+    const servicoIds: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const id = await criarFrete(e, 10000 * (i + 1));
+      await marcarServicoFinalizado(e.empresaId, id);
+      servicoIds.push(id);
+    }
+
+    const relatorio = await criarRelatorio(e.empresaId, {
+      clienteId: e.clienteId,
+      dataInicial: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+      dataFinal: new Date(),
+      servicoIds,
+    });
+    for (const servicoId of servicoIds) {
+      await faturarServico(e.empresaId, servicoId, {
+        vencimento,
+        formaPrevista: "outro",
+        relatorioId: relatorio.id,
+      });
+    }
+
+    const { titulos: lista, cortado } = await listarCobrancas(e.empresaId, {
+      situacao: "em_aberto",
+      periodo: null,
+      limite: 3,
+      hoje,
+    });
+
+    const doGrupo = lista.filter((t) => t.relatorio_id === relatorio.id);
+    expect(doGrupo).toHaveLength(5);
+    conferencias++;
+    expect(doGrupo.reduce((soma, t) => soma + t.valor, 0)).toBe(10000 + 20000 + 30000 + 40000 + 50000);
+    conferencias++;
+    // `cortado` precisa continuar `true` mesmo depois da completude trazer a
+    // lista para mais de 5 títulos — achado do segundo `/revisar`: comparar
+    // `titulos.length === limite` depois de completar o grupo escondia o
+    // corte real assim que um relatório completava o teto.
+    expect(cortado).toBe(true);
     conferencias++;
   });
 });

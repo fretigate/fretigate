@@ -51,6 +51,21 @@ const nextConfig: NextConfig = {
   // desenvolvimento nunca vai ao ar.
   allowedDevOrigins:
     process.env.NODE_ENV === "development" ? enderecosDeRedeLocal() : undefined,
+
+  // Sem isto, o binário do Chromium (`node_modules/@sparticuz/chromium/bin/
+  // chromium.br`) e os `.woff2` auto-hospedados de `src/lib/documentos/
+  // fontes/` não embarcam na função da Vercel — `next build` termina com
+  // sucesso do mesmo jeito, e a falha só aparece no primeiro pedido real
+  // que gerar um relatório (`CLAUDE.md` §14, "CONFERIR ANTES DE PUBLICAR").
+  // `/relatorio` é a rota da tela de montagem, cuja Server Action
+  // (`gerarRelatorioAction`) é quem primeiro importa `gerarDocumento`
+  // (item 7, Tarefa 3, segundo commit).
+  outputFileTracingIncludes: {
+    "/relatorio": [
+      "./node_modules/@sparticuz/chromium/bin/**/*",
+      "./src/lib/documentos/fontes/**/*",
+    ],
+  },
 };
 
 export default nextConfig;

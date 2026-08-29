@@ -174,6 +174,39 @@ export function resolverPeriodoDoPerfil(
   };
 }
 
+/**
+ * Resolve o período da montagem do relatório (item 7, Tarefa 3, segundo
+ * commit) — mesmo formato de `resolverPeriodoDoPerfil` (sempre devolve um
+ * `Periodo` completo, com `janelaEfetiva` para o chip nunca discordar do
+ * número), mas com padrão diferente: **sem `janela` na URL, o padrão é
+ * "mês passado"**, não "mês atual" — evidência corroborante do protótipo
+ * (`referencia/.../TelaRelatorio.dc.html`, `CLAUDE.md` §13): um relatório
+ * normalmente fecha o mês anterior, ainda completo, não o mês em andamento.
+ * `"todos"` nunca é opção aqui (`docs/especificacao.md` §4.4: "este mês ·
+ * mês passado · últimos 30 dias · personalizado") — janela desconhecida ou
+ * "personalizado" com `de`/`ate` inválidos cai em "mês passado", pelo mesmo
+ * motivo do perfil: a montagem nunca fica sem período nenhum.
+ */
+export function resolverPeriodoDoRelatorio(
+  janela: string | undefined,
+  de: string | undefined,
+  ate: string | undefined,
+): { periodo: Periodo; janelaEfetiva: string } {
+  const janelaPedida = janela ?? "mes-passado";
+  if (janelaPedida === "todos") {
+    return {
+      periodo: resolverPeriodoDaUrl("mes-passado", undefined, undefined)!,
+      janelaEfetiva: "mes-passado",
+    };
+  }
+  const periodo = resolverPeriodoDaUrl(janelaPedida, de, ate);
+  if (periodo) return { periodo, janelaEfetiva: janelaPedida };
+  return {
+    periodo: resolverPeriodoDaUrl("mes-passado", undefined, undefined)!,
+    janelaEfetiva: "mes-passado",
+  };
+}
+
 const MESES_ABREV = [
   "jan", "fev", "mar", "abr", "mai", "jun",
   "jul", "ago", "set", "out", "nov", "dez",

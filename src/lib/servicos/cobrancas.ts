@@ -111,6 +111,7 @@ const CAMPOS_DA_LISTA = {
   vencimento: true,
   forma_pagamento_prevista: true,
   status: true,
+  relatorio_id: true,
 } as const;
 
 /**
@@ -163,6 +164,45 @@ const CAMPOS_DA_LISTA = {
  * pela data do último recebimento. Isso também decide o que o teto de 50
  * corta: nunca a cobrança mais urgente.
  */
+/**
+ * Completa qualquer relatório que o teto de 50 tenha cortado ao meio — achado
+ * do `/revisar` na Tarefa 3 do item 7, segundo commit, 29/08/2026: o teto
+ * corta títulos **individuais**, sem saber que alguns compartilham
+ * `relatorio_id`. Sem isto, `agruparPorRelatorio` (`cobrancas-situacao.ts`)
+ * monta uma linha com só parte dos títulos do grupo — total errado, "N
+ * fretes" errado, e "Cobrar no WhatsApp" registrando só os títulos que
+ * couberam, deixando o resto sem marca **em silêncio** (`CLAUDE.md` §2,
+ * rigor total — dinheiro; "a regra fala de TODOS os títulos, não do
+ * primeiro que aparecer").
+ *
+ * Só roda quando o teto de fato cortou algo (`limite` presente): busca de
+ * novo, **sem teto**, todo título com `relatorio_id` entre os que já
+ * apareceram na página — nunca filtra por situação/período aqui, porque os
+ * títulos de um mesmo relatório compartilham `vencimento` e
+ * `forma_pagamento_prevista` (`gerarRelatorio` grava um valor só para o
+ * lote inteiro), então completar o grupo nunca traz título que não
+ * pertenceria à mesma situação.
+ */
+async function completarGruposDeRelatorio<T extends { id: string; relatorio_id: string | null }>(
+  empresaId: string,
+  titulos: T[],
+  limite: number | undefined,
+  buscarFaltantes: (relatorioIds: string[], idsJaTemos: string[]) => Promise<T[]>,
+): Promise<T[]> {
+  if (limite === undefined) return titulos;
+  const relatorioIds = [
+    ...new Set(titulos.map((t) => t.relatorio_id).filter((id): id is string => id !== null)),
+  ];
+  if (relatorioIds.length === 0) return titulos;
+
+  const faltantes = await buscarFaltantes(
+    relatorioIds,
+    titulos.map((t) => t.id),
+  );
+  if (faltantes.length === 0) return titulos;
+  return [...titulos, ...faltantes];
+}
+
 export async function listarCobrancas(
   empresaId: string,
   filtros: {
@@ -193,6 +233,12 @@ export async function listarCobrancas(
       : grupos;
     filtrados.sort((a, b) => b._max.data!.getTime() - a._max.data!.getTime());
     const pagina = limite ? filtrados.slice(0, limite) : filtrados;
+    // Antes de `completarGruposDeRelatorio` acrescentar título — achado do
+    // segundo `/revisar`: comparar o tamanho FINAL (pós-completude) contra o
+    // teto faria "há mais cobranças que não cabem aqui" desaparecer sempre
+    // que um relatório completasse o grupo, mesmo quando o corte real
+    // aconteceu.
+    const cortado = limite !== undefined && filtrados.length > limite;
 
     const ultimoRecebimentoPorTitulo = new Map(pagina.map((g) => [g.titulo_id, g._max.data!]));
     const titulosCrus = await db(empresaId).tituloReceber.findMany({
@@ -202,22 +248,46 @@ export async function listarCobrancas(
     const porId = new Map(titulosCrus.map((t) => [t.id, t]));
     // `findMany` com `id: { in }` não preserva a ordem da lista — a ordem
     // certa (pela data do último recebimento) é a de `pagina`.
-    const titulos = pagina
+    let titulos = pagina
       .map((g) => porId.get(g.titulo_id))
       .filter((t): t is NonNullable<typeof t> => t !== undefined);
+
+    titulos = await completarGruposDeRelatorio(empresaId, titulos, limite, async (relatorioIds, idsJaTemos) => {
+      const completos = await db(empresaId).tituloReceber.findMany({
+        where: { status: "pago", arquivado_em: null, relatorio_id: { in: relatorioIds }, id: { notIn: idsJaTemos } },
+        select: CAMPOS_DA_LISTA,
+      });
+      if (completos.length === 0) return [];
+      // O completado também precisa de `ultimoRecebimentoEm`, pelo mesmo
+      // motivo dos títulos da página — sem `Recebimento` correspondente,
+      // `_max.data` não existe, então busca de novo só para estes.
+      const recebimentosDosCompletos = await db(empresaId).recebimento.groupBy({
+        by: ["titulo_id"],
+        where: { arquivado_em: null, titulo_id: { in: completos.map((c) => c.id) } },
+        _max: { data: true },
+      });
+      const ultimoPorId = new Map(recebimentosDosCompletos.map((r) => [r.titulo_id, r._max.data!]));
+      for (const c of completos) {
+        ultimoRecebimentoPorTitulo.set(c.id, ultimoPorId.get(c.id) ?? new Date(0));
+      }
+      return completos;
+    });
 
     const totalPorTitulo = await totalRecebidoPorTitulo(
       empresaId,
       titulos.map((t) => t.id),
     );
-    return titulos.map((t) => ({
-      ...t,
-      totalRecebido: totalPorTitulo.get(t.id) ?? 0,
-      ultimoRecebimentoEm: ultimoRecebimentoPorTitulo.get(t.id) ?? null,
-    }));
+    return {
+      titulos: titulos.map((t) => ({
+        ...t,
+        totalRecebido: totalPorTitulo.get(t.id) ?? 0,
+        ultimoRecebimentoEm: ultimoRecebimentoPorTitulo.get(t.id) ?? null,
+      })),
+      cortado,
+    };
   }
 
-  const titulos = await db(empresaId).tituloReceber.findMany({
+  let titulos = await db(empresaId).tituloReceber.findMany({
     where: {
       arquivado_em: null,
       status: "aberto",
@@ -244,26 +314,51 @@ export async function listarCobrancas(
     orderBy: [{ vencimento: { sort: "asc", nulls: "last" } }, { criado_em: "asc" }],
     take: limite,
   });
+  // Antes da completude, pelo mesmo motivo do ramo "recebidas" acima —
+  // `titulos.length` já reflete o `take: limite`, então "cortou" é só isto.
+  const cortado = limite !== undefined && titulos.length === limite;
+
+  titulos = await completarGruposDeRelatorio(empresaId, titulos, limite, async (relatorioIds, idsJaTemos) => {
+    // Sem `situacao`/`vencimento`/período aqui de propósito — ver a
+    // docstring de `completarGruposDeRelatorio`: um relatório inteiro
+    // sempre cabe na mesma situação, então não há filtro a repetir, só a
+    // condição estrutural (aberta, não arquivada, frete não arquivado).
+    return db(empresaId).tituloReceber.findMany({
+      where: {
+        arquivado_em: null,
+        status: "aberto",
+        servico: { arquivado_em: null },
+        relatorio_id: { in: relatorioIds },
+        id: { notIn: idsJaTemos },
+      },
+      select: CAMPOS_DA_LISTA,
+    });
+  });
 
   const totalPorTitulo = await totalRecebidoPorTitulo(
     empresaId,
     titulos.map((t) => t.id),
   );
-  return titulos.map((t) => ({
-    ...t,
-    totalRecebido: totalPorTitulo.get(t.id) ?? 0,
-    ultimoRecebimentoEm: null as Date | null,
-  }));
+  return {
+    titulos: titulos.map((t) => ({
+      ...t,
+      totalRecebido: totalPorTitulo.get(t.id) ?? 0,
+      ultimoRecebimentoEm: null as Date | null,
+    })),
+    cortado,
+  };
 }
 
-export type CobrancaDoBanco = Awaited<ReturnType<typeof listarCobrancas>>[number];
+export type CobrancaDoBanco = Awaited<ReturnType<typeof listarCobrancas>>["titulos"][number];
 
 /**
  * "Fortaleza → Sobral · 22 jul" — a rota e o dia do frete que originou a
  * cobrança, só o que existir. Extraída de `cobrancas/page.tsx` (item 6,
  * Tarefa 2) para o detalhe da cobrança (Tarefa 4) reaproveitar, em vez de
- * duplicar (`CLAUDE.md` §8). Uma cobrança de relatório terá referência
- * própria ("Relatório de julho · 9 fretes"), no item 7.
+ * duplicar (`CLAUDE.md` §8). Uma cobrança de relatório com 2+ fretes usa a
+ * referência própria "N fretes" (item 7, `agruparPorRelatorio` em
+ * `cobrancas-situacao.ts`) — esta função continua servindo a linha
+ * individual e a linha expandida do grupo, uma por frete nas duas.
  */
 export function referenciaDoServico(
   servico: { origem_texto: string | null; destino_texto: string | null; data_servico: Date } | null,
@@ -276,8 +371,9 @@ export function referenciaDoServico(
 
 /**
  * Quantos fretes estão **A faturar** — só para o estado vazio da tela, que
- * precisa dizer o que destrava a ação (`CLAUDE.md` §8) em vez de oferecer
- * "Gerar relatório", que é o item 7 e ainda não existe.
+ * precisa dizer o que destrava a ação (`CLAUDE.md` §8). O botão "Gerar
+ * relatório" já existe (item 7, `/relatorio`); este número acompanha o botão
+ * secundário "Ver os N fretes", que abre "Meus fretes" filtrado.
  *
  * **O critério é o mesmo de `situacaoFinanceira`** (`titulos.ts`): não
  * arquivado e **sem nenhum título ativo** — `none` sobre a relação inteira,

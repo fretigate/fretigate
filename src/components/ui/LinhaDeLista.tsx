@@ -38,6 +38,14 @@ import type { SituacaoFinanceira } from "@/lib/servicos/titulos";
  * Com `href` navega (`next/link`) — as listas de cadastro e "Meus fretes".
  * Com `onClick` vira `<button>` — a folha de busca do lançamento seleciona e
  * fecha a folha, nunca troca de rota. Mesmo par de `Botao`/`PilulaEmLinha`.
+ *
+ * **`iconePersonalizado`/`desmarcado`/`acessorio`** entraram no item 7,
+ * segundo commit (29/08/2026), achado do `/revisar`: a linha desmarcável da
+ * montagem do relatório e a linha agrupada de Cobranças (`LinhaCobrancaAgrupada.tsx`)
+ * tinham nascido como implementações à parte, copiando este cartão em vez de
+ * estendê-lo — `CLAUDE.md` §8, "componente existe uma vez". `acessorio`
+ * segue o mesmo desenho de `rodape` (irmão do alvo de navegação, nunca
+ * aninhado — mesmo motivo), só que ao LADO em vez de abaixo.
  */
 
 type PropsBase = {
@@ -47,9 +55,15 @@ type PropsBase = {
    * linhas de lista é uma decisão do fundador restrita a cliente/motorista;
    * `ListaCaminhoes.tsx` já registra a decisão contrária: "'Scania branco' →
    * 'SB' não distingue nada"). Sem `iniciais`, a linha não desenha o círculo.
-   * Só faz sentido na variante clássica (sem `valorCentavos`).
    */
   iniciais?: string;
+  /**
+   * Substitui o círculo de `iniciais` por qualquer marcador — o checkbox
+   * marcado/desmarcado da montagem do relatório (item 7, segundo commit).
+   * Funciona nas duas variantes; tem prioridade sobre `iniciais` quando os
+   * dois vêm preenchidos (nunca os dois juntos, na prática).
+   */
+  iconePersonalizado?: ReactNode;
   nome: string;
   apoio?: string;
   /** Presente = variante de frete (nome + valor, apoio + situação). */
@@ -64,6 +78,12 @@ type PropsBase = {
    * uma cópia dele (`CLAUDE.md` §8).
    */
   marca?: ReactNode;
+  /**
+   * Esmaece nome e valor e risca os dois — "fora deste relatório" (item 7,
+   * segundo commit), quando a pessoa desmarca uma linha da montagem. Só faz
+   * sentido na variante de frete.
+   */
+  desmarcado?: boolean;
   /**
    * Deslizar revela "Marcar recebido" (item 6, Tarefa 3 —
    * `docs/componentes.md`: Meus fretes e Cobranças). Independente de
@@ -83,6 +103,15 @@ type PropsBase = {
    * não está dentro dele.
    */
   rodape?: ReactNode;
+  /**
+   * Controle ao LADO do alvo de navegação, dentro do mesmo cartão — o
+   * chevron de "ver fretes desta cobrança" (`LinhaCobrancaAgrupada.tsx`,
+   * item 7, segundo commit). Mesmo motivo de `rodape` (irmão, nunca
+   * aninhado) — só a posição muda, de abaixo para o lado, via
+   * `items-stretch`: o acessório herda a altura real da linha (mínimo
+   * `min-h-78`), nunca um alvo mais baixo que 48px.
+   */
+  acessorio?: ReactNode;
 };
 
 type PropsLink = PropsBase & { href: string; onClick?: undefined };
@@ -93,17 +122,23 @@ type Props = PropsLink | PropsBotao;
 const CLASSE =
   "flex min-h-78 w-full rounded-linha bg-separacao px-18 py-14 text-left active:bg-principal-desabilitado";
 
-/** Mesma aparência de `CLASSE`, mas sem o raio/fundo — quando `rodape` existe, o cartão (raio + fundo) sobe para o `<div>` que envolve o alvo de navegação e o rodapé juntos. */
-const CLASSE_COM_RODAPE =
+/** Mesma aparência de `CLASSE`, mas sem o raio/fundo — quando só `rodape` existe (sem `acessorio`), o alvo continua sozinho no envoltório, então `w-full` ainda é certo (não é item de um flex ao lado de outra coisa). */
+const CLASSE_ENVOLVIDA =
   "flex min-h-78 w-full px-18 py-14 text-left active:bg-principal-desabilitado";
 
-function ConteudoClassico({ iniciais, nome, apoio }: PropsBase): ReactNode {
+/** Quando `acessorio` existe, o alvo de navegação é item de um `flex items-stretch` ao lado dele — `w-full` ali tentaria tomar o espaço inteiro e empurraria o acessório pra fora. `flex-1` divide o espaço direito; `min-w-0` deixa o texto truncar em vez de estourar a linha. */
+const CLASSE_COM_ACESSORIO =
+  "flex min-h-78 min-w-0 flex-1 px-18 py-14 text-left active:bg-principal-desabilitado";
+
+function ConteudoClassico({ iniciais, iconePersonalizado, nome, apoio }: PropsBase): ReactNode {
   return (
     <div className="flex w-full items-center gap-14">
       {/* docs/componentes.md § "Iniciais da empresa": "Fundo #1B6B3A com
           texto branco" em toda linha de lista — o documento manda mais que o
           protótipo (fundo claro/texto verde), que é só evidência (§13). */}
-      {iniciais ? (
+      {iconePersonalizado ? (
+        iconePersonalizado
+      ) : iniciais ? (
         <span className="flex h-40 w-40 flex-none items-center justify-center rounded-pilula bg-acao text-[13px] font-bold leading-[1] text-white">
           {iniciais}
         </span>
@@ -118,30 +153,44 @@ function ConteudoClassico({ iniciais, nome, apoio }: PropsBase): ReactNode {
   );
 }
 
-function ConteudoFrete({ nome, apoio, valorCentavos, situacao, marca }: PropsBase): ReactNode {
+function ConteudoFrete({
+  iconePersonalizado,
+  nome,
+  apoio,
+  valorCentavos,
+  situacao,
+  marca,
+  desmarcado,
+}: PropsBase): ReactNode {
+  const classeTexto = desmarcado ? "text-tinta-desabilitada line-through" : "text-tinta";
   return (
-    <div className="flex w-full flex-col gap-6">
-      <div className="flex items-start justify-between gap-10">
-        <span className="min-w-0 flex-1 truncate text-nome-linha font-bold text-tinta">
-          {nome}
-        </span>
-        <span className="flex-none text-valor-lista font-extrabold leading-[1] tabular-nums text-tinta">
-          R$ {formatarCentavos(valorCentavos ?? 0)}
-        </span>
-      </div>
-      <div className="flex items-center justify-between gap-10">
-        {apoio ? (
-          <span className="min-w-0 flex-1 truncate text-apoio font-normal text-tinta-apoio-forte">
-            {apoio}
+    <div className="flex w-full items-center gap-14">
+      {iconePersonalizado}
+      <div className="flex min-w-0 flex-1 flex-col gap-6">
+        <div className="flex items-start justify-between gap-10">
+          <span className={`min-w-0 flex-1 truncate text-nome-linha font-bold ${classeTexto}`}>
+            {nome}
           </span>
-        ) : (
-          <span />
-        )}
-        {marca ? (
-          <span className="flex flex-none items-center gap-8">{marca}</span>
-        ) : situacao ? (
-          <EtiquetaSituacao situacao={situacao} />
-        ) : null}
+          <span
+            className={`flex-none text-valor-lista font-extrabold leading-[1] tabular-nums ${classeTexto}`}
+          >
+            R$ {formatarCentavos(valorCentavos ?? 0)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-10">
+          {apoio ? (
+            <span className="min-w-0 flex-1 truncate text-apoio font-normal text-tinta-apoio-forte">
+              {apoio}
+            </span>
+          ) : (
+            <span />
+          )}
+          {marca ? (
+            <span className="flex flex-none items-center gap-8">{marca}</span>
+          ) : situacao ? (
+            <EtiquetaSituacao situacao={situacao} />
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -169,13 +218,25 @@ function linha(props: Props, classe: string): ReactNode {
 }
 
 export function LinhaDeLista(props: Props): ReactNode {
-  const nucleo = props.rodape ? (
-    <div className="overflow-hidden rounded-linha bg-separacao">
-      {linha(props, CLASSE_COM_RODAPE)}
-      <div className="px-18 pb-14">{props.rodape}</div>
+  const precisaDeEnvoltorio = Boolean(props.rodape) || Boolean(props.acessorio);
+  const classeLinha = props.acessorio ? CLASSE_COM_ACESSORIO : precisaDeEnvoltorio ? CLASSE_ENVOLVIDA : CLASSE;
+
+  const corpo = props.acessorio ? (
+    <div className="flex items-stretch">
+      {linha(props, classeLinha)}
+      {props.acessorio}
     </div>
   ) : (
-    linha(props, CLASSE)
+    linha(props, classeLinha)
+  );
+
+  const nucleo = precisaDeEnvoltorio ? (
+    <div className="overflow-hidden rounded-linha bg-separacao">
+      {corpo}
+      {props.rodape ? <div className="px-18 pb-14">{props.rodape}</div> : null}
+    </div>
+  ) : (
+    corpo
   );
 
   if (!props.aoDeslizar) return nucleo;

@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { Botao } from "@/components/ui/Botao";
 import { FolhaDeBusca, type ItemFolhaDeBusca } from "@/components/ui/FolhaDeBusca";
 import { FolhaDeCalendario } from "@/components/ui/FolhaDeCalendario";
+import { LinhaRecolhida } from "@/components/ui/LinhaRecolhida";
 import { PilulaEmLinha } from "@/components/ui/PilulaEmLinha";
 import { TecladoNumerico } from "@/components/ui/TecladoNumerico";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
@@ -87,47 +88,6 @@ function rotuloData(dia: string, hoje: string): string {
   return corpo.charAt(0).toUpperCase() + corpo.slice(1) + sufixoAno;
 }
 
-function LinhaRecolhida({
-  rotulo,
-  valor,
-  onClick,
-  desabilitada,
-}: {
-  rotulo: string;
-  valor: string;
-  onClick: () => void;
-  /** Frete com título ativo — `docs/especificacao.md` §8, item 12. */
-  desabilitada?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={desabilitada}
-      className="flex min-h-60 items-center gap-12 rounded-campo bg-separacao px-18 text-left active:bg-principal-desabilitado disabled:bg-secundario-desabilitado disabled:active:bg-secundario-desabilitado"
-    >
-      <span className="w-82 flex-none text-[11px] font-bold uppercase leading-[1] tracking-[.16em] text-tinta-apoio">
-        {rotulo}
-      </span>
-      <span
-        className={`min-w-0 flex-1 truncate text-nome-recolhida font-bold ${desabilitada ? "text-tinta-desabilitada" : "text-tinta"}`}
-      >
-        {valor}
-      </span>
-      {desabilitada ? null : (
-        <svg width={8} height={14} viewBox="0 0 8 14" fill="none" className="flex-none" aria-hidden="true">
-          <path
-            d="M1.4 1.4 6.6 7l-5.2 5.6"
-            stroke="#A8AFA9"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      )}
-    </button>
-  );
-}
 
 function LinhaEditavel({
   rotulo,

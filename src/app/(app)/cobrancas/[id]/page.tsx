@@ -21,7 +21,7 @@ import { AcaoEstornar } from "@/components/ui/AcaoEstornar";
 // nunca importadas por conta própria dentro de um componente de `ui`.
 import {
   estornarTituloAction,
-  registrarCobrancaEnviadaAction,
+  registrarCobrancaEnviadaEmGrupoAction,
   registrarRecebimentoAction,
   salvarChavePixAction,
 } from "../../fretes/acoes";
@@ -225,7 +225,7 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           {podeCobrar ? (
             <AcaoCobrarNoWhatsApp
               variante="secundaria"
-              tituloId={tituloAtual.id}
+              tituloIds={[tituloAtual.id]}
               cliente={{
                 id: titulo.cliente_id,
                 nome: cliente?.nome ?? "Cliente",
@@ -235,17 +235,19 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
                 empresa: empresa!.nome_fantasia,
                 cliente: cliente?.nome ?? "Cliente",
                 rota,
-                // O agrupamento de títulos por relatório (item 7, "uma
-                // cobrança gerada por relatório é uma linha só") ainda não
-                // chegou a esta tela — `null` preserva a frase de um frete só
-                // (`montarMensagemCobranca`), igual a antes desta mudança.
+                // Esta tela sempre mostra UM título — mesmo quando ele
+                // pertence a um relatório de 2+ fretes (a linha agrupada de
+                // Cobranças leva ao Documento A4, não aqui; só a linha
+                // individual expandida chega nesta tela). Cobrar daqui
+                // cobra só este frete, `null` mantém a frase no singular
+                // (item 7, `docs/planos/item-7-relatorio.md`).
                 periodo: null,
                 valor: formatarCentavos(saldo),
                 vencimento: tituloAtual.vencimento ? formatarDiaDaSemanaEData(tituloAtual.vencimento) : "",
                 vencido: grupo === "vencidas",
               }}
               chavePixEmpresa={empresa!.chave_pix}
-              registrar={registrarCobrancaEnviadaAction}
+              registrar={registrarCobrancaEnviadaEmGrupoAction}
               salvarTelefoneCliente={salvarTelefoneClienteAction}
               salvarChavePix={salvarChavePixAction}
             />
@@ -277,7 +279,7 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
         </div>
 
         {/* COBRANÇAS ENVIADAS — o histórico de "Enviei" confirmados
-            (`registrarCobrancaEnviada`, item 6, Tarefa 5). Linha estática,
+            (`registrarCobrancaEnviadaEmGrupo`, item 6, Tarefa 5). Linha estática,
             sem `LinhaDeLista`: não existe destino para navegar a partir de
             um envio, e forçar `href`/`onClick` nela criaria um alvo tocável
             sem ação nenhuma por trás (`CLAUDE.md` §8). Mesmo fundo/raio de

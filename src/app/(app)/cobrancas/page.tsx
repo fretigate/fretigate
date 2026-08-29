@@ -6,11 +6,22 @@ import {
   referenciaDoServico,
   resumoDeCobrancas,
 } from "@/lib/servicos/cobrancas";
-import { grupoDaCobranca, resolverSituacaoDaUrl, textoCobradoHa } from "@/lib/servicos/cobrancas-situacao";
+import {
+  agruparPorRelatorio,
+  grupoDaCobranca,
+  resolverSituacaoDaUrl,
+  textoCobradoHa,
+  type CobrancaParaLista,
+} from "@/lib/servicos/cobrancas-situacao";
 import { ultimoEnvioPorTitulo } from "@/lib/servicos/titulos";
 import { buscarClientesPorIds } from "@/lib/servicos/clientes";
 import { buscarServicosPorIds } from "@/lib/servicos/servicos";
-import { diaEmFortaleza, formatarDiaDaSemanaEData } from "@/lib/utils/data-fortaleza";
+import { buscarRelatoriosPorIds } from "@/lib/servicos/relatorios";
+import {
+  diaEmFortaleza,
+  formatarDiaDaSemanaEData,
+  formatarPeriodoDeCobranca,
+} from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { formatarRota } from "@/lib/utils/rota";
 import {
@@ -18,7 +29,7 @@ import {
   resolverPeriodoDaUrl,
   rotuloDoPeriodo,
 } from "@/lib/utils/periodo";
-import { ListaCobrancas, type CobrancaParaLista } from "./ListaCobrancas";
+import { ListaCobrancas } from "./ListaCobrancas";
 
 /**
  * Cobranças (item 6, Tarefa 2) — substitui a tela provisória que estava aqui
@@ -67,7 +78,7 @@ export default async function Pagina({
   const limite = resolverLimiteDaLista(janela, periodo);
   const hoje = diaEmFortaleza(new Date());
 
-  const [resumo, titulos] = await Promise.all([
+  const [resumo, { titulos, cortado }] = await Promise.all([
     resumoDeCobrancas(sessao.empresaId, hoje),
     listarCobrancas(sessao.empresaId, { situacao, periodo, limite, hoje }),
   ]);
@@ -80,7 +91,11 @@ export default async function Pagina({
   const idsDeClientes = new Set(titulos.map((t) => t.cliente_id));
   if (clienteInicial) idsDeClientes.add(clienteInicial);
 
-  const [clientes, servicos, envios, empresa] = await Promise.all([
+  const idsDeRelatorio = [
+    ...new Set(titulos.map((t) => t.relatorio_id).filter((id): id is string => id !== null)),
+  ];
+
+  const [clientes, servicos, envios, empresa, relatorios] = await Promise.all([
     buscarClientesPorIds(sessao.empresaId, [...idsDeClientes]),
     buscarServicosPorIds(sessao.empresaId, [...new Set(titulos.map((t) => t.servico_id))]),
     // Em lote, nunca uma consulta por linha — mesma regra de
@@ -92,13 +107,19 @@ export default async function Pagina({
       where: { id: sessao.empresaId },
       select: { nome_fantasia: true, chave_pix: true },
     }),
+    // O período de cada relatório, para `{periodo}` na mensagem de cobrança
+    // agrupada (item 7, segundo commit) — `agruparPorRelatorio`, abaixo.
+    buscarRelatoriosPorIds(sessao.empresaId, idsDeRelatorio),
   ]);
 
   const nomeDoCliente = new Map(clientes.map((c) => [c.id, c.nome]));
   const telefoneDoCliente = new Map(clientes.map((c) => [c.id, c.telefone]));
   const servicoPorId = new Map(servicos.map((s) => [s.id, s]));
+  const periodoPorRelatorio = new Map(
+    relatorios.map((r) => [r.id, formatarPeriodoDeCobranca(r.data_inicial, r.data_final)]),
+  );
 
-  const cobrancas: CobrancaParaLista[] = titulos.map((t) => {
+  const cobrancasFlat: CobrancaParaLista[] = titulos.map((t) => {
     const servico = servicoPorId.get(t.servico_id);
     const grupo = grupoDaCobranca(t, hoje);
     // Sempre igual a `t.valor` quando `status === "pago"` — a função de
@@ -128,8 +149,16 @@ export default async function Pagina({
       rota: formatarRota(servico?.origem_texto ?? null, servico?.destino_texto ?? null),
       vencimentoFormatado: t.vencimento ? formatarDiaDaSemanaEData(t.vencimento) : null,
       marcaCobrado: envio ? textoCobradoHa(envio, hoje) : null,
+      marcaCobradoEm: envio?.em ?? null,
+      relatorioId: t.relatorio_id,
     };
   });
+
+  // Junta em uma linha só os títulos com o mesmo `relatorio_id` (item 7,
+  // `docs/especificacao.md` §4.5) — depois do teto de 50: o corte já
+  // aconteceu em `listarCobrancas` sobre os títulos individuais, então um
+  // relatório de 4 fretes conta como 4 contra o teto, não como 1.
+  const cobrancas = agruparPorRelatorio(cobrancasFlat, periodoPorRelatorio);
 
   // Uma consulta a mais só quando a lista veio vazia — é o único caso em que
   // o número é exibido (o estado vazio precisa dizer o que destrava a tela).
@@ -159,7 +188,7 @@ export default async function Pagina({
           situacaoAtual={situacao}
           janelaAtual={janela}
           filtroDePeriodoAtivo={periodo !== null}
-          limitadoA50={limite === 50 && titulos.length === 50}
+          limitadoA50={limite === 50 && cortado}
           rotuloPeriodo={rotuloDoPeriodo(janela, de, ate, "Todas as cobranças")}
           clienteInicial={clienteInicial}
           clienteInicialNome={clienteInicial ? (nomeDoCliente.get(clienteInicial) ?? null) : null}

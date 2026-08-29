@@ -149,3 +149,140 @@ export function textoCobradoHa(envio: { em: Date; usuarioNome: string }, hoje: s
   const relativo = dias <= 0 ? "hoje" : dias === 1 ? "ontem" : `há ${dias} dias`;
   return `cobrado ${relativo} por ${envio.usuarioNome}`;
 }
+
+/**
+ * Uma linha da lista de Cobranças. Definido aqui, não em `ListaCobrancas.tsx`
+ * — `agruparPorRelatorio` (abaixo) precisa do tipo, e mora neste módulo pelo
+ * mesmo motivo do resto dele: puro, sem `@/lib/db`, importável tanto pelo
+ * Client Component quanto por `cobrancas.ts`/`page.tsx` sem puxar `server-only`
+ * para o navegador.
+ */
+export type CobrancaParaLista = {
+  id: string;
+  clienteId: string;
+  cliente: string;
+  /** Rota e dia do frete — `null` quando o frete não tem origem/destino, ou quando a linha é um grupo (`agrupado` presente). */
+  referencia: string | null;
+  /**
+   * Em aberto, o que **falta entrar** (valor menos o já recebido); em
+   * Recebidas, o que **entrou**. Numa linha agrupada, a soma dos N títulos.
+   */
+  valorCentavos: number;
+  grupo: GrupoDeCobranca;
+  /** Dia (`"AAAA-MM-DD"` em Fortaleza) do vencimento, ou do recebimento nas pagas — igual em todos os títulos de um mesmo relatório (`gerarRelatorio` grava um vencimento só para o lote). */
+  dia: string | null;
+  boleto: boolean;
+  /** `true` se ao menos um título do grupo já recebeu parte (item 6, Tarefa 3). */
+  parcial: boolean;
+  clienteTelefone: string | null;
+  /** `formatarRota` puro, sem o dia — `null` numa linha agrupada (não faz sentido para vários fretes; a mensagem usa `agrupado.periodo` no lugar). */
+  rota: string | null;
+  vencimentoFormatado: string | null;
+  /** "cobrado há 2 dias por Monalisa" — `null` quando ninguém cobrou ainda. */
+  marcaCobrado: string | null;
+  /**
+   * O instante bruto por trás de `marcaCobrado` — só existe para
+   * `agruparPorRelatorio` achar o envio mais recente do grupo (`.some()`
+   * não serve aqui, precisa do MAIOR, não de "existe algum"). A UI nunca lê
+   * este campo direto, só `marcaCobrado` já formatado.
+   */
+  marcaCobradoEm: Date | null;
+  /** `TituloReceber.relatorio_id` — usado só por `agruparPorRelatorio` para achar quem tem 2+ títulos em comum; a UI depois de agrupado lê `agrupado.relatorioId`, nunca este campo. */
+  relatorioId: string | null;
+  /**
+   * Presente só quando 2+ títulos do mesmo relatório viraram uma linha só
+   * (`docs/especificacao.md` §4.5, item 7, decisão do fundador 29/08/2026).
+   * Sem "Marcar recebido" na linha agrupada — registrar contra "o" título de
+   * um grupo receberia uma fração em silêncio; para receber, a linha expande
+   * (`itens`) e cada título aparece com o próprio deslizar, que já funciona.
+   * "Cobrar no WhatsApp" continua na linha agrupada, e registra em todos os
+   * `tituloIds` no mesmo instante (`registrarCobrancaEnviadaEmGrupo`,
+   * `src/lib/servicos/titulos.ts`) — nunca um só, que deixaria o grupo com
+   * marca inconsistente entre os títulos.
+   */
+  agrupado?: {
+    relatorioId: string;
+    tituloIds: string[];
+    /** "agosto" ou "20/08 a 10/09" (`formatarPeriodoDeCobranca`) — para `{periodo}` na mensagem de cobrança. */
+    periodo: string;
+    fretes: number;
+    /** As linhas individuais, cada uma uma `CobrancaParaLista` normal (`agrupado` ausente) — reveladas ao expandir. */
+    itens: CobrancaParaLista[];
+  };
+};
+
+/**
+ * Junta em uma linha só os títulos que compartilham `relatorioId`
+ * (`docs/especificacao.md` §4.5: "uma cobrança gerada por relatório é uma
+ * linha só, não uma por frete") — registrado em `docs/planos/
+ * item-7-relatorio.md`. Preserva a posição do PRIMEIRO membro do grupo na
+ * lista original (já ordenada por vencimento/criado_em em `cobrancas.ts`) —
+ * nunca reordena, só substitui os N títulos pela linha combinada no lugar
+ * onde o primeiro deles apareceria.
+ *
+ * Um relatório de um frete só não agrupa — fica como título normal, mesma
+ * regra de `montarMensagemCobranca` ("Passando pra lembrar do frete
+ * {rota}." nunca vira plural com um item).
+ */
+export function agruparPorRelatorio(
+  cobrancas: CobrancaParaLista[],
+  periodoPorRelatorio: Map<string, string>,
+): CobrancaParaLista[] {
+  const porRelatorio = new Map<string, CobrancaParaLista[]>();
+  for (const c of cobrancas) {
+    if (!c.relatorioId) continue;
+    const lista = porRelatorio.get(c.relatorioId);
+    if (lista) lista.push(c);
+    else porRelatorio.set(c.relatorioId, [c]);
+  }
+
+  const jaEmitido = new Set<string>();
+  const resultado: CobrancaParaLista[] = [];
+
+  for (const c of cobrancas) {
+    if (!c.relatorioId) {
+      resultado.push(c);
+      continue;
+    }
+    if (jaEmitido.has(c.relatorioId)) continue;
+    jaEmitido.add(c.relatorioId);
+
+    const itens = porRelatorio.get(c.relatorioId)!;
+    if (itens.length === 1) {
+      resultado.push(itens[0]);
+      continue;
+    }
+
+    const relatorioId = c.relatorioId;
+    const valorTotal = itens.reduce((soma, i) => soma + i.valorCentavos, 0);
+    const algumParcial = itens.some((i) => i.parcial);
+    // O envio mais recente do grupo, não o do primeiro item — achado do
+    // segundo `/revisar`: `...itens[0]` sozinho herdaria a marca de um
+    // membro escolhido por acaso, o mesmo defeito que `CLAUDE.md` §2 já
+    // nomeia para regra que fala de uma coleção inteira.
+    const maisRecente = itens.reduce((melhor, i) =>
+      (i.marcaCobradoEm?.getTime() ?? -Infinity) > (melhor.marcaCobradoEm?.getTime() ?? -Infinity)
+        ? i
+        : melhor,
+    );
+
+    resultado.push({
+      ...itens[0],
+      referencia: `${itens.length} fretes`,
+      rota: null,
+      valorCentavos: valorTotal,
+      parcial: algumParcial,
+      marcaCobrado: maisRecente.marcaCobrado,
+      marcaCobradoEm: maisRecente.marcaCobradoEm,
+      agrupado: {
+        relatorioId,
+        tituloIds: itens.map((i) => i.id),
+        periodo: periodoPorRelatorio.get(relatorioId) ?? "",
+        fretes: itens.length,
+        itens: itens.map((i) => ({ ...i, relatorioId: null })),
+      },
+    });
+  }
+
+  return resultado;
+}

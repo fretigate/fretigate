@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Botao } from "./Botao";
@@ -11,6 +11,7 @@ import { FolhaDeTelefone } from "./FolhaDeTelefone";
 import { FolhaDePix } from "./FolhaDePix";
 import { linkWhatsapp, normalizarTelefone } from "@/lib/utils/telefone";
 import { montarMensagemCobranca, type DadosMensagemCobranca } from "@/lib/servicos/mensagens";
+import { useMontadoNoCliente } from "@/lib/utils/montado";
 
 /**
  * "Cobrar no WhatsApp" (item 6, Tarefa 5) — pílula em linha na lista de
@@ -58,33 +59,28 @@ import { montarMensagemCobranca, type DadosMensagemCobranca } from "@/lib/servic
 
 type Props = {
   variante: "pilula" | "secundaria";
-  tituloId: string;
+  /**
+   * Um título só (`[tituloId]`) no caso normal; 2+ quando a linha representa
+   * uma cobrança de relatório agrupada (item 7, segundo commit —
+   * `docs/especificacao.md` §4.5). "Enviei" registra em todos ao mesmo
+   * tempo — sempre via `registrarCobrancaEnviadaEmGrupoAction` (um título é
+   * só um grupo de um; não existe versão separada para o caso único, achado
+   * do segundo `/revisar` — uma closure embrulhando uma ação de um-título-só
+   * não atravessa a fronteira de serialização quando quem chama é Server
+   * Component), este componente só entrega a lista.
+   */
+  tituloIds: string[];
   cliente: { id: string; nome: string; telefone: string | null };
   /** As peças do molde (`montarMensagemCobranca`) que não mudam nesta tela — só `pix` varia, com `chavePixEmpresa`. */
   dadosMensagem: Omit<DadosMensagemCobranca, "pix">;
   chavePixEmpresa: string | null;
-  registrar: (tituloId: string) => Promise<{ ok: true } | { ok: false; erro: string }>;
+  registrar: (tituloIds: string[]) => Promise<{ ok: true } | { ok: false; erro: string }>;
   salvarTelefoneCliente: (
     clienteId: string,
     telefone: string,
   ) => Promise<{ ok: true } | { ok: false; erro: string }>;
   salvarChavePix: (chavePix: string) => Promise<{ ok: true } | { ok: false; erro: string }>;
 };
-
-// `useSyncExternalStore` para saber se já estamos no cliente, sem o padrão
-// "setState dentro de um efeito" que o `react-hooks/set-state-in-effect`
-// (achado do `/revisar`) recusa — não é assinatura de nada de verdade, só o
-// jeito correto de perguntar "isto já hidratou?" sem disparar um re-render em
-// cascata a partir de um efeito.
-function inscreverNoop() {
-  return () => {};
-}
-function estaNoCliente() {
-  return true;
-}
-function estaNoServidor() {
-  return false;
-}
 
 function IconeWhatsapp() {
   return (
@@ -106,7 +102,7 @@ function IconeWhatsapp() {
 
 export function AcaoCobrarNoWhatsApp({
   variante,
-  tituloId,
+  tituloIds,
   cliente,
   dadosMensagem,
   chavePixEmpresa,
@@ -119,7 +115,7 @@ export function AcaoCobrarNoWhatsApp({
   // quebra a primeira renderização no servidor. As folhas/avisos nunca
   // aparecem antes do toque do usuário, então `montado` fica `false` durante
   // toda a renderização do servidor sem perder nenhum estado real.
-  const montado = useSyncExternalStore(inscreverNoop, estaNoCliente, estaNoServidor);
+  const montado = useMontadoNoCliente();
   const [telefoneAtual, setTelefoneAtual] = useState(cliente.telefone ?? "");
   const [folhaTelefoneAberta, setFolhaTelefoneAberta] = useState(false);
   const [folhaPixAberta, setFolhaPixAberta] = useState(false);
@@ -150,7 +146,7 @@ export function AcaoCobrarNoWhatsApp({
   async function confirmarEnvio() {
     setConfirmando(true);
     try {
-      const resultado = await registrar(tituloId);
+      const resultado = await registrar(tituloIds);
       if (!resultado.ok) {
         setErroConfirmacao(resultado.erro);
         return;

@@ -18,7 +18,7 @@ import { formatarCentavos } from "@/lib/utils/dinheiro";
 // `criarTituloJaRecebiAction` — as outras ações de título e cobrança, mesmo
 // motivo de não terem nascido cada uma no seu próprio domínio de tela.
 import {
-  registrarCobrancaEnviadaAction,
+  registrarCobrancaEnviadaEmGrupoAction,
   registrarRecebimentoAction,
   salvarChavePixAction,
 } from "../fretes/acoes";
@@ -32,9 +32,11 @@ import {
   SITUACAO_PADRAO,
   SITUACOES as VALORES_DE_SITUACAO,
   textoDoPrazo,
+  type CobrancaParaLista,
   type GrupoDeCobranca,
   type SituacaoCobranca,
 } from "@/lib/servicos/cobrancas-situacao";
+import { LinhaCobrancaAgrupada } from "@/components/ui/LinhaCobrancaAgrupada";
 
 /**
  * Cobranças (item 6, Tarefa 2) — `docs/especificacao.md` §4.5 e o protótipo
@@ -51,46 +53,6 @@ import {
  * Período) e nenhuma busca; a lista de cobranças em aberto é curta por
  * natureza, diferente de "Meus fretes".
  */
-
-export type CobrancaParaLista = {
-  id: string;
-  clienteId: string;
-  cliente: string;
-  /** Rota e dia do frete — `null` quando o frete não tem origem/destino. */
-  referencia: string | null;
-  /**
-   * Em aberto, o que **falta entrar** (valor menos o já recebido); em
-   * Recebidas, o que **entrou**. É o mesmo dinheiro que os números do topo
-   * contam, para a linha e o topo nunca discordarem (decisão do fundador,
-   * 26/08/2026 — plano do item 6, Tarefa 2). Hoje os dois são iguais ao valor
-   * cheio: recebimento parcial só nasce na Tarefa 3.
-   */
-  valorCentavos: number;
-  grupo: GrupoDeCobranca;
-  /** Dia (`"AAAA-MM-DD"` em Fortaleza) do vencimento, ou do recebimento nas pagas. */
-  dia: string | null;
-  boleto: boolean;
-  /**
-   * Já entrou parte, e ainda falta (item 6, Tarefa 3) — nunca `true` junto
-   * com o grupo "recebidas", que é o caso cheio, não parcial.
-   */
-  parcial: boolean;
-  /**
-   * As peças de "Cobrar no WhatsApp" (item 6, Tarefa 5) — só usadas fora de
-   * "recebidas"/boleto (`ListaCobrancas` decide se a pílula aparece; estes
-   * campos vêm preenchidos sempre que fazem sentido, `null`/vazio quando não
-   * se aplicam). `clienteTelefone` é o de `Cliente.telefone`, espelho do
-   * cadastro — mesmo cuidado de `docs/componentes.md` § "Fonte única do
-   * dado".
-   */
-  clienteTelefone: string | null;
-  /** `formatarRota` puro, sem o dia — o que `montarMensagemCobranca` espera em `rota`, diferente de `referencia` (rota + dia, para exibição). */
-  rota: string | null;
-  /** "sexta, 5 de setembro" — `null` só quando não há vencimento (título "a vencer" sem data, hoje inalcançável para título aberto). */
-  vencimentoFormatado: string | null;
-  /** "cobrado há 2 dias por Monalisa" (§4.5) — `null` quando ninguém cobrou ainda. */
-  marcaCobrado: string | null;
-};
 
 type Props = {
   cobrancas: CobrancaParaLista[];
@@ -263,19 +225,24 @@ export function ListaCobrancas({
             : "Suas cobranças aparecem aqui quando você faturar um frete."
         }
         acao={
-          // "Gerar relatório" (`docs/componentes.md`, "Cobranças vazia") é o
-          // item 7 e não existe — `CLAUDE.md` §8 proíbe botão sem destino, e
-          // manda dizer o que falta para a ação existir, que é o texto acima.
-          // A neutra leva a Fretes já filtrado, sem teto de 50, para a
-          // contagem prometida aqui bater com a lista de lá. Variante
-          // "texto", não secundária: é o que `docs/componentes.md` registra
-          // para esta tela ("Cobranças vazia | ... · texto neutra **Ver os 4
-          // fretes**").
-          fretesAFaturar > 0 ? (
-            <Botao variante="texto" href="/fretes?situacao=a_faturar&periodo=todos">
-              Ver os {fretesAFaturar} fretes
+          // "Gerar relatório" (`docs/componentes.md`, "Cobranças vazia" —
+          // "principal Gerar relatório · texto neutra Ver os 4 fretes") —
+          // o item 7 passou a existir neste commit (`/relatorio`); achado do
+          // `/revisar`: o comentário aqui ainda afirmava "não existe",
+          // `CLAUDE.md` §2 ("texto que está certo só por coincidência de
+          // estado envelhece calado") nomeia exatamente este caso. A neutra
+          // continua levando a Fretes já filtrado, sem teto de 50, para a
+          // contagem prometida aqui bater com a lista de lá.
+          <div className="flex flex-col gap-10">
+            <Botao variante="principal" href="/relatorio">
+              Gerar relatório
             </Botao>
-          ) : undefined
+            {fretesAFaturar > 0 ? (
+              <Botao variante="texto" href="/fretes?situacao=a_faturar&periodo=todos">
+                Ver os {fretesAFaturar} fretes
+              </Botao>
+            ) : null}
+          </div>
         }
       />
   );
@@ -348,71 +315,88 @@ export function ListaCobrancas({
                 {grupo.rotulo}
               </span>
               <div className="flex flex-col gap-6">
-                {grupo.itens.map((cobranca) => (
-                  <LinhaDeLista
-                    key={cobranca.id}
-                    href={`/cobrancas/${cobranca.id}`}
-                    nome={cobranca.cliente}
-                    apoio={cobranca.referencia ?? undefined}
-                    valorCentavos={cobranca.valorCentavos}
-                    marca={<MarcaDaCobranca cobranca={cobranca} hoje={hoje} />}
-                    aoDeslizar={
-                      // "Recebidas" já está pago — nada para receber, então
-                      // sem painel (a função recusaria mesmo, mas o painel
-                      // nem deveria aparecer para essa ação).
-                      cobranca.grupo === "recebidas"
-                        ? undefined
-                        : {
-                            rotulo: "Marcar recebido",
-                            onRevelar: () =>
-                              setRecebendo({
-                                tituloId: cobranca.id,
-                                saldoCentavos: cobranca.valorCentavos,
-                              }),
-                          }
-                    }
-                    rodape={
-                      // Boleto e Recebidas não cobram por WhatsApp (§8 item
-                      // 11 · "Recebidas" já está pago) — sem pílula e sem
-                      // marca de cobrado, mesmo critério do protótipo
-                      // (`referencia/.../TelaCobrancas.dc.html`).
-                      cobranca.boleto || cobranca.grupo === "recebidas" ? undefined : (
-                        <div className="flex items-center gap-12">
-                          <AcaoCobrarNoWhatsApp
-                            variante="pilula"
-                            tituloId={cobranca.id}
-                            cliente={{
-                              id: cobranca.clienteId,
-                              nome: cobranca.cliente,
-                              telefone: cobranca.clienteTelefone,
-                            }}
-                            dadosMensagem={{
-                              empresa: empresaNome,
-                              cliente: cobranca.cliente,
-                              rota: cobranca.rota,
-                              // Mesma nota de `cobrancas/[id]/page.tsx`: o
-                              // agrupamento por relatório ainda não chegou
-                              // aqui — `null` mantém a frase de um frete só.
-                              periodo: null,
-                              valor: formatarCentavos(cobranca.valorCentavos),
-                              vencimento: cobranca.vencimentoFormatado ?? "",
-                              vencido: cobranca.grupo === "vencidas",
-                            }}
-                            chavePixEmpresa={chavePixEmpresa}
-                            registrar={registrarCobrancaEnviadaAction}
-                            salvarTelefoneCliente={salvarTelefoneClienteAction}
-                            salvarChavePix={salvarChavePixAction}
-                          />
-                          {cobranca.marcaCobrado ? (
-                            <span className="text-apoio font-medium text-tinta-apoio">
-                              {cobranca.marcaCobrado}
-                            </span>
-                          ) : null}
-                        </div>
-                      )
-                    }
-                  />
-                ))}
+                {grupo.itens.map((cobranca) =>
+                  cobranca.agrupado ? (
+                    <LinhaCobrancaAgrupada
+                      key={cobranca.agrupado.relatorioId}
+                      cobranca={cobranca}
+                      hoje={hoje}
+                      empresaNome={empresaNome}
+                      chavePixEmpresa={chavePixEmpresa}
+                      onReceber={({ tituloId, saldoCentavos }) =>
+                        setRecebendo({ tituloId, saldoCentavos })
+                      }
+                      registrarGrupo={registrarCobrancaEnviadaEmGrupoAction}
+                      salvarTelefoneCliente={salvarTelefoneClienteAction}
+                      salvarChavePix={salvarChavePixAction}
+                    />
+                  ) : (
+                    <LinhaDeLista
+                      key={cobranca.id}
+                      href={`/cobrancas/${cobranca.id}`}
+                      nome={cobranca.cliente}
+                      apoio={cobranca.referencia ?? undefined}
+                      valorCentavos={cobranca.valorCentavos}
+                      marca={<MarcaDaCobranca cobranca={cobranca} hoje={hoje} />}
+                      aoDeslizar={
+                        // "Recebidas" já está pago — nada para receber, então
+                        // sem painel (a função recusaria mesmo, mas o painel
+                        // nem deveria aparecer para essa ação).
+                        cobranca.grupo === "recebidas"
+                          ? undefined
+                          : {
+                              rotulo: "Marcar recebido",
+                              onRevelar: () =>
+                                setRecebendo({
+                                  tituloId: cobranca.id,
+                                  saldoCentavos: cobranca.valorCentavos,
+                                }),
+                            }
+                      }
+                      rodape={
+                        // Boleto e Recebidas não cobram por WhatsApp (§8 item
+                        // 11 · "Recebidas" já está pago) — sem pílula e sem
+                        // marca de cobrado, mesmo critério do protótipo
+                        // (`referencia/.../TelaCobrancas.dc.html`).
+                        cobranca.boleto || cobranca.grupo === "recebidas" ? undefined : (
+                          <div className="flex items-center gap-12">
+                            <AcaoCobrarNoWhatsApp
+                              variante="pilula"
+                              tituloIds={[cobranca.id]}
+                              cliente={{
+                                id: cobranca.clienteId,
+                                nome: cobranca.cliente,
+                                telefone: cobranca.clienteTelefone,
+                              }}
+                              dadosMensagem={{
+                                empresa: empresaNome,
+                                cliente: cobranca.cliente,
+                                rota: cobranca.rota,
+                                // Um título só, nunca de relatório de 2+
+                                // fretes (esses viram `LinhaCobrancaAgrupada`
+                                // acima, antes de chegar aqui) — `null`
+                                // mantém a frase de um frete só.
+                                periodo: null,
+                                valor: formatarCentavos(cobranca.valorCentavos),
+                                vencimento: cobranca.vencimentoFormatado ?? "",
+                                vencido: cobranca.grupo === "vencidas",
+                              }}
+                              chavePixEmpresa={chavePixEmpresa}
+                              registrar={registrarCobrancaEnviadaEmGrupoAction}
+                              salvarTelefoneCliente={salvarTelefoneClienteAction}
+                              salvarChavePix={salvarChavePixAction}
+                            />
+                            {cobranca.marcaCobrado ? (
+                              <span className="text-apoio font-medium text-tinta-apoio">
+                                {cobranca.marcaCobrado}
+                              </span>
+                            ) : null}
+                          </div>
+                        )
+                      }
+                    />
+                  ),
+                )}
               </div>
             </div>
           ))}

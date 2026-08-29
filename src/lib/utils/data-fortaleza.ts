@@ -201,3 +201,4 @@ export function formatarPeriodoDoDocumento(dataInicial: Date, dataFinal: Date): 
   }
   return `${diaInicio} de ${MESES[mesInicio - 1]} de ${anoInicio} a ${diaFim} de ${MESES[mesFim - 1]} de ${anoFim}`;
 }
+

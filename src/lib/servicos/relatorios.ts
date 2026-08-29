@@ -59,6 +59,20 @@ export function buscarRelatorio(empresaId: string, id: string) {
   return db(empresaId).relatorio.findUnique({ where: { id }, select: CAMPOS });
 }
 
+/**
+ * Em lote, nunca uma consulta por linha — mesmo padrão de
+ * `buscarClientesPorIds`/`buscarServicosPorIds`. Cobranças (item 7, segundo
+ * commit) usa para o período de cada grupo de títulos que compartilha
+ * `relatorio_id` (`agruparPorRelatorio`, `src/lib/servicos/cobrancas.ts`).
+ */
+export function buscarRelatoriosPorIds(empresaId: string, ids: string[]) {
+  if (ids.length === 0) return Promise.resolve([]);
+  return db(empresaId).relatorio.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, data_inicial: true, data_final: true },
+  });
+}
+
 export type DadosRelatorio = {
   clienteId: string;
   dataInicial: Date;
@@ -373,8 +387,40 @@ export async function gerarRelatorio(empresaId: string, dados: DadosGerarRelator
     }
   }
 
+  const dadosDocumento = await montarDadosDocumentoRelatorio(
+    empresaId,
+    relatorioConferido,
+    algumTituloCriado ? dados.vencimento! : null,
+  );
+  const { caminho } = await gerarDocumento(empresaId, "relatorio", dadosDocumento);
+
+  return db(empresaId).relatorio.update({
+    where: { id: relatorio.id },
+    data: { pdf_url: caminho, gerou_cobranca: algumTituloCriado },
+    select: CAMPOS,
+  });
+}
+
+/**
+ * Monta os dados do documento (`DadosDocumentoRelatorio`) a partir de um
+ * `Relatorio` já gravado — extraída de `gerarRelatorio` (achado ao construir
+ * a tela "Documento A4", item 7, Tarefa 3 segundo commit) para ter **um
+ * lugar só** que sabe montar essa marcação a partir do banco: `gerarRelatorio`
+ * chama na hora de criar o PDF, e `buscarDadosParaPreviaDocumento` (abaixo)
+ * chama de novo para a prévia em tela — a mesma marcação da Tarefa 2
+ * (`CLAUDE.md` §8, "componente existe uma vez"), nunca reconstruída duas
+ * vezes com pequenas diferenças.
+ *
+ * `vencimentoCobranca` é `null` quando o relatório não gerou cobrança —
+ * o bloco de vencimento/Pix do documento some (`corpoRelatorio.ts`).
+ */
+async function montarDadosDocumentoRelatorio(
+  empresaId: string,
+  relatorio: { id: string; numero: number; gerado_em: Date; data_inicial: Date; data_final: Date; valor_total: number; cliente_id: string },
+  vencimentoCobranca: Date | null,
+): Promise<import("@/lib/documentos/gerador").DadosDocumentoRelatorio> {
   const [cliente, empresa, linhasDocumento] = await Promise.all([
-    buscarCliente(empresaId, dados.clienteId),
+    buscarCliente(empresaId, relatorio.cliente_id),
     db(empresaId).empresa.findUnique({
       where: { id: empresaId },
       select: {
@@ -421,7 +467,7 @@ export async function gerarRelatorio(empresaId: string, dados: DadosGerarRelator
     ? `${tipoDocumento(cliente.documento) === "cnpj" ? "CNPJ" : "CPF"} ${formatarDocumento(cliente.documento)}`
     : null;
 
-  const { caminho } = await gerarDocumento(empresaId, "relatorio", {
+  return {
     numero: formatarNumeroRelatorio(relatorio.numero),
     emissao: formatarDataPorExtenso(diaEmFortaleza(relatorio.gerado_em)),
     empresa: { nome: nomeDoDocumento, linhaDados, linhaContato, logoUrl: empresa.logo_url },
@@ -437,9 +483,9 @@ export async function gerarRelatorio(empresaId: string, dados: DadosGerarRelator
         valor: formatarCentavos(s.valor),
       })),
       total: formatarCentavos(relatorio.valor_total),
-      cobranca: algumTituloCriado
+      cobranca: vencimentoCobranca
         ? {
-            vencimento: formatarDataNumerica(diaEmFortaleza(dados.vencimento!)),
+            vencimento: formatarDataNumerica(diaEmFortaleza(vencimentoCobranca)),
             // Exceção do §12 (`docs/componentes.md`): sem chave Pix, o
             // relatório sai do mesmo jeito, só sem essa coluna
             // (`corpoRelatorio.ts`, `montarBlocoCobranca`) — quem chama
@@ -448,11 +494,51 @@ export async function gerarRelatorio(empresaId: string, dados: DadosGerarRelator
           }
         : null,
     },
-  });
+  };
+}
 
-  return db(empresaId).relatorio.update({
-    where: { id: relatorio.id },
-    data: { pdf_url: caminho, gerou_cobranca: algumTituloCriado },
-    select: CAMPOS,
-  });
+/**
+ * Os dados para a prévia em tela do Documento A4 (item 7, Tarefa 3, segundo
+ * commit). `null` quando o relatório não existe ou é de outra empresa —
+ * mesmo contrato de `buscarRelatorio`.
+ *
+ * **Duas coisas diferentes convivem aqui, e só uma é congelada.** Achado do
+ * `/revisar`, decisão do fundador, 29/08/2026, corrigindo esta mesma
+ * docstring (dizia "nunca recalculada" para as duas):
+ *
+ * - **O retrato do que foi cobrado** — data, rota, carga, valor de cada
+ *   frete (`RelatorioServico`, `docs/especificacao.md` §4.4) — está
+ *   congelado, gravado uma vez, e é isto que nunca muda, mesmo que o
+ *   `Servico` original seja editado depois.
+ * - **A identidade de quem cobra** — logo, razão social, CNPJ, endereço,
+ *   contato, chave Pix (lidos de `Empresa`, ao vivo) — **não é congelada, de
+ *   propósito**: é a empresa atual, não um valor da época. Se ela trocar a
+ *   logo, o relatório reimpresso sai com a nova — é a mesma empresa cobrando
+ *   de novo, não uma versão histórica dela. Confirmar isto era a pergunta
+ *   certa a fazer; a resposta é que congelar a identidade seria o erro, não
+ *   o contrário.
+ *
+ * Quando `gerou_cobranca` é `true`, o vencimento vem de qualquer título do
+ * grupo — todos compartilham o mesmo `vencimento`, gravado numa `dados.
+ * vencimento` só por `gerarRelatorio` para o lote inteiro; não é "olhar um
+ * item da coleção e supor que vale para todos" (`CLAUDE.md` §2), é ler um
+ * valor que é, por construção, idêntico em todos.
+ */
+export async function buscarDadosParaPreviaDocumento(
+  empresaId: string,
+  relatorioId: string,
+): Promise<import("@/lib/documentos/gerador").DadosDocumentoRelatorio | null> {
+  const relatorio = await buscarRelatorio(empresaId, relatorioId);
+  if (!relatorio) return null;
+
+  let vencimentoCobranca: Date | null = null;
+  if (relatorio.gerou_cobranca) {
+    const titulo = await db(empresaId).tituloReceber.findFirst({
+      where: { relatorio_id: relatorioId },
+      select: { vencimento: true },
+    });
+    vencimentoCobranca = titulo?.vencimento ?? null;
+  }
+
+  return montarDadosDocumentoRelatorio(empresaId, relatorio, vencimentoCobranca);
 }

@@ -1,5 +1,5 @@
 import { uuidv7 } from "uuidv7";
-import { db, registrarRecebimentoAtomico } from "@/lib/db";
+import { db, emTransacao, registrarRecebimentoAtomico } from "@/lib/db";
 import { Prisma, type FormaPagamentoPrevista } from "@/lib/generated/prisma/client";
 import {
   buscarServico,
@@ -501,7 +501,7 @@ export async function registrarRecebimento(
  *
  * **Recusa frete arquivado** — decisão do fundador, 27/08/2026, achado do
  * `/revisar`: mesmo critério de `registrarRecebimento`/
- * `registrarCobrancaEnviada`, por consistência ("frete arquivado é frete
+ * `registrarCobrancaEnviadaEmGrupo`, por consistência ("frete arquivado é frete
  * fora de circulação; agir sobre a cobrança dele é caminho que ninguém
  * decidiu abrir" — e errar para o lado de menos ação numa operação
  * destrutiva). A tela já esconde "Estornar cobrança" nesse caso
@@ -530,54 +530,103 @@ export async function estornarTitulo(empresaId: string, tituloId: string) {
 }
 
 /**
- * "Cobrar no WhatsApp" (item 6, Tarefa 5) — grava a confirmação de "Enviei"
- * ao voltar da conversa, mesmo padrão de `marcarOrdemEnviada` (item 5), mas
- * repetível: uma `CobrancaEnviada` por confirmação, nunca um campo único
- * sobrescrito (`docs/planos/item-6-titulo-e-cobrancas.md`, mesmo raciocínio
- * da decisão 6 sobre `Recebimento`).
+ * "Cobrar no WhatsApp" (item 6, Tarefa 5; unificada em uma chamada só de
+ * grupo no item 7, segundo commit — achado do segundo `/revisar`: a versão
+ * de um título só existia em paralelo, e cada chamada em componente de
+ * servidor que passasse uma função embrulhando-a virava uma closure não
+ * serializável atravessando a fronteira de Server Component para Client
+ * Component. Um título é só um grupo de um: `registrarCobrancaEnviadaEmGrupo`
+ * cobre os dois casos, com a mesma checagem).
+ *
+ * **Em lote, nunca uma consulta por título** (mesmo padrão de
+ * `totalRecebidoPorTitulo`/`ultimoEnvioPorTitulo`) — achado do segundo
+ * `/revisar`: a versão anterior conferia um título por vez, dentro de um
+ * `for`, contradizendo o princípio já escrito em `cobrancas.ts`. Um
+ * relatório tem poucos fretes, então o risco de esgotar o pool era baixo na
+ * prática, mas a regra não abre exceção por tamanho.
  *
  * **A conferência de FK é a mesma de `registrarRecebimento`** (`CLAUDE.md`
- * §3): `buscarTituloReceber` confere que `tituloId` pertence à empresa antes
- * de gravar — o Postgres não aplica RLS na checagem de chave estrangeira.
- * `usuarioId` nunca é escolhido, vem sempre da sessão.
+ * §3): busca por `id: { in: tituloIds }` já filtra pela empresa do
+ * contexto — o Postgres não aplica RLS na checagem de chave estrangeira, mas
+ * aplica na leitura. `usuarioId` nunca é escolhido, vem sempre da sessão.
  *
  * **Recusa o mesmo que `registrarRecebimento` recusaria** — título de outra
- * empresa/inexistente/arquivado, já pago ou cancelado, ou frete arquivado —
+ * empresa/inexistente/arquivado, já pago ou cancelado, boleto (o banco já
+ * avisa — `docs/especificacao.md` §4.5 e §8, item 11), ou frete arquivado —
  * pelo mesmo motivo: a tela só oferece "Cobrar no WhatsApp" para título
  * aberto de frete não arquivado, mas a tela é a primeira camada, não a
  * garantia.
  */
-export async function registrarCobrancaEnviada(
+async function conferirTitulosParaCobrancaEnviada(
+  empresaId: string,
+  tituloIds: string[],
+): Promise<void> {
+  const titulos = await db(empresaId).tituloReceber.findMany({
+    where: { id: { in: tituloIds } },
+    select: CAMPOS,
+  });
+  const porId = new Map(titulos.map((t) => [t.id, t]));
+
+  const servicoIds = [...new Set(titulos.map((t) => t.servico_id))];
+  const servicos = await db(empresaId).servico.findMany({
+    where: { id: { in: servicoIds } },
+    select: { id: true, arquivado_em: true },
+  });
+  const servicoPorId = new Map(servicos.map((s) => [s.id, s]));
+
+  for (const tituloId of tituloIds) {
+    const titulo = porId.get(tituloId);
+    if (!titulo || titulo.arquivado_em) throw new Error("Cobrança não encontrada.");
+    if (titulo.status !== "aberto") {
+      throw new Error("Esta cobrança já foi recebida ou cancelada.");
+    }
+    if (titulo.forma_pagamento_prevista === "boleto") {
+      throw new Error("Cobrança por boleto — o banco já avisa, sem cobrar por aqui.");
+    }
+    const servico = servicoPorId.get(titulo.servico_id);
+    if (!servico || servico.arquivado_em) {
+      throw new Error("Este frete foi arquivado — não é possível registrar o envio.");
+    }
+  }
+}
+
+/**
+ * "Cobrar no WhatsApp", para um título ou para os 2+ fretes de uma cobrança
+ * de relatório (item 7, `docs/especificacao.md` §4.5 — "uma cobrança gerada
+ * por relatório é uma linha só"). A mensagem sai uma vez só (`{periodo}`,
+ * `mensagens.ts`), mas o registro de "enviei" precisa marcar **todos** os
+ * títulos da lista, no mesmo instante — decisão do fundador, 29/08/2026:
+ * marcar um só faria a lista mostrar o grupo como não cobrado depois de ter
+ * cobrado, ou "cobrado" para uma fração dele. Sem isso, a linha some da
+ * fila de pendência achando que resolveu o valor inteiro, tendo resolvido
+ * 1/N dele.
+ *
+ * **Tudo ou nada, numa transação só** (`CLAUDE.md` §2, rigor total —
+ * dinheiro): confere os N títulos primeiro, em lote, e só grava se todos
+ * passarem. Nunca marca 3 de 4 e recusa o 4º deixando os 3 já gravados —
+ * isso criaria o mesmo problema que esta função existe para evitar, só que
+ * ao contrário (grupo com marca inconsistente entre os títulos).
+ */
+export async function registrarCobrancaEnviadaEmGrupo(
   empresaId: string,
   usuarioId: string,
-  tituloId: string,
+  tituloIds: string[],
 ): Promise<void> {
-  const titulo = await buscarTituloReceber(empresaId, tituloId);
-  if (!titulo || titulo.arquivado_em) throw new Error("Cobrança não encontrada.");
-  if (titulo.status !== "aberto") {
-    throw new Error("Esta cobrança já foi recebida ou cancelada.");
-  }
-  // Boleto não cobra por WhatsApp — o banco já avisa (`docs/especificacao.md`
-  // §4.5 e §8, item 11: "boleto não gera pendência nem ação de cobrar"). A
-  // tela nunca oferece o botão nesse caso, mas a tela é a primeira camada,
-  // não a garantia — achado do `/revisar`.
-  if (titulo.forma_pagamento_prevista === "boleto") {
-    throw new Error("Cobrança por boleto — o banco já avisa, sem cobrar por aqui.");
-  }
+  if (tituloIds.length === 0) throw new Error("Nenhum título para cobrar.");
 
-  const servico = await buscarServico(empresaId, titulo.servico_id);
-  if (!servico || servico.arquivado_em) {
-    throw new Error("Este frete foi arquivado — não é possível registrar o envio.");
-  }
+  await conferirTitulosParaCobrancaEnviada(empresaId, tituloIds);
 
-  await db(empresaId).cobrancaEnviada.create({
-    data: {
-      id: uuidv7(),
-      titulo_id: tituloId,
-      usuario_id: usuarioId,
-      enviado_em: new Date(),
-      empresa_id: empresaId,
-    },
+  const agora = new Date();
+  await emTransacao(empresaId, async (tx) => {
+    await tx.cobrancaEnviada.createMany({
+      data: tituloIds.map((tituloId) => ({
+        id: uuidv7(),
+        titulo_id: tituloId,
+        usuario_id: usuarioId,
+        enviado_em: agora,
+        empresa_id: empresaId,
+      })),
+    });
   });
 }
 

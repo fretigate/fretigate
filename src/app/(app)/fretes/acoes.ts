@@ -20,7 +20,7 @@ import {
   editarServicoComProtecaoDeTitulo,
   estornarTitulo,
   faturarServico,
-  registrarCobrancaEnviada,
+  registrarCobrancaEnviadaEmGrupo,
   registrarRecebimento,
 } from "@/lib/servicos/titulos";
 import { salvarChavePix } from "@/lib/servicos/empresas";
@@ -486,23 +486,39 @@ export const registrarRecebimentoAction = comoUsuario(async (
   }
 });
 
-const schemaRegistrarCobrancaEnviada = z.object({ tituloId: z.string().uuid() });
+const schemaRegistrarCobrancaEnviadaEmGrupo = z.object({
+  tituloIds: z.array(z.string().uuid()).min(1),
+});
 
 /**
  * "Enviei", no aviso de confirmação que aparece ao voltar do WhatsApp de uma
  * cobrança (item 6, Tarefa 5) — mesmo padrão de `marcarOrdemEnviadaAction`.
- * `registrarCobrancaEnviada` (`src/lib/servicos/titulos.ts`) confere posse do
- * título, recusa boleto/já pago/cancelado e frete arquivado.
+ * Serve tanto o caso comum (um título) quanto a linha agrupada de Cobranças
+ * (item 7, segundo commit — `docs/especificacao.md` §4.5, cobrança de
+ * relatório com 2+ fretes): uma lista de um é só um grupo de um.
+ *
+ * **Não existe mais uma versão "só um título".** Achado do segundo
+ * `/revisar`: um componente de servidor (`cobrancas/[id]/page.tsx`) passava
+ * `registrar={(ids) => registrarCobrancaEnviadaAction(ids[0])}` para o
+ * Client Component `AcaoCobrarNoWhatsApp` — uma closure não atravessa a
+ * fronteira de serialização do RSC, só Server Action de verdade atravessa;
+ * a tela quebraria ao renderizar. Unificar nesta ação (que já aceita
+ * `tituloIds: string[]`) elimina a closure nos dois pontos que a usavam
+ * (`cobrancas/[id]/page.tsx` e `ListaCobrancas.tsx`) sem precisar de duas
+ * versões da mesma ação.
+ * `registrarCobrancaEnviadaEmGrupo` (`src/lib/servicos/titulos.ts`) confere
+ * posse de cada título, recusa boleto/já pago/cancelado e frete arquivado —
+ * tudo ou nada.
  */
-export const registrarCobrancaEnviadaAction = comoUsuario(async (
+export const registrarCobrancaEnviadaEmGrupoAction = comoUsuario(async (
   sessao,
-  tituloId: string,
+  tituloIds: string[],
 ): Promise<ResultadoSimples> => {
-  const validado = schemaRegistrarCobrancaEnviada.safeParse({ tituloId });
+  const validado = schemaRegistrarCobrancaEnviadaEmGrupo.safeParse({ tituloIds });
   if (!validado.success) return { ok: false, erro: "Cobrança inválida." };
 
   try {
-    await registrarCobrancaEnviada(sessao.empresaId, sessao.usuarioId, validado.data.tituloId);
+    await registrarCobrancaEnviadaEmGrupo(sessao.empresaId, sessao.usuarioId, validado.data.tituloIds);
     return { ok: true };
   } catch (erro) {
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não deu para salvar agora." };

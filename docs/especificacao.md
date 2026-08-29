@@ -582,14 +582,16 @@ que gere custo. Os números, aprovados em 07/08/2026:
 | Consultar o código em `/redefinir-senha` (carregar a tela) | **20 por minuto** |
 | Criar conta | **5 por 10 minutos** |
 | Enviar comprovante | **20 por 5 minutos** |
+| Gerar relatório | **10 por 5 minutos** |
 
 A contagem é por endereço de rede e por rota, e fica **no banco** — a
 hospedagem roda várias instâncias, e contagem em memória viraria uma contagem
 por instância. As travas de **Criar conta**, de **consultar o código em
-`/redefinir-senha`** e de **Enviar comprovante** não são rota do Better Auth
-(são Server Action, Server Component e rota de API, respectivamente —
-`src/lib/servicos/trava-de-cadastro.ts`, `trava-de-redefinicao.ts` e
-`trava-de-comprovante.ts`), mas usam a mesma tabela `rate_limit` e o mesmo
+`/redefinir-senha`**, de **Enviar comprovante** e de **Gerar relatório** não
+são rota do Better Auth (são Server Action, Server Component, rota de API e
+Server Action, respectivamente — `src/lib/servicos/trava-de-cadastro.ts`,
+`trava-de-redefinicao.ts`, `trava-de-comprovante.ts` e
+`trava-de-relatorio.ts`), mas usam a mesma tabela `rate_limit` e o mesmo
 mecanismo atômico; estão aqui, e não só no código, para as listas nunca
 divergirem de novo — já aconteceu três vezes.
 

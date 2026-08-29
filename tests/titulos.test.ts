@@ -19,7 +19,7 @@ import {
   listarServicosDoCliente,
   listarServicosDoCaminhao,
   listarServicosDoMotorista,
-  registrarCobrancaEnviada,
+  registrarCobrancaEnviadaEmGrupo,
   ultimoEnvioPorTitulo,
   listarEnviosDoTitulo,
 } from "@/lib/servicos/titulos";
@@ -61,7 +61,8 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 88;
+// +4 (item 7, segundo commit): describe "12b. registrarCobrancaEnviadaEmGrupo".
+const CONFERENCIAS_ESPERADAS = 88 + 4;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -1883,14 +1884,14 @@ describe("11. ultimoRecebimentoEm — a data que \"recebido em X\" mostra (item 
   });
 });
 
-describe("12. registrarCobrancaEnviada — \"Cobrar no WhatsApp\" (item 6, Tarefa 5)", () => {
+describe("12. registrarCobrancaEnviadaEmGrupo com um título — \"Cobrar no WhatsApp\" (item 6, Tarefa 5; unificada no item 7, segundo commit)", () => {
   it("recusa título de outra empresa (conferência de FK — CLAUDE.md §3)", async () => {
     const a = await criarEmpresaDeTeste("cob1a");
     const b = await criarEmpresaDeTeste("cob1b");
     const tituloDeB = await criarTituloAberto(b);
 
     await expect(
-      registrarCobrancaEnviada(a.empresaId, a.usuarioId, tituloDeB.id),
+      registrarCobrancaEnviadaEmGrupo(a.empresaId, a.usuarioId, [tituloDeB.id]),
     ).rejects.toThrow("Cobrança não encontrada.");
 
     // Nada vazou nem foi gravado para a cobrança de B.
@@ -1902,7 +1903,7 @@ describe("12. registrarCobrancaEnviada — \"Cobrar no WhatsApp\" (item 6, Taref
   it("recusa título que não existe", async () => {
     const e = await criarEmpresaDeTeste("cob2");
     await expect(
-      registrarCobrancaEnviada(e.empresaId, e.usuarioId, randomUUID()),
+      registrarCobrancaEnviadaEmGrupo(e.empresaId, e.usuarioId, [randomUUID()]),
     ).rejects.toThrow("Cobrança não encontrada.");
     conferencias++;
   });
@@ -1917,7 +1918,7 @@ describe("12. registrarCobrancaEnviada — \"Cobrar no WhatsApp\" (item 6, Taref
     });
 
     await expect(
-      registrarCobrancaEnviada(e.empresaId, e.usuarioId, titulo.id),
+      registrarCobrancaEnviadaEmGrupo(e.empresaId, e.usuarioId, [titulo.id]),
     ).rejects.toThrow("Esta cobrança já foi recebida ou cancelada.");
     conferencias++;
   });
@@ -1937,7 +1938,7 @@ describe("12. registrarCobrancaEnviada — \"Cobrar no WhatsApp\" (item 6, Taref
     });
 
     await expect(
-      registrarCobrancaEnviada(e.empresaId, e.usuarioId, titulo.id),
+      registrarCobrancaEnviadaEmGrupo(e.empresaId, e.usuarioId, [titulo.id]),
     ).rejects.toThrow("Cobrança por boleto — o banco já avisa, sem cobrar por aqui.");
     conferencias++;
   });
@@ -1948,7 +1949,7 @@ describe("12. registrarCobrancaEnviada — \"Cobrar no WhatsApp\" (item 6, Taref
     await arquivarServico(e.empresaId, titulo.servico_id);
 
     await expect(
-      registrarCobrancaEnviada(e.empresaId, e.usuarioId, titulo.id),
+      registrarCobrancaEnviadaEmGrupo(e.empresaId, e.usuarioId, [titulo.id]),
     ).rejects.toThrow("Este frete foi arquivado — não é possível registrar o envio.");
     conferencias++;
   });
@@ -1957,7 +1958,7 @@ describe("12. registrarCobrancaEnviada — \"Cobrar no WhatsApp\" (item 6, Taref
     const e = await criarEmpresaDeTeste("cob5");
     const titulo = await criarTituloAberto(e);
 
-    await registrarCobrancaEnviada(e.empresaId, e.usuarioId, titulo.id);
+    await registrarCobrancaEnviadaEmGrupo(e.empresaId, e.usuarioId, [titulo.id]);
 
     const { rows } = await raiz.query<{ titulo_id: string; usuario_id: string; empresa_id: string }>(
       `SELECT titulo_id, usuario_id, empresa_id FROM cobranca_enviada WHERE titulo_id = $1`,
@@ -1978,11 +1979,96 @@ describe("12. registrarCobrancaEnviada — \"Cobrar no WhatsApp\" (item 6, Taref
     const e = await criarEmpresaDeTeste("cob6");
     const titulo = await criarTituloAberto(e);
 
-    await registrarCobrancaEnviada(e.empresaId, e.usuarioId, titulo.id);
-    await registrarCobrancaEnviada(e.empresaId, e.usuarioId, titulo.id);
+    await registrarCobrancaEnviadaEmGrupo(e.empresaId, e.usuarioId, [titulo.id]);
+    await registrarCobrancaEnviadaEmGrupo(e.empresaId, e.usuarioId, [titulo.id]);
 
     const envios = await listarEnviosDoTitulo(e.empresaId, titulo.id);
     expect(envios).toHaveLength(2);
+    conferencias++;
+  });
+});
+
+/**
+ * `registrarCobrancaEnviadaEmGrupo` (item 7, segundo commit) — "Cobrar no
+ * WhatsApp" de uma cobrança de relatório com 2+ fretes
+ * (`docs/especificacao.md` §4.5). Rigor total (`CLAUDE.md` §2): dinheiro —
+ * tudo ou nada, nunca metade do grupo marcada.
+ */
+describe("12b. registrarCobrancaEnviadaEmGrupo — tudo ou nada (item 7, segundo commit)", () => {
+  it("recusa lista vazia", async () => {
+    const e = await criarEmpresaDeTeste("grp1");
+    await expect(
+      registrarCobrancaEnviadaEmGrupo(e.empresaId, e.usuarioId, []),
+    ).rejects.toThrow("Nenhum título para cobrar.");
+    conferencias++;
+  });
+
+  it("grava os N títulos do grupo, todos no mesmo instante", async () => {
+    const e = await criarEmpresaDeTeste("grp2");
+    const t1 = await criarTituloAberto(e);
+    const t2 = await criarTituloAberto(e);
+    const t3 = await criarTituloAberto(e);
+
+    await registrarCobrancaEnviadaEmGrupo(e.empresaId, e.usuarioId, [t1.id, t2.id, t3.id]);
+
+    const { rows } = await raiz.query<{ titulo_id: string; enviado_em: Date }>(
+      `SELECT titulo_id, enviado_em FROM cobranca_enviada WHERE titulo_id = ANY($1)`,
+      [[t1.id, t2.id, t3.id]],
+    );
+    expect(rows).toHaveLength(3);
+    const instantes = new Set(rows.map((r) => r.enviado_em.getTime()));
+    // Mesmo instante para os três — nunca um relógio por título, que
+    // deixaria "cobrado há X dias" divergir entre linhas do mesmo grupo.
+    expect(instantes.size).toBe(1);
+    conferencias++;
+  });
+
+  /**
+   * Se QUALQUER título do grupo falhar a checagem (já pago, boleto, frete
+   * arquivado, de outra empresa...), NENHUM é gravado — nunca 2 de 3, que
+   * deixaria a lista mostrar o grupo como "cobrado" para uma fração dele ou
+   * "não cobrado" depois de ter cobrado parte. A checagem roda ANTES de
+   * qualquer gravação (`registrarCobrancaEnviadaEmGrupo`, `titulos.ts`).
+   */
+  it("um título inválido no meio do grupo recusa TODOS — nenhum fica gravado", async () => {
+    const e = await criarEmpresaDeTeste("grp3");
+    const valido1 = await criarTituloAberto(e);
+    const jaPago = await criarTituloAberto(e);
+    await registrarRecebimento(e.empresaId, e.usuarioId, jaPago.id, {
+      valor: e.valorServico,
+      data: new Date(),
+      forma: "Pix",
+    });
+    const valido2 = await criarTituloAberto(e);
+
+    await expect(
+      registrarCobrancaEnviadaEmGrupo(e.empresaId, e.usuarioId, [valido1.id, jaPago.id, valido2.id]),
+    ).rejects.toThrow("Esta cobrança já foi recebida ou cancelada.");
+
+    const envios = await raiz.query(
+      `SELECT titulo_id FROM cobranca_enviada WHERE titulo_id = ANY($1)`,
+      [[valido1.id, jaPago.id, valido2.id]],
+    );
+    // Nem os dois títulos válidos foram marcados — tudo ou nada de verdade.
+    expect(envios.rows).toHaveLength(0);
+    conferencias++;
+  });
+
+  it("recusa título de outra empresa dentro do grupo — mesma conferência de FK do CLAUDE.md §3", async () => {
+    const a = await criarEmpresaDeTeste("grp4a");
+    const b = await criarEmpresaDeTeste("grp4b");
+    const deA = await criarTituloAberto(a);
+    const deB = await criarTituloAberto(b);
+
+    await expect(
+      registrarCobrancaEnviadaEmGrupo(a.empresaId, a.usuarioId, [deA.id, deB.id]),
+    ).rejects.toThrow("Cobrança não encontrada.");
+
+    const envios = await raiz.query(
+      `SELECT titulo_id FROM cobranca_enviada WHERE titulo_id = ANY($1)`,
+      [[deA.id, deB.id]],
+    );
+    expect(envios.rows).toHaveLength(0);
     conferencias++;
   });
 });
@@ -2001,7 +2087,7 @@ describe("13. ultimoEnvioPorTitulo — \"cobrado há X dias por Y\" em lote (ite
    * Mesma prova de `ultimoRecebimentoEm` (bloco 11): grava fora de ordem
    * cronológica e confere que a função acha a MAIOR data, não a última
    * gravada nem a primeira que o banco devolver. `enviado_em` é escrito
-   * direto por SQL aqui — `registrarCobrancaEnviada` sempre usa o instante
+   * direto por SQL aqui — `registrarCobrancaEnviadaEmGrupo` sempre usa o instante
    * do toque, sem permitir escolher a data, então só assim dá para simular
    * dois envios em datas diferentes de forma determinística.
    */
@@ -2152,11 +2238,11 @@ describe("14. estornarTitulo — Estorno (item 6, Tarefa 6)", () => {
 
   /**
    * Decisão do fundador, 27/08/2026, achado do `/revisar`: por
-   * consistência com `registrarRecebimento`/`registrarCobrancaEnviada`
+   * consistência com `registrarRecebimento`/`registrarCobrancaEnviadaEmGrupo`
    * ("frete arquivado é frete fora de circulação; agir sobre a cobrança
    * dele é caminho que ninguém decidiu abrir").
    */
-  it("recusa frete arquivado — mesmo critério de registrarRecebimento/registrarCobrancaEnviada", async () => {
+  it("recusa frete arquivado — mesmo critério de registrarRecebimento/registrarCobrancaEnviadaEmGrupo", async () => {
     const e = await criarEmpresaDeTeste("est10");
     const titulo = await criarTituloAberto(e);
     await arquivarServico(e.empresaId, titulo.servico_id);

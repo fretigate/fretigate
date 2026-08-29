@@ -570,3 +570,109 @@ volta. Este item mexe nos dois:
 - **Numeração sequencial por empresa sob concorrência real** — mesmo teste
   de `Servico.numero`, agora para `Relatorio.numero`.
 - **Contagem de verificações** em todo teste novo (§3, item 4).
+
+---
+
+## Construído na Tarefa 3, segundo commit (29/08/2026) — achado durante a construção
+
+**O agrupamento de Cobranças por relatório revelou uma peça que a regra
+escrita não previa.** `docs/especificacao.md` §4.5 diz "uma cobrança gerada
+por relatório é uma linha só" — mas uma linha só, com "Marcar recebido"
+apontando para qual dos N títulos? Registrar contra um só receberia uma
+fração do valor em silêncio (`CLAUDE.md` §2, rigor total — dinheiro).
+Decisão do fundador: a linha some numa linha só para exibição e para
+"Cobrar no WhatsApp" (que registra em todos os títulos do grupo, no mesmo
+instante — `registrarCobrancaEnviadaEmGrupo`, `titulos.ts`), mas **sem**
+"Marcar recebido" nela — um chevron expande a linha e revela cada título
+como uma linha normal, com o próprio deslizar que já existe. Peça nova:
+`LinhaCobrancaAgrupada.tsx`.
+
+**O achado que motivou tudo, vale registrar como método:** quem está em
+Cobranças olhando o dinheiro não tinha como agir dali — o caminho para
+receber já existia, mas só pela tela de Fretes (o frete específico →
+Marcar recebido), fora da tela onde a pendência aparece. Isso só apareceu
+perguntando "como ela faz isso" durante a construção — nenhum teste
+automatizado teria achado, porque tecnicamente o dinheiro sempre teve um
+caminho de receber, só não na tela certa.
+
+### O que precisa chegar ao Design
+
+- **O tratamento do chevron.** Fica dentro de uma linha que já é tocável (o
+  corpo, para o Documento A4) e já tem rodapé (a pílula "Cobrar no
+  WhatsApp") — mesma família de risco do item 4 ("dois alvos de 48px não
+  cabem em 78px sem invadir a linha de apoio", `LinhaDeLista.tsx`), embora
+  aqui os dois alvos sejam IRMÃOS (lado a lado), não empilhados como lá.
+  Construído com `min-h-78` na área tocável e `w-48` no chevron, dentro de
+  um `items-stretch` — o alvo do chevron sai **48×78px**, medido contra a
+  escala de espaçamento do projeto (`--spacing: 1px`, `src/app/globals.css`
+  — `w-48` vale exatamente 48px aqui, não a escala padrão do Tailwind).
+  Ainda não confirmado ao vivo num navegador autenticado (sem conta de
+  teste à mão nesta sessão) — o número está medido contra o CSS compilado,
+  não visto renderizado.
+- **Como o grupo aberto se distingue visualmente.** As linhas reveladas
+  hoje só têm recuo (`pl-16`) e o rótulo "Fretes desta cobrança" — nenhuma
+  cor nova, porque `docs/estilo.md` já registra "o app não tem borda
+  nenhuma — separa por fundo", e as duas tonalidades existentes
+  (`--color-separacao`/`--color-separacao-variante`) já têm outro
+  significado (estado desabilitado de pílula, `PilulaCabecalho.tsx`/
+  `PilulaEmLinha.tsx`). Sem confirmação, a pessoa pode não perceber que as
+  linhas abaixo pertencem à cobrança acima.
+- **A etiqueta de `em_andamento` na prévia da montagem** — mesma lacuna já
+  registrada acima ("A tela de montagem"): sem cor/rótulo próprio em
+  `docs/estilo.md`, construída com tratamento neutro por não haver outro
+  definido.
+- **O padrão "mês passado" quando a tela abre sem período na URL.**
+  `docs/especificacao.md` §4.4 lista as quatro janelas mas não diz qual é o
+  padrão — a decisão veio do protótipo (`TelaRelatorio.dc.html`), que
+  `CLAUDE.md` §13 trata como evidência corroborante, nunca autoridade. Achado
+  do segundo `/revisar`: aqui não existe documento pra corroborar, só o
+  protótipo sozinho. Pede confirmação por escrito.
+- **O rótulo da tela para quem usa.** O cabeçalho mostra "Relatório",
+  `docs/estilo.md` linha 94 lista "Novo relatório" entre os títulos de tela,
+  e `docs/componentes.md` chama a tela de "Relatório — montagem". Achado do
+  segundo `/revisar`: nenhum documento fecha qual das três é o texto que a
+  pessoa lê no topo da tela.
+
+### Lacunas do segundo `/revisar` — registradas, não corrigidas nesta tarefa
+
+- **O total da linha agrupada quando um dos títulos já recebeu parte —
+  conferido, não é ambiguidade nova.** Pergunta do fundador: se o grupo soma
+  R$ 4.200 e um título já recebeu metade, o número mostrado é o valor cheio
+  ou o saldo? **É o saldo — a mesma regra do item 6, Tarefa 2, já se
+  aplica.** `cobrancas/page.tsx` calcula `valorCentavos` **por título, antes
+  de agrupar**: `t.valor - recebido` fora de "Recebidas" (o que falta
+  entrar) e o valor recebido dentro de "Recebidas". `agruparPorRelatorio`
+  soma esses valores já-saldo (`itens.reduce((soma, i) => soma +
+  i.valorCentavos, 0)`) — nunca soma `t.valor` bruto. O total do grupo é
+  sempre "quanto ainda falta entrar somando os N títulos", nunca "o valor
+  cheio do relatório". A etiqueta "Parcial" (`algumParcial =
+  itens.some(...)`) avisa que o número não é o valor total faturado, sem
+  precisar de um segundo número na linha.
+- **"Imprimir" não aciona impressão — é o comportamento, não uma limitação
+  técnica a resolver.** O botão abre o PDF numa aba nova; quem imprime usa o
+  leitor de PDF do próprio navegador dali. Não dá para chamar `window.print()`
+  numa aba nova de outra origem a partir de quem abriu — a alternativa exigiria
+  buscar o PDF como blob e renderizar dentro de um `<iframe>` só para
+  imprimir, complexidade que o rótulo "Imprimir" não pediu para justificar.
+  Fica registrado como texto que promete mais do que a ação faz — se o
+  Design decidir trocar o rótulo (por "Abrir PDF", por exemplo) é decisão
+  dele, não corrigida aqui.
+- **Token "rodapé de ações ancorado" de `docs/estilo.md` sem reconciliar com
+  o uso atual** desta tarefa — construído com o rodapé dentro do fluxo
+  rolável (`CLAUDE.md` §8), sem conferir se o token descreve exatamente este
+  caso ou um tratamento diferente.
+- **O tratamento `desmarcado` (esmaecido + risco) da checkbox de frete** —
+  peça nova de `LinhaDeLista`, sem respaldo em `docs/estilo.md` ou
+  `docs/componentes.md`.
+- **Duas formas de checkbox na mesma tela, sem regra documentada** — o
+  círculo (`rounded-pilula`) da lista de fretes e o quadrado arredondado
+  (`rounded-etiqueta`) do toggle "Gerar cobrança" usam o mesmo ícone e a
+  mesma cor, formas diferentes, sem nenhum documento dizendo quando cada
+  forma vale.
+- **O prefixo "R$" sem combinação tipográfica documentada** — construído
+  com o texto ao lado do valor, tratamento visual não conferido contra
+  `docs/estilo.md`.
+- **A seta de voltar da tela de montagem está fixa em `/mais`**, mas
+  `docs/navegacao.md` lista 4 origens possíveis para chegar a esta tela.
+  Corrigir exigiria passar a origem pela URL (mesmo padrão de `?cliente=`),
+  não feito nesta tarefa.

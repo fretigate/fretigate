@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   criarRelatorio,
   buscarRelatorio,
+  buscarDadosParaPreviaDocumento,
   formatarNumeroRelatorio,
   listarServicosParaRelatorio,
   gerarUrlRelatorio,
@@ -49,7 +50,8 @@ const clienteStorage = createClient(process.env.SUPABASE_URL!, process.env.SUPAB
 const caminhosGravados: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 27 + 1 + 4 + 4 + 1 + (RODA_CHROMIUM ? 16 : 0);
+// +9 (item 7, segundo commit): describe "8. buscarDadosParaPreviaDocumento".
+const CONFERENCIAS_ESPERADAS = 27 + 1 + 4 + 4 + 1 + (RODA_CHROMIUM ? 16 : 0) + 9;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -869,6 +871,115 @@ describe("7. gerarRelatorio — a ação completa (Tarefa 3)", () => {
     if (relatorio.pdf_url) caminhosGravados.push(relatorio.pdf_url);
 
     expect(relatorio.pdf_url).not.toBeNull();
+    conferencias++;
+  });
+});
+
+/**
+ * `buscarDadosParaPreviaDocumento` (item 7, Tarefa 3, segundo commit) — a
+ * prévia em tela do Documento A4. Reconstrói a mesma marcação do PDF a
+ * partir do banco (`RelatorioServico`, o retrato congelado), sem precisar
+ * de Chromium — roda em qualquer plataforma, diferente dos testes de
+ * `gerarRelatorio` acima.
+ */
+describe("8. buscarDadosParaPreviaDocumento — a prévia em tela (Tarefa 3, segundo commit)", () => {
+  it("null para relatório que não existe", async () => {
+    const e = await criarEmpresaDeTeste("z1");
+    expect(await buscarDadosParaPreviaDocumento(e.empresaId, randomUUID())).toBeNull();
+    conferencias++;
+  });
+
+  it("null para relatório de outra empresa — mesma conferência de buscarRelatorio", async () => {
+    const a = await criarEmpresaDeTeste("z2a");
+    const b = await criarEmpresaDeTeste("z2b");
+    const s1 = await criarServicoDe(b, { valor: 10000 });
+    const relatorioDeB = await criarRelatorio(b.empresaId, {
+      clienteId: b.clienteId,
+      ...periodo(),
+      servicoIds: [s1.id],
+    });
+
+    expect(await buscarDadosParaPreviaDocumento(a.empresaId, relatorioDeB.id)).toBeNull();
+    conferencias++;
+  });
+
+  it("sem cobrança: corpo.cobranca é null, linhas batem com o retrato congelado", async () => {
+    const e = await criarEmpresaDeTeste("z3");
+    const s1 = await criarServicoDe(e, {
+      valor: 15000,
+      origem_texto: "Fortaleza",
+      destino_texto: "Sobral",
+      carga_texto: "Grãos",
+    });
+    const relatorio = await criarRelatorio(e.empresaId, {
+      clienteId: e.clienteId,
+      ...periodo(),
+      servicoIds: [s1.id],
+    });
+
+    const dados = await buscarDadosParaPreviaDocumento(e.empresaId, relatorio.id);
+    expect(dados).not.toBeNull();
+    expect(dados!.corpo.cobranca).toBeNull();
+    conferencias++;
+    expect(dados!.corpo.linhas).toHaveLength(1);
+    conferencias++;
+    expect(dados!.corpo.linhas[0].valor).toBe("150,00");
+    conferencias++;
+    expect(dados!.corpo.total).toBe("150,00");
+    conferencias++;
+  });
+
+  /**
+   * O retrato congelado, não o dado ao vivo (`docs/especificacao.md` §4.4:
+   * "o documento fica gravado com os valores da época") — editar o `Servico`
+   * depois de gerado o relatório não pode mudar a prévia.
+   */
+  it("editar o Servico depois de gerado não muda a prévia — usa RelatorioServico, nunca o Servico ao vivo", async () => {
+    const e = await criarEmpresaDeTeste("z4");
+    const s1 = await criarServicoDe(e, { valor: 15000, carga_texto: "Grãos" });
+    const relatorio = await criarRelatorio(e.empresaId, {
+      clienteId: e.clienteId,
+      ...periodo(),
+      servicoIds: [s1.id],
+    });
+
+    await editarServico(e.empresaId, s1.id, {
+      tipo_operacao_id: e.tipoOperacaoId,
+      cliente_id: e.clienteId,
+      data_servico: s1.data_servico,
+      valor: 15000,
+      carga_texto: "Móveis",
+    });
+
+    const dados = await buscarDadosParaPreviaDocumento(e.empresaId, relatorio.id);
+    expect(dados!.corpo.linhas[0].carga).toBe("Grãos");
+    conferencias++;
+  });
+
+  it("com cobrança: corpo.cobranca vem do vencimento do título, mesmo com múltiplos títulos no grupo", async () => {
+    const e = await criarEmpresaDeTeste("z5");
+    const s1 = await criarServicoDe(e, { valor: 10000 });
+    const s2 = await criarServicoDe(e, { valor: 20000 });
+    await marcarServicoFinalizado(e.empresaId, s1.id);
+    await marcarServicoFinalizado(e.empresaId, s2.id);
+
+    const relatorio = await criarRelatorio(e.empresaId, {
+      clienteId: e.clienteId,
+      ...periodo(),
+      servicoIds: [s1.id, s2.id],
+    });
+    const vencimento = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+    await faturarServico(e.empresaId, s1.id, { vencimento, formaPrevista: "outro", relatorioId: relatorio.id });
+    await faturarServico(e.empresaId, s2.id, { vencimento, formaPrevista: "outro", relatorioId: relatorio.id });
+    // `gerarRelatorio` grava `gerou_cobranca` — aqui simulado direto, já que
+    // este teste mede só a leitura da prévia, não o fluxo de geração
+    // completo (coberto pela describe 7 acima).
+    await raiz.query(`UPDATE "relatorio" SET gerou_cobranca = true WHERE id = $1`, [relatorio.id]);
+
+    const dados = await buscarDadosParaPreviaDocumento(e.empresaId, relatorio.id);
+    expect(dados!.corpo.cobranca).not.toBeNull();
+    conferencias++;
+    expect(dados!.corpo.cobranca!.chavePix).toBeNull();
     conferencias++;
   });
 });
