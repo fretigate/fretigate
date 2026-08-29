@@ -10,6 +10,7 @@ import {
 import { buscarCliente } from "@/lib/servicos/clientes";
 import { referenciaDoServico } from "@/lib/servicos/cobrancas";
 import { CLASSE_DO_PRAZO, grupoDaCobranca, textoDoPrazo } from "@/lib/servicos/cobrancas-situacao";
+import { Botao } from "@/components/ui/Botao";
 import { CabecalhoDeDetalhe } from "@/components/ui/CabecalhoDeDetalhe";
 import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
 import { LinhaDeLista } from "@/components/ui/LinhaDeLista";
@@ -251,6 +252,11 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
               salvarTelefoneCliente={salvarTelefoneClienteAction}
               salvarChavePix={salvarChavePixAction}
             />
+          ) : null}
+          {tituloAtual.relatorio_id ? (
+            <Botao variante="secundaria" href={`/relatorio/${tituloAtual.relatorio_id}`}>
+              Ver relatório
+            </Botao>
           ) : null}
           {podeEstornar ? (
             <AcaoEstornar

@@ -1690,6 +1690,32 @@ Não invente resposta. Pergunte.
   fundador, 28/08/2026: fica registrado como lacuna, não corrige agora — se
   se mostrar alcançável com frequência real (não só teórica), vira tarefa
   própria; se for raro, permanece assim.
+
+  **Deixou de ser só teórico na Tarefa 4 (29/08/2026), achado do `/revisar`:**
+  "Ver relatório" no detalhe do frete e da cobrança (as duas novas nesta
+  tarefa) chegam ao Documento A4 por `RelatorioServico`/`relatorio_id`,
+  nenhum dos dois olha `pdf_url` — então o estado passou de "só entre o
+  `criarRelatorio` e o Chromium terminar" para "alcançável por qualquer
+  pessoa navegando depois". A tela (`TelaDocumentoRelatorio.tsx`) ganhou
+  tratamento: sem `pdf_url`, some com Compartilhar/Baixar/Imprimir (`CLAUDE.md`
+  §8, nunca botão sem ação de fundo) e mostra "Este relatório não tem PDF
+  gerado." com o "tentar de novo à mão" já como botão de verdade (volta à
+  montagem, cliente pré-selecionado) — não resolve a lacuna, só evita a
+  tela quebrada que ela criaria sem isso.
+- **Entradas de navegação não têm cobertura automatizada.** Achado do
+  `/revisar` na Tarefa 4 do item 7 (29/08/2026), quando as quatro entradas
+  construídas (perfil do cliente, detalhe do frete, detalhe da cobrança,
+  Mais → Relatório) foram verificadas só manualmente — clique no navegador
+  até o destino certo, sem teste escrito. **Decisão do fundador,
+  29/08/2026: basta, decisão anterior a esta tarefa.** O projeto nunca teve
+  suíte de tela/componente (só serviço, contra banco real, via Vitest) —
+  criar a primeira agora seria escopo novo dentro da última tarefa de um
+  item, não parte dela. A lacuna real, registrada para não ficar só na
+  cabeça de quem construiu: **se alguém trocar um `href` por engano, nada
+  acusa** — nem `npx tsc --noEmit` (string literal, não checada contra
+  rota), nem `npm run lint`, nem a suíte de serviço. Candidato a tarefa
+  própria (suíte de tela, ou teste de rota/link) se um dia isso incomodar
+  de verdade — não antes.
 - **PRAZO — trava de 2 GB por empresa no storage (§10) ainda não existe.**
   Achado do `/revisar` na Tarefa 5 do item 5 (25/08/2026), quando o upload de
   comprovante (`src/lib/servicos/comprovantes.ts`, `enviarComprovante`)

@@ -438,6 +438,16 @@ no DOM
 `609` — mesma ordem da regra (resumo → campos → **ação** → histórico),
 igual aos outros dois perfis.
 
+**Perfil do cliente, remedido na Tarefa 4 do item 7 (29/08/2026).** A linha
+"1096" acima é de antes deste commit — a tela ganhou a principal **Gerar
+relatório**, 60px, acima da pílula "Lançar frete para este cliente" que já
+estava nesse mesmo bloco. Medido de novo no DOM
+(`getBoundingClientRect`, viewport 1280×720, `scrollTop: 0`, achado do
+`/revisar` desta tarefa: a medição anterior parou de valer e ninguém tinha
+refeito): o botão principal em `764–824`, Histórico em `898` — mesma ordem
+da regra (resumo → campos → **ações** → histórico), só a posição absoluta
+mudou.
+
 ## Onde cada tela usa o quê
 
 Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o dinheiro ou o estado. Telas de nível 1 (dashboard e listas) não têm principal — o (+) da barra é chrome, não ação de tela.
@@ -446,7 +456,7 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 |---|---|
 | Dashboard | sem principal · 2× pílula sobre escuro (**Gerar relatório** · **Importar fretes**) · pastilhas, pendências, barras do gráfico e cartão FretiNews são superfícies tocáveis, não botões · × discreto para dispensar o FretiNews · aviso do sistema com **Desfazer** |
 | Meus fretes | sem principal · chip de filtro (Período · Cliente · Situação) · deslizar revela **Marcar recebido** · aviso do sistema depois de salvar |
-| Detalhe do frete | principal **muda com a situação**: em andamento, sem motorista → **Escolher motorista** (leva a Editar frete); em andamento, com motorista → **Enviar ordem no WhatsApp**, com aviso do sistema **Enviei** / **Ainda não** ao voltar da conversa (Tarefa 2 do item 5) — em andamento, qualquer que seja o estado da principal, acompanha a secundária **Marcar como finalizado** (Tarefa 3 do item 5, 24/08/2026); finalizado e sem cobrança → **Faturar frete**; já faturado → **Ver relatório** · secundárias **Marcar recebido** + **Editar frete** · texto destrutiva **Arquivar frete** · pílula em linha para anexar comprovante |
+| Detalhe do frete | principal **muda com a situação**: em andamento, sem motorista → **Escolher motorista** (leva a Editar frete); em andamento, com motorista → **Enviar ordem no WhatsApp**, com aviso do sistema **Enviei** / **Ainda não** ao voltar da conversa (Tarefa 2 do item 5) — em andamento, qualquer que seja o estado da principal, acompanha a secundária **Marcar como finalizado** (Tarefa 3 do item 5, 24/08/2026); finalizado e sem cobrança → **Faturar frete**; pertence a um relatório (`RelatorioServico`) e não tem faturamento pendente → **Ver relatório** — corrigido na Tarefa 4 do item 7, achado do `/revisar`: "já faturado" não bastava, porque "Faturar frete" (item 6) sempre pôde criar título sem passar por relatório nenhum, e "Ver relatório" nesse caso levaria a lugar nenhum (§8, "Falta de dado"); faturado sem relatório fica **sem principal**, mesmo caso já registrado abaixo para o perfil do caminhão · secundárias **Marcar recebido** + **Editar frete** · texto destrutiva **Arquivar frete** · pílula em linha para anexar comprovante |
 | Lançar frete | principal **Salvar frete** — na edição, **Salvar alterações** (com o valor no próprio botão nos dois casos) · linhas recolhidas abrem folha de busca · teclado numérico próprio sobreposto · aviso do sistema depois de salvar (só na criação), com **Já recebi** / **Ver o frete** · com título ativo, Cliente e o valor ficam travados, sem abrir folha/teclado |
 | Folha de busca | pílula de cabeçalho **+ Novo** / **+ Cadastrar** · texto neutra **Fechar** · chips de escolha |
 | Folha de calendário | chips de atalho **Hoje** · **Ontem** · **Amanhã** · células de dia 48px · duas setas de mês de 44px |

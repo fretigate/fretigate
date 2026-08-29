@@ -8,6 +8,7 @@ import { buscarMotorista } from "@/lib/servicos/motoristas";
 import { buscarTipoOperacao } from "@/lib/servicos/tipos-de-operacao";
 import { montarMensagemOrdem } from "@/lib/servicos/mensagens";
 import { gerarUrlComprovante } from "@/lib/servicos/comprovantes";
+import { buscarRelatorioIdDoServico } from "@/lib/servicos/relatorios";
 import { Botao } from "@/components/ui/Botao";
 import { CabecalhoDeDetalhe } from "@/components/ui/CabecalhoDeDetalhe";
 import { EtiquetaSituacao } from "@/components/ui/EtiquetaSituacao";
@@ -38,14 +39,20 @@ import { AnexarComprovante } from "./AnexarComprovante";
  * sempre que o frete estiver "em andamento", qualquer que seja o estado da
  * principal — são ações independentes (dá para finalizar um frete que nunca
  * teve ordem enviada). **Finalizado e sem cobrança → "Faturar frete"**
- * (`AcaoFaturarFrete.tsx`, item 6, Tarefa 1). **Já faturado** continua sem
- * principal: o rótulo previsto ali é "Ver relatório", que é o item 7 —
- * mesmo precedente já registrado para o perfil do caminhão, "sem principal"
- * (`docs/componentes.md` linhas 379–390 e 427): **botão cuja ação de fundo
- * não existe não entra, nem desabilitado.** Isso não vale para **Editar
- * frete** (secundária) nem **Arquivar frete** (texto destrutiva) — os dois
- * ficam no bloco de ações, no fim, em todo estado, sempre com ação de fundo
- * válida — nunca um botão que não leva a lugar nenhum.
+ * (`AcaoFaturarFrete.tsx`, item 6, Tarefa 1). **Pertence a um relatório e não
+ * tem faturamento pendente → "Ver relatório"** (item 7, Tarefa 4 —
+ * `buscarRelatorioIdDoServico`, via `RelatorioServico`, não via título: um
+ * frete `em_andamento` incluído sem cobrança também "pertence" a um
+ * relatório). `podeFaturar` vence quando os dois são verdade ao mesmo tempo
+ * (frete incluído sem cobrança, depois finalizado, ainda `a_faturar`) —
+ * faturar continua sendo a ação mais útil nesse caso. Sem relatório e sem
+ * faturamento pendente, nenhum dos dois entra — mesmo precedente já
+ * registrado para o perfil do caminhão, "sem principal" (`docs/componentes.md`
+ * linhas 379–390 e 427): **botão cuja ação de fundo não existe não entra,
+ * nem desabilitado.** Isso não vale para **Editar frete** (secundária) nem
+ * **Arquivar frete** (texto destrutiva) — os dois ficam no bloco de ações,
+ * no fim, em todo estado, sempre com ação de fundo válida — nunca um botão
+ * que não leva a lugar nenhum.
  *
  * `BotaoMarcarFinalizado` é renderizado **incondicionalmente** (fora do
  * `if` de "em andamento"), e é ele mesmo quem decide se o botão aparece —
@@ -76,7 +83,7 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
   const servico = await buscarServicoComTitulos(sessao.empresaId, id);
   if (!servico) notFound();
 
-  const [cliente, tipoOperacao, caminhao, motorista, empresa, urlComprovante] = await Promise.all([
+  const [cliente, tipoOperacao, caminhao, motorista, empresa, urlComprovante, relatorioId] = await Promise.all([
     buscarCliente(sessao.empresaId, servico.cliente_id),
     buscarTipoOperacao(sessao.empresaId, servico.tipo_operacao_id),
     servico.veiculo_id ? buscarCaminhao(sessao.empresaId, servico.veiculo_id) : null,
@@ -99,6 +106,7 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
     // leitura; não é perda de dado (o objeto continua no balde, o caminho
     // continua no `Servico`), só a exibição que este item não cobre.
     servico.arquivado_em ? null : gerarUrlComprovante(sessao.empresaId, id),
+    buscarRelatorioIdDoServico(sessao.empresaId, id),
   ]);
 
   const rota = formatarRota(servico.origem_texto, servico.destino_texto);
@@ -121,6 +129,18 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
     !servico.arquivado_em &&
     servico.status_operacional === "finalizado" &&
     servico.situacao_financeira === "a_faturar";
+
+  // "Ver relatório" (item 7, Tarefa 4) — só quando o frete pertence a um
+  // relatório, não está "em andamento" (a principal ali é Escolher
+  // motorista/Enviar ordem — CLAUDE.md §8, uma principal por tela) e não tem
+  // faturamento pendente (`podeFaturar` vence quando os dois são verdade:
+  // frete incluído sem cobrança, depois finalizado, ainda sem título —
+  // faturar continua a ação mais útil). `servico.arquivado_em` não entra
+  // aqui: diferente de `podeFaturar`/`tituloAberto` (ações que GRAVAM
+  // dinheiro), "Ver relatório" só lê um documento já emitido — um frete
+  // arquivado que já apareceu num relatório continua podendo mostrá-lo.
+  const podeVerRelatorio =
+    servico.status_operacional !== "em_andamento" && !podeFaturar && relatorioId !== null;
 
   // Secundária "Marcar recebido" (item 6, Tarefa 3 —
   // `docs/componentes.md` linha 447): aparece com título **aberto** —
@@ -283,6 +303,11 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
             hoje={hoje}
             vencimentoInicial={vencimentoInicial}
           />
+          {podeVerRelatorio ? (
+            <Botao variante="principal" href={`/relatorio/${relatorioId}`}>
+              Ver relatório
+            </Botao>
+          ) : null}
           <AcaoMarcarRecebido
             podeReceber={tituloAberto !== undefined}
             tituloId={tituloAberto?.id}

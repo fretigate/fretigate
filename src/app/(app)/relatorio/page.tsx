@@ -16,7 +16,7 @@ import { TelaMontagemRelatorio } from "./TelaMontagemRelatorio";
  * fretes diferentes ao servidor, nunca um recorte sobre o que já veio (não é
  * como o filtro de cliente de Cobranças, que é local sobre uma lista já
  * ampla). `?cliente=` também serve de pré-seleção vinda de outra tela (item
- * 7, Tarefa 4 — ainda não construída), mesmo mecanismo de `fretes/novo`.
+ * 7, Tarefa 4 — perfil do cliente e Mais), mesmo mecanismo de `fretes/novo`.
  *
  * **Sem período na URL, o padrão é "mês passado"** — evidência corroborante
  * do protótipo (`referencia/.../TelaRelatorio.dc.html`, `CLAUDE.md` §13):

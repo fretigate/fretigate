@@ -28,8 +28,7 @@ import { formatarRota } from "@/lib/utils/rota";
  * decisão do fundador, 28/08/2026): grava a entidade e o que ela amarra,
  * nada mais. O gerador de PDF (Tarefa 2) e `gerarRelatorio` — a ação
  * completa, que também cria título quando "Gerar cobrança" está ativo e
- * grava `pdf_url` — estão mais abaixo, neste mesmo arquivo. A tela de
- * montagem (a última peça da Tarefa 3) ainda não existe.
+ * grava `pdf_url` — estão mais abaixo, neste mesmo arquivo.
  */
 
 const CAMPOS = {
@@ -71,6 +70,40 @@ export function buscarRelatoriosPorIds(empresaId: string, ids: string[]) {
     where: { id: { in: ids } },
     select: { id: true, data_inicial: true, data_final: true },
   });
+}
+
+/**
+ * O `relatorio_id` do relatório mais recente que incluiu este frete — item 7,
+ * Tarefa 4 (`docs/planos/item-7-relatorio.md`, "Detalhe do frete: Ver
+ * relatório quando o frete pertence a algum `RelatorioServico`").
+ *
+ * **Via `RelatorioServico.servico_id`, nunca `TituloReceber.relatorio_id`**:
+ * um frete `em_andamento` pode entrar num relatório sem gerar cobrança (soma
+ * no documento, nenhum título nasce — `gerarRelatorio` acima) e ainda assim
+ * "pertence" a um relatório para efeito de "Ver relatório"; olhar só o
+ * título perderia esse caso.
+ *
+ * **O mais recente, não o primeiro que o banco devolver** (`CLAUDE.md` §2,
+ * "regra fala de todos os itens da coleção"): nada no produto impede um
+ * mesmo frete de aparecer em dois relatórios (`criarRelatorio` não confere
+ * inclusão anterior — lacuna registrada na Tarefa 1, `docs/planos/
+ * item-7-relatorio.md`). Decisão do fundador, 29/08/2026: o mais recente,
+ * mesmo critério já usado em `marcaCobrado` (agrupamento de Cobranças) —
+ * consistência com precedente do projeto, e é o que provavelmente foi
+ * enviado ao cliente por último.
+ *
+ * `null` quando o frete nunca entrou em relatório nenhum, ou é de outra
+ * empresa — RLS já filtra por `db(empresaId)`, mesmo contrato de
+ * `buscarRelatorio`.
+ */
+export function buscarRelatorioIdDoServico(empresaId: string, servicoId: string): Promise<string | null> {
+  return db(empresaId)
+    .relatorioServico.findFirst({
+      where: { servico_id: servicoId, arquivado_em: null },
+      orderBy: { criado_em: "desc" },
+      select: { relatorio_id: true },
+    })
+    .then((linha) => linha?.relatorio_id ?? null);
 }
 
 export type DadosRelatorio = {

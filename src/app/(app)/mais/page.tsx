@@ -14,11 +14,19 @@ import { BotaoSairDaConta } from "../BotaoSairDaConta";
  * Mais — `docs/navegacao.md` linha 20, `docs/componentes.md` linha 392.
  *
  * PROVISÓRIA: nasce com o nome da empresa, "Sair da conta" e a seção
- * CADASTROS, agora com "Clientes" (tarefa 5), "Caminhões" (tarefa 6) e
- * "Motoristas" (tarefa 7) — falta Relatório, Despesas, Importar, Novidades,
+ * CADASTROS, com "Clientes" (item 2, tarefa 5), "Caminhões" (tarefa 6) e
+ * "Motoristas" (tarefa 7) — e agora a seção FERRAMENTAS, com "Relatório do
+ * cliente" (item 7, Tarefa 4). Falta Despesas, Importar, Novidades,
  * Configurações, Usuários, Conta. "A tela 'Mais' nasce só com as linhas que
  * têm destino; cada item seguinte acrescenta a sua" (`docs/planos/
  * item-2-cadastros.md`, tarefa 4).
+ *
+ * **Rótulo e ícone já previstos, não inferidos** — `docs/componentes.md`
+ * linha 277: `barra-cobrancas.svg`, "linha 'Relatório do cliente' em Mais"
+ * (achado do `/revisar`: a primeira versão desta tarefa tinha desenhado um
+ * ícone novo e usado só "Relatório", violando a regra de nome da linha 13,
+ * "nunca 'Relatório' sozinho" — sem checar que os dois já estavam
+ * documentados).
  *
  * O nome da empresa também não é tocável ainda: o cartão de identidade
  * (`docs/componentes.md` linha 392) leva à tela de Conta, que é item 10 e
@@ -91,6 +99,18 @@ export default async function Pagina() {
         <ItemMenu href="/motoristas" nome="Motoristas" apoio={subtituloMotoristas}>
           <circle cx="12" cy="8.4" r="3.06" />
           <path d="M6.42 18.3c0.45 -2.88 2.7 -4.5 5.58 -4.5s5.13 1.62 5.58 4.5" />
+        </ItemMenu>
+      </div>
+
+      <div className="flex flex-col gap-6">
+        <span className="px-4 pb-2 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
+          Ferramentas
+        </span>
+        {/* `docs/icones/barra-cobrancas.svg` — o mesmo desenho do item
+            "Cobranças" da barra, reaproveitado aqui por `docs/componentes.md`
+            linha 277 ("linha 'Relatório do cliente' em Mais"). */}
+        <ItemMenu href="/relatorio" nome="Relatório do cliente">
+          <path d="M5.16 6.24h13.68v9.18a0.9 0.9 0 0 1 -0.9 0.9H6.06a0.9 0.9 0 0 1 -0.9 -0.9V6.24ZM8.04 9.3h7.92M8.04 12.36h4.5" />
         </ItemMenu>
       </div>
 

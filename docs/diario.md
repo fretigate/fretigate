@@ -6,6 +6,89 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 29/08/2026 — Tarefa 4 do item 7: Entradas no fluxo — item 7 fecha
+
+Última tarefa do item 7 (relatório). Liga as cinco pontas alcançáveis hoje:
+perfil do cliente (principal **Gerar relatório**, cliente pré-selecionado
+via `?cliente=`), estado vazio de Cobranças (já ligado na Tarefa 3, só
+confirmado), detalhe do frete (principal **Ver relatório** quando o frete
+pertence a algum `RelatorioServico` — via a relação, não via título, para
+cobrir o `em_andamento` incluído sem cobrança), detalhe da cobrança
+(secundária **Ver relatório** quando o título tem `relatorio_id`), e Mais
+(nova seção Ferramentas, "Relatório do cliente"). O atalho do cartão escuro
+da dashboard **não entrou** — a dashboard ainda é o pouso provisório do
+item 8, sem cartão nenhum para o atalho entrar; registrado como pendente
+daquele item em `docs/planos/item-7-relatorio.md`, não construído por cima
+do provisório.
+
+**Dois passes do `/revisar`, achados corrigidos antes do commit.**
+
+Primeiro passe: inventei ícone e rótulo novos para a linha de Mais
+("Relatório" sozinho, desenho à mão) sem checar que os dois já estavam
+documentados — `docs/componentes.md` linha 277 já previa `barra-cobrancas.svg`
+com o rótulo "Relatório do cliente". Trocado pelo que já existia.
+
+Segundo passe achou um bug de verdade, não só texto: os links novos de "Ver
+relatório" tornam alcançável um estado que antes só existia entre
+`criarRelatorio` terminar e o Chromium falhar (`CLAUDE.md` §14, lacuna já
+registrada na Tarefa 3) — um `Relatorio` com `pdf_url` nulo. Nesse estado, os
+três botões do Documento A4 (Compartilhar, Baixar, Imprimir) viravam clique
+sem ação, porque todos dependem do arquivo. Corrigido: sem `pdf_url`, a tela
+mostra "Este relatório não tem PDF gerado." e um botão de verdade ("Gerar
+relatório novo", volta à montagem com o cliente certo) no lugar dos três —
+`CLAUDE.md` §8, nunca botão sem ação de fundo. Testado ao vivo forçando o
+estado via SQL direto (Chromium não roda no Windows local). Achado exatamente
+do tipo que só aparece ligando as pontas — a Tarefa 3 tinha razão ao dizer
+"hoje inalcançável" quando escreveu aquilo.
+
+Também corrigidos: dois comentários que afirmavam estado que este commit
+tornou falso ("ainda não construída", "hoje inalcançável"); `docs/navegacao.md`
+sem "Mais" como origem de "Relatório — montagem"; a medição de posição do
+perfil do cliente em `docs/componentes.md` (remedida no DOM, 1280×720: botão
+principal em `764–824`, Histórico em `898`).
+
+**Duas decisões do fundador, depois do segundo passe:**
+
+1. Quando o mesmo frete aparece em dois relatórios, "Ver relatório" mostra o
+   **mais recente** (`orderBy criado_em desc`) — mesmo critério já usado em
+   `marcaCobrado` (Tarefa 3, agrupamento de Cobranças), e é o que
+   provavelmente foi enviado ao cliente por último. A lacuna "o mesmo frete
+   pode entrar em mais de um relatório" (registrada na Tarefa 1, ainda sem
+   decisão sobre impedir/avisar/deixar como está) ganhou esta consequência —
+   registrado no mesmo lugar (`docs/planos/item-7-relatorio.md`).
+2. Sem teste automatizado de tela para as quatro entradas — verificadas só
+   manualmente no navegador (screenshot + clique até o destino certo). O
+   projeto nunca teve suíte de tela/componente, decisão anterior a esta
+   tarefa; criar a primeira agora seria escopo novo dentro da última tarefa
+   de um item. A lacuna registrada com clareza em `CLAUDE.md` §14: se
+   alguém trocar um `href` por engano, nada acusa hoje — nem `tsc`, nem
+   `lint`, nem a suíte de serviço.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` verdes. `npm test`
+— suíte inteira, 30/30 arquivos, 592 passaram, 8 puladas (Chromium não roda
+no Windows). `buscarRelatorioIdDoServico` ganhou 4 casos próprios. Contra o
+banco de **desenvolvimento**, não o de teste da esteira (`CLAUDE.md` §2) — a
+esteira roda só depois do push, confirmação pendente na próxima sessão.
+
+**O item 7 fecha aqui — quatro tarefas: a entidade com retrato congelado, o
+gerador de PDF validado por medição publicada, a tela de montagem com o
+Documento A4, e as entradas no fluxo.** Palavras do fundador, valem registrar:
+o relatório substitui o Canva — o trabalho manual que ele descreveu como o da
+esposa do Pedro — e era o item mais pesado do que restava. **Sete dos dez
+itens do MVP prontos.** Faltam quatro: dashboard (item 8), configurações e
+conta, despesas, assinatura.
+
+**Dívida já registrada para o item 8:** o princípio "somar é diferente de
+cobrar" (item 7, decisão do fundador — `docs/especificacao.md` linha 170) vai
+precisar da mesma distinção na dashboard, que mostra faturamento do mês —
+quanto rodou não é quanto pode cobrar. E o atalho "Gerar relatório" do
+cartão escuro, adiado nesta tarefa, entra junto.
+
+Próximo: item 8 da ordem de construção do produto (`docs/especificacao.md`
+§9) — a dashboard.
+
+---
+
 ## 29/08/2026 — Tarefa 3 do item 7, segundo commit: montagem, Documento A4 e agrupamento em Cobranças
 
 Fecha o item 7, Tarefa 3 inteira — a tela "Relatório — montagem", a Server

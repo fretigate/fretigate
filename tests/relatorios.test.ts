@@ -6,6 +6,7 @@ import {
   criarRelatorio,
   buscarRelatorio,
   buscarDadosParaPreviaDocumento,
+  buscarRelatorioIdDoServico,
   formatarNumeroRelatorio,
   listarServicosParaRelatorio,
   gerarUrlRelatorio,
@@ -51,7 +52,8 @@ const caminhosGravados: string[] = [];
 
 let conferencias = 0;
 // +9 (item 7, segundo commit): describe "8. buscarDadosParaPreviaDocumento".
-const CONFERENCIAS_ESPERADAS = 27 + 1 + 4 + 4 + 1 + (RODA_CHROMIUM ? 16 : 0) + 9;
+// +4 (item 7, Tarefa 4): describe "9. buscarRelatorioIdDoServico".
+const CONFERENCIAS_ESPERADAS = 27 + 1 + 4 + 4 + 1 + (RODA_CHROMIUM ? 16 : 0) + 9 + 4;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -980,6 +982,60 @@ describe("8. buscarDadosParaPreviaDocumento — a prévia em tela (Tarefa 3, seg
     expect(dados!.corpo.cobranca).not.toBeNull();
     conferencias++;
     expect(dados!.corpo.cobranca!.chavePix).toBeNull();
+    conferencias++;
+  });
+});
+
+/**
+ * `buscarRelatorioIdDoServico` (item 7, Tarefa 4 — "Ver relatório" no
+ * detalhe do frete, `docs/planos/item-7-relatorio.md` linha 539) — via
+ * `RelatorioServico.servico_id`, não via título, para cobrir também o frete
+ * `em_andamento` incluído sem cobrança.
+ */
+describe("9. buscarRelatorioIdDoServico — Ver relatório no detalhe do frete (Tarefa 4)", () => {
+  it("null quando o frete nunca entrou em relatório nenhum", async () => {
+    const e = await criarEmpresaDeTeste("aa1");
+    const s1 = await criarServicoDe(e, { valor: 10000 });
+
+    expect(await buscarRelatorioIdDoServico(e.empresaId, s1.id)).toBeNull();
+    conferencias++;
+  });
+
+  it("acha o relatorio_id depois de criarRelatorio — cobre o em_andamento sem cobrança", async () => {
+    const e = await criarEmpresaDeTeste("aa2");
+    const s1 = await criarServicoDe(e, { valor: 10000 });
+    expect(s1.status_operacional).toBe("em_andamento");
+    const relatorio = await criarRelatorio(e.empresaId, {
+      clienteId: e.clienteId,
+      ...periodo(),
+      servicoIds: [s1.id],
+    });
+
+    expect(await buscarRelatorioIdDoServico(e.empresaId, s1.id)).toBe(relatorio.id);
+    conferencias++;
+  });
+
+  it("o relatório mais recente, quando o mesmo frete aparece em dois", async () => {
+    const e = await criarEmpresaDeTeste("aa3");
+    const s1 = await criarServicoDe(e, { valor: 10000 });
+    await criarRelatorio(e.empresaId, { clienteId: e.clienteId, ...periodo(), servicoIds: [s1.id] });
+    const segundo = await criarRelatorio(e.empresaId, {
+      clienteId: e.clienteId,
+      ...periodo(),
+      servicoIds: [s1.id],
+    });
+
+    expect(await buscarRelatorioIdDoServico(e.empresaId, s1.id)).toBe(segundo.id);
+    conferencias++;
+  });
+
+  it("null para frete de outra empresa — RLS, não filtro escrito à mão", async () => {
+    const a = await criarEmpresaDeTeste("aa4a");
+    const b = await criarEmpresaDeTeste("aa4b");
+    const sa = await criarServicoDe(a, { valor: 10000 });
+    await criarRelatorio(a.empresaId, { clienteId: a.clienteId, ...periodo(), servicoIds: [sa.id] });
+
+    expect(await buscarRelatorioIdDoServico(b.empresaId, sa.id)).toBeNull();
     conferencias++;
   });
 });

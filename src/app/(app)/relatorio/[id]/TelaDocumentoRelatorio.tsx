@@ -20,7 +20,13 @@ type Props = {
   clienteNome: string;
   numero: string;
   corpoHtml: string;
-  /** `null` só na janela improvável entre criar o relatório e o PDF terminar de gerar — hoje inalcançável (a tela só existe depois de `gerarRelatorioAction` ter sucesso). */
+  /**
+   * `null` quando o Chromium falhou depois de o `Relatorio` já ter sido
+   * gravado (`CLAUDE.md` §14) — alcançável desde a Tarefa 4 do item 7, via
+   * "Ver relatório" no detalhe do frete/cobrança. As três ações que dependem
+   * do arquivo (Compartilhar, Baixar, Imprimir) não entram nesse estado —
+   * a prévia (`corpoHtml`) continua mostrando o documento certo.
+   */
   urlPdf: string | null;
   /** `/relatorio?cliente=X` — volta pra montagem com o mesmo cliente, não a tela zerada. */
   hrefVoltar: string;
@@ -120,23 +126,39 @@ export function TelaDocumentoRelatorio({ clienteNome, numero, corpoHtml, urlPdf,
           />
         </div>
 
-        <div className="flex w-full max-w-[370px] flex-col gap-10">
-          <Botao variante="principal" carregando={compartilhando} onClick={compartilhar} distribuido>
-            Compartilhar no WhatsApp
-          </Botao>
-          <div className="flex gap-10">
-            <div className="flex-1">
-              <Botao variante="secundaria" onClick={baixar}>
-                Baixar PDF
-              </Botao>
-            </div>
-            <div className="flex-1">
-              <Botao variante="secundaria" onClick={imprimir}>
-                Imprimir
-              </Botao>
+        {urlPdf ? (
+          <div className="flex w-full max-w-[370px] flex-col gap-10">
+            <Botao variante="principal" carregando={compartilhando} onClick={compartilhar} distribuido>
+              Compartilhar no WhatsApp
+            </Botao>
+            <div className="flex gap-10">
+              <div className="flex-1">
+                <Botao variante="secundaria" onClick={baixar}>
+                  Baixar PDF
+                </Botao>
+              </div>
+              <div className="flex-1">
+                <Botao variante="secundaria" onClick={imprimir}>
+                  Imprimir
+                </Botao>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          // Sem `pdf_url` não existe arquivo para compartilhar, baixar ou
+          // imprimir — `CLAUDE.md` §8: nunca um botão que não leva a lugar
+          // nenhum. A prévia acima continua mostrando o documento certo; a
+          // única ação real daqui é gerar um relatório novo (§14, não existe
+          // "tentar de novo" para este mesmo registro).
+          <div className="flex w-full max-w-[370px] flex-col items-center gap-10">
+            <span className="text-center text-apoio font-medium text-tinta-apoio-forte">
+              Este relatório não tem PDF gerado.
+            </span>
+            <Botao variante="secundaria" href={hrefVoltar}>
+              Gerar relatório novo
+            </Botao>
+          </div>
+        )}
       </div>
 
       {aviso ? <AvisoDoSistema mensagem={aviso} onSumir={() => setAviso(null)} /> : null}

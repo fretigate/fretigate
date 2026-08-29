@@ -4,6 +4,7 @@ import { exigirSessao } from "@/lib/auth/sessao";
 import { db } from "@/lib/db";
 import { buscarCliente } from "@/lib/servicos/clientes";
 import { resumoFinanceiroDoCliente, listarServicosDoCliente } from "@/lib/servicos/titulos";
+import { Botao } from "@/components/ui/Botao";
 import { PilulaCabecalho } from "@/components/ui/PilulaCabecalho";
 import { LinhaDePerfil } from "@/components/ui/LinhaDePerfil";
 import { PilulaEmLinha } from "@/components/ui/PilulaEmLinha";
@@ -20,15 +21,15 @@ import { salvarTelefoneClienteAction } from "../acoes";
 /**
  * Perfil do cliente — `docs/navegacao.md` linha 39. Ganha resumo financeiro
  * e histórico de fretes na Tarefa 6 do item 4
- * (`docs/planos/item-4-lista-e-detalhe-do-frete.md`), e "a receber"/"vencido"
- * no resumo na Tarefa 7 do item 6. Continua **sem** "Gerar relatório" nem
- * "Cobrar no WhatsApp" — por motivos diferentes agora, e é importante não
- * confundir os dois: "Gerar relatório" ainda depende de dado que só existe a
- * partir do item 7 (relatório); "Cobrar no WhatsApp" já tem o dado que
- * faltava (valor em aberto, Tarefa 7) mas não foi construído aqui — é escopo
- * que ninguém pediu ainda, não falta de dado. Achado ao revisar o pedido do
- * fundador, 27/08/2026: o texto antigo dava a mesma razão para os dois, e
- * deixaria de ser verdade para o segundo sem ninguém perceber.
+ * (`docs/planos/item-4-lista-e-detalhe-do-frete.md`), "a receber"/"vencido"
+ * no resumo na Tarefa 7 do item 6, e o principal **Gerar relatório** na
+ * Tarefa 4 do item 7 (`docs/componentes.md` linha 461) — cliente
+ * pré-selecionado via `?cliente=`, mesmo mecanismo de `fretes/novo`.
+ *
+ * Continua **sem** "Cobrar no WhatsApp": já tem o dado que faltava (valor em
+ * aberto, Tarefa 7 do item 6), mas não foi construído aqui — é escopo que
+ * ninguém pediu ainda, não falta de dado (achado ao revisar o pedido do
+ * fundador, 27/08/2026, quando "Gerar relatório" ainda estava no mesmo caso).
  */
 export default async function Pagina({
   params,
@@ -198,7 +199,10 @@ export default async function Pagina({
           <span className="pl-108 text-apoio font-medium text-tinta-apoio">{prazoOrigem}</span>
         </div>
 
-        <div className="pt-26">
+        <div className="pt-26 flex flex-col gap-10">
+          <Botao variante="principal" href={`/relatorio?cliente=${id}`}>
+            Gerar relatório
+          </Botao>
           <PilulaEmLinha href={`/fretes/novo?cliente=${id}`}>
             Lançar frete para este cliente
           </PilulaEmLinha>

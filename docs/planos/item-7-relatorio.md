@@ -274,6 +274,18 @@ registrada junto do código, mesmo padrão de `{pix}` no item 6.
   integral para o mesmo frete. O que sobra não é técnico: o mesmo frete pode
   aparecer em dois documentos **enviados ao cliente**, e isso gera pergunta
   dele. Não decidido se deve ser impedido, avisado, ou deixado como está.
+
+  **Ganhou consequência na Tarefa 4 (29/08/2026), decisão do fundador:**
+  "Ver relatório" no detalhe do frete (`buscarRelatorioIdDoServico`,
+  `src/lib/servicos/relatorios.ts`) precisava escolher qual dos dois
+  documentos mostrar quando os dois existem — antes disso a lacuna acima era
+  registro sem consequência definida. Escolhe o **mais recente**
+  (`orderBy criado_em desc`), pelo mesmo critério já usado em
+  `marcaCobrado` (agrupamento de Cobranças, 29/08/2026): consistência com
+  precedente do próprio projeto, e o mais recente é o que provavelmente foi
+  enviado ao cliente por último. A pergunta em aberto acima (impedir/avisar/
+  deixar como está) continua sem resposta — isto só decide qual dos dois a
+  tela de leitura mostra, não se o segundo deveria ter sido criado.
 - **`Relatorio.pdf_url` — caminho ou URL assinada?** Ainda sempre nulo nesta
   tarefa (só a Tarefa 2/4 escrevem nele), então não decidido agora. Mas
   `Servico.comprovante_url` já resolveu a mesma pergunta (`docs/
@@ -540,10 +552,16 @@ Liga as pontas que `docs/navegacao.md` já marca com `⚠️` apontando pra cá:
   `RelatorioServico` → Documento A4 daquele relatório.
 - Detalhe da cobrança: **Ver relatório** quando o título tem `relatorio_id`
   → Documento A4.
-- Mais > Relatório (atalho de ferramentas) → Relatório — montagem, sem
-  cliente pré-selecionado.
-- Dashboard: atalho **Gerar relatório** do cartão escuro (§4.6) → Relatório
-  — montagem.
+- Mais > Relatório do cliente (atalho de ferramentas) → Relatório —
+  montagem, sem cliente pré-selecionado.
+- ~~Dashboard: atalho **Gerar relatório** do cartão escuro (§4.6) → Relatório
+  — montagem.~~ **Fora desta tarefa** (execução, 29/08/2026): a dashboard de
+  verdade é o item 8 — hoje `src/app/(app)/page.tsx` é só o pouso provisório
+  pós-login (nome da empresa, nada mais), sem cartão escuro nenhum para o
+  atalho entrar. Construir por cima do provisório contradiria o próprio §12
+  ("nada de arquivo 'para depois'"). Fica pendente do item 8, junto do resto
+  da dashboard — não é lacuna nova, é a mesma dependência que já valia antes
+  desta tarefa.
 - Testes: cada entrada leva para onde `docs/navegacao.md` diz, com o filtro
   certo semeado.
 

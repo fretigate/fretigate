@@ -37,9 +37,12 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
     corpoHtml: montarCorpoRelatorio(dadosDocumento.corpo),
   });
 
-  // `pdf_url` nasce nulo só entre `criarRelatorio` e o gerador terminar
-  // (mesma transação de `gerarRelatorio` — hoje inalcançável nesta tela,
-  // que só existe depois de `gerarRelatorioAction` retornar com sucesso).
+  // `pdf_url` fica nulo se o Chromium falhar depois de `criarRelatorio` já
+  // ter gravado o `Relatorio` (`CLAUDE.md` §14 — lacuna registrada, sem
+  // "tentar de novo"). Deixou de ser inalcançável nesta tela na Tarefa 4 do
+  // item 7: "Ver relatório" no detalhe do frete e da cobrança chegam aqui
+  // por `RelatorioServico`/`relatorio_id`, nenhum dos dois olha `pdf_url` —
+  // `TelaDocumentoRelatorio` decide o que mostrar quando é `null`.
   const urlPdf = relatorio.pdf_url ? await gerarUrlRelatorio(sessao.empresaId, id) : null;
 
   return (
