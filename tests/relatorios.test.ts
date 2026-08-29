@@ -327,10 +327,25 @@ describe("1. criarRelatorio — a entidade, o que ela amarra, e o retrato congel
   it("concorrência: criações simultâneas da mesma empresa nunca colidem no numero", async () => {
     // Mesmo teste de `tests/servicos.test.ts` ("concorrência: criações
     // simultâneas..."), aplicado ao contador de `Relatorio.numero`
-    // (CLAUDE.md §3, "concorrência real").
+    // (CLAUDE.md §3, "concorrência real") — mas com QUANTIDADE menor, de
+    // propósito. Medido local (não suposto): com QUANTIDADE = 8, a chamada
+    // mais lenta da fila estourou o teto de 5s da transação interativa do
+    // Prisma em 1 de 3 tentativas, sem esteira e sem desaceleração nenhuma
+    // (PrismaClientKnownRequestError P2028). Com QUANTIDADE = 4, 5 de 5
+    // rodadas ficaram em ~2,3-2,5s, com margem. **O MECANISMO NÃO FOI
+    // IDENTIFICADO** — a hipótese óbvia ("criarRelatorio faz mais consultas
+    // antes da fila que o equivalente que nunca falha") foi descartada por
+    // leitura do código: é o oposto, `criarServico` faz TRÊS consultas
+    // nesse caminho (`buscarUsuario` + `buscarCliente`/`buscarTipoOperacao`
+    // dentro de `normalizarEntrada`) contra as DUAS de `criarRelatorio`. A
+    // garantia continua provada por inteiro com 4 — se dois pedidos
+    // simultâneos pudessem colidir, quatro já pegariam (CLAUDE.md §2, "fila
+    // serializada longa demais" e "explicação plausível não é explicação
+    // verificada", 29/08/2026,
+    // `docs/planos/reduz-concorrencia-teste-numeracao-relatorio.md`).
     const e = await criarEmpresaDeTeste("g");
     const s1 = await criarServicoDe(e, { valor: 10000 });
-    const QUANTIDADE = 8;
+    const QUANTIDADE = 4;
     const criados = await Promise.all(
       Array.from({ length: QUANTIDADE }, () =>
         criarRelatorio(e.empresaId, { clienteId: e.clienteId, ...periodo(), servicoIds: [s1.id] }),

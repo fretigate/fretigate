@@ -115,6 +115,27 @@ você escreve.** O padrão é o meu.
   **espera o anterior terminar** (`gh run view <id> --json status` até
   `completed`) antes do próximo — nunca dois em voo ao mesmo tempo, mesmo
   quando são de commits diferentes.
+
+  **"Vermelho sem defeito de código" já apareceu em três formatos
+  diferentes, e confundir um pelo outro custa tempo — cada um pede
+  diagnóstico e correção próprios, nunca a mesma resposta por analogia.**
+  Registrado em 29/08/2026, depois de perder tempo tratando o terceiro caso
+  como possível repetição do segundo até medir.
+
+  | Formato | Onde apareceu | Causa | Correção |
+  |---|---|---|---|
+  | **Pool esgotado** | `tests/regressao-resolucao-municipios.test.ts`, 18/08/2026 | Mais pedidos simultâneos que conexões no pool (21 contra 10, medido em `node_modules/pg-pool`) — parte deles nem chega a abrir transação | Reduzir a quantidade de pedidos simultâneos para caber no pool, motivo escrito no código (`docs/planos/correcao-pool-esteira-vermelha.md`) |
+  | **Margem contra desaceleração** | `tests/medicao-municipios.test.ts`, "2. medição completa", 21/08/2026 | O teste cabe no teto local com folga pequena (2,6×), menor que o fator de desaceleração da esteira já medido (~3×) — só estoura sob esteira lenta, nunca sozinho local | Teto de tempo próprio, maior, só para aquele teste, com o cálculo (baseline, fator, margem escolhida) escrito no código (`docs/planos/teto-de-tempo-no-teste-de-medicao-completa.md`) |
+  | **Fila serializada longa demais** | `tests/relatorios.test.ts`, concorrência da numeração de `Relatorio`, 29/08/2026 | Pedidos disputam a mesma linha e passam um de cada vez; a soma da fila já estoura o teto sozinha, **sem esteira, sem desaceleração** (reproduzido local, 1 em 3). **O porquê deste teste e não do equivalente que nunca falhou não foi identificado** — a hipótese óbvia (mais consultas antes da fila) foi testada e descartada por leitura de código: é o oposto, o equivalente que nunca falha faz mais consultas, não menos | Reduzir a fila (quantidade de pedidos simultâneos no teste) até onde a garantia continua provada — não é tapar sintoma, é a mesma pergunta de sempre: "quantos bastam para provar a regra?" (`docs/planos/reduz-concorrencia-teste-numeracao-relatorio.md`) |
+
+  **A pergunta que separa os três, antes de aplicar qualquer correção: o
+  erro reproduz local, sozinho, sem esteira e sem carga extra?** Se sim, não
+  é desaceleração — descarta o segundo formato — e é pool ou fila (medir
+  qual: pool esgotado só reproduz acima do número de conexões do pool;
+  fila serializada reproduz dentro do pool, na concorrência que o teste já
+  usa — sem precisar de mais pedidos simultâneos do que ele tinha). Se só
+  reproduz sob esteira, é desaceleração — não adianta reduzir concorrência
+  nem trocar teto sem medir a margem primeiro.
 - **"A regra vale para todos os itens de uma coleção" e "o código olha um
   item da coleção" são duas afirmações diferentes — a segunda não implica a
   primeira, mesmo quando a regra está escrita certa.** Padrão a procurar de
@@ -195,6 +216,30 @@ você escreve.** O padrão é o meu.
   merece a pergunta. O **item 13** (assinatura) liga `inadimplente`,
   `vencida` e `encerrada`, que hoje só existem no schema: todo texto escrito
   supondo empresa sempre ativa entra na mesma varredura.
+- **Explicação plausível não é explicação verificada — e uma explicação
+  errada documentada é pior que nenhuma, porque quem ler depois constrói
+  raciocínio em cima dela.** Registrado em 29/08/2026: investigando por que
+  só o teste de concorrência da numeração de `Relatorio` estourava (e não o
+  equivalente em `tests/servicos.test.ts`), a hipótese "`criarRelatorio` faz
+  mais consultas antes da fila do que o equivalente" parecia explicar o
+  sintoma medido — e foi escrita em quatro lugares (comentário do teste,
+  plano, diário, este arquivo) antes de alguém abrir o código para conferir.
+  Era o oposto: `criarServico`, no mesmo teste, faz **três** consultas nesse
+  caminho (`buscarUsuario` + `buscarCliente`/`buscarTipoOperacao` dentro de
+  `normalizarEntrada`) contra as **duas** de `criarRelatorio`. A explicação
+  passou pelo fundador e por mim sem que nenhum dos dois abrisse o código
+  para confirmar; só o `/revisar` (item 7, "julga o resultado, não o
+  argumento") pegou — é o único passo que lê o código sem o raciocínio que já
+  tinha convencido quem escreveu.
+
+  **O que fazer diferente:** toda explicação causal que vai para
+  documentação — não só o dado medido, mas o "porquê" — pede a mesma
+  verificação de qualquer afirmação de medição (§13, "medido, não suposto"):
+  abrir o código dos dois lados da comparação antes de escrever, nunca
+  confiar que a explicação está certa só porque ela cabe no sintoma. Quando
+  não dá para verificar a tempo, registra o dado sozinho e nomeia o
+  mecanismo como não identificado — foi o que este caso terminou fazendo
+  (`docs/planos/reduz-concorrencia-teste-numeracao-relatorio.md`).
 - Se auditassem esse código para comprar a empresa, não teria nada para ter vergonha.
 
 ### Como executar

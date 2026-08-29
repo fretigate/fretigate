@@ -6,6 +6,63 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 29/08/2026 — Esteira vermelha do commit `5fd6700`, investigada: fila serializada, não instabilidade genérica
+
+**Achado ao rodar `/onde-paramos`:** o commit `5fd6700` (só plano/comentário,
+sem código de produto) tinha run próprio com `conclusion: failure`, sem
+diagnóstico registrado — bloqueio, por `.claude/commands/onde-paramos.md`.
+Investigado antes de qualquer tarefa nova, a pedido do fundador.
+
+**Diagnóstico, medido antes de decidir.** `tests/relatorios.test.ts`,
+"concorrência: criações simultâneas da mesma empresa nunca colidem no
+numero", reprovou com `PrismaClientKnownRequestError P2028` — mesma
+assinatura do commit `36554ef`, **no mesmo dia** (28/08/2026). A hipótese
+inicial (mesmo caso de "2. medição completa", `docs/planos/teto-de-tempo-
+no-teste-de-medicao-completa.md`) foi **descartada por medição**: reproduzi
+o erro LOCAL, sozinho, sem esteira e sem desaceleração nenhuma, numa de três
+tentativas (5.478ms contra o teto de 5.000ms da transação interativa do
+Prisma) — diferente do caso de "medição completa", que nunca falhou local
+sozinho. **O mecanismo não foi identificado.** A primeira hipótese escrita
+aqui ("criarRelatorio faz mais consultas antes da fila que o equivalente
+que nunca falha") foi derrubada pelo `/revisar`, lendo o código: é o
+oposto — `criarServico` (`tests/servicos.test.ts`) faz três consultas nesse
+caminho contra as duas de `criarRelatorio`. Fica só o dado medido: 8 falha
+1 em 3, 4 não falha em 5 de 5. Detalhe completo, com a tabela de medição e
+a correção da hipótese descartada, em
+`docs/planos/reduz-concorrencia-teste-numeracao-relatorio.md`.
+
+**Correção: QUANTIDADE de 8 para 4 no teste**, decisão do fundador — não é
+tapar sintoma, o teste existe para provar que a numeração não repete sob
+concorrência, e isso se prova com quatro tão bem quanto com oito. Não mexe
+em código de produto: as duas conferências ficam onde estão, por decisão de
+segurança (`CLAUDE.md` §3). Margem medida com 4: ~2,3-2,5s contra o teto de
+5s, estável em cinco rodadas locais.
+
+**`CLAUDE.md` §2 ganhou dois registros novos:** o catálogo dos três formatos
+de "vermelho sem defeito de código" já vistos (pool esgotado, margem contra
+desaceleração, fila serializada) com a pergunta que separa um do outro; e,
+à parte, o padrão da explicação causal não verificada — achado do
+`/revisar` nesta mesma tarefa, não só uma nota sobre CI.
+
+**Contagem de reruns (`CLAUDE.md` §2):** commit `5fd6700` é a segunda
+ocorrência da mesma assinatura de erro no mesmo teste (a primeira foi
+`36554ef`, mais cedo no mesmo dia). Não computei a proporção histórica
+completa (reruns antigos não aparecem mais em `gh run list` — o rerun
+reescreve o mesmo run para `success` — e contá-los exige vasculhar o
+diário inteiro atrás de cada linha já registrada); fica como pendência
+separada, se o fundador quiser o número exato.
+
+**Verificação: local.** `npx vitest run tests/relatorios.test.ts` (32
+passed + 5 skipped no Windows), `npm run lint`, `npx tsc --noEmit` verdes.
+Esteira: a confirmar na próxima sessão.
+
+Próximo: Tarefa 3 do item 7, segundo commit — Tela "Relatório — montagem" +
+`gerarRelatorioAction` + tela "Documento A4", mais os requisitos que só
+fazem sentido quando a rota existir (`outputFileTracingIncludes`, rate
+limit, `CLAUDE.md` §14) e o agrupamento por `relatorio_id` em Cobranças.
+
+---
+
 ## 28/08/2026 — Tarefa 3 do item 7, primeiro commit: `gerarRelatorio` (servidor)
 
 **Dividida em dois commits**, como o plano já previa ("a geração num, a tela
@@ -57,8 +114,9 @@ datado no próximo commit — não abstração especulativa.
 `tests/mensagens.test.ts`, `tests/data-fortaleza.test.ts`,
 `tests/periodo.test.ts`, `tests/documentos/gerador.test.ts`,
 `tests/titulos.test.ts` (88/88) e `tests/relatorios.test.ts` (32 passed + 5
-skipped no Windows — Chromium, `CLAUDE.md` §14) verdes. Esteira disparada,
-ainda rodando, sem confirmação.
+skipped no Windows — Chromium, `CLAUDE.md` §14) verdes. **Esteira: `success`,
+confirmada na sessão seguinte** (`CLAUDE.md` §2 item 9 — atualizado aqui, não
+em commit próprio).
 
 Próximo: Tarefa 3 do item 7, segundo commit — Tela "Relatório — montagem" +
 `gerarRelatorioAction` + tela "Documento A4", mais os requisitos que só
@@ -115,8 +173,10 @@ comentários em `src/lib/documentos/` (`gerador.ts`, `moldeDocumentoA4.ts`,
   texto exato, já registrada no plano).
 
 **Verificação: local.** Só documentação/comentário, nenhum código de
-produto mudou — `npx tsc --noEmit` e `npm run lint` verdes. Esteira
-disparada, ainda rodando, sem confirmação.
+produto mudou — `npx tsc --noEmit` e `npm run lint` verdes. **Esteira:
+`failure`, confirmada na sessão seguinte e investigada — ver entrada de
+29/08/2026 acima** (`CLAUDE.md` §2 item 9 — atualizado aqui, não em commit
+próprio).
 
 Próximo: Tarefa 3 do item 7 — Tela "Relatório — montagem" + gerar relatório
 + tela "Documento A4".
