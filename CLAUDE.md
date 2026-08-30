@@ -116,26 +116,37 @@ você escreve.** O padrão é o meu.
   `completed`) antes do próximo — nunca dois em voo ao mesmo tempo, mesmo
   quando são de commits diferentes.
 
-  **"Vermelho sem defeito de código" já apareceu em três formatos
+  **"Vermelho sem defeito de código" já apareceu em quatro formatos
   diferentes, e confundir um pelo outro custa tempo — cada um pede
   diagnóstico e correção próprios, nunca a mesma resposta por analogia.**
   Registrado em 29/08/2026, depois de perder tempo tratando o terceiro caso
-  como possível repetição do segundo até medir.
+  como possível repetição do segundo até medir. **Os três primeiros são
+  incidentes de esteira; o quarto (acrescentado em 30/08/2026) é de outro
+  eixo — a máquina de quem programa, contra o banco de desenvolvimento, a
+  esteira nunca participa.** Fica no mesmo catálogo por ser a mesma classe
+  de fenômeno (vermelho que medição desfaz), não por ser incidente do mesmo
+  tipo.
 
   | Formato | Onde apareceu | Causa | Correção |
   |---|---|---|---|
   | **Pool esgotado** | `tests/regressao-resolucao-municipios.test.ts`, 18/08/2026 | Mais pedidos simultâneos que conexões no pool (21 contra 10, medido em `node_modules/pg-pool`) — parte deles nem chega a abrir transação | Reduzir a quantidade de pedidos simultâneos para caber no pool, motivo escrito no código (`docs/planos/correcao-pool-esteira-vermelha.md`) |
   | **Margem contra desaceleração** | `tests/medicao-municipios.test.ts`, "2. medição completa", 21/08/2026 | O teste cabe no teto local com folga pequena (2,6×), menor que o fator de desaceleração da esteira já medido (~3×) — só estoura sob esteira lenta, nunca sozinho local | Teto de tempo próprio, maior, só para aquele teste, com o cálculo (baseline, fator, margem escolhida) escrito no código (`docs/planos/teto-de-tempo-no-teste-de-medicao-completa.md`) |
   | **Fila serializada longa demais** | `tests/relatorios.test.ts`, concorrência da numeração de `Relatorio`, 29/08/2026 | Pedidos disputam a mesma linha e passam um de cada vez; a soma da fila já estoura o teto sozinha, **sem esteira, sem desaceleração** (reproduzido local, 1 em 3). **O porquê deste teste e não do equivalente que nunca falhou não foi identificado** — a hipótese óbvia (mais consultas antes da fila) foi testada e descartada por leitura de código: é o oposto, o equivalente que nunca falha faz mais consultas, não menos | Reduzir a fila (quantidade de pedidos simultâneos no teste) até onde a garantia continua provada — não é tapar sintoma, é a mesma pergunta de sempre: "quantos bastam para provar a regra?" (`docs/planos/reduz-concorrencia-teste-numeracao-relatorio.md`) |
+  | **Queda de conexão local** | Suíte inteira local (`npm test`), 29-30/08/2026 — `tests/titulos.test.ts`, sem relação com a tarefa em andamento (item 8) | O `pg.Client` de um arquivo de teste (`raiz`) foi derrubado pelo host durante uma suíte longa (~26 min contra o banco de **desenvolvimento**) — sintoma "Connection terminated unexpectedly" / "Client has encountered a connection error and is not queryable", nunca timeout de transação (`P2028`) como nos três acima. **Sintoma, não mecanismo, separa este formato dos outros três** — queda de conexão crua não é fila nem pool. Isolado, o mesmo arquivo passou 92/92 duas vezes seguidas; na segunda, 3,7× mais lento que o normal (597s contra ~160s) — o dado que sustenta "instabilidade", não suposição | Rodar o arquivo isolado de novo; se passar (mesmo mais lento), não é defeito de código. Não é a mesma correção dos três acima — reduzir concorrência ou trocar teto não resolve queda de conexão. **Não conta na proporção de reruns da esteira** (regra de contagem acima) — aquela regra é sobre envios que a esteira recebe; isto foi execução local, contra outro banco, e nunca chegou a virar push |
 
-  **A pergunta que separa os três, antes de aplicar qualquer correção: o
-  erro reproduz local, sozinho, sem esteira e sem carga extra?** Se sim, não
-  é desaceleração — descarta o segundo formato — e é pool ou fila (medir
-  qual: pool esgotado só reproduz acima do número de conexões do pool;
-  fila serializada reproduz dentro do pool, na concorrência que o teste já
-  usa — sem precisar de mais pedidos simultâneos do que ele tinha). Se só
-  reproduz sob esteira, é desaceleração — não adianta reduzir concorrência
-  nem trocar teto sem medir a margem primeiro.
+  **A pergunta que separa os três primeiros, antes de aplicar qualquer
+  correção: o erro reproduz local, sozinho, sem esteira e sem carga
+  extra?** Se sim, não é desaceleração — descarta o segundo formato — e é
+  pool ou fila (medir qual: pool esgotado só reproduz acima do número de
+  conexões do pool; fila serializada reproduz dentro do pool, na
+  concorrência que o teste já usa — sem precisar de mais pedidos
+  simultâneos do que ele tinha). Se só reproduz sob esteira, é
+  desaceleração — não adianta reduzir concorrência nem trocar teto sem
+  medir a margem primeiro. **Essa árvore inteira pressupõe timeout de
+  transação/consulta.** Se a mensagem for de conexão caindo
+  (`ECONNRESET`, "Connection terminated", "Client has encountered a
+  connection error") em vez de estourar um teto, é o quarto formato —
+  decide rodando o arquivo isolado de novo, não entrando na árvore acima.
 - **"A regra vale para todos os itens de uma coleção" e "o código olha um
   item da coleção" são duas afirmações diferentes — a segunda não implica a
   primeira, mesmo quando a regra está escrita certa.** Padrão a procurar de

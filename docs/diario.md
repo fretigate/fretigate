@@ -6,6 +6,64 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 30/08/2026 — Tarefa 1 do item 8: Dados da dashboard
+
+Plano do item 8 aprovado e commitado em `1ce8ac8` (29/08/2026), com quatro
+decisões do fundador registradas em `docs/planos/item-8-dashboard.md`:
+Rodagem mostra dado real (o km já existe desde o item 3, não depende do
+item 12); a marca da empresa no cartão escuro nasce não-tocável até o item
+10 construir a tela de Conta; "Fretes em andamento" leva a Fretes sem
+filtro, com pedido de um quarto chip (situação operacional) ao Design; e a
+sugestão de relatório dispara com 3 ou mais fretes não faturados de um mês
+fechado (fuso de Fortaleza).
+
+Esta tarefa fecha só os dados: `src/lib/servicos/dashboard.ts`, seis
+funções novas — `resumoDoMes` (faturamento + comparação com o mês anterior
++ média por frete), `resumoDeRodagemDoMes` (km e R$/km, mesma forma de
+`resumoDoCaminhao`), `contarFretesEmAndamento`, `contarCobrancasVencidasAgrupadas`
+(mesma unidade da lista — um relatório com N títulos conta 1),
+`sugerirRelatorio` e `faturamentoPorMes` (as barras dos 6 meses). Tudo
+reaproveitando o filtro-base já usado em `resumoDoCaminhao`/`resumoDoMotorista`
+("somar é diferente de cobrar", `CLAUDE.md` §9) — nenhuma tabela nova,
+nenhuma migration. `resumoDeCobrancas`/`contarFretesAFaturar`, que a tela já
+tinha prontos, não são repetidos aqui.
+
+**Achado na construção: `sugerirRelatorio` precisa divergir de
+`contarFretesAFaturar`.** Um teste (frete cancelado sem título) mostrou que
+`contarFretesAFaturar` não exclui `status_operacional: "cancelado"` — e um
+frete cancelado "não vai acontecer" (`CLAUDE.md` §7), então não pode
+alimentar uma sugestão de gerar cobrança. Corrigido só em `sugerirRelatorio`,
+com o motivo escrito no comentário; `contarFretesAFaturar` não foi tocada,
+por estar fora do escopo desta tarefa — registrado aqui para não se perder,
+não como pendência aberta (o comportamento dela hoje não muda nenhuma tela
+existente, e mudar sem medir o efeito nas outras telas seria decisão nova).
+
+**Instabilidade local, formato novo — não confundir com os três da esteira
+já catalogados.** A suíte inteira (`npm test`, ~26 min contra o banco de
+desenvolvimento) reprovou em `tests/titulos.test.ts` — arquivo sem relação
+com esta tarefa — com "Connection terminated unexpectedly" /
+"Client has encountered a connection error and is not queryable", nunca
+timeout de transação. Rodado isolado duas vezes: passou as duas (92/92), a
+segunda vez 3,7× mais lento que o normal (597s contra ~160s) — dado medido,
+não suposto, de que era queda de conexão, não defeito. `CLAUDE.md` §2 ganhou
+o quarto formato do catálogo, com a distinção que o fundador pediu: os três
+anteriores são incidentes de **esteira**; este é da **máquina local**,
+contra o banco de **desenvolvimento**, e não entra na proporção de reruns
+da esteira (regra separada, sobre envios que ela recebe).
+
+**Verificação: local.** `npx tsc --noEmit` e `npm run lint` verdes.
+`tests/dashboard.test.ts` (17/17, novo) e `tests/titulos.test.ts` (92/92,
+isolado) verdes contra o banco de **desenvolvimento** — decisão do
+fundador de não repetir a suíte inteira, por já estar provado que o
+arquivo novo e o arquivo que falhou passam sozinhos, e a esteira roda a
+suíte inteira de qualquer forma no envio.
+
+Próximo: Tarefa 2 do item 8 — a tela, substituindo o pouso provisório
+(`src/app/(app)/page.tsx`) pela dashboard de verdade: cartão escuro,
+quatro pastilhas, barras dos 6 meses e "Precisa de você".
+
+---
+
 ## 29/08/2026 — Tarefa 4 do item 7: Entradas no fluxo — item 7 fecha
 
 Última tarefa do item 7 (relatório). Liga as cinco pontas alcançáveis hoje:
