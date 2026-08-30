@@ -936,7 +936,29 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
    * registrando só esses 3, em silêncio (`CLAUDE.md` §2, rigor total —
    * dinheiro). `completarGruposDeRelatorio` (`cobrancas.ts`) busca de novo,
    * sem teto, qualquer relatório que apareceu cortado.
+   *
+   * Margem pequena, medida — não suposta (`CLAUDE.md` §2, quinto formato
+   * do catálogo, "timeout puro"; `docs/planos/margem-teste-teto-cobrancas.md`):
+   * este teste é o único do bloco que soma 5 títulos pelo caminho de
+   * produção completo (`marcarServicoFinalizado`+`faturarServico`, cada um
+   * com validação e consulta própria — os vizinhos plantam 1 a 3 títulos
+   * direto por SQL, `plantarTitulo`) MAIS um `criarRelatorio` de verdade
+   * (que nenhum vizinho chama, e que roda numa transação com a mesma
+   * numeração sequencial já catalogada como cara em
+   * `docs/planos/reduz-concorrencia-teste-numeracao-relatorio.md`) MAIS a
+   * consulta extra da completude, abaixo. Medido direto na esteira (commit
+   * `c5e2e92`, 29/08/2026, run que passou): **29.273ms** contra o teto
+   * padrão de 30.000ms — 2,4% de folga, no dia em que passou. NÃO é o caso
+   * do `tests/medicao-municipios.test.ts` (lá a margem local já era pequena,
+   * mas o teste só falhava sob desaceleração da esteira, nunca sozinho):
+   * este teste já não tem margem na própria esteira, em condição normal.
+   *
+   * SE ESTOURAR MESMO COM 60S, NÃO É FALTA DE MARGEM — é o teste fazendo
+   * trabalho demais (já é quase o dobro do segundo teste mais lento do
+   * arquivo). Revise o que ele faz, não alargue o prazo de novo.
    */
+  const TIMEOUT_TETO_RELATORIO = 60_000;
+
   it("teto de 3 não corta um relatório de 5 fretes ao meio — o grupo sempre vem completo", async () => {
     const e = await criarEmpresaDeTeste("l8");
     const hoje = diaEmFortaleza(new Date());
@@ -981,7 +1003,7 @@ describe("4. listarCobrancas — situação, período e ordem", () => {
     // corte real assim que um relatório completava o teto.
     expect(cortado).toBe(true);
     conferencias++;
-  });
+  }, TIMEOUT_TETO_RELATORIO);
 });
 
 describe("5. contarFretesAFaturar — o número do estado vazio", () => {

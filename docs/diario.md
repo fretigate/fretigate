@@ -6,6 +6,58 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 30/08/2026 — Margem pequena no teste do teto de relatório (`cobrancas.test.ts`), segunda pista da causa raiz reaberta
+
+Continuação da investigação da entrada abaixo. `9f01d69` (Tarefa 1 do item
+8) terminou `failure` com o mesmo sintoma mudo do quinto formato —
+`tests/cobrancas.test.ts > 4. listarCobrancas... > teto de 3 não corta um
+relatório de 5 fretes ao meio`, `Error: Test timed out in 30000ms` — a
+segunda ocorrência exata do mesmo teste (a primeira foi no commit
+`1ce8ac8`, 29/08/2026).
+
+**Medido, não suposto: o teste já não tem margem na própria esteira, em
+condição normal.** O log do commit `c5e2e92` (29/08/2026, a última execução
+em que este teste **passou**) imprime a duração de cada teste do arquivo —
+este levou 29.273ms contra o teto de 30.000ms, 2,4% de folga. **Não é o
+mesmo caso do `tests/medicao-municipios.test.ts`** (lá a margem local já
+era pequena, mas o teste só falhava sob desaceleração da esteira, nunca
+sozinho) — aqui o teste já está no limite mesmo com a esteira se
+comportando normalmente. Causa, lida no código: é o único teste do bloco
+que soma 5 títulos pelo caminho de produção completo
+(`marcarServicoFinalizado`+`faturarServico`) mais um `criarRelatorio` de
+verdade (que nenhum vizinho chama, com a mesma transação de numeração já
+catalogada como cara) mais a consulta extra que `completarGruposDeRelatorio`
+faz para não deixar um relatório cortado ao meio. Detalhe completo em
+`docs/planos/margem-teste-teto-cobrancas.md`.
+
+**Correção, decisão do fundador: opção A** — teto próprio de 60s só neste
+teste (`TIMEOUT_TETO_RELATORIO`, `tests/cobrancas.test.ts`), mesmo
+mecanismo já usado em `medicao-municipios.test.ts`, com o registro
+explícito de que 60s resolve **hoje**: se estourar de novo mesmo assim, a
+causa é o teste fazer trabalho demais, não falta de margem — revisar o
+teste, não alargar o prazo outra vez. Opção B (reduzir o trabalho do
+teste) foi descartada por enfraquecer o que o teste prova.
+
+**Achados do `/revisar`, todos aceitos** — a explicação da causa omitia
+`criarRelatorio` e comparava errado com os vizinhos (eles também criam o
+frete pelo caminho de produção; só o título costuma ser SQL direto);
+"margem local boa" no `medicao-municipios` contradizia o próprio catálogo
+do `CLAUDE.md` §2 ("folga pequena"); a data certa daquele caso é
+21/08/2026, não 20/08; a tabela de duração dos vizinhos tinha um valor
+duplicado por engano de cópia, e afirmava dado de 16 testes que o log não
+imprime duração própria. Tudo corrigido no plano e no comentário do
+código antes deste commit.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` limpos.
+`tests/cobrancas.test.ts -t "teto de 3 não corta"`: 1/1, 13.584ms (dentro
+do teto novo). Arquivo inteiro: 37/37. **Esteira: a confirmar no próximo
+`/onde-paramos`**.
+
+Próximo: mesmo da entrada abaixo — depende da confirmação da esteira dos
+dois commits desta sessão.
+
+---
+
 ## 30/08/2026 — Reabre causa raiz da instabilidade: conexão de longa duração em `titulos.test.ts`, e o quinto formato do catálogo
 
 Decisão do fundador, ao rodar `/onde-paramos`: a esteira do commit `1ce8ac8`
@@ -55,7 +107,7 @@ intermitente antes da mudança também. **Esteira: a confirmar no próximo
 
 Enquanto isso, `9f01d69` (Tarefa 1 do item 8) terminou `failure`, no mesmo
 sintoma mudo, desta vez em `tests/cobrancas.test.ts` — investigado à parte,
-ver a entrada seguinte.
+ver a entrada acima ("Margem pequena no teste do teto de relatório").
 
 Próximo: se a esteira confirmar (parou de travar), decidir se estende o
 mesmo padrão de conexão por bloco aos outros 18 arquivos. Se não confirmar,
