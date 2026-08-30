@@ -228,23 +228,38 @@ async function criarEmpresaDeTeste(sufixo: string): Promise<EmpresaDeTeste> {
   };
 }
 
-beforeAll(async () => {
-  raiz = new Client({ connectionString: process.env.DIRECT_URL });
-  await raiz.connect();
-});
-
+/**
+ * Conexão única por `describe` (não mais por arquivo) — cada bloco abre a
+ * sua em `beforeAll` e fecha em `afterAll` (ver os 17 blocos abaixo).
+ * `criarEmpresaDeTeste`/`plantarTitulo` continuam lendo esta mesma variável
+ * de módulo, só que agora ela aponta para a conexão do bloco corrente.
+ *
+ * Investigação de causa raiz (`docs/planos/investiga-conexao-longa-em-
+ * titulos-test.md`): a versão anterior mantinha uma única conexão aberta do
+ * início ao fim do arquivo — medido na esteira do commit `1ce8ac8`
+ * (29/08/2026), 1165,7s (19min26s) de conexão contínua, mais que o dobro do
+ * segundo arquivo mais longo da suíte. Foi essa conexão, no arquivo mais
+ * longo, que travou primeiro.
+ *
+ * Limpeza final, abaixo, com conexão própria — não pode depender de nenhum
+ * `raiz` de bloco ainda estar de pé, já que cada bloco fecha a sua ao final
+ * dele.
+ */
 afterAll(async () => {
-  if (empresasParaLimpar.length) {
+  if (!empresasParaLimpar.length) return;
+  const limpeza = new Client({ connectionString: process.env.DIRECT_URL });
+  await limpeza.connect();
+  try {
     // `cobranca_enviada` e `recebimento` referenciam `titulo_receber` (item
     // 6, Tarefas 3 e 5) — saem primeiro. `titulo_receber` referencia servico,
     // cliente e `relatorio` (item 7) — sai antes deles.
-    await raiz.query(`DELETE FROM "cobranca_enviada" WHERE empresa_id = ANY($1)`, [
+    await limpeza.query(`DELETE FROM "cobranca_enviada" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
-    await raiz.query(`DELETE FROM "recebimento" WHERE empresa_id = ANY($1)`, [
+    await limpeza.query(`DELETE FROM "recebimento" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
-    await raiz.query(`DELETE FROM "titulo_receber" WHERE empresa_id = ANY($1)`, [
+    await limpeza.query(`DELETE FROM "titulo_receber" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
     // `relatorio_servico` referencia `relatorio` e `servico` (item 7) — sai
@@ -252,39 +267,49 @@ afterAll(async () => {
     // Entraram aqui quando `faturarServico` ganhou `relatorioId` (item 7,
     // Tarefa 3) e um teste deste arquivo passou a criar `Relatorio` de
     // verdade — mesma ordem de `tests/relatorios.test.ts`.
-    await raiz.query(`DELETE FROM "relatorio_servico" WHERE empresa_id = ANY($1)`, [
+    await limpeza.query(`DELETE FROM "relatorio_servico" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
-    await raiz.query(`DELETE FROM "relatorio" WHERE empresa_id = ANY($1)`, [
+    await limpeza.query(`DELETE FROM "relatorio" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
-    await raiz.query(`DELETE FROM "servico" WHERE empresa_id = ANY($1)`, [
+    await limpeza.query(`DELETE FROM "servico" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
     // `motorista` referencia `veiculo` (veiculo_habitual_id) — sai antes
     // dele, mesma ordem de `tests/servicos.test.ts`. Achado do quarto
     // /revisar: a versão anterior invertia essa ordem; passava só porque
     // nenhum teste deste arquivo grava veiculo_habitual_id ainda.
-    await raiz.query(`DELETE FROM "motorista" WHERE empresa_id = ANY($1)`, [
+    await limpeza.query(`DELETE FROM "motorista" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
-    await raiz.query(`DELETE FROM "veiculo" WHERE empresa_id = ANY($1)`, [
+    await limpeza.query(`DELETE FROM "veiculo" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
-    await raiz.query(`DELETE FROM "cliente" WHERE empresa_id = ANY($1)`, [
+    await limpeza.query(`DELETE FROM "cliente" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
-    await raiz.query(`DELETE FROM "usuario" WHERE empresa_id = ANY($1)`, [
+    await limpeza.query(`DELETE FROM "usuario" WHERE empresa_id = ANY($1)`, [
       empresasParaLimpar,
     ]);
-    await raiz.query(`DELETE FROM "empresa" WHERE id = ANY($1)`, [
+    await limpeza.query(`DELETE FROM "empresa" WHERE id = ANY($1)`, [
       empresasParaLimpar,
     ]);
+  } finally {
+    await limpeza.end();
   }
-  await raiz.end();
 });
 
 describe("1. Já recebi — cria título pago derivado do Servico", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("status pago, valor e cliente_id vêm do Servico, não de input", async () => {
     const e = await criarEmpresaDeTeste("a");
     const antes = new Date();
@@ -327,6 +352,15 @@ describe("1. Já recebi — cria título pago derivado do Servico", () => {
 });
 
 describe("2. a conferência de FK — CLAUDE.md §3", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("recusa servico_id de outra empresa (via Já recebi)", async () => {
     const a = await criarEmpresaDeTeste("c1");
     const b = await criarEmpresaDeTeste("c2");
@@ -355,6 +389,15 @@ describe("2. a conferência de FK — CLAUDE.md §3", () => {
 });
 
 describe("3. um título integral por frete — achado da revisão do fundador", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("Já recebi chamado duas vezes em sequência para o mesmo frete recusa na segunda", async () => {
     const e = await criarEmpresaDeTeste("g");
     await criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId);
@@ -400,6 +443,15 @@ describe("3. um título integral por frete — achado da revisão do fundador", 
 });
 
 describe("3b. editarServicoComProtecaoDeTitulo — trava valor e cliente do frete com título ativo (item 4, tarefa 4)", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   /** `e.servicoId` já existe (`tipo_operacao_id`/`cliente_id`/`data_servico`/`valor` de `criarEmpresaDeTeste`). */
   function dadosParaEditar(e: EmpresaDeTeste, extra: Partial<DadosServico> = {}): DadosServico {
     return {
@@ -515,6 +567,15 @@ describe("3b. editarServicoComProtecaoDeTitulo — trava valor e cliente do fret
 });
 
 describe("4. listarServicosComSituacao — leitura em lote, sem N+1", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("os quatro estados aparecem corretamente numa leitura em lote", async () => {
     const e = await criarEmpresaDeTeste("s1");
     // e.servicoId já existe, sem título nenhum → a_faturar.
@@ -711,6 +772,15 @@ describe("4. listarServicosComSituacao — leitura em lote, sem N+1", () => {
 });
 
 describe("5. buscarServicoComTitulos", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("traz o servico com os títulos e a situação derivada", async () => {
     const e = await criarEmpresaDeTeste("t1");
     await criarTituloJaRecebi(e.empresaId, e.usuarioId, e.servicoId);
@@ -733,6 +803,15 @@ describe("5. buscarServicoComTitulos", () => {
 });
 
 describe("6. resumoFinanceiroDoCliente — quatro números, dois pares diferentes (Tarefa 7 do item 6)", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("soma já rodado e recebido no período, ignorando título cancelado", async () => {
     const e = await criarEmpresaDeTeste("u1");
     const hoje = diaEmFortaleza(new Date());
@@ -938,6 +1017,15 @@ describe("6. resumoFinanceiroDoCliente — quatro números, dois pares diferente
 });
 
 describe("6b. valorEmAbertoPorCliente — saldo em aberto de todos os clientes, situação atual (Tarefa 7 do item 6)", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("soma o saldo por cliente, ignora cancelado, pago e frete arquivado", async () => {
     const e = await criarEmpresaDeTeste("v1");
     const outroCliente = await criarCliente(e.empresaId, { nome: "Outro cliente v1" });
@@ -1026,6 +1114,15 @@ describe("6b. valorEmAbertoPorCliente — saldo em aberto de todos os clientes, 
 });
 
 describe("7. históricos dos perfis — teto de 5, total real, situação em cada linha, isolamento", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it(
     "listarServicosDoCliente traz os 5 mais recentes, o total real, e cada linha já com a situação financeira",
     async () => {
@@ -1296,6 +1393,15 @@ describe("7. históricos dos perfis — teto de 5, total real, situação em cad
  * (`situacaoFinanceira`) era inalcançável na prática.
  */
 describe("8. vencimentoPadrao — os dois primeiros dos três níveis de prazo (§4.7)", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("usa o prazo do cliente quando ele tem um", () => {
     expect(vencimentoPadrao("2026-08-26", 30, 15)).toBe("2026-09-25");
     conferencias++;
@@ -1331,6 +1437,15 @@ describe("8. vencimentoPadrao — os dois primeiros dos três níveis de prazo (
 });
 
 describe("9. faturarServico — cria o título EM ABERTO", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("status aberto, sem nada recebido, com vencimento e forma prevista gravados", async () => {
     const e = await criarEmpresaDeTeste("f1");
     await marcarServicoFinalizado(e.empresaId, e.servicoId);
@@ -1571,6 +1686,15 @@ async function criarTituloAberto(e: EmpresaDeTeste, valor = e.valorServico) {
 }
 
 describe("10. registrarRecebimento — confirmar recebimento (item 6, Tarefa 3)", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("recusa valor zero ou negativo, sem tocar o banco", async () => {
     const e = await criarEmpresaDeTeste("rec1");
     const titulo = await criarTituloAberto(e);
@@ -1841,6 +1965,15 @@ describe("10. registrarRecebimento — confirmar recebimento (item 6, Tarefa 3)"
 });
 
 describe("11. ultimoRecebimentoEm — a data que \"recebido em X\" mostra (item 6, Tarefa 4)", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   /**
    * Achado do `/revisar` na Tarefa 4: o resumo do detalhe da cobrança usava
    * `vencimento` como a data de "recebido em X" — para um título faturado
@@ -1885,6 +2018,15 @@ describe("11. ultimoRecebimentoEm — a data que \"recebido em X\" mostra (item 
 });
 
 describe("12. registrarCobrancaEnviadaEmGrupo com um título — \"Cobrar no WhatsApp\" (item 6, Tarefa 5; unificada no item 7, segundo commit)", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("recusa título de outra empresa (conferência de FK — CLAUDE.md §3)", async () => {
     const a = await criarEmpresaDeTeste("cob1a");
     const b = await criarEmpresaDeTeste("cob1b");
@@ -1995,6 +2137,15 @@ describe("12. registrarCobrancaEnviadaEmGrupo com um título — \"Cobrar no Wha
  * tudo ou nada, nunca metade do grupo marcada.
  */
 describe("12b. registrarCobrancaEnviadaEmGrupo — tudo ou nada (item 7, segundo commit)", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("recusa lista vazia", async () => {
     const e = await criarEmpresaDeTeste("grp1");
     await expect(
@@ -2074,6 +2225,15 @@ describe("12b. registrarCobrancaEnviadaEmGrupo — tudo ou nada (item 7, segundo
 });
 
 describe("13. ultimoEnvioPorTitulo — \"cobrado há X dias por Y\" em lote (item 6, Tarefa 5)", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("título sem nenhum envio não entra no mapa", async () => {
     const e = await criarEmpresaDeTeste("uenv1");
     const titulo = await criarTituloAberto(e);
@@ -2127,6 +2287,15 @@ describe("13. ultimoEnvioPorTitulo — \"cobrado há X dias por Y\" em lote (ite
 });
 
 describe("14. estornarTitulo — Estorno (item 6, Tarefa 6)", () => {
+  beforeAll(async () => {
+    raiz = new Client({ connectionString: process.env.DIRECT_URL });
+    await raiz.connect();
+  });
+
+  afterAll(async () => {
+    await raiz.end();
+  });
+
   it("cancela o título, nunca apaga — a linha continua no banco (CLAUDE.md §7)", async () => {
     const e = await criarEmpresaDeTeste("est1");
     const titulo = await criarTituloAberto(e);

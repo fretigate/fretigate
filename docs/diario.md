@@ -6,6 +6,65 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 30/08/2026 — Reabre causa raiz da instabilidade: conexão de longa duração em `titulos.test.ts`, e o quinto formato do catálogo
+
+Decisão do fundador, ao rodar `/onde-paramos`: a esteira do commit `1ce8ac8`
+(Plano do item 8) estava vermelha, sem diagnóstico — investigar antes de
+qualquer tarefa nova (`CLAUDE.md` §2). A investigação inicial (janela
+recente: 2 vermelhos em 5 envios, acima do 1 em 3) achou uma correlação
+medida: os quatro arquivos de teste que já falharam por instabilidade neste
+período são, com folga, os quatro de maior duração de conexão `raiz` aberta
+da suíte — `titulos.test.ts` (92 testes) ficou **19min26s** com a mesma
+conexão aberta, mais que o dobro do segundo colocado.
+
+**O sintoma da falha (`Error: Test timed out in 30000ms`, sem nenhuma
+mensagem de baixo nível) não batia com nenhum dos quatro formatos já
+catalogados no `CLAUDE.md` §2** — nem P2028, nem `ECONNRESET`. Registrado
+como **quinto formato**, "timeout puro", com a distinção que o fundador
+pediu: a árvore de decisão do §2 pressupõe um sintoma de baixo nível, e
+aplicá-la sem ele seria escolher a correção por analogia falsa.
+
+**Construção:** `tests/titulos.test.ts` — a conexão `raiz`, antes aberta
+uma vez para o arquivo inteiro (`beforeAll`/`afterAll` no topo), passa a
+abrir e fechar por bloco (17 dos 18 `describe` de nível superior; o 18º,
+"cobertura", não usa `raiz`). A limpeza final ganhou conexão própria, para
+não depender de nenhum bloco anterior ainda estar de pé. Plano completo,
+com a medição, a hipótese, o critério de decisão e o resultado local (4
+rodadas, 92/92 cada), em
+`docs/planos/investiga-conexao-longa-em-titulos-test.md`.
+
+**Achado do `/revisar`, aceito integralmente:** a contagem de arquivos com o
+mesmo padrão estava errada duas vezes (13, depois 17) — a correta, conferida
+à parte, é **19 dos 31**. A correlação por duração sobrevive à correção. O
+plano também ganhou a explicação que faltava para as rodadas locais saírem
+~2,2× mais lentas que o baseline antigo (17 conexões abrindo/fechando em vez
+de 1 — custo esperado da mudança, não sintoma novo) e o registro explícito
+de que a medição do limite de ociosidade do Supabase só alcançou o projeto
+de **desenvolvimento**, não o de **teste** — decisão registrada de seguir
+mesmo assim.
+
+**Desvio de processo, registrado:** o plano foi aprovado no chat antes da
+construção, mas não foi commitado como passo próprio antes dela começar,
+como o §2 pede — plano e construção fecham no mesmo commit.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` limpos.
+`titulos.test.ts` isolado, 4 rodadas seguidas, 92/92 em todas (352-368s cada,
+banco de **desenvolvimento**). Não é prova definitiva — o defeito era
+intermitente antes da mudança também. **Esteira: a confirmar no próximo
+`/onde-paramos`** — é o próximo envio que mede de verdade.
+
+Enquanto isso, `9f01d69` (Tarefa 1 do item 8) terminou `failure`, no mesmo
+sintoma mudo, desta vez em `tests/cobrancas.test.ts` — investigado à parte,
+ver a entrada seguinte.
+
+Próximo: se a esteira confirmar (parou de travar), decidir se estende o
+mesmo padrão de conexão por bloco aos outros 18 arquivos. Se não confirmar,
+a hipótese cai e a investigação reabre do zero. De qualquer forma, depois
+disso, a Tarefa 2 do item 8 (a tela da dashboard) continua sendo a próxima
+tarefa do produto.
+
+---
+
 ## 30/08/2026 — Tarefa 1 do item 8: Dados da dashboard
 
 Plano do item 8 aprovado e commitado em `1ce8ac8` (29/08/2026), com quatro

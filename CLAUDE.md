@@ -116,16 +116,19 @@ você escreve.** O padrão é o meu.
   `completed`) antes do próximo — nunca dois em voo ao mesmo tempo, mesmo
   quando são de commits diferentes.
 
-  **"Vermelho sem defeito de código" já apareceu em quatro formatos
+  **"Vermelho sem defeito de código" já apareceu em cinco formatos
   diferentes, e confundir um pelo outro custa tempo — cada um pede
   diagnóstico e correção próprios, nunca a mesma resposta por analogia.**
   Registrado em 29/08/2026, depois de perder tempo tratando o terceiro caso
   como possível repetição do segundo até medir. **Os três primeiros são
-  incidentes de esteira; o quarto (acrescentado em 30/08/2026) é de outro
-  eixo — a máquina de quem programa, contra o banco de desenvolvimento, a
-  esteira nunca participa.** Fica no mesmo catálogo por ser a mesma classe
-  de fenômeno (vermelho que medição desfaz), não por ser incidente do mesmo
-  tipo.
+  incidentes de esteira com sintoma de baixo nível (P2028, ou a demora do
+  próprio teste); o quarto (acrescentado em 30/08/2026) é de outro eixo — a
+  máquina de quem programa, contra o banco de desenvolvimento, a esteira
+  nunca participa; o quinto (acrescentado em 30/08/2026) volta a ser
+  esteira, mas com um sintoma que nenhum dos quatro anteriores tem — timeout
+  puro, sem nenhuma mensagem de baixo nível.** Fica no mesmo catálogo por
+  ser a mesma classe de fenômeno (vermelho que medição desfaz), não por ser
+  incidente do mesmo tipo.
 
   | Formato | Onde apareceu | Causa | Correção |
   |---|---|---|---|
@@ -133,6 +136,7 @@ você escreve.** O padrão é o meu.
   | **Margem contra desaceleração** | `tests/medicao-municipios.test.ts`, "2. medição completa", 21/08/2026 | O teste cabe no teto local com folga pequena (2,6×), menor que o fator de desaceleração da esteira já medido (~3×) — só estoura sob esteira lenta, nunca sozinho local | Teto de tempo próprio, maior, só para aquele teste, com o cálculo (baseline, fator, margem escolhida) escrito no código (`docs/planos/teto-de-tempo-no-teste-de-medicao-completa.md`) |
   | **Fila serializada longa demais** | `tests/relatorios.test.ts`, concorrência da numeração de `Relatorio`, 29/08/2026 | Pedidos disputam a mesma linha e passam um de cada vez; a soma da fila já estoura o teto sozinha, **sem esteira, sem desaceleração** (reproduzido local, 1 em 3). **O porquê deste teste e não do equivalente que nunca falhou não foi identificado** — a hipótese óbvia (mais consultas antes da fila) foi testada e descartada por leitura de código: é o oposto, o equivalente que nunca falha faz mais consultas, não menos | Reduzir a fila (quantidade de pedidos simultâneos no teste) até onde a garantia continua provada — não é tapar sintoma, é a mesma pergunta de sempre: "quantos bastam para provar a regra?" (`docs/planos/reduz-concorrencia-teste-numeracao-relatorio.md`) |
   | **Queda de conexão local** | Suíte inteira local (`npm test`), 29-30/08/2026 — `tests/titulos.test.ts`, sem relação com a tarefa em andamento (item 8) | O `pg.Client` de um arquivo de teste (`raiz`) foi derrubado pelo host durante uma suíte longa (~26 min contra o banco de **desenvolvimento**) — sintoma "Connection terminated unexpectedly" / "Client has encountered a connection error and is not queryable", nunca timeout de transação (`P2028`) como nos três acima. **Sintoma, não mecanismo, separa este formato dos outros três** — queda de conexão crua não é fila nem pool. Isolado, o mesmo arquivo passou 92/92 duas vezes seguidas; na segunda, 3,7× mais lento que o normal (597s contra ~160s) — o dado que sustenta "instabilidade", não suposição | Rodar o arquivo isolado de novo; se passar (mesmo mais lento), não é defeito de código. Não é a mesma correção dos três acima — reduzir concorrência ou trocar teto não resolve queda de conexão. **Não conta na proporção de reruns da esteira** (regra de contagem acima) — aquela regra é sobre envios que a esteira recebe; isto foi execução local, contra outro banco, e nunca chegou a virar push |
+  | **Timeout puro — sem sintoma de baixo nível** | `tests/titulos.test.ts` e `tests/cobrancas.test.ts`, esteira do commit `1ce8ac8`, 29/08/2026 — dois arquivos sem relação entre si, no mesmo run | O Vitest mata a promessa em 30000ms **antes** de qualquer erro do driver aparecer — nem `P2028` (que chega em 5-17s, com mensagem própria), nem `ECONNRESET`/"Connection terminated" (o sintoma do quarto formato). `Error: Test timed out in 30000ms`, sozinho, não aponta pool, fila, desaceleração nem conexão caindo — **aplicar a árvore abaixo a este sintoma seria escolher a correção por analogia falsa**, o catálogo existe para evitar exatamente isso (achado do fundador, 30/08/2026) | Não tem receita própria — o sintoma mudo obriga medir o teste/arquivo específico antes de tocar em qualquer coisa, nunca aplicar a correção de outro formato por parecido. Duas ocorrências já resolvidas por esse caminho, cada uma revelando um mecanismo diferente por baixo do mesmo sintoma mudo: `cobrancas.test.ts` mediu 29,3s **numa esteira que passou** — quase zero de folga mesmo em condição normal, não o mesmo caso do segundo formato (lá a margem local era boa e só a desaceleração da esteira estourava; aqui o teste já não tem margem na própria esteira) — corrigido com teto próprio de 60s, registrado como resolve hoje; se estourar de novo mesmo com 60s, é o teste fazendo trabalho demais, não falta de margem (`docs/planos/margem-teste-teto-cobrancas.md`). `titulos.test.ts`, sem sintoma que apontasse mecanismo nenhum, foi tratado por correlação medida: os quatro arquivos que já falharam desse jeito são, com folga, os quatro de maior duração de conexão aberta da suíte (`docs/planos/investiga-conexao-longa-em-titulos-test.md`) — hipótese em teste, não confirmada |
 
   **A pergunta que separa os três primeiros, antes de aplicar qualquer
   correção: o erro reproduz local, sozinho, sem esteira e sem carga
@@ -147,6 +151,13 @@ você escreve.** O padrão é o meu.
   (`ECONNRESET`, "Connection terminated", "Client has encountered a
   connection error") em vez de estourar um teto, é o quarto formato —
   decide rodando o arquivo isolado de novo, não entrando na árvore acima.
+  **E se a mensagem for só `Test timed out em Nms`, sem nenhum erro de
+  driver por baixo, é o quinto — a árvore não se aplica, porque não há
+  sintoma nenhum para ler.** Medir o teste/arquivo específico primeiro
+  (local isolado e, quando possível, a duração real na esteira) é o único
+  caminho: o que a medição revelar pode acabar sendo margem (segundo
+  formato) ou outra coisa — descobre-se medindo, não aplicando a árvore por
+  cima de um sintoma que ela não cobre.
 - **"A regra vale para todos os itens de uma coleção" e "o código olha um
   item da coleção" são duas afirmações diferentes — a segunda não implica a
   primeira, mesmo quando a regra está escrita certa.** Padrão a procurar de
