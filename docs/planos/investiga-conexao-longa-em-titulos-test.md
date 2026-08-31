@@ -209,3 +209,30 @@ verdade. Só depois disso a hipótese está confirmada ou derrubada.
   passo próprio antes dela começar**, como o `CLAUDE.md` §2 pede — construção
   e plano fecham no mesmo commit. Não dá para corrigir a ordem
   retroativamente; fica registrado para não repetir.
+
+## Decisão do fundador, 30/08/2026: não estende agora
+
+A esteira confirmou o commit `2f57719` verde — a hipótese sobrevive. Mesmo
+assim, decisão de **não estender** o padrão de conexão por bloco aos outros
+18 arquivos de teste agora.
+
+**Critério, não suposição:** a evidência que sustenta a mudança em
+`titulos.test.ts` é **duração de conexão**, não "todo arquivo de teste corre
+o mesmo risco". Os quatro arquivos que já falharam por instabilidade neste
+período são, com folga, os quatro de maior duração de conexão aberta da
+suíte — salto de **~4×** entre o quarto colocado e o quinto (medido nesta
+mesma investigação, "O que já está medido, antes deste plano", acima).
+Estender a mudança aos outros catorze arquivos protegeria contra um risco
+que a medição não mostra que eles têm, e tem custo real e já medido: a
+própria reestruturação deixou `titulos.test.ts` ~2,2× mais lento (352-368s
+contra ~160s do baseline de uma conexão só, "Resultado — local", acima).
+
+**Registrado como critério de entrada na conversa, não como regra
+automática:** arquivo de teste cuja conexão de longa duração passa de **uns
+250 segundos** entra na conversa para o mesmo tratamento (medir, decidir se
+reestrutura). Hoje isso deixa `relatorios.test.ts`, `servicos.test.ts` e
+`cobrancas.test.ts` como candidatos — quando (e se) a duração deles crescer
+até essa faixa, não antes. Os outros catorze ficam de fora até chegarem lá.
+O número é heurística de observação, no mesmo espírito do limiar de
+`sugerirRelatorio` (item 8) — ajustável se a experiência mostrar que está
+alto ou baixo demais, não regra de negócio travada.

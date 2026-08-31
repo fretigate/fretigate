@@ -111,6 +111,12 @@
   --text-titulo-tela--line-height: 1.1;
   --text-valor-lista: 20px;
   --text-valor-lista--line-height: 1;
+  /* "Valores das pastilhas (25px)" — docs/estilo.md linha 113, tipografia da
+     dashboard. Faltava como token: as pastilhas de Cobranças usam
+     `--text-valor-lista` (20px), um número diferente — dashboard (item 8) é
+     o primeiro uso real de 25px. */
+  --text-valor-pastilha: 25px;
+  --text-valor-pastilha--line-height: 1;
   --text-nome-empresa: 19px;
   --text-nome-empresa--line-height: 1.15;
   --text-botao-principal: 17px;

@@ -78,13 +78,18 @@ export type ResumoDeRodagem = {
   kmMesMetros: number | null;
   /** Reais por km, float — mesma exceção de `rsPorKm` em `resumoDoCaminhao`. */
   rsPorKm: number | null;
+  /** Quantos fretes do mês têm km preenchido — para a nota de cobertura parcial (`CLAUDE.md` §8, regra 10). */
+  fretesComKm: number;
+  fretesNoMes: number;
 };
 
 /**
  * Km e R$/km do mês, para a empresa inteira — mesma forma de
  * `resumoDoCaminhao` (`src/lib/servicos/servicos.ts`), inclusive o filtro
  * `km: { gt: 0 }` (nunca `not: null`, pelo mesmo motivo lá: um frete com
- * `km = 0` não pode inflar a contagem sem contribuir distância nenhuma).
+ * `km = 0` não pode inflar a contagem sem contribuir distância nenhuma) e a
+ * contagem `fretesComKm`/`fretesNoMes`, para a tela mostrar a cobertura
+ * quando o dado é parcial — mesmo par de campos, mesmo motivo.
  *
  * **Mostra dado real, não convite fixo** — decisão do fundador, 29/08/2026
  * (`docs/planos/item-8-dashboard.md`): `Servico.km` existe desde o item 3,
@@ -94,22 +99,31 @@ export type ResumoDeRodagem = {
 export async function resumoDeRodagemDoMes(empresaId: string, hoje: string): Promise<ResumoDeRodagem> {
   const primeiroDiaDoMes = `${hoje.slice(0, 7)}-01`;
   const { inicio, fimExclusivo } = limitesDoMes(primeiroDiaDoMes);
+  const baseWhere = {
+    arquivado_em: null,
+    status_operacional: { not: "cancelado" as const },
+    data_servico: { gte: inicio, lt: fimExclusivo },
+  };
 
-  const comKm = await db(empresaId).servico.aggregate({
-    where: {
-      arquivado_em: null,
-      status_operacional: { not: "cancelado" },
-      data_servico: { gte: inicio, lt: fimExclusivo },
-      km: { gt: 0 },
-    },
-    _sum: { valor: true, km: true },
-  });
+  const [comKm, fretesNoMes] = await Promise.all([
+    db(empresaId).servico.aggregate({
+      where: { ...baseWhere, km: { gt: 0 } },
+      _sum: { valor: true, km: true },
+      _count: true,
+    }),
+    db(empresaId).servico.count({ where: baseWhere }),
+  ]);
 
   const kmMesMetros = comKm._sum.km ?? 0;
-  if (kmMesMetros <= 0) return { kmMesMetros: null, rsPorKm: null };
+  if (kmMesMetros <= 0) return { kmMesMetros: null, rsPorKm: null, fretesComKm: 0, fretesNoMes };
 
   const valorComKm = comKm._sum.valor ?? 0;
-  return { kmMesMetros, rsPorKm: valorComKm / CENTAVOS / (kmMesMetros / 1000) };
+  return {
+    kmMesMetros,
+    rsPorKm: valorComKm / CENTAVOS / (kmMesMetros / 1000),
+    fretesComKm: comKm._count,
+    fretesNoMes,
+  };
 }
 
 export type ContagemEmAndamento = { total: number; semOrdemEnviada: number };

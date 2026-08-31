@@ -2,9 +2,10 @@ import { createAuthClient } from "better-auth/client";
 
 /**
  * O lado do navegador da autenticação — Entrar, Esqueci a senha e Redefinir
- * senha (tarefa 8, fatia 2).
+ * senha (tarefa 8, fatia 2), mais "Reenviar e-mail" da dashboard
+ * (`BotaoReenviarEmail.tsx`, item 8, Tarefa 2, 30/08/2026).
  *
- * Por que ESTES TRÊS fluxos falam com o servidor por aqui (fetch real, no
+ * Por que estes fluxos falam com o servidor por aqui (fetch real, no
  * navegador) e não por Server Action, ao contrário do cadastro
  * (`src/lib/servicos/cadastro.ts`): o limite de tentativas do Better Auth
  * (`src/lib/auth/index.ts`, `rateLimit.customRules`) só liga quando o pedido

@@ -1,7 +1,9 @@
 /**
  * A mensagem de travado (CLAUDE.md §4 / docs/especificacao.md § Trava de
  * tentativas) para os fluxos que falam com o Better Auth pelo navegador —
- * Entrar, Esqueci a senha, Redefinir senha (`src/lib/auth/cliente.ts`).
+ * Entrar, Esqueci a senha, Redefinir senha (`src/lib/auth/cliente.ts`), mais
+ * "Reenviar e-mail" da dashboard (`src/app/(app)/BotaoReenviarEmail.tsx`,
+ * item 8, Tarefa 2, 30/08/2026).
  *
  * O prazo exato vem do cabeçalho `X-Retry-After` da resposta 429 do próprio
  * limitador (`node_modules/better-auth/dist/api/rate-limiter`). Sem ele —

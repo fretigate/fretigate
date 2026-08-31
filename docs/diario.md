@@ -6,6 +6,151 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 30/08/2026 — Tarefa 2 do item 8: Dashboard — item 8 fecha
+
+Última tarefa do item 8 (`docs/planos/item-8-dashboard.md`). Substitui o
+pouso provisório de `src/app/(app)/page.tsx` (existia desde o item 1) pela
+dashboard de verdade: cartão escuro (marca não-tocável, faturamento do mês,
+comparação com o mês anterior, atalho Gerar relatório), quatro pastilhas (A
+receber · Vencido · Lucro · Rodagem, as duas últimas em convite quando
+faltam dado), "Precisa de você" (até cinco pendências condicionais) e as
+barras dos últimos 6 meses. Conteúdo por `docs/especificacao.md` §4.6
+(atualizado nesta tarefa com as quatro decisões do fundador de 29/08/2026,
+que só viviam no plano até agora).
+
+**Decisão do fundador, antes de começar: não estende a conexão por bloco aos
+outros 18 arquivos de teste agora.** Registrada com o critério (arquivo
+acima de ~250s de conexão aberta entra na conversa) em
+`docs/planos/investiga-conexao-longa-em-titulos-test.md`. A esteira do
+commit `2f57719` (entrada anterior deste diário) já tinha rodado `success`
+antes desta tarefa começar — confirmado no `/onde-paramos` desta sessão.
+
+**`/despesas` nasceu fora do escopo original do plano — aprovado pelo
+fundador depois, com o motivo escrito.** A pastilha Lucro já linkava para
+lá desde o plano aprovado (`docs/planos/item-8-dashboard.md`), supondo que
+a rota já respondia com o próprio estado vazio — sem a página, o toque caía
+num 404 (`CLAUDE.md` §8: nunca botão sem destino). Construída como stub
+mínimo (`src/app/(app)/despesas/page.tsx`): só o estado vazio já decidido em
+`docs/navegacao.md` linha 47 ("Estado vazio explica que o Lucro depende
+dela"), sem "+ Nova despesa" nem lista — os dois nascem no item 11.
+**Decisão do fundador, 30/08/2026: certo manter o destino** — a alternativa
+seria a pastilha ficar sem destino como a de Rodagem, mas ali não existe
+destino nenhum definido; aqui existe, só não construído. **Registrada como
+PROVISÓRIA com o prazo escrito — item 11 —, mesmo tratamento das telas de
+Fretes e Cobranças na "casca do app"** (commit `3b7561f`, 10/08/2026: ativas
+na barra desde cedo, apontando para uma tela curta que diz o que falta em
+vez de dar erro).
+
+**Achados do `/revisar`, dois passes — todos os de "corrige no passe"
+aceitos e corrigidos:**
+
+Primeiro passe:
+- Ordem da tela trocada: as barras vinham antes de "Precisa de você";
+  `docs/especificacao.md` §4.6 e o protótipo têm a ordem contrária.
+  Corrigido.
+- Alvo de toque das barras abaixo de 48px quando o mês tem faturamento
+  zero (a barra visível encolhe a 4px) — `CLAUDE.md` §8. A coluna inteira
+  agora tem `min-h-48`, conteúdo alinhado embaixo, sem esticar a barra.
+- `112px`/raio `8 8 3 3` das barras e `min-h-70` das pendências não têm
+  token em `docs/estilo.md` — registrados como lacuna lá (mesmo padrão do
+  `h-180` da miniatura de comprovante), e a docstring que atribuía os
+  112px a "`docs/estilo.md` § Cores" (errado — só as cores estão lá) foi
+  corrigida.
+- Círculo de iniciais sem `letter-spacing:.02em` (`docs/componentes.md` §
+  "Iniciais da empresa") — corrigido.
+- `docs/navegacao.md` linha 46 ("Conta da empresa") continuava dizendo que a
+  marca da dashboard já levava lá, contradizendo a linha 16 corrigida no
+  mesmo commit — corrigido.
+- `/despesas` sem "Voltar" — toda tela de nível 2 tem
+  (`docs/navegacao.md`, "Regras de navegação"). Corrigido.
+- Pendência "fretes prontos para faturar" linkava para `/fretes?
+  situacao=a_faturar` sem `periodo=todos`: `contarFretesAFaturar` não tem
+  recorte de data, mas a lista sem período cai no teto de 50 mais recentes
+  — o número podia anunciar mais fretes do que a tela mostra. Corrigido.
+
+Segundo passe:
+- Pastilha Rodagem não mostrava a cobertura quando só parte dos fretes do
+  mês tem km — `CLAUDE.md` §8, regra 10 ("com dado parcial, exibir a
+  cobertura"), mesma regra que já vale no perfil do caminhão.
+  `resumoDeRodagemDoMes` ganhou `fretesComKm`/`fretesNoMes` (mesmo padrão
+  de `resumoDoCaminhao`) e a pastilha ganhou a nota ("3 de 5 fretes com
+  km"). Corrigido.
+- "Voltar" de `/despesas` apontava para `/mais` por analogia com
+  Clientes/Caminhões/Motoristas — mas "Mais" ainda não tem linha de
+  Despesas, então não era "voltar à origem". Corrigido para `/`, o único
+  caminho de entrada hoje (pastilha Lucro da dashboard).
+- `docs/navegacao.md` linha 44 ("Importar fretes") ainda citava o atalho da
+  dashboard como entrada, contradizendo a linha 16 corrigida no primeiro
+  passe. Corrigido. Linha 17 (Fretes) não registrava a barra do gráfico
+  como nova entrada — acrescentada.
+- `src/lib/auth/cliente.ts` e `src/lib/utils/mensagem-trava.ts` diziam
+  "estes três fluxos" (Entrar, Esqueci a senha, Redefinir senha) — o
+  `BotaoReenviarEmail.tsx` desta tarefa é o quarto consumidor dos dois.
+  Comentários corrigidos.
+
+**Aceito como lacuna, registrado, não corrigido agora** (categoria "não
+bloqueia", `CLAUDE.md` §2 item 7): cor/texto da variação negativa do
+faturamento e o complemento "acima de \<mês\>" que o protótipo desenha (só
+"N%" está construído); tamanho do nome da empresa no cartão escuro (usei
+19/700, `text-nome-empresa`, mais próximo da tabela — o protótipo desenha
+14,5/700, e nenhuma linha da tabela cobre esse elemento); três tamanhos de
+fonte (14px comparação, 12px iniciais, 11px rótulo do mês) e o uso de
+`#1B6B3A` na barra do mês corrente sem confirmação em `docs/estilo.md`
+(registrados como lacuna lá, junto dos casos de altura/raio); cor das
+quatro barras mais antigas todas em `#E4E0D6`, que a tabela de Cores nomeia
+no singular ("a barra mais antiga"); textos exatos das pendências, do
+cartão escuro e das mensagens de `BotaoReenviarEmail.tsx` (mesmo padrão de
+inferência-pendente-do-Design já usado nas tarefas anteriores);
+`sugerirRelatorio` não excluir cliente arquivado (a pré-seleção some
+silenciosamente em `/relatorio`, edge case raro); falta de rótulo de seção
+acima das barras anunciando que são tocáveis; `/despesas` sem a principal
+"Lançar a primeira despesa" que `docs/componentes.md` linha 479 prevê para
+o estado vazio (nasce só no item 11, `CLAUDE.md` §8 proíbe botão sem
+destino); linha de Despesas em Mais ainda não construída, mesmo com
+`/despesas` já tendo destino.
+
+**Pedido ao Design** (`CLAUDE.md` §13): `docs/componentes.md` linha 457
+("Onde cada tela usa o quê", Dashboard) ainda lista duas pílulas sobre
+escuro — o corte de "Importar fretes" (já registrado em
+`docs/especificacao.md` desde 09/08) nunca chegou a atualizar essa linha, e
+o novo componente desta tarefa ("Reenviar e-mail", pílula em linha dentro
+da pendência de e-mail) também não está nela. As quatro decisões do
+fundador (marca não-tocável, Rodagem com dado real e não-tocável, "fretes
+em andamento" sem filtro operacional, sugestão a partir de 3) e as lacunas
+acima seguem junto desta entrada.
+
+**Verificação.** `npx tsc --noEmit`, `npm run lint` limpos. `tests/
+dashboard.test.ts` (17/17 — os dois testes de `resumoDeRodagemDoMes`
+ganharam a conferência de `fretesComKm`/`fretesNoMes`, achado do segundo
+`/revisar` acima) contra o banco de desenvolvimento. **Sem suíte de
+tela/componente** (mesma decisão já
+registrada no item 7, `CLAUDE.md` §14) — verificado no navegador: conta
+nova criada de ponta a ponta (cadastro → login), dashboard renderizada em
+estado vazio (A receber e Vencido em R$ 0,00 — não há convite para número
+zero de verdade, só para dado ausente; Lucro e Rodagem em convite, por
+faltar despesa e km; "Precisa de você" só com e-mail não confirmado),
+alvo de toque das barras medido em 48×66px (`getBoundingClientRect`),
+`/despesas` sem 404 e com Voltar, "Reenviar e-mail" chamando o servidor de
+verdade (recebeu 500 do Resend por causa do domínio de teste
+`example.com` — não é defeito do código: o erro foi capturado e mostrou a
+mensagem amigável, exatamente o caminho que o componente prevê), telas
+conferidas em 450px e 375px (mobile). **Dois passes do `/revisar`** — o
+primeiro achou a ordem da tela trocada, alvo de toque das barras, valores
+sem token, botão fora do inventário e as contradições de estado nos
+documentos; o segundo achou a nota de cobertura da pastilha Rodagem, o
+destino de Voltar em `/despesas`, mais tamanhos/cor sem confirmação e
+contradições residuais nos mesmos documentos. Achados aceitos e corrigidos
+nos dois passes; lacunas registradas abaixo.
+
+Próximo: item 10 da ordem de construção do produto (`docs/especificacao.md`
+§9) — Configurações, conta da empresa e usuários. O item 9 (Cobrança por
+WhatsApp) não entra na lista de itens do MVP (§9, "São 10 itens a
+construir": 2, 3, 4, 5, 6, 7, 8, 10, 11 e 13) e já está parcialmente coberto
+pelos itens 5 e 6 (Cobrar no WhatsApp, Modelo de cobrança e de ordem de
+serviço).
+
+---
+
 ## 30/08/2026 — Margem pequena no teste do teto de relatório (`cobrancas.test.ts`), segunda pista da causa raiz reaberta
 
 Continuação da investigação da entrada abaixo. `9f01d69` (Tarefa 1 do item
@@ -50,11 +195,13 @@ código antes deste commit.
 
 **Verificação: local.** `npx tsc --noEmit`, `npm run lint` limpos.
 `tests/cobrancas.test.ts -t "teto de 3 não corta"`: 1/1, 13.584ms (dentro
-do teto novo). Arquivo inteiro: 37/37. **Esteira: a confirmar no próximo
-`/onde-paramos`**.
+do teto novo). Arquivo inteiro: 37/37. **Esteira: confirmada verde** — o
+commit `2f57719` (este) rodou `success`, conferido no `/onde-paramos` da
+sessão seguinte (`gh run list`, SHA batendo com `origin/main`).
 
-Próximo: mesmo da entrada abaixo — depende da confirmação da esteira dos
-dois commits desta sessão.
+Próximo: ver a entrada de "Tarefa 2 do item 8" no topo deste diário — a
+esteira confirmou, e a decisão do fundador sobre estender a conexão por
+bloco está registrada em `docs/planos/investiga-conexao-longa-em-titulos-test.md`.
 
 ---
 

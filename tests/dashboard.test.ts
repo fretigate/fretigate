@@ -219,6 +219,10 @@ describe("2. resumoDeRodagemDoMes — dado real com cobertura parcial, convite s
     const rodagem = await resumoDeRodagemDoMes(e.empresaId, hoje);
     expect(rodagem.kmMesMetros).toBe(100_000);
     expect(rodagem.rsPorKm).toBeCloseTo(10, 5);
+    // `CLAUDE.md` §8, regra 10: dado incompleto mostra a cobertura — a
+    // pastilha da dashboard usa estes dois para a nota "1 de 2 fretes com km".
+    expect(rodagem.fretesComKm).toBe(1);
+    expect(rodagem.fretesNoMes).toBe(2);
     conferencias++;
   });
 
@@ -229,6 +233,8 @@ describe("2. resumoDeRodagemDoMes — dado real com cobertura parcial, convite s
     const rodagem = await resumoDeRodagemDoMes(e.empresaId, hoje);
     expect(rodagem.kmMesMetros).toBeNull();
     expect(rodagem.rsPorKm).toBeNull();
+    expect(rodagem.fretesComKm).toBe(0);
+    expect(rodagem.fretesNoMes).toBe(1);
     conferencias++;
   });
 });

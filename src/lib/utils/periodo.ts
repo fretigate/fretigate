@@ -217,6 +217,12 @@ export function formatarDataCurta(dia: string): string {
   return `${diaDoMes} ${MESES_ABREV[mes - 1]}`;
 }
 
+/** "jan", "fev"... — rótulo das barras do gráfico de 6 meses (dashboard, item 8). Recebe `"AAAA-MM"`, sem dia. */
+export function formatarMesAbreviado(mes: string): string {
+  const [, m] = mes.split("-").map(Number);
+  return MESES_ABREV[m - 1];
+}
+
 /**
  * O texto do chip de Período quando uma janela está ativa — `null` = chip
  * neutro ("Período").

@@ -233,21 +233,41 @@ temporário pergunta se foi enviada, e a resposta alimenta a marca de cobrado.
 
 Tela inicial. Só entra número que muda o que ele faz depois de ver.
 
-- **Cartão escuro** com a marca da empresa no respiro superior (tocável, leva à
-  Conta), **faturamento do mês** em número grande, e na linha de comparação:
-  variação sobre o mês anterior · **quantidade de fretes** · **média por frete**.
-  Abaixo, dois atalhos: Gerar relatório · Importar fretes.
-- **Quatro pastilhas tocáveis**, duas a duas: **A receber** · **Vencido** ·
+- **Cartão escuro** com a marca da empresa no respiro superior, **faturamento
+  do mês** em número grande, e na linha de comparação: variação sobre o mês
+  anterior · **quantidade de fretes** · **média por frete**. Abaixo, o atalho
+  Gerar relatório.
+
+  **Marca da empresa nasce não-tocável** — decisão do fundador, item 8
+  (`docs/planos/item-8-dashboard.md`): "Conta da empresa" é o item 10, ainda
+  não construído; levar a "Mais" seria destino de consolação. Vira tocável
+  quando aquela tela nascer.
+
+  **Só um atalho, não dois** — "Importar fretes" não nasce ao lado de Gerar
+  relatório: corte já registrado (ver "O que o corte da importação deixa em
+  tela", abaixo), não pendência nova.
+- **Quatro pastilhas**: **A receber** · **Vencido** ·
   **Lucro no mês** (faturamento − despesas, com a conta como apoio) ·
-  **Rodagem no mês** (km total, com R$/km como apoio).
+  **Rodagem no mês** (km total, com R$/km como apoio). As três primeiras são
+  tocáveis; **Rodagem nasce não-tocável** (decisão do fundador, item 8): sem
+  destino próprio até o Design decidir um, uma pastilha que responde ao toque
+  sem levar a lugar nenhum seria pior que uma que não responde.
+
+  **Rodagem mostra dado real desde o item 3, nunca convite fixo** — decisão do
+  fundador, item 8: `Servico.km` já existe (campo manual); o item 12 é só o
+  cálculo automático da distância, não pré-requisito para o campo existir.
+  Convite só quando nenhum frete do mês tem km preenchido.
 - **Cartão de comunicação da plataforma**, na superfície lilás, só quando houver
   mensagem ativa. Dispensável por arraste horizontal — **sem revelar painel
   colorido**, para não confundir com o arraste das listas — e por um "×" visível.
   Ao dispensar, aviso "Guardado em Novidades" com Desfazer.
 - **"Precisa de você"**: fretes em andamento (indicando quantos sem ordem
-  enviada), fretes a faturar, cobranças vencidas, sugestão de relatório quando
-  um cliente acumula fretes não faturados de um mês fechado, e **e-mail ainda
-  não confirmado**. **O sistema nunca gera relatório sozinho.**
+  enviada, levando a Fretes **sem** filtro — não existe filtro por situação
+  operacional em Fretes hoje, decisão do fundador, item 8), fretes a faturar,
+  cobranças vencidas, sugestão de relatório quando um cliente acumula **3 ou
+  mais** fretes não faturados de um mês já fechado (fuso de Fortaleza — número
+  heurístico, ajustável), e **e-mail ainda não confirmado**. **O sistema nunca
+  gera relatório sozinho.**
 - **Barras dos últimos 6 meses**, sem eixo, legenda ou grade. **Tocáveis:** cada
   mês leva a Fretes filtrado naquele período.
 

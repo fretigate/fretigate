@@ -266,6 +266,33 @@ junto com as outras duas pendências da mesma peça (recortar ou mostrar a
 foto inteira; abrir em tamanho cheio ao tocar — `docs/planos/
 item-5-ordem-de-servico.md`, "O que precisa chegar ao Design").
 
+**Mesma lacuna, quinto e sexto caso: as barras do gráfico de 6 meses e a
+linha de "Precisa de você" (item 8, Tarefa 2, 30/08/2026, achado do
+`/revisar`).** `BarrasDoGrafico` (dashboard) usa `112px` de altura máxima
+(o valor que o protótipo desenha, `referencia/.../TelaFretiGate.dc.html`,
+"Barras | altura máx. 112px") e raio `8 8 3 3` — nenhuma linha desta tabela
+cobre barra de gráfico. `LinhaDePendencia` usa `min-h-70` (também do
+protótipo: "Pendência | linha mín. 70px") — nenhuma linha cobre cartão de
+pendência. As duas reaproveitam o valor do protótipo por ser o precedente
+mais próximo, mesmo padrão já usado nos casos acima; fica registrado até o
+Design formalizar.
+
+**A mesma tarefa também deixou três tamanhos de fonte e um uso de cor sem
+confirmação — achado do segundo `/revisar`.** A linha de comparação do
+cartão escuro ("12% · 8 fretes · média R$…") usa `14px/700` (a única fonte
+é o protótipo, mesma célula "Comparação"); o círculo de iniciais da
+dashboard (30px) usa `12px/700`; o rótulo do mês sob cada barra usa `11px/600`.
+Nenhum dos três está na tabela de Tipografia — a mais próxima é a
+eyebrow (11/700 maiúsculo), que não é o mesmo caso. E a barra do mês
+corrente reaproveita `#1B6B3A` (`--color-acao`), cor já existente e
+descrita na tabela de Cores só como "ação — botão principal, o (+) da
+barra, o círculo de iniciais e a tinta de 'Quitado'", sem "barra de
+gráfico" na lista de usos — diferente das outras duas cores do mesmo
+gráfico (`#D6D1C5` e `#E4E0D6`), que já estão nomeadas para esse uso.
+Nenhum valor novo foi inventado nos quatro casos: os tamanhos vêm do
+protótipo e a cor já existe no sistema — mas nenhum dos quatro tem
+confirmação nesta folha. Fica registrado até o Design responder.
+
 **Nota (07/08/2026):** rótulo, apoio, erro e o tratamento de foco/erro do
 Campo de texto estão em `docs/componentes.md`, seção "Rótulo, apoio e erro" —
 não aqui. Esta seção só define altura. Uma versão anterior desta nota dizia
