@@ -97,7 +97,16 @@ data pode ser futura.
   campo de busca.
 - Tocar no valor abre o **teclado numérico sobrepondo** as linhas. As linhas
   mantêm altura definida; nada é comprimido. O botão salvar nunca fica coberto.
-- **Origem** vem pré-preenchida com o pátio cadastrado, editável.
+- **Origem** vem pré-preenchida com a origem do **último frete lançado**,
+  editável. Só quando não existe frete anterior (empresa nova, primeiro
+  frete) é que vem com o **pátio cadastrado** (item 10) — decisão do
+  fundador, 31/08/2026: quem sai sempre do mesmo pátio já vê o pátio ali de
+  qualquer jeito, porque foi de lá que o último frete saiu; os dois só
+  divergem quando a rota anterior começou em outro lugar (uma carreta que
+  foi entregar fora e volta carregando de lá), e nesse caso é o último
+  frete que aponta para onde a próxima carga realmente está — o pátio como
+  padrão fixo obrigaria reescrever a origem toda vez que a empresa sai da
+  base.
 - **Destino:** chips com os destinos já usados **com aquele cliente**. Ao digitar
   um destino novo, sugestões de município aparecem abaixo do campo. **Não
   bloqueia o salvar** se não reconhecer — grava o texto e resolve depois.
@@ -423,19 +432,29 @@ Entrada por "Mais" e pelo card de Lucro quando ele estiver no estado de convite.
 **Configurações:** endereço padrão do pátio, prazo padrão de vencimento, e
 acesso aos **dois modelos de mensagem** (cobrança e ordem de serviço).
 
-**Conta da empresa:** logo, razão social, CNPJ, endereço, telefone, e-mail,
-chave Pix e dados bancários, com prévia do cabeçalho do relatório. Sem logo,
-círculo com as **iniciais das duas primeiras palavras** do nome. Nunca ícone
-genérico.
+**Conta da empresa:** logo, razão social, CNPJ, endereço, telefone, e-mail e
+chave Pix, com prévia do cabeçalho do relatório. Sem logo, círculo com as
+**iniciais das duas primeiras palavras** do nome. Nunca ícone genérico.
+
+**"Dados bancários" saiu desta lista em 31/08/2026** (planejamento do item
+10) — a versão anterior listava "chave Pix e dados bancários" como se fossem
+a mesma coisa. Não são: `chave_pix` já tem dois leitores (a mensagem de
+cobrança e, quando existir, o rodapé do A4); `dados_bancarios` não tem
+nenhum. Fica registrado como lacuna em `CLAUDE.md` §14 — entra quando existir
+quem leia, provavelmente o mesmo rodapé do relatório.
 
 **Usuários**, dentro de Conta: lista com nome, e-mail, papel e último acesso.
-Convite por e-mail ou WhatsApp, com envio manual. Convite pendente com reenviar
+Convite por WhatsApp, com envio manual. Convite pendente com reenviar
 e cancelar. Remover acesso é ação destrutiva, **só visível para o dono**, e não
 apaga histórico.
 
 **Papéis:** Dono e Operador têm o mesmo acesso a fretes, clientes, cobranças,
-relatórios e cadastros. Só o dono acessa assinatura, forma de pagamento e gestão
-de usuários.
+relatórios e cadastros. Só o dono acessa Configurações, Conta da empresa,
+assinatura, forma de pagamento e gestão de usuários — decisão do fundador,
+planejamento do item 10, 31/08/2026: essas telas mudam a chave Pix que
+recebe dinheiro, o CNPJ do documento fiscal e o prazo que define quando toda
+cobrança vence — identidade e regra financeira da empresa, não cadastro do
+dia a dia.
 
 ### 4.10 Novidades
 
@@ -500,9 +519,16 @@ Vocabulário, no topo deste documento.
 
 ### E-mail transacional
 
-O produto manda e-mail em três momentos, e só nesses três: **recuperação de
-senha**, **verificação de e-mail** e **convite de usuário**. Nenhum deles é
-opcional para o produto funcionar — quem perde a senha só volta por e-mail.
+O produto manda e-mail em dois momentos, e só nesses dois: **recuperação de
+senha** e **verificação de e-mail**. Nenhum dos dois é opcional para o produto
+funcionar — quem perde a senha só volta por e-mail.
+
+**Convite de usuário não manda e-mail** — corrigido em 31/08/2026, planejamento
+do item 10: a versão anterior desta lista incluía "convite de usuário" como
+terceiro momento, mas a tela que o Design desenhou (`docs/componentes.md`,
+"Usuários — convite") só tem "Mandar convite no WhatsApp", nunca uma opção por
+e-mail. O convite (§4.9, abaixo) é sempre por WhatsApp, com envio manual pela
+própria pessoa — o produto nunca despacha essa mensagem sozinho.
 
 | | |
 |---|---|

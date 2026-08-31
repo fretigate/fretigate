@@ -1764,6 +1764,18 @@ Não invente resposta. Pergunte.
 - **Modelo de IA da importação** — testar a extração com o material real do
   usuário antes de escolher. Decidir por acerto, não por preço: a diferença de
   custo entre os candidatos é inferior a 2% da receita por cliente.
+- **`Empresa.dados_bancarios` não tem tela nem consumidor.** Achado no
+  planejamento do item 10, 31/08/2026: `docs/especificacao.md` §4.9 listava
+  "chave Pix e dados bancários" juntos na Conta da empresa, como se fossem o
+  mesmo caso — não são. `chave_pix` tem leitor desde o item 6 (a mensagem de
+  cobrança); `dados_bancarios` não tem nenhum, nem a mensagem, nem o rodapé
+  do relatório A4. Decisão do fundador: fora da Tarefa 2 do item 10, mesmo
+  critério que já cortou "ano do caminhão" e "categoria da CNH" — campo sem
+  leitor fica meio preenchido pra sempre. Some sensível ainda pesa mais aqui:
+  guardar agência e conta sem ninguém ler é responsabilidade sem função.
+  **Gatilho para entrar:** o dia em que existir quem leia — provavelmente o
+  mesmo rodapé do A4 que seria o primeiro lugar a mostrar Pix, no dia em que
+  alguém pedir transferência bancária em vez de Pix.
 - ~~Provedor de e-mail transacional~~ · ~~domínio próprio autenticado~~ —
   **RESOLVIDOS em 06/08/2026.** Resend, domínio `fretigate.com` com envio por
   `envio.fretigate.com` verificado. Ver §5 e §11. Continua valendo o motivo:

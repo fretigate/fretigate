@@ -256,11 +256,18 @@ Enquanto isso, `9f01d69` (Tarefa 1 do item 8) terminou `failure`, no mesmo
 sintoma mudo, desta vez em `tests/cobrancas.test.ts` — investigado à parte,
 ver a entrada acima ("Margem pequena no teste do teto de relatório").
 
-Próximo: se a esteira confirmar (parou de travar), decidir se estende o
-mesmo padrão de conexão por bloco aos outros 18 arquivos. Se não confirmar,
-a hipótese cai e a investigação reabre do zero. De qualquer forma, depois
-disso, a Tarefa 2 do item 8 (a tela da dashboard) continua sendo a próxima
-tarefa do produto.
+**Pendência fechada em 31/08/2026 (Tarefa 2 do item 8, commit `765ed02`,
+`/onde-paramos` da sessão seguinte).** A esteira confirmou — parou de
+travar (`2f57719`, `success`). Decisão do fundador sobre estender o padrão
+de conexão por bloco aos outros 18 arquivos: **não estende**. Critério para
+o caso entrar de novo em pauta: arquivo de teste cuja conexão `raiz` ficar
+aberta **acima de uns 250 segundos** — o mesmo tipo de correlação medida
+que abriu esta investigação (`titulos.test.ts`, 19min26s, mais que o dobro
+do segundo colocado). Abaixo disso, fica como está.
+
+Próximo: item 10 da ordem de construção do produto — Configurações, conta
+da empresa e usuários (ver a entrada "Tarefa 2 do item 8" no topo deste
+diário).
 
 ---
 
