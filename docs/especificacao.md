@@ -775,9 +775,8 @@ sido escritos. Registrado em 09/08/2026 para fechar essa lacuna.
 consciente ao critério de "coluna sem tela que a preencha é peso morto": ela
 já tem **quem a leia** no item 2 — o formulário e o perfil do cliente precisam
 dizer "vazio usa o padrão da empresa (15 dias)", e sem a coluna essa frase
-apontaria para nada. Os outros campos de Empresa do item 10 (`patio_*`,
-`dados_bancarios`, `modelo_mensagem_*`, `afiliado_id`) continuam fora: esses
-ninguém lê ainda.
+apontaria para nada. Os outros campos de Empresa do item 10 (`dados_bancarios`,
+`modelo_mensagem_*`, `afiliado_id`) continuam fora: esses ninguém lê ainda.
 
 **`chave_pix` saiu desta lista em 27/08/2026 (item 6, Tarefa 5)** — mesma
 exceção, adiantada pelo mesmo motivo: a coluna ganhou o primeiro leitor
@@ -787,6 +786,15 @@ da tela que editaria o resto da Conta da empresa (item 10). Frase que
 descrevia o estado por um caso que deixou de ser o único — "esses ninguém lê
 ainda" não vale mais para este campo (`CLAUDE.md` §2, sobre texto que
 envelhece calado quando um estado novo passa a existir).
+
+**`patio_endereco`/`patio_municipio_id` saíram desta lista em 31/08/2026
+(item 10, Tarefa 1)** — mesma exceção, mesmo motivo: `buscarEmpresa` já lê
+as duas colunas e `atualizarConfiguracoes` já grava as duas
+(`src/lib/servicos/empresas.ts`), achado do `/revisar` na própria tarefa que
+as criou. O consumidor de comportamento (a origem do frete caindo para o
+pátio quando não há frete anterior, §4.1) só nasce na Tarefa 3 — a coluna já
+tem leitor e lugar de preencher antes disso, mesmo padrão de `chave_pix`
+acima.
 
 **`termos_aceitos_em` e `termos_versao`** são obrigatórios — o aceite acontece
 no cadastro, então não existe Empresa sem aceite.
@@ -838,7 +846,14 @@ Better Auth (`ctx.password.config.minPasswordLength`), então as duas nunca
 divergem entre si.
 
 ### Convite
-`email` · `nome` · `papel` · `token` · `status` · `enviado_em` · `aceito_em`
+`telefone` · `nome` · `papel` · `token` · `status` · `enviado_em` · `aceito_em`
+
+**`telefone`, não `email`** — corrigido em 31/08/2026 (item 10, Tarefa 1,
+achado do `/revisar`): o convite é sempre por WhatsApp (ver "E-mail
+transacional" acima, "convite de usuário não manda e-mail"), então o que se
+guarda é o telefone de quem foi chamado, nunca um e-mail. O e-mail da conta
+nasce só quando a pessoa aceita — é ela quem digita, em
+`(auth)/aceitar-convite`, junto da senha —, nunca antes.
 
 ### Municipio
 Tabela global, base do IBGE, 5.570 registros.

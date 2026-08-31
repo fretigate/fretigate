@@ -207,6 +207,51 @@ export async function registrarRecebimentoAtomico(
   ]);
 }
 
+/** O que `localizar_convite_por_token` devolve — só o mínimo para achar a empresa. */
+type LinhaConviteLocalizado = {
+  id: string;
+  empresa_id: string;
+  telefone: string;
+  nome: string;
+  papel: "dono" | "operador";
+  status: "pendente" | "aceito" | "cancelado";
+};
+
+/**
+ * Acha um `Convite` pelo token — ANTES de saber a empresa (item 10, Tarefa 1
+ * — `docs/planos/item-10-configuracoes-conta-e-usuarios.md`).
+ *
+ * `Convite` é tabela de domínio, isolada como qualquer outra por
+ * `convite_isolamento`; sem saber a empresa não há `app.empresa_id` para
+ * definir, e `db(empresaId)` exige exatamente isso. Chama
+ * `localizar_convite_por_token` (migration `20260831060000_convite_e_patio_do_frete`),
+ * `SECURITY DEFINER`, dona de um papel próprio (`fretigate_convite`, sem
+ * `BYPASSRLS`, sem `LOGIN`) com uma política só sua (`convite_busca_por_token`,
+ * `USING (true)`) — mesmo mecanismo de `usuario_autenticacao`
+ * (`src/lib/db/sem-filtro-de-empresa.ts`), só que preso dentro da função: ela
+ * devolve só os campos de `LinhaConviteLocalizado`, nunca a linha inteira
+ * (sem `arquivado_em`, sem `enviado_em`/`aceito_em`), e nenhuma tabela de
+ * autenticação ganha alcance novo. Decisão do fundador,
+ * 31/08/2026, depois de medir três caminhos — ver o comentário do `model
+ * Convite` em `prisma/schema.prisma`.
+ *
+ * **A função só recusa o que impede achar o convite** — token que não
+ * existe (`null` aqui). Convite vencido, já aceito ou cancelado é decisão de
+ * `src/lib/servicos/usuarios.ts` (`aceitarConvite`), não desta função: regra
+ * de negócio mora em `src/lib/servicos`, nunca em SQL.
+ *
+ * Não passa por `exigirEmpresaId`: não há empresa nenhuma para exigir aqui —
+ * é exatamente o que esta função existe para descobrir.
+ */
+export async function localizarConvitePorToken(
+  token: string,
+): Promise<LinhaConviteLocalizado | null> {
+  const linhas = await clienteBase.$queryRaw<LinhaConviteLocalizado[]>`
+    SELECT id, empresa_id, telefone, nome, papel, status
+      FROM localizar_convite_por_token(${token})`;
+  return linhas[0] ?? null;
+}
+
 /**
  * Fecha o pool de conexões do `clienteBase` — para processo CURTO que usa
  * `db()`/`emTransacao()` e depois termina (comando de terminal, suíte de

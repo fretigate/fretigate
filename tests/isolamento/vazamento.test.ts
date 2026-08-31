@@ -117,6 +117,11 @@ const TABELAS_DO_LACO: Record<
       where: { empresa_id: { in: [A, B] } },
       select: { empresa_id: true },
     }),
+  convite: (empresaId) =>
+    db(empresaId).convite.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
 };
 
 const semear = async (id: string, nome: string) => {
@@ -228,6 +233,16 @@ const semear = async (id: string, nome: string) => {
      VALUES (gen_random_uuid(), $1, $2, $3, now(), 10000)`,
     [id, relatorioId, servicoId],
   );
+  // Um Convite por empresa (item 10, Tarefa 1), mesma razão acima. A regra de
+  // negócio (token único, sempre papel operador, guardado por telefone —
+  // nunca e-mail —, busca antes de saber a empresa) é testada em
+  // `tests/usuarios.test.ts`. `token` leva a marca de execução, mesmo motivo
+  // de `A`/`B`: é `UNIQUE` na tabela inteira, não por empresa.
+  await raiz.query(
+    `INSERT INTO "convite" (id, empresa_id, telefone, nome, papel, token, enviado_em)
+     VALUES (gen_random_uuid(), $1, '85999990000', $2, 'operador', $3, now())`,
+    [id, `Convidado ${nome}`, `token-${id}-${marca}`],
+  );
 };
 
 beforeAll(async () => {
@@ -239,8 +254,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // `cliente`, `veiculo`, `motorista`, `tipo_operacao`, `servico`,
-  // `titulo_receber`, `recebimento`, `cobranca_enviada`, `relatorio` e
-  // `relatorio_servico` são `RESTRICT`/`CASCADE` de propósito
+  // `titulo_receber`, `recebimento`, `cobranca_enviada`, `relatorio`,
+  // `relatorio_servico` e `convite` são `RESTRICT`/`CASCADE` de propósito
   // (`docs/especificacao.md`, `CLAUDE.md` §7). `cobranca_enviada` e
   // `recebimento` referenciam `titulo_receber` (item 6, Tarefas 3 e 5),
   // então saem primeiro; `relatorio_servico` referencia `relatorio` e
@@ -249,7 +264,9 @@ afterAll(async () => {
   // então sai antes deles; `relatorio` referencia `cliente`, então sai
   // antes dele; `servico` referencia os quatro da tarefa 1, então sai antes
   // deles; `motorista` referencia `veiculo` (`veiculo_habitual_id`), então
-  // sai antes dele.
+  // sai antes dele; `convite` (item 10, Tarefa 1) só referencia `empresa`,
+  // então pode sair em qualquer ponto antes dela.
+  await raiz.query(`DELETE FROM "convite" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "cobranca_enviada" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "recebimento" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "relatorio_servico" WHERE empresa_id IN ($1,$2)`, [A, B]);

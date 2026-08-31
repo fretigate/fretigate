@@ -73,6 +73,33 @@ coexistem por design: a tela completa (Tarefa 2, dono) e o atalho pontual
 (item 6, qualquer papel) escrevem no mesmo campo, com portas diferentes
 para motivos diferentes.
 
+**8. `aceitarConvite` acha o `Convite` pelo token através de uma função
+`SECURITY DEFINER` dedicada, dona de um papel novo (`fretigate_convite`) —
+achado do `/revisar` na própria Tarefa 1, decisão do fundador, 31/08/2026.**
+`Convite` é tabela de domínio, e `fretigate_auth` (`src/lib/db/
+sem-filtro-de-empresa.ts`) nunca pode alcançar tabela de domínio — mas
+achar o convite pelo token acontece antes de saber a empresa, mesma
+situação do login por e-mail. Três caminhos foram medidos: reaproveitar o
+mecanismo do Better Auth (não serve — `verification` nunca precisa devolver
+uma empresa, e `aceitarConvite` precisa); `Convite` entrar no conjunto de
+autenticação (funcionaria, mas quebraria a garantia escrita de
+`fretigate_auth` nunca alcançar domínio); e a função dedicada, escolhida —
+mesmo padrão de `fretigate_reversor`, mas com uma política de leitura ampla
+presa dentro da função, devolvendo só os campos mínimos. **A função só
+recusa token que não existe; convite vencido, já aceito ou cancelado é
+regra do serviço (`src/lib/servicos/usuarios.ts`), nunca da função.**
+Decisão completa, com os três caminhos comparados, em `CLAUDE.md` §9 (tabela
+de papéis) — não repetida aqui.
+
+**9. `Convite` guarda `telefone`, não `email` — achado do `/revisar` na
+própria Tarefa 1, decisão do fundador, 31/08/2026.** O formulário que o
+Design desenhou (decisão 6, acima) pede nome e WhatsApp, nunca e-mail — e o
+convite é sempre por WhatsApp (`docs/especificacao.md`, "convite de usuário
+não manda e-mail"). O e-mail da conta nasce só quando a pessoa aceita — ela
+digita o próprio e-mail em `(auth)/aceitar-convite`, junto da senha —, nunca
+antes. `aceitarConvite` mudou de `(token, senha)` para `(token, {email,
+senha})`.
+
 ## Correções de documento aplicadas junto deste plano
 
 - `docs/especificacao.md` §4.9 — "Convite por e-mail ou WhatsApp" corrigido
@@ -85,6 +112,13 @@ para motivos diferentes.
 - `docs/especificacao.md` §4.1 — origem do frete corrigida (decisão 2 acima).
 - `docs/especificacao.md` §4.9 — papéis: Configurações e Conta da empresa
   nomeadas explicitamente como exclusivas do dono (decisão 1 acima).
+- `docs/especificacao.md` §6, entidade `Convite` — campo trocado de `email`
+  para `telefone` (decisão 9 acima).
+- `docs/especificacao.md` §6, entidade `Empresa` — "`patio_*` ... ninguém lê
+  ainda" corrigido: a coluna já tem leitor e lugar de preencher desde esta
+  tarefa (mesmo tratamento que `chave_pix` já tinha recebido).
+- `CLAUDE.md` §9 — quinto papel (`fretigate_convite`) na tabela, com a
+  decisão dos três caminhos comparados (decisão 8 acima).
 
 ## O que fica de fora, e por quê
 
@@ -105,13 +139,15 @@ para motivos diferentes.
 Migration:
 - `Empresa` ganha `patio_endereco String?` e `patio_municipio_id Int?` (FK
   para `Municipio`, mesmo padrão de `municipio_id`).
-- Tabela nova `Convite`: `email` · `nome` · `papel` (`PapelUsuario`, reaproveita
-  o enum de `Usuario`) · `token String @unique` · `status` (`pendente` |
-  `aceito` | `cancelado`, default `pendente`) · `enviado_em` · `aceito_em` ·
-  `empresa_id` (isolamento, mesma política de toda tabela de domínio) ·
-  `criado_em` · `atualizado_em` · `arquivado_em` (padrão de toda tabela, §7 —
-  mesmo sem uso previsto hoje, já que `status: cancelado` cobre o
-  "não apagar" na prática).
+- Tabela nova `Convite`: `telefone` · `nome` · `papel` (`PapelUsuario`,
+  reaproveita o enum de `Usuario`) · `token String @unique` · `status`
+  (`pendente` | `aceito` | `cancelado`, default `pendente`) · `enviado_em` ·
+  `aceito_em` · `empresa_id` (isolamento, mesma política de toda tabela de
+  domínio) · `criado_em` · `atualizado_em` · `arquivado_em` (padrão de toda
+  tabela, §7 — mesmo sem uso previsto hoje, já que `status: cancelado` cobre
+  o "não apagar" na prática). **`telefone`, não `email`** — decisão 9,
+  abaixo, achado do `/revisar` na própria tarefa: o convite é sempre por
+  WhatsApp, nunca e-mail.
 - Token: gerado com `crypto.randomBytes`, longo o bastante para não ser
   adivinhável (é uma credencial de uso único que cria conta) — não reaproveita
   o código de 24 caracteres do Better Auth, que vive na tabela `verification`
@@ -127,10 +163,14 @@ Serviços:
   chama) e `atualizarConfiguracoes` (pátio, prazo padrão, numeração do
   relatório — com o piso da decisão 5).
 - `src/lib/servicos/usuarios.ts` (novo): `listarUsuarios`, `buscarUsuario`,
-  `removerAcesso` (arquiva o `Usuario` — o dono não pode remover a si
-  mesmo), `convidarUsuario` (cria `Convite`), `reenviarConvite` (token e
-  `enviado_em` novos), `cancelarConvite`, `aceitarConvite` (token válido +
-  senha → cria `Usuario`, marca `aceito_em`).
+  `removerAcesso` (arquiva o `Usuario` — **o acesso do dono não pode ser
+  removido**, checado pelo `papel` do alvo, não por "o chamador não remove a
+  si mesmo" — achado do segundo `/revisar` na própria tarefa, ver
+  `docs/componentes.md`, "Usuários — detalhe"), `convidarUsuario` (cria
+  `Convite`), `reenviarConvite` (token e `enviado_em` novos),
+  `cancelarConvite`, `aceitarConvite` (token válido + **e-mail** (decisão 9)
+  + senha → cria `Usuario`, marca `aceito_em`, reivindicando o convite
+  atomicamente antes de criar a conta — achado do segundo `/revisar`).
 
 **Testes:** serviço para cada função nova, contra o banco de desenvolvimento.
 Isolamento de `Convite` na suíte permanente (`tests/isolamento/`).
@@ -202,9 +242,27 @@ pessoa vai poder fazer, campo de senha, cria a conta e entra. Token inválido
 ou já usado tem tela própria (mesmo padrão de "Link expirado" da recuperação
 de senha).
 
+**Pendência aberta pela decisão 9: a tela também precisa de um campo de
+e-mail**, já que `aceitarConvite` (Tarefa 1) passou a exigi-lo como entrada
+— o convite guarda só `telefone`, nunca e-mail. Nem `docs/componentes.md`
+("Aceitar convite") nem `docs/navegacao.md` mostram esse campo hoje; fica
+registrado como lacuna, resolver quando esta tarefa for construída.
+
 Sem limite de quantidade de convites — o limite de assentos (1 grátis/3
 pago, `CLAUDE.md` §10) é do item 13; esta tarefa não implementa nenhuma
 trava de plano.
+
+**Requisito desta tarefa, achado do `/revisar` na Tarefa 1: `aceitarConvite`
+precisa de rate limit.** `CLAUDE.md` §4 exige "rate limit em... toda rota
+que gere custo" e a rota é pública, por token, mesma família de
+`/redefinir-senha` (que já tem trava, `src/lib/auth/index.ts`,
+`customRules`). O token é longo (32 bytes aleatórios, `base64url`) — força
+bruta não é o risco —, mas é rota pública consultando o banco a cada
+chamada, e a regra já vale para as outras. Não existe rota nenhuma antes
+desta tarefa (`aceitarConvite`, o serviço, não tem onde pendurar uma
+trava), então fica registrado como requisito explícito daqui, mesmo padrão
+de `docs/diario.md`/`CLAUDE.md` §14 para requisito de rota que só nasce
+numa tarefa futura.
 
 **Testes:** serviço para `convidarUsuario`/`reenviarConvite`/
 `cancelarConvite`/`removerAcesso`/`aceitarConvite` (token vencido/inválido,
@@ -222,3 +280,51 @@ produto, não só na função de auth isolada.
   de um segundo dono, é decisão nova.
 - **Rota de API do logo sem trava automática** — mesma lacuna já registrada
   para `comprovante`, `CLAUDE.md` §9.
+- **`prazoPadraoDias` sem faixa de validação** — achado do `/revisar` na
+  Tarefa 1: `atualizarConfiguracoes` aceita zero ou negativo, o que
+  produziria vencimento no passado em toda cobrança que herdar o prazo da
+  empresa. Nenhum documento define um limite hoje. Registrado, não
+  corrigido — a Tarefa 3 (tela) é o lugar natural de decidir a faixa junto
+  do campo.
+- **Convites duplicados para o mesmo telefone, ou convite para quem já tem
+  conta na empresa** — achado do `/revisar` na Tarefa 1: `convidarUsuario`
+  não confere nenhum dos dois casos; a recusa por e-mail já em uso só
+  aparece no aceite (`aceitarConvite`). Decisão de produto em aberto — se
+  deve barrar, avisar, ou deixar como está.
+- **`atualizarContaDaEmpresa` deixa esvaziar um CNPJ já preenchido** —
+  achado do segundo `/revisar`: `cnpj: ""`/`null` grava nulo e libera o
+  CNPJ (`@unique`) para outra conta usar. `docs/especificacao.md` fecha o
+  caminho do arquivamento ("empresa arquivada não libera o CNPJ"), mas não
+  diz se a própria tela de edição pode esvaziar o campo. Decisão de produto
+  em aberto.
+- **`patioMunicipioId` inválido sobe o erro cru de chave estrangeira** —
+  achado do segundo `/revisar`: a Tarefa 3 resolve o município por busca
+  (`resolverMunicipio`), então um id inválido não deveria acontecer no uso
+  normal, mas nada garante isso na função. Nenhum documento define a
+  mensagem para esse caso.
+- **`email` da Conta da empresa sem validação de formato** — achado do
+  segundo `/revisar`: `atualizarContaDaEmpresa` grava texto livre, diferente
+  de `aceitarConvite` (que valida com `z.email()`). O e-mail sai no
+  cabeçalho do relatório A4, para o cliente do cliente. Nenhum documento
+  define se deve ser validado.
+- **Numeração do relatório não aparece em `docs/componentes.md`/
+  `docs/especificacao.md` como campo da tela Configurações** — achado do
+  segundo `/revisar`: `atualizarConfiguracoes` já grava o campo (decisão 5),
+  mas quem manda no que a tela contém é `docs/componentes.md` (`CLAUDE.md`
+  §13), e ele não lista esse campo nem o rótulo dele. A Tarefa 3 precisa
+  dessa decisão do Design antes de construir a tela.
+- **`(auth)/aceitar-convite` precisa de campo de e-mail, e nenhum documento
+  o define** — achado do terceiro `/revisar`: `docs/componentes.md`
+  ("Aceitar convite") e `docs/navegacao.md` descrevem a tela sem esse campo
+  — a decisão 9 (e-mail entra só no aceite) nasceu depois do desenho.
+  Registrado também no corpo da Tarefa 4, acima.
+- **Convite não tem prazo de validade próprio** — achado do terceiro
+  `/revisar`: o token vale para sempre até ser usado ou cancelado à mão,
+  diferente do link de recuperação de senha (2 horas, `docs/componentes.md`).
+  Nenhum documento decide se o convite deveria vencer sozinho.
+- **`arquivado_em` de `Convite` não é conferido por `localizar_convite_por_token`
+  nem por `aceitarConvite`** — achado do terceiro `/revisar`: hoje nada
+  arquiva um convite (`status: cancelado` cobre o caso na prática), então é
+  inofensivo; mas se algo um dia arquivar uma linha, ela continuaria
+  aceitável pelo token. Registrado para quando essa lacuna deixar de ser
+  hipotética (mesmo critério do `CLAUDE.md` §2 sobre estado novo).

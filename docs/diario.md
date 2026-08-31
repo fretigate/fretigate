@@ -6,6 +6,98 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 31/08/2026 — Tarefa 1 do item 10: Fundamentos — schema e serviços
+
+**Nota sobre o fechamento do item 8 (commit `765ed02`): ficou sem esteira
+própria confirmada.** O push seguinte (`2f91a9c`, plano deste item)
+cancelou a execução dele antes de terminar — rotina do `concurrency:
+cancel-in-progress` (`CLAUDE.md` §2), não falha. Não é bloqueio, e a
+esteira deste commit roda a suíte inteira, então confirma o item 8
+indiretamente. Mas fica registrado por precisão: o item 8 fechou sem um
+verde próprio, só um cancelamento explicado.
+
+Migration `20260831060000_convite_e_patio_do_frete`: `Empresa` ganha
+`patio_endereco`/`patio_municipio_id` (segunda FK para `Municipio`, relação
+nomeada `EmpresaPatioMunicipio`); tabela nova `Convite` (isolada como
+qualquer tabela de domínio — RLS, `convite_isolamento`, sem `DELETE` para
+`fretigate_app`).
+
+**Decisão de arquitetura, medida antes de escrever código — `CLAUDE.md` §9
+tem o detalhe completo, não repetido aqui.** `aceitarConvite` precisa achar
+o `Convite` pelo token antes de saber a empresa, mas `Convite` é tabela de
+domínio e `fretigate_auth` promete nunca alcançar domínio. Três caminhos
+medidos (reaproveitar o mecanismo do Better Auth; `Convite` entrar no
+conjunto de autenticação; função `SECURITY DEFINER` dedicada) — o terceiro
+venceu: papel novo `fretigate_convite` (`NOLOGIN`, `NOBYPASSRLS`), política
+própria `USING (true)` restrita a ele, dona da função
+`localizar_convite_por_token`, que devolve só `id`/`empresa_id`/`telefone`/
+`nome`/`papel`/`status`. A função só recusa token que não existe; convite
+vencido/aceito/cancelado é regra do serviço, nunca de SQL.
+
+Serviços: `src/lib/servicos/empresas.ts` ganhou `buscarEmpresa`,
+`atualizarContaDaEmpresa` (CNPJ validado e traduzido — "já existe uma conta
+com esse CNPJ", nunca o erro cru — campo omitido não é tocado) e
+`atualizarConfiguracoes` (pátio, prazo padrão, piso da numeração do
+relatório, gravado atomicamente com `updateMany`). `src/lib/servicos/
+usuarios.ts` (novo): `listarUsuarios`, `buscarUsuario`, `removerAcesso`
+(recusa remover o acesso do dono, pelo `papel` do alvo), `convidarUsuario`/
+`listarConvitesPendentes`/`reenviarConvite`/`cancelarConvite`, e
+`aceitarConvite` (token + e-mail + senha — reivindica o convite
+atomicamente antes de criar o `Usuario`). `criar-usuario-dono.ts` ganhou
+`criarUsuario(ctx, {..., papel})` genérico; `criarUsuarioDono` virou casca
+dele.
+
+**Achado na conversa, antes do primeiro `/revisar`: `Convite` guarda
+`telefone`, não `email`.** O formulário desenhado (`docs/componentes.md`,
+"Usuários — convite") pede nome e WhatsApp, nunca e-mail — o convite é
+sempre por WhatsApp. O e-mail da conta nasce só quando a pessoa aceita,
+digitado por ela; `aceitarConvite` mudou de `(token, senha)` para `(token,
+{email, senha})`.
+
+**Três passes do `/revisar`** (a regra permite um terceiro quando o achado
+é rigor total ou contradição documento/código — os dois apareceram).
+Primeiro passe: sem teste de dono/`rolbypassrls` da função nova; `CLAUDE.md`
+§9 desatualizado (quatro papéis, viraram cinco) sem registrar a decisão;
+`atualizarContaDaEmpresa` sem guarda de campo omitido; CNPJ duplicado sem
+mensagem amigável; piso da numeração em duas transações (corrida real);
+`docs/especificacao.md` com "`patio_*` ninguém lê ainda" desatualizado.
+Todos corrigidos; email→telefone decidido no meio deste passe. Segundo
+passe, mais sério: a correção do piso da numeração **regravava o valor
+antigo sem guarda no `update` seguinte**, desfazendo a própria proteção;
+`aceitarConvite` verificava `status` numa consulta e gravava noutra, sem
+condição no `WHERE` — dois aceites simultâneos do mesmo token criavam dois
+`Usuario`; `removerAcesso` comparava "quem chama" em vez de checar o
+`papel` do alvo (só funcionava por coincidência de haver um único dono
+hoje); documentação do mecanismo de busca por token com contagem errada de
+campos. Todos corrigidos, com teste de concorrência real provando os dois
+primeiros (`Promise.allSettled` disputando a mesma linha). Terceiro passe:
+só texto desatualizado em cascata (comentários citando "quatro papéis" em
+`tests/encerra-conexoes-anteriores.ts`, `.github/workflows/ci.yml`,
+`docs/planos/impede-concorrencia-na-esteira.md`; o próprio plano desta
+tarefa ainda descrevendo `email`/assinatura antiga de `aceitarConvite`/
+checagem antiga de `removerAcesso` depois de decisões corrigidas mais acima
+no mesmo arquivo). Lacunas registradas em
+`docs/planos/item-10-configuracoes-conta-e-usuarios.md` (rate limit de
+`aceitarConvite` — requisito explícito para a Tarefa 4, sem rota ainda para
+pendurar; validação de `prazoPadraoDias`; convites duplicados; esvaziar
+CNPJ; `patioMunicipioId` inválido; e-mail da empresa sem validação; campo
+de e-mail em "Aceitar convite" sem desenho; convite sem prazo de validade;
+`arquivado_em` de `Convite` não conferido).
+
+**Verificação.** `npx tsc --noEmit`, `npm run lint` limpos. Suíte local
+completa: 33 arquivos, 646 verdes, 8 pulados (Windows, Chromium — mesmo
+padrão de sempre) — rodada duas vezes, antes e depois dos achados do
+`/revisar`. Isolamento (`tests/isolamento/*`) cobre `convite` no laço de
+vazamento, na política declarada e no teste de privilégio genérico; `tests/
+usuarios.test.ts` confere dono/`rolbypassrls` de `localizar_convite_por_token`
+(mesmo padrão de `reverter_cadastro_incompleto`) e a corrida do aceite
+simultâneo.
+
+Próximo: Tarefa 2 do item 10 — Conta da empresa: dados, logo e as três
+pendências que fecham.
+
+---
+
 ## 30/08/2026 — Tarefa 2 do item 8: Dashboard — item 8 fecha
 
 Última tarefa do item 8 (`docs/planos/item-8-dashboard.md`). Substitui o

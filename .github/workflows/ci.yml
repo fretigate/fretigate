@@ -197,9 +197,9 @@ jobs:
       # cancelamento, segurando lock em cima do que `migrate reset --force`
       # precisa derrubar (pesquisado no comportamento documentado do runner
       # do GitHub Actions, não medido diretamente forçando um cancelamento).
-      # Este passo mata as conexões dos quatro papéis do produto no projeto
-      # de teste antes do reset — o resultado (o sinal chega, a conexão
-      # morre) é conferido pelo próprio script, não só suposto
+      # Este passo mata as conexões dos papéis do produto (CLAUDE.md §9) no
+      # projeto de teste antes do reset — o resultado (o sinal chega, a
+      # conexão morre) é conferido pelo próprio script, não só suposto
       # (`tests/encerra-conexoes-anteriores.ts`). O privilégio de
       # `pg_terminate_backend` foi medido contra o papel `postgres`, mas
       # contra o banco de DESENVOLVIMENTO — a prova de que o passo roda

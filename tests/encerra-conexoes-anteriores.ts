@@ -27,10 +27,10 @@
  * SÓ AS CONEXÕES DO PRÓPRIO FRETIGATE — não "toda conexão do banco".
  * O projeto do Supabase tem serviços próprios (pooler, PostgREST, Auth
  * interno) que também podem manter conexão aberta com o banco, sob papéis
- * que não são nenhum dos quatro do `CLAUDE.md` §9. Matar isso não é
+ * que não são nenhum dos cinco do `CLAUDE.md` §9. Matar isso não é
  * "órfã de execução anterior" — é mexer em coisa que não é nossa, sem
  * necessidade nenhuma para o problema que este script resolve. O filtro é
- * por `usename`, restrito aos quatro papéis que a aplicação usa.
+ * por `usename`, restrito aos papéis que a aplicação usa.
  *
  * A GARANTIA É CONFERIDA, NÃO SUPOSTA. `pg_terminate_backend` só manda o
  * sinal — devolve `false` (sem erro) quando não consegue, e mesmo quando
@@ -53,13 +53,18 @@ import { validarSoTeste } from "./guarda-de-banco.ts";
 
 validarSoTeste(process.env);
 
-// As quatro conexões que o produto usa (CLAUDE.md §9) — nunca os papéis
+// Os cinco papéis que o produto usa (CLAUDE.md §9) — nunca os papéis
 // internos do próprio Supabase, que não são problema nosso para encerrar.
+// `fretigate_reversor` e `fretigate_convite` são `NOLOGIN` (nunca abrem
+// conexão própria, só emprestam privilégio dentro de uma função `SECURITY
+// DEFINER`) — entram na lista por completude e consistência com o §9, não
+// porque algum dia apareceriam em `pg_stat_activity`.
 const PAPEIS_DO_FRETIGATE = [
   "postgres",
   "fretigate_app",
   "fretigate_auth",
   "fretigate_reversor",
+  "fretigate_convite",
 ];
 
 const LIMITE_DE_ESPERA_MS = 10_000;

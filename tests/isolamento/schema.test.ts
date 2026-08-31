@@ -133,9 +133,28 @@ const POLITICAS_ESPERADAS: Record<string, Politica[]> = {
   cobranca_enviada: [politicaDeIsolamento("cobranca_enviada", "empresa_id")],
   relatorio: [politicaDeIsolamento("relatorio", "empresa_id")],
   relatorio_servico: [politicaDeIsolamento("relatorio_servico", "empresa_id")],
-  // Único caso do produto com `USING` e `WITH CHECK` DIFERENTES de propósito:
-  // todo mundo lê (dado oficial, igual para todas as empresas), ninguém
-  // grava — ver `SEM_EMPRESA_ID.municipio` acima.
+  // Segunda política, só para `fretigate_convite` — a busca do convite pelo
+  // token acontece antes de saber a empresa, mesma necessidade de
+  // `usuario_autenticacao`, mas restrita a um papel que só existe para a
+  // função `localizar_convite_por_token` (`CLAUDE.md` §9, decisão do
+  // fundador, 31/08/2026). `WITH CHECK (false)` explícito, mesma forma de
+  // `municipio_leitura`: este papel só tem `SELECT` concedido, nunca
+  // gravaria de qualquer jeito.
+  convite: [
+    politicaDeIsolamento("convite", "empresa_id"),
+    {
+      nome: "convite_busca_por_token",
+      tipo: "PERMISSIVE",
+      papeis: ["fretigate_convite"],
+      comando: "ALL",
+      usando: "true",
+      comCheck: "false",
+    },
+  ],
+  // O segundo caso do produto (depois de `convite_busca_por_token`, acima)
+  // com `USING` e `WITH CHECK` DIFERENTES de propósito: todo mundo lê (dado
+  // oficial, igual para todas as empresas), ninguém grava — ver
+  // `SEM_EMPRESA_ID.municipio` acima.
   municipio: [
     {
       nome: "municipio_leitura",

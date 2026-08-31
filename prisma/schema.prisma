@@ -77,6 +77,19 @@ model Empresa {
   municipio_id Int?
   municipio    Municipio? @relation(fields: [municipio_id], references: [codigo_ibge], onDelete: Restrict)
 
+  /// Endereço padrão do pátio (item 10, Tarefa 3 — `docs/planos/
+  /// item-10-configuracoes-conta-e-usuarios.md`). Usado como origem do frete
+  /// só quando não existe frete anterior para herdar dela (decisão do
+  /// fundador, 31/08/2026, `docs/especificacao.md` §4.1) — o último frete
+  /// lançado manda, o pátio é só o padrão de partida.
+  ///
+  /// Relação nomeada (`EmpresaPatioMunicipio`) porque `Empresa` já aponta
+  /// para `Municipio` por `municipio_id` — duas relações sem nome para o
+  /// mesmo par de tabelas o Prisma não consegue distinguir sozinho.
+  patio_endereco     String?
+  patio_municipio_id Int?
+  patio_municipio    Municipio? @relation("EmpresaPatioMunicipio", fields: [patio_municipio_id], references: [codigo_ibge], onDelete: Restrict)
+
   logo_url String?
 
   /// Texto livre, sem `enum` e sem validação de formato (item 6, Tarefa 5) —
@@ -143,6 +156,7 @@ model Empresa {
   cobrancas_enviadas CobrancaEnviada[]
   relatorios         Relatorio[]
   relatorio_servicos RelatorioServico[]
+  convites           Convite[]
 
   @@map("empresa")
 }
@@ -516,8 +530,9 @@ model Municipio {
   /// toca nesta coluna: preencher é decisão, não efeito de recarregar a fonte.
   arquivado_em  DateTime? @db.Timestamptz(6)
 
-  empresas Empresa[]
-  clientes Cliente[]
+  empresas        Empresa[]
+  empresas_patio  Empresa[] @relation("EmpresaPatioMunicipio")
+  clientes        Cliente[]
 
   /// As duas pontas de `Servico` — origem e destino nunca compartilham a
   /// mesma relação nomeada, senão o Prisma não sabe qual FK cada lado é.
@@ -991,6 +1006,83 @@ model RelatorioServico {
   @@index([empresa_id])
   @@index([servico_id])
   @@map("relatorio_servico")
+}
+
+enum StatusConvite {
+  pendente
+  aceito
+  cancelado
+
+  @@map("status_convite")
+}
+
+/// O convite de um novo usuário (item 10, Tarefa 1 — `docs/planos/
+/// item-10-configuracoes-conta-e-usuarios.md`). `docs/especificacao.md` §6.
+///
+/// **Sempre `papel: operador`** (decisão do fundador, 31/08/2026): o
+/// formulário que o Design desenhou nunca oferece seletor de papel — só o
+/// dono original tem esse papel. Se um dia isso mudar, é decisão nova.
+///
+/// **`token` é a própria credencial de aceite** — gerado com
+/// `crypto.randomBytes`, longo o bastante para não ser adivinhável. Não
+/// reaproveita o código de 24 caracteres do Better Auth: aquele vive em
+/// `verification`, tabela da biblioteca, sem porta de saída para uma tabela
+/// nossa.
+///
+/// **Achar o convite pelo token acontece ANTES de saber a empresa** — mesma
+/// natureza de achar o usuário pelo e-mail no login, só que `Convite` é
+/// tabela de domínio (tem `empresa_id`, isolada como qualquer outra), e
+/// `fretigate_auth` (`src/lib/db/sem-filtro-de-empresa.ts`) nunca pode
+/// alcançar tabela de domínio — a garantia está escrita lá, "hoje e quando
+/// existirem". Decisão do fundador, 31/08/2026, depois de medir as três
+/// alternativas: a busca por token roda dentro de uma função `SECURITY
+/// DEFINER` própria (`localizar_convite_por_token`, migration desta tarefa),
+/// dona de um papel novo (`fretigate_convite`) com uma política só sua,
+/// `USING (true)` — mesmo mecanismo de `usuario_autenticacao`, mas preso
+/// dentro da função: ela devolve só `id`/`empresa_id`/`telefone`/`nome`/
+/// `papel`/`status`, nunca a linha inteira (sem `enviado_em`/`aceito_em`/
+/// `arquivado_em`), e nenhuma tabela de autenticação ganha alcance novo. A
+/// função só recusa o que impede achar o convite (token que não
+/// existe); convite vencido, já usado ou cancelado é decisão do serviço
+/// (`src/lib/servicos/usuarios.ts`), não da função — regra de negócio mora em
+/// `src/lib/servicos`, nunca em SQL. `CLAUDE.md` §9 tem o quinto papel e os
+/// três caminhos comparados; `docs/planos/item-10-configuracoes-conta-e-usuarios.md`
+/// tem a decisão completa.
+///
+/// **`telefone`, não `email`** (achado do `/revisar`, decisão do fundador,
+/// 31/08/2026): o formulário que o Design desenhou (`docs/componentes.md`,
+/// "Usuários — convite") pede nome e WhatsApp, nunca e-mail — e o convite é
+/// sempre por WhatsApp (`docs/especificacao.md` § "E-mail transacional",
+/// corrigido na mesma tarefa: "convite de usuário não manda e-mail"). O
+/// e-mail da conta nasce só quando a pessoa aceita — é ela quem digita, em
+/// `(auth)/aceitar-convite` —, nunca antes.
+///
+/// **`arquivado_em` existe pelo padrão de toda tabela (§7), sem uso previsto
+/// hoje** — `status: cancelado` já cobre "não apagar" na prática, e nada do
+/// produto arquiva um convite.
+model Convite {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  telefone String
+  nome     String
+  papel    PapelUsuario
+
+  token String @unique
+
+  status StatusConvite @default(pendente)
+
+  enviado_em DateTime  @db.Timestamptz(6)
+  aceito_em  DateTime? @db.Timestamptz(6)
+
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  arquivado_em  DateTime? @db.Timestamptz(6)
+
+  @@index([empresa_id])
+  @@map("convite")
 }
 
 // ---------------------------------------------------------------------------

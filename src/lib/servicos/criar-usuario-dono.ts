@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 
 /**
- * Cria o Usuário dono + credencial de senha, por dentro do Better Auth.
+ * Cria um Usuário + credencial de senha, por dentro do Better Auth.
  *
  * ISOLADO NUM ARQUIVO SÓ, DE PROPÓSITO (decisão do fundador, 07/08/2026).
  *
@@ -24,10 +24,15 @@ import { auth } from "@/lib/auth";
  * administrativos: `tests/cadastro.test.ts` confere que as três funções
  * abaixo continuam existindo, e quebra alto, aqui, se não continuarem — não
  * quebra em produção, calado.
+ *
+ * `papel` entrou como parâmetro no item 10, Tarefa 1: `aceitarConvite`
+ * (`src/lib/servicos/usuarios.ts`) precisa do mesmo mecanismo para criar um
+ * operador, não só um dono — segundo caso de uso real, não abstração
+ * especulativa (`CLAUDE.md` §6).
  */
-export async function criarUsuarioDono(
+export async function criarUsuario(
   ctx: Awaited<typeof auth.$context>,
-  dados: { email: string; nome: string; empresaId: string; senha: string },
+  dados: { email: string; nome: string; empresaId: string; senha: string; papel: "dono" | "operador" },
 ) {
   const hash = await ctx.password.hash(dados.senha);
   const usuarioCriado = await ctx.internalAdapter.createUser({
@@ -35,7 +40,7 @@ export async function criarUsuarioDono(
     name: dados.nome,
     emailVerified: false,
     empresa_id: dados.empresaId,
-    papel: "dono",
+    papel: dados.papel,
   });
   await ctx.internalAdapter.linkAccount({
     userId: usuarioCriado.id,
@@ -44,4 +49,11 @@ export async function criarUsuarioDono(
     password: hash,
   });
   return usuarioCriado;
+}
+
+export async function criarUsuarioDono(
+  ctx: Awaited<typeof auth.$context>,
+  dados: { email: string; nome: string; empresaId: string; senha: string },
+) {
+  return criarUsuario(ctx, { ...dados, papel: "dono" });
 }

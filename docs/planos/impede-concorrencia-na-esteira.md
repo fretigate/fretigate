@@ -69,9 +69,9 @@ segurando esse lock trava o `DROP SCHEMA`, não é ignorada por ele.
 **Correção: `tests/encerra-conexoes-anteriores.ts`**, passo novo antes do
 `migrate reset`, que:
 1. Mata (`pg_terminate_backend`) toda conexão do projeto de teste, exceto a
-   própria — restrita aos quatro papéis do produto (`postgres`,
-   `fretigate_app`, `fretigate_auth`, `fretigate_reversor`, `CLAUDE.md`
-   §9), nunca papéis internos do Supabase (pooler, PostgREST, Auth).
+   própria — restrita aos papéis do produto (`CLAUDE.md` §9; a lista mora
+   só lá, para não divergir), nunca papéis internos do Supabase (pooler,
+   PostgREST, Auth).
 2. **Confere o resultado de cada sinal** — `pg_terminate_backend` devolve
    `false` sem erro quando não consegue; contar linhas devolvidas não prova
    nada.
@@ -91,7 +91,7 @@ verdade, na esteira — item da Verificação abaixo.
 
 **Limitação conhecida, aceita: o script não distingue "conexão órfã de
 execução cancelada" de "conexão legítima em uso agora".** Mata qualquer
-conexão dos quatro papéis, sem checar idade nem estado. O `concurrency`
+conexão dos papéis do produto, sem checar idade nem estado. O `concurrency`
 (item 1) reduz a chance de existir uma conexão legítima concorrente no
 momento em que este passo roda — quando ele roda, o GitHub já decidiu que
 esta é a execução ativa, então qualquer outra conexão desses papéis já

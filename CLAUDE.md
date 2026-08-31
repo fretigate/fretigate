@@ -1153,12 +1153,16 @@ não é serem iguais; é serem **escritas**.
 com o contexto de empresa) leva o **mesmo texto** nas duas: quem pode ler é
 quem pode gravar, e é sempre a própria empresa.
 
-**A política de `municipio` é a exceção assimétrica, de propósito — e continua
-sendo, mesmo com a exigência acima.** `USING (true) WITH CHECK (false)`: todo
-mundo lê, ninguém grava (§2, sobre esta mesma política: "cumpre o §9 ao pé da
-letra **e** é mais rígida"). As duas cláusulas aqui são diferentes por
-desenho, não por omissão — a exigência é que as duas estejam escritas, não que
-digam a mesma coisa.
+**A política de `municipio` é uma exceção assimétrica, de propósito — e
+continua sendo, mesmo com a exigência acima.** `USING (true) WITH CHECK
+(false)`: todo mundo lê, ninguém grava (§2, sobre esta mesma política: "cumpre
+o §9 ao pé da letra **e** é mais rígida"). As duas cláusulas aqui são
+diferentes por desenho, não por omissão — a exigência é que as duas estejam
+escritas, não que digam a mesma coisa. **Não é mais a única** — item 10,
+Tarefa 1 (31/08/2026) criou a segunda: `convite_busca_por_token`, restrita a
+`fretigate_convite`, mesma forma (`USING (true) WITH CHECK (false)`), mesmo
+motivo (este papel só tem `SELECT` concedido, nunca gravaria de qualquer
+jeito).
 
 **O perigo que esta regra evita não é a ausência do `WITH CHECK` isolada — é o
 `USING` não filtrar.** Medido em 15/08/2026, com as duas tentativas: uma
@@ -1216,13 +1220,14 @@ cada cadastro que falha na metade — caminho de execução. Migration e seed s�
 chamadas **por quem opera**, ao publicar. A distinção não é de risco percebido,
 é de quem dispara.
 
-São quatro papéis, e a separação é parte do desenho:
+São cinco papéis, e a separação é parte do desenho:
 
 | Papel | Para quê | Enxerga |
 |---|---|---|
 | `fretigate_app` | todo o domínio | só a empresa do contexto. Sem `DELETE` — arquivar é `UPDATE` (§7) |
 | `fretigate_auth` | só o Better Auth | as tabelas que existem para autenticar e não têm `empresa_id` (ver abaixo). **Nada** de domínio |
 | `fretigate_reversor` | só reverter cadastro incompleto (tarefa 8) | `DELETE`/`SELECT` em `empresa`, `SELECT` em `usuario` — nomeados, nunca `BYPASSRLS`. Dono de `reverter_cadastro_incompleto`, chamada por `fretigate_app` via `SECURITY DEFINER` |
+| `fretigate_convite` | só achar um `Convite` pelo token, antes de saber a empresa (item 10, Tarefa 1) | `SELECT` em `convite` — nomeado, nunca `BYPASSRLS`, via uma política só sua (`convite_busca_por_token`, `USING (true)`). Dono de `localizar_convite_por_token`, chamada por `fretigate_app` via `SECURITY DEFINER`, que devolve só `id`/`empresa_id`/`telefone`/`nome`/`papel`/`status` — nunca a linha inteira |
 | `postgres` | **só migrations e comando de operação** (a seed de municípios) | tudo — por isso **não atende pedido de usuário** |
 
 **Por que `fretigate_reversor` existe, e não a função rodando como
@@ -1238,6 +1243,44 @@ de uma cláusula. A correção: a função chama `set_config('app.empresa_id',
 `tests/cadastro.test.ts` confere o dono e o `rolbypassrls`, não só o
 resultado — sem essa verificação, a regressão para "dono = postgres" passaria
 despercebida porque o resultado observável é idêntico.
+
+**Por que `fretigate_convite` existe, e por que não é `fretigate_auth`.**
+Item 10, Tarefa 1 (31/08/2026): `aceitarConvite` precisa achar um `Convite`
+pelo token **antes de saber a empresa** — mesma situação do login por
+e-mail. Mas `Convite` é tabela de domínio (tem `empresa_id`, isolada como
+qualquer outra, no laço de `tests/isolamento/vazamento.test.ts`), e
+`fretigate_auth` promete, no próprio comentário de
+`src/lib/db/sem-filtro-de-empresa.ts`, nunca alcançar tabela de domínio —
+"hoje e quando existirem". Três caminhos foram medidos antes de decidir:
+
+1. **Reaproveitar o mecanismo do Better Auth** (o token de recuperação de
+   senha, achado por `fretigate_auth` em `verification`) — não serve:
+   `verification` funciona porque ELA TAMBÉM não pertence a empresa nenhuma.
+   Reset de senha nunca precisa devolver uma empresa; `aceitarConvite`
+   precisa, para criar o `Usuario` no lugar certo.
+2. **`Convite` entrar no conjunto de autenticação** (segunda política em
+   `usuario`-estilo, `TO fretigate_auth USING (true)`) — tecnicamente
+   funcionaria, mas quebraria a garantia escrita de `fretigate_auth` nunca
+   alcançar domínio, e tornaria `Convite` a primeira tabela desse conjunto
+   que não é pura infraestrutura de login — é convite de pessoa real para
+   empresa real.
+3. **Função `SECURITY DEFINER` dedicada** (a escolhida) — mesmo padrão de
+   `fretigate_reversor`, mas resolvendo um problema diferente: `reverter_
+   cadastro_incompleto` já sabe a empresa (recebe como parâmetro) e só
+   satisfaz a política normal para ela; `localizar_convite_por_token`
+   **não sabe** a empresa — por isso o papel dono da função tem uma política
+   própria de leitura ampla (`USING (true)`), igual a `usuario_autenticacao`
+   em espírito, mas **presa dentro da função**: nenhuma tabela de
+   autenticação ganha alcance novo, e a função devolve só os campos
+   mínimos, nunca a linha inteira.
+
+**A função só recusa o que impede achar o convite** (token que não existe).
+Convite vencido, já aceito ou cancelado é decisão de
+`src/lib/servicos/usuarios.ts`, nunca da função — regra de negócio mora em
+`src/lib/servicos`, nunca em SQL, mesmo princípio de todo o resto do
+produto. `tests/usuarios.test.ts` confere o dono e o `rolbypassrls` de
+`localizar_convite_por_token`, mesmo padrão de `reverter_cadastro_
+incompleto` acima.
 
 **O que `fretigate_auth` alcança é regra, não lista.** Ele enxerga as tabelas
 que existem para autenticar e que **não têm `empresa_id`**, porque são
