@@ -34,3 +34,23 @@ export function iniciais(nome: string): string {
   const sigla = p[0] && p[0] === p[0].toUpperCase() && p[0].length <= 3;
   return (sigla ? p[0] : p.slice(0, 2).map((w) => w[0]).join("")).toUpperCase();
 }
+
+/**
+ * Regra de pessoa — item 10, Tarefa 4, primeiro consumidor real (Usuários —
+ * lista, badge de cada pessoa nas linhas, ao lado do badge da empresa no
+ * topo, que continua usando `iniciais()`). Sempre a primeira letra dos dois
+ * primeiros nomes, sem a exceção de sigla que `iniciais()` tem — as duas
+ * regras coincidem para nome digitado normalmente e divergem só quando o
+ * primeiro nome tem até 3 letras e vem todo em maiúsculas ("ANA PAULA" →
+ * `iniciais` lê "ANA" como sigla e devolve "ANA"; esta função devolve "AP").
+ * Não podem ser trocadas uma pela outra (`docs/componentes.md`, "Iniciais da
+ * empresa").
+ */
+export function iniciaisPessoa(nome: string): string {
+  const p = String(nome || "").trim().split(/\s+/);
+  return p
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}

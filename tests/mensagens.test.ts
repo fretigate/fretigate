@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   montarMensagemCobranca,
+  montarMensagemConvite,
   montarMensagemOrdem,
   type DadosMensagemCobranca,
+  type DadosMensagemConvite,
   type DadosMensagemOrdem,
 } from "@/lib/servicos/mensagens";
 
@@ -215,9 +217,58 @@ describe("montarMensagemCobranca", () => {
   });
 });
 
+/**
+ * `montarMensagemConvite` — função pura (item 10, Tarefa 4, achado do
+ * terceiro `/revisar`: as outras duas funções do arquivo já tinham teste
+ * próprio, esta tinha ficado de fora).
+ */
+let conferenciasConvite = 0;
+const CONFERENCIAS_ESPERADAS_CONVITE = 4;
+
+const BASE_CONVITE: DadosMensagemConvite = {
+  nomeConvidado: "Maria Operadora",
+  nomeEmpresa: "Transportes Ceará",
+  link: "https://fretigate.com/aceitar-convite?token=abc123",
+};
+
+describe("montarMensagemConvite", () => {
+  it("com link — a mensagem de verdade, mandada pelo WhatsApp", () => {
+    const resultado = montarMensagemConvite(BASE_CONVITE);
+    expect(resultado).toBe(
+      [
+        "Transportes Ceará",
+        "Oi, Maria Operadora! Você foi chamado(a) pra fazer parte da equipe da Transportes Ceará no FretiGate.",
+        "Toque aqui pra criar sua conta: https://fretigate.com/aceitar-convite?token=abc123",
+      ].join("\n\n"),
+    );
+    conferenciasConvite++;
+  });
+
+  it("sem link (null) — a prévia mostrada enquanto o convite ainda não foi criado", () => {
+    const resultado = montarMensagemConvite({ ...BASE_CONVITE, link: null });
+    expect(resultado).toContain("Toque aqui pra criar sua conta: (link gerado ao enviar)");
+    expect(resultado).not.toContain("https://");
+    conferenciasConvite++;
+  });
+
+  it("empresa sozinha na primeira linha, sem nada antes", () => {
+    const resultado = montarMensagemConvite(BASE_CONVITE);
+    expect(resultado.startsWith("Transportes Ceará\n\n")).toBe(true);
+    conferenciasConvite++;
+  });
+
+  it("nome do convidado aparece na saudação, empresa nomeada duas vezes (linha 1 e frase)", () => {
+    const resultado = montarMensagemConvite(BASE_CONVITE);
+    expect(resultado).toContain("Oi, Maria Operadora!");
+    expect(resultado.split("Transportes Ceará").length - 1).toBe(2);
+    conferenciasConvite++;
+  });
+});
+
 describe("cobertura", () => {
   it("rodou todas as verificações previstas", () => {
     expect(conferencias).toBe(CONFERENCIAS_ESPERADAS);
     expect(conferenciasCobranca).toBe(CONFERENCIAS_ESPERADAS_COBRANCA);
+    expect(conferenciasConvite).toBe(CONFERENCIAS_ESPERADAS_CONVITE);
   });
 });

@@ -6,6 +6,140 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 01/09/2026 — Tarefa 4 do item 10: Usuários — convite por WhatsApp e Aceitar convite
+
+Última tarefa do item 10. Serviço e função de banco já existiam da Tarefa 1
+(17 testes verdes) — esta tarefa é tela, ação de servidor e rate limit.
+
+**Construído:**
+- `/conta/usuarios` — lista com acesso + convite pendente (Reenviar, Ver o
+  que ela recebe, Cancelar).
+- `/conta/usuarios/novo` — nome + WhatsApp, prévia da mensagem, "Mandar
+  convite no WhatsApp".
+- `/conta/usuarios/[id]` — detalhe, Remover acesso (nunca aparece na linha
+  do dono).
+- `(auth)/aceitar-convite` — pública, token na URL, e-mail + senha, cria a
+  conta, manda e-mail de verificação (melhor esforço, mesmo padrão de
+  `criarConta`) e entra. Rate limit próprio (`trava-de-convite.ts`,
+  20/minuto, mesma chave para o carregamento e o envio).
+
+**Decisões do fundador ao aprovar o plano, antes de construir:**
+1. Aceitar convite nunca leva a marca do FretiGate — só a da empresa que
+   convidou, motivo escrito em `docs/estilo.md`.
+2. Mensagem de convite indisponível precisa de saída explícita, não só negar.
+3. O mecanismo de criar-convite-e-abrir-WhatsApp (aba em branco antes do
+   `await`, `location.href` depois de gravar o token) exige confirmação no
+   aparelho, não só no navegador do computador — o mesmo defeito já
+   apareceu uma vez (Tarefa 2 do item 5).
+4. Regra de "iniciais de pessoa" confirmada com exemplo real de divergência
+   antes de implementar (`iniciaisPessoa`, primeiro consumidor).
+5. Lista de Usuários omite "último acesso" em vez de afirmar "Ainda não
+   entrou" — o campo nunca é escrito, e a frase mentiria por coincidência
+   de estado.
+
+**Verificação: local.** `npx tsc --noEmit`/`npm run lint` limpos.
+`tests/usuarios.test.ts` (17/17), `tests/protecao-de-acoes.test.ts`,
+`tests/sessao-e-papel.test.ts` (12/12, com os dois casos novos do segundo
+passe abaixo) — 43/43 no total, contra o banco de desenvolvimento. Fluxo
+inteiro testado ao vivo no navegador (convidar → link → aceitar → login
+automático → entrar, com e-mail de verificação mandado de verdade; reenviar
+regenerando o token; cancelar; remover acesso; dono não removível; convite
+indisponível nos três estados — token ausente, aceito, cancelado).
+
+**A confirmação no aparelho real (decisão 3) não aconteceu nesta sessão** —
+a emulação de celular do Browser pane travou justamente no toque que abre a
+aba em branco, sem confirmar nem contradizer o comportamento. Isto é
+diferente de "item 10 pendente": as quatro tarefas do item (Fundamentos,
+Conta da empresa, Configurações, Usuários) estão construídas e verificadas
+por todo o resto deste registro — só o mecanismo específico de abrir o
+WhatsApp ao convidar segue sem confirmação no aparelho de verdade, e é essa
+confirmação, não o item inteiro, que fica pendente do fundador.
+
+**`/auditar-tela`, achados corrigidos antes do commit:** parágrafo do topo
+de Aceitar convite usava `text-campo`/`text-tinta-apoio` em vez do papel
+"Corpo fora de sessão" (`text-corpo-fora-sessao`); `mt-30` fora da escala de
+espaçamento (virou `mt-24`); título de "Convidar" usava `text-titulo-tela`
+(nível de lista) em vez de `text-titulo-modelo` (nível de formulário, mesmo
+padrão de "Novo cliente"/"Novo motorista"/"Novo caminhão").
+
+**`/revisar`, primeiro passe, achados corrigidos antes do commit:**
+- Bug real: `ListaUsuarios.tsx` só atualizava o token local no caminho feliz
+  de "Reenviar" — se a aba do WhatsApp fosse bloqueada, "Ver o que ela
+  recebe" continuava abrindo o token velho, já morto (o novo já tinha sido
+  gravado no banco). Corrigido para atualizar sempre, com aviso explícito de
+  que o link antigo não vale mais.
+- As quatro ações de `conta/usuarios/acoes.ts` não tinham schema (`zod`) —
+  confiavam só na validação interna do serviço. Somado, mesmo padrão de
+  `conta/acoes.ts`.
+- `docs/componentes.md` (duas linhas), `CLAUDE.md` §11 (tabela do Resend) e
+  `docs/estilo.md` (lacuna do `text-[16px]`) ainda descreviam estado
+  anterior a esta tarefa.
+- `docs/especificacao.md` § "Trava de tentativas" ganhou a linha da trava
+  nova.
+- Comentário desatualizado em `tests/sessao-e-papel.test.ts`
+  ("`exigirDono()` nunca rodou em produção" — falso desde a Tarefa 2).
+
+**Segundo passe, achados corrigidos — o mais sério dos três passes:**
+- **O primeiro passe errou ao aceitar minha leitura de que a Tarefa 2 já
+  tinha atendido o pedido do plano** ("este arquivo ganha o primeiro caso
+  real de `comoDono` barrando operador numa ação de produto"). O segundo
+  passe conferiu de verdade: a Tarefa 2 criou a *ação* `comoDono`, nenhum
+  teste a chamava. `tests/sessao-e-papel.test.ts` ganhou um `vi.mock` de
+  `next/headers` (único jeito de rodar uma Server Action fora de um pedido
+  HTTP) e dois casos novos, chamando `cancelarConviteAction` de verdade com
+  login real de dono e de operador.
+- `aceitar-convite/acoes.ts` também lia `FormData` sem schema — ganhou
+  `zod`, mesmo padrão das outras quatro ações.
+- O operador criado pelo aceite nunca recebia e-mail de verificação
+  (diferente de `criarConta`), e a dashboard dele mostrava "Confirme seu
+  e-mail / Pode ter caído na caixa de spam" sobre um envio que nunca
+  aconteceu. Corrigido — manda o e-mail, melhor esforço.
+- A tela de convite indisponível usava `text-campo`/`leading-[1.4]` em vez
+  do papel "Corpo de texto fora de sessão" — o mesmo defeito que o
+  `/auditar-tela` já tinha corrigido no parágrafo do topo da mesma tela
+  ficou de fora deste segundo parágrafo.
+- `linkDeAceiteDoConvite` não falhava alto se `NEXT_PUBLIC_APP_URL`
+  faltasse — o link quebrado iria calado para o WhatsApp de quem foi
+  convidado. Corrigido, mesmo padrão de `src/lib/auth/index.ts`.
+
+**Terceiro passe, achados corrigidos — todos citação/texto desatualizado
+pela própria tarefa, nenhum de comportamento:**
+- A política de privacidade publicada (`ConteudoTermos.tsx`) ainda dizia
+  que o Resend manda e-mail de convite — corrigido para bater com
+  `CLAUDE.md` §11 e `docs/especificacao.md`, os dois já corrigidos no
+  primeiro passe.
+- Comentário de `src/lib/auth/email.ts` ainda dizia "três momentos" —
+  corrigido para dois.
+- `CLAUDE.md` (lista de módulos que falham alto no carregamento) não citava
+  `src/lib/utils/convite.ts`, que passou a fazer o mesmo no segundo passe —
+  somado.
+- `docs/componentes.md`/`docs/especificacao.md` (senha mínima de 6
+  caracteres) não citavam Aceitar convite como terceira tela que aplica a
+  regra — somado.
+- Comentário de `tests/usuarios.test.ts` dizia que o token do convite "não é
+  exposto pelo serviço" — ficou falso desde que `token: true` entrou em
+  `CAMPOS_CONVITE`, primeiro passe. Corrigido.
+- Comentário de `usuarios.ts` enumerava "as duas funções" que leem
+  `CAMPOS_CONVITE` — são quatro. Corrigido.
+- `tests/mensagens.test.ts` ganhou o caso de `montarMensagemConvite` —
+  única das três funções do arquivo sem teste próprio (achado como lacuna,
+  virou correção por ser barato e ter precedente direto no mesmo arquivo).
+
+**Lacunas registradas, não corrigidas agora:** textos/campo de e-mail de
+Aceitar convite, os avisos novos de `ListaUsuarios.tsx` e as duas variações
+do texto de trava sem confirmação do Design; círculo de 56px no detalhe de
+usuário (contexto que a tabela de tamanhos não cobre); toque na linha do
+convite pendente abrindo a prévia (redundante com a pílula "Ver o que ela
+recebe", decisão da construção, não documentada); `docs/navegacao.md`
+descreve um rótulo "aguardando" que a tela não tem; ícone de "Usuários"
+provisório, sem arquivo em `docs/icones/`; `iniciaisPessoa` sem teste
+próprio (mesmo estado de `iniciais()`, que também nunca teve).
+
+Próximo: item 13 da ordem de construção do produto (`docs/especificacao.md`
+§9) — Assinatura, plano gratuito, limites e tela de limite.
+
+---
+
 ## 01/09/2026 — Tarefa 3 do item 10: Configurações — pátio, prazo padrão, numeração do relatório
 
 Schema e `atualizarConfiguracoes` já existiam da Tarefa 1; esta tarefa

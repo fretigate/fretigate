@@ -1418,7 +1418,7 @@ declarar depois não conserta, porque não se pede autorização retroativa.
 |---|---|---|
 | **Supabase** | todo o banco e os arquivos | banco de dados e armazenamento |
 | **Vercel** | o tráfego da aplicação | hospedagem |
-| **Resend** | nome e e-mail de quem recebe a mensagem | e-mail transacional: recuperação de senha, verificação de e-mail e convite de usuário |
+| **Resend** | nome e e-mail de quem recebe a mensagem | e-mail transacional: recuperação de senha e verificação de e-mail. **Convite de usuário não manda e-mail** — é sempre por WhatsApp, envio manual (item 10, Tarefa 4, 01/09/2026; corrigido aqui para bater com `docs/especificacao.md` §"E-mail transacional", já corrigido na Tarefa 1) |
 | **Cloudflare** | o conteúdo das respostas que chegam em `contato@`, **de passagem** | redirecionamento do e-mail de contato. Quem responde pedindo ajuda costuma colar dado do próprio negócio na mensagem |
 | **Google** | o conteúdo dessas mesmas respostas, **armazenado** | a caixa que recebe o redirecionamento é Gmail. Quem guarda entra com mais razão que quem só vê passar — **sai desta tabela quando existir caixa própria no domínio**, e essa é uma das razões para migrar |
 | **fornecedor de IA** *(a decidir — §14)* | o conteúdo da conversa colada na importação | extração dos fretes |
@@ -1616,14 +1616,19 @@ Não invente resposta. Pergunte.
   tarefa 9 (08/08/2026): nada verifica, hoje, que as dez variáveis da tabela
   em "Ambientes" (§5, sete linhas desde o item 5, Tarefa 4) estão
   configuradas na Vercel antes da primeira publicação. E o jeito como isso falha importa:
-  `src/lib/auth/index.ts`, `src/lib/auth/email.ts` e (desde o item 5, Tarefa 4)
-  `src/lib/servicos/comprovantes.ts` lançam erro **no carregamento do
-  módulo**, mas nenhuma rota que os importa é avaliada durante `next build`
-  (são rota de API e Server Actions, não página estática) — então a
-  publicação **termina com sucesso** mesmo faltando uma variável, e o erro só
-  aparece no **primeiro pedido real** que tocar login, sessão ou comprovante.
+  `src/lib/auth/index.ts`, `src/lib/auth/email.ts`, (desde o item 5, Tarefa 4)
+  `src/lib/servicos/comprovantes.ts` e (desde o item 10, Tarefa 4)
+  `src/lib/utils/convite.ts` lançam erro **no carregamento do módulo**, mas
+  nenhuma rota que os importa é avaliada durante `next build` (são rota de
+  API e Server Actions, não página estática) — então a publicação **termina
+  com sucesso** mesmo faltando uma variável, e o erro só aparece no
+  **primeiro pedido real** que tocar login, sessão, comprovante ou convite.
   Sem conferência manual antes de publicar, isso apareceria com cliente
-  pagante já usando o produto, não durante o deploy.
+  pagante já usando o produto, não durante o deploy. **`convite.ts` é o
+  primeiro destes também importado por componente de cliente**
+  (`ListaUsuarios.tsx`, `FormularioConvite.tsx`) — faltando a variável, o
+  primeiro sintoma pode ser o próprio navegador quebrando ao carregar o
+  pacote, antes mesmo de um pedido ao servidor.
 
   **O sintoma exato, se `NEXT_PUBLIC_APP_URL` estiver errado ou faltando**
   (achado do fundador, 12/08/2026, testando login pelo celular): **login
@@ -1836,6 +1841,17 @@ Não invente resposta. Pergunte.
   **Gatilho para entrar:** o dia em que existir quem leia — provavelmente o
   mesmo rodapé do A4 que seria o primeiro lugar a mostrar Pix, no dia em que
   alguém pedir transferência bancária em vez de Pix.
+- **`Usuario.ultimo_acesso_em` não tem escritor.** Achado do fundador ao
+  aprovar o plano da Tarefa 4 do item 10 (01/09/2026): o campo existe no
+  schema e `docs/especificacao.md` §4.9 promete "lista com nome, e-mail,
+  papel e último acesso", mas nada grava esse campo hoje — falta um
+  requisito à parte (marcar a cada login bem-sucedido, provavelmente um
+  hook do Better Auth) que ninguém pediu ainda. A tela de Usuários
+  (`/conta/usuarios`) **omite a linha inteira** em vez de mostrar "Ainda não
+  entrou" para todo mundo, sempre — essa frase pareceria dado e não seria:
+  `null` aqui não significa "nunca entrou", significa "ninguém registrou".
+  **Gatilho para entrar:** o dia em que o rastreamento de acesso existir de
+  verdade.
 - ~~Provedor de e-mail transacional~~ · ~~domínio próprio autenticado~~ —
   **RESOLVIDOS em 06/08/2026.** Resend, domínio `fretigate.com` com envio por
   `envio.fretigate.com` verificado. Ver §5 e §11. Continua valendo o motivo:

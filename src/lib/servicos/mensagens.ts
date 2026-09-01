@@ -120,3 +120,31 @@ export function montarMensagemCobranca(dados: DadosMensagemCobranca): string {
 
   return blocos.join("\n\n");
 }
+
+export type DadosMensagemConvite = {
+  nomeConvidado: string;
+  nomeEmpresa: string;
+  /**
+   * `null` monta a prévia mostrada enquanto a pessoa ainda preenche o
+   * formulário (item 10, Tarefa 4) — o link só existe depois que o servidor
+   * cria o `Convite` e gera o token; até lá, a frase final vira um texto
+   * segurando o lugar, nunca um link fabricado ou omitido em silêncio.
+   */
+  link: string | null;
+};
+
+/**
+ * Convite de usuário por WhatsApp (item 10, Tarefa 4) — mesma regra de
+ * blocos de `montarMensagemOrdem`/`montarMensagemCobranca`.
+ */
+export function montarMensagemConvite(dados: DadosMensagemConvite): string {
+  const linkOuEspera = dados.link ?? "(link gerado ao enviar)";
+
+  const blocos = [
+    dados.nomeEmpresa,
+    `Oi, ${dados.nomeConvidado}! Você foi chamado(a) pra fazer parte da equipe da ${dados.nomeEmpresa} no FretiGate.`,
+    `Toque aqui pra criar sua conta: ${linkOuEspera}`,
+  ];
+
+  return blocos.join("\n\n");
+}

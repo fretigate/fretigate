@@ -450,10 +450,17 @@ cobrança e, quando existir, o rodapé do A4); `dados_bancarios` não tem
 nenhum. Fica registrado como lacuna em `CLAUDE.md` §14 — entra quando existir
 quem leia, provavelmente o mesmo rodapé do relatório.
 
-**Usuários**, dentro de Conta: lista com nome, e-mail, papel e último acesso.
+**Usuários**, dentro de Conta: lista com nome, e-mail e papel.
 Convite por WhatsApp, com envio manual. Convite pendente com reenviar
 e cancelar. Remover acesso é ação destrutiva, **só visível para o dono**, e não
 apaga histórico.
+
+**"Último acesso" não aparece na lista ainda** — corrigido em 01/09/2026
+(item 10, Tarefa 4, achado do fundador ao aprovar o plano): `ultimo_acesso_em`
+existe no schema, mas nada escreve nesse campo hoje (falta o rastreamento de
+acesso — um hook de login, que ninguém pediu ainda). Mostrar uma frase sobre
+um campo sempre nulo afirmaria um dado que o sistema não tem. Entra na lista
+quando o rastreamento existir de verdade — lacuna em `CLAUDE.md` §14.
 
 **Papéis:** Dono e Operador têm o mesmo acesso a fretes, clientes, cobranças,
 relatórios e cadastros. Só o dono acessa Configurações, Conta da empresa,
@@ -637,18 +644,27 @@ que gere custo. Os números, aprovados em 07/08/2026:
 | Enviar comprovante | **20 por 5 minutos** |
 | Gerar relatório | **10 por 5 minutos** |
 | Trocar a logo da empresa | **20 por 5 minutos** |
+| Aceitar convite (carregar `/aceitar-convite` ou enviar o formulário) | **20 por minuto** |
 
 A contagem é por endereço de rede e por rota, e fica **no banco** — a
 hospedagem roda várias instâncias, e contagem em memória viraria uma contagem
 por instância. As travas de **Criar conta**, de **consultar o código em
-`/redefinir-senha`**, de **Enviar comprovante**, de **Gerar relatório** e de
-**Trocar a logo da empresa** não são rota do Better Auth (são Server Action,
-Server Component, rota de API, Server Action e rota de API, respectivamente —
+`/redefinir-senha`**, de **Enviar comprovante**, de **Gerar relatório**, de
+**Trocar a logo da empresa** e de **Aceitar convite** não são rota do Better
+Auth (são Server Action, Server Component, rota de API, Server Action, rota
+de API e a dupla Server Component + Server Action, respectivamente —
 `src/lib/servicos/trava-de-cadastro.ts`, `trava-de-redefinicao.ts`,
-`trava-de-comprovante.ts`, `trava-de-relatorio.ts` e `trava-de-logo.ts`), mas
-usam a mesma tabela `rate_limit` e o mesmo mecanismo atômico; estão aqui, e
-não só no código, para as listas nunca divergirem de novo — já aconteceu três
-vezes.
+`trava-de-comprovante.ts`, `trava-de-relatorio.ts`, `trava-de-logo.ts` e
+`trava-de-convite.ts`), mas usam a mesma tabela `rate_limit` e o mesmo
+mecanismo atômico; estão aqui, e não só no código, para as listas nunca
+divergirem de novo — já aconteceu três vezes.
+
+**"Aceitar convite" reaproveita o número de "Consultar o código em
+`/redefinir-senha`"** (item 10, Tarefa 4, mesmo perfil de custo — o token tem
+entropia alta demais para valer a pena adivinhar, o risco é custo de consulta
+ao banco a cada carregamento/tentativa, não força bruta) — **uma só chave
+para os dois pontos que tocam o banco** (o carregamento da tela e o envio do
+formulário), para os dois contarem juntos contra o mesmo limite.
 
 **"Trocar a logo da empresa" reaproveita o número de "Enviar comprovante"
 (mesmo perfil de custo por requisição — decodifica, redimensiona, recomprime,
@@ -875,10 +891,10 @@ nunca reversível, nunca em log.
 
 **Senha mínima: 6 caracteres.** Decidido em 08/08/2026 — `minPasswordLength`
 em `src/lib/auth/index.ts`, não o padrão da biblioteca (8), para o número
-não mudar sozinho numa atualização. Vale em Criar conta e em Redefinir
-senha, e a mensagem de erro das duas telas lê este valor do próprio
-Better Auth (`ctx.password.config.minPasswordLength`), então as duas nunca
-divergem entre si.
+não mudar sozinho numa atualização. Vale em Criar conta, Redefinir senha e
+(desde o item 10, Tarefa 4) Aceitar convite, e a mensagem de erro das três
+telas lê este valor do próprio Better Auth
+(`ctx.password.config.minPasswordLength`), então nunca divergem entre si.
 
 ### Convite
 `telefone` · `nome` · `papel` · `token` · `status` · `enviado_em` · `aceito_em`

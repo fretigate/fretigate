@@ -3,12 +3,14 @@ import { Resend } from "resend";
 /**
  * O envio de e-mail transacional.
  *
- * São três momentos, e só esses três (`docs/especificacao.md`, "E-mail
- * transacional"): recuperação de senha, verificação de e-mail e convite de
- * usuário. Nenhum é opcional — quem perde a senha só volta por aqui.
+ * São dois momentos, e só esses dois (`docs/especificacao.md`, "E-mail
+ * transacional"): recuperação de senha e verificação de e-mail. **Convite de
+ * usuário não manda e-mail** — é sempre por WhatsApp, envio manual (item 10,
+ * Tarefa 4). Nenhum dos dois é opcional — quem perde a senha só volta por
+ * aqui.
  *
  * POR QUE ISTO VIVE EM `lib/auth` E NÃO NUMA PASTA PRÓPRIA
- * Os três consumidores são de autenticação. O §6 do `CLAUDE.md` proíbe camada
+ * Os dois consumidores são de autenticação. O §6 do `CLAUDE.md` proíbe camada
  * sem dois casos de uso reais, e uma pasta `lib/email` hoje seria uma camada a
  * mais entre o Better Auth e o fornecedor, servindo só a ele. No dia em que
  * existir e-mail que não seja de autenticação, aí ela se paga.

@@ -189,7 +189,7 @@ const iniciais = nome => {
 
 Se a primeira palavra já é uma sigla em caixa alta de até 3 letras, ela **é** a inicial — senão, a primeira letra das duas primeiras palavras. Assim "AP Transportes" → **AP** (não "AT"), "AP Transportes Rodoviários Ltda" → **AP**, "Transportes São Jorge" → **TS**, "JBS" → **JBS**.
 
-Esta é a regra da **empresa**. **Pessoa é outra regra**: sempre a primeira letra dos dois primeiros nomes — "Antônio Pereira" → AP, "Sandra do escritório" → SD. As duas coexistem na tela de Usuários (badge da empresa no topo, badge de cada pessoa nas linhas) e não podem ser trocadas uma pela outra.
+Esta é a regra da **empresa**. **Pessoa é outra regra**: sempre a primeira letra dos dois primeiros nomes — "Antônio Pereira" → AP, "Sandra do escritório" → SD. As duas coexistem na tela de Usuários (badge da empresa no topo, badge de cada pessoa nas linhas) e não podem ser trocadas uma pela outra. **Implementada no item 10, Tarefa 4 (01/09/2026)** — `iniciaisPessoa()`, `src/lib/utils/iniciais.ts`, primeiro consumidor real.
 
 Círculo: `30px` no cartão da dashboard · `40px` em linha de lista · `48px` em Mais · `56px` em Conta e no convite · `46px` quadrado de raio 6 no A4. Fundo `#1B6B3A` com texto branco (contorno preto no A4, que é impresso), `letter-spacing:.02em`.
 
@@ -217,7 +217,7 @@ Vale nas três telas que têm o padrão: `telDe()` no detalhe do frete, `campoDe
 | Número | Valor | Onde aparece |
 |---|---|---|
 | Validade do link de recuperação | **2 horas** | Recuperação enviada · Link expirado. O usuário pode não abrir o e-mail na hora |
-| Senha mínima | 6 caracteres | Redefinir senha · Criar conta |
+| Senha mínima | 6 caracteres | Redefinir senha · Criar conta · Aceitar convite |
 | Prazo padrão de vencimento | 15 dias | Configurações · perfil do cliente (herdado) |
 
 ## Barra de navegação: exceção fora de sessão
@@ -483,7 +483,7 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Configurações | principal **Salvar configurações** · campos de OPERAÇÃO (endereço do pátio, prazo padrão de vencimento, próximo número do relatório) — decisão do fundador, item 10 Tarefa 3, 01/09/2026: a linha anterior ("sem principal · linhas de OPERAÇÃO e MENSAGENS abrem os dois modelos") descrevia a tela de quando Configurações era só os dois modelos de mensagem, que ficaram fora do MVP; campo editável pede ação explícita para gravar, mesma regra de todo formulário do produto, e o rótulo nomeia o objeto — mesmo critério de "Salvar cliente"/"Salvar dados"/"Salvar frete" (achado do `/revisar`: um "Salvar" sozinho quebraria o padrão numa tela só). **Sem seção MENSAGENS ainda** — Modelo de cobrança/Modelo de ordem de serviço não têm tela de edição construída (item 9, MVP parcial) |
 | Modelo de cobrança | principal **Salvar modelo** · chips de variável {cliente} {valor} {vencimento} {rota} {empresa} · prévia abaixo do campo |
 | Modelo de ordem de serviço | principal **Salvar modelo** · chips {motorista} {cliente} {carga} {origem} {destino} {data} — **sem {valor}**, o motorista não vê o preço |
-| Conta da empresa | principal **Salvar dados** · linhas para Usuários, Minha assinatura e Termos · prévia do cabeçalho do relatório · texto destrutiva **Sair da conta**. **Construído no item 10, Tarefa 2: só a linha Termos tem destino hoje** — Usuários (`/conta/usuarios`) é a Tarefa 4; Minha assinatura é o item 13. Mesmo critério de "nasce só com as linhas que têm destino" já usado em Mais; entram quando as telas nascerem |
+| Conta da empresa | principal **Salvar dados** · linhas para Usuários, Minha assinatura e Termos · prévia do cabeçalho do relatório · texto destrutiva **Sair da conta**. **Usuários (`/conta/usuarios`) ganhou destino no item 10, Tarefa 4 (01/09/2026)** — só Minha assinatura segue sem link, à espera do item 13. Mesmo critério de "nasce só com as linhas que têm destino" já usado em Mais |
 | Usuários — lista | sem principal · pílula de cabeçalho **+ Convidar** · pílulas em linha **Reenviar** e **Ver o que ela recebe** · texto destrutiva **Cancelar** no convite pendente |
 | Usuários — convite | principal **Mandar convite no WhatsApp** · prévia da mensagem |
 | Usuários — detalhe | texto destrutiva **Remover acesso**, visível só para o dono; o acesso do dono não é removível |

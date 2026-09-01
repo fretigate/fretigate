@@ -65,7 +65,13 @@ async function criarUsuarioDeTeste(empresaId: string, email: string, nome: strin
   return usuario;
 }
 
-/** Busca o token do convite direto no banco — não é exposto pelo serviço. */
+/**
+ * Busca o token direto no banco. `token: true` entrou em `CAMPOS_CONVITE`
+ * no item 10, Tarefa 4 — o serviço passou a expor o campo (`convidarUsuario`/
+ * `reenviarConvite`/`cancelarConvite`/`listarConvitesPendentes`) —, mas os
+ * testes escritos antes disso continuam pegando o valor aqui, sem depender
+ * da forma de retorno de cada função.
+ */
 async function tokenDoConvite(conviteId: string): Promise<string> {
   const { rows } = await raiz.query<{ token: string }>(
     `SELECT token FROM "convite" WHERE id = $1`,

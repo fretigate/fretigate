@@ -7,11 +7,11 @@ import ts from "typescript";
  * Prova estrutural do envelope (`docs/planos/auditoria-3-mecanismo-de-sessao.md`,
  * §6): toda ação de servidor (arquivo com `"use server"` na primeira linha)
  * só exporta coisa envolvida por `comoUsuario`/`comoDono` — ou está na lista
- * de duas exceções, conferida por igualdade exata nos dois sentidos.
+ * de exceções, conferida por igualdade exata nos dois sentidos.
  *
  * Não há lista de ARQUIVO à mão: a varredura acha sozinha qualquer arquivo
- * com a diretiva, em qualquer lugar de `src/`. Só a lista de EXPORTAÇÃO (duas
- * entradas) é escrita à mão, e cada uma tem o motivo ao lado.
+ * com a diretiva, em qualquer lugar de `src/`. Só a lista de EXPORTAÇÃO é
+ * escrita à mão, e cada entrada tem o motivo ao lado.
  *
  * ⚠️ LIMITAÇÃO CONHECIDA, ACEITA (`CLAUDE.md` §9) — igual às duas de
  * `sem-filtro-de-empresa` (tarefa 2): só alcança arquivo com a diretiva na
@@ -26,6 +26,8 @@ const IGNORADOS = [join(RAIZ_SRC, "lib", "generated")];
 const EXCECOES: Record<string, string> = {
   sairDaConta: "sessão pode já ter vencido; auth.api.signOut trata isso",
   criarConta: "cria a empresa; sessão não existe nesse momento",
+  aceitarConviteAction:
+    "cria o usuário a partir de um convite público, por token; sessão não existe nesse momento — mesmo motivo de criarConta (item 10, Tarefa 4)",
 };
 
 type Classificacao = "comoUsuario" | "comoDono" | "sem-envelope";
@@ -171,7 +173,7 @@ describe("toda ação de servidor usa o envelope comoUsuario/comoDono", () => {
     });
   }
 
-  it("as duas exceções foram realmente encontradas — igualdade exata nos dois sentidos", () => {
+  it("as exceções foram realmente encontradas — igualdade exata nos dois sentidos", () => {
     expect([...excecoesVistas].sort()).toEqual(Object.keys(EXCECOES).sort());
   });
 });

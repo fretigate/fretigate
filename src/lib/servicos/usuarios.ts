@@ -75,6 +75,17 @@ const CAMPOS_CONVITE = {
   status: true,
   enviado_em: true,
   aceito_em: true,
+  /**
+   * `token` entrou na Tarefa 4 (item 10) — a tela precisa dele para "Ver o
+   * que ela recebe" (link real para `/aceitar-convite?token=`) e para
+   * remontar a mensagem do WhatsApp depois de "Reenviar". Seguro só por quem
+   * chama: as quatro funções que leem `CAMPOS_CONVITE`
+   * (`listarConvitesPendentes`, `convidarUsuario`, `reenviarConvite`,
+   * `cancelarConvite`, abaixo) só respondem a `comoDono`
+   * (`src/app/(app)/conta/usuarios/acoes.ts`) — o token nunca chega a quem
+   * não seja o próprio dono da empresa.
+   */
+  token: true,
 } as const;
 
 /**

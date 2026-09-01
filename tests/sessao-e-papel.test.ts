@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Client } from "pg";
@@ -14,14 +14,40 @@ import {
   SemPermissao,
 } from "@/lib/auth/sessao-por-cabecalho";
 import { criarTiposDeOperacaoIniciais } from "@/lib/servicos/tipos-de-operacao";
+import { cancelarConviteAction } from "@/app/(app)/conta/usuarios/acoes";
+
+/**
+ * Suporte para o describe "comoDono numa Server Action de produto real",
+ * abaixo — `next/headers` só funciona dentro de um pedido real (mesmo
+ * motivo do comentário do topo do arquivo), então é a única forma de
+ * exercitar uma ação `comoDono` de verdade fora de um pedido HTTP: trocar
+ * `headers()` por uma versão que devolve o `Headers` que o teste já tem à
+ * mão (`cabecalhosDono`/`cabecalhosOperador`, login real, mais abaixo).
+ * `vi.hoisted` porque `vi.mock` é hasteado para o topo do arquivo — sem
+ * isso, o holder seria acessado antes de existir.
+ */
+const headersControlados = vi.hoisted(() => ({ atual: new Headers() as Headers }));
+vi.mock("next/headers", () => ({
+  headers: async () => headersControlados.atual,
+}));
 
 /**
  * Sessão e papel de verdade (`docs/planos/auditoria-3-mecanismo-de-sessao.md`,
  * §6) — login real contra o banco de teste, cookie real, sem simulação.
  *
- * `exigirDono()` nunca rodou em produção — nenhuma tela de dono existe ainda
- * (`comoDono` fica pronto para o item 10). Este arquivo é a única prova de
- * que ele barra operador de verdade.
+ * **Corrigido, achados do `/revisar` na Tarefa 4 do item 10 — em dois
+ * passes.** A frase anterior ("`exigirDono()` nunca rodou em produção —
+ * nenhuma tela de dono existe ainda") ficou falsa a partir da Tarefa 2 do
+ * mesmo item (`atualizarContaDaEmpresaAction`, primeira ação de servidor a
+ * usar `comoDono` de verdade), sem ninguém notar. **A primeira correção
+ * (primeiro passe) errou**: tratou o pedido do plano da Tarefa 4 — "este
+ * arquivo ganha o primeiro caso real de `comoDono` barrando operador numa
+ * ação de produto" — como já atendido pela Tarefa 2, sem checar se algum
+ * teste chamava a ação de verdade. Não chamava: a Tarefa 2 criou a *ação*
+ * `comoDono`, nenhum teste a exercitava — o pedido do plano continuava em
+ * aberto, e a frase de correção teria virado uma segunda afirmação errada
+ * se o segundo passe não tivesse conferido de novo. O describe "comoDono
+ * numa Server Action de produto real", abaixo, fecha o pedido de verdade.
  */
 
 const marca = process.hrtime.bigint().toString(16).slice(-8);
@@ -31,7 +57,7 @@ const empresasParaLimpar: string[] = [];
 const usuariosParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 10;
+const CONFERENCIAS_ESPERADAS = 12;
 
 async function criarEmpresa(nome: string) {
   const empresaId = uuidv7();
@@ -158,6 +184,36 @@ describe("sessão e papel, com login real", () => {
     // A ausência de sessão vem antes da checagem de papel: sem sessão, não há
     // papel nenhum para checar.
     await expect(exigirDonoPorCabecalho(new Headers())).rejects.toThrow(SemSessao);
+    conferencias++;
+  });
+
+  /**
+   * O pedido do plano da Tarefa 4 (`docs/planos/
+   * item-10-configuracoes-conta-e-usuarios.md`, "Tarefa 4"): "o primeiro
+   * caso real de `comoDono` barrando operador numa ação de produto, não só
+   * na função de auth isolada". `cancelarConviteAction`
+   * (`conta/usuarios/acoes.ts`) serve de exemplo — qualquer ação `comoDono`
+   * provaria o mesmo, porque a barreira acontece antes de qualquer uma
+   * delas tocar o próprio serviço.
+   *
+   * `headersControlados.atual` (topo do arquivo) troca o `next/headers`
+   * real pelo `Headers` do login de verdade feito acima
+   * (`cabecalhosDono`/`cabecalhosOperador`) — é o único jeito de a ação
+   * rodar fora de um pedido HTTP de verdade.
+   */
+  it("comoDono numa Server Action de produto real: operador recebe SemPermissao — a barreira roda antes do serviço", async () => {
+    headersControlados.atual = cabecalhosOperador;
+    await expect(cancelarConviteAction("id-qualquer")).rejects.toThrow(SemPermissao);
+    conferencias++;
+  });
+
+  it("comoDono numa Server Action de produto real: dono passa da barreira e chega ao serviço — devolve erro de negócio, não SemPermissao", async () => {
+    headersControlados.atual = cabecalhosDono;
+    // Sem convite nenhum criado com este id: o serviço recusa por não achar
+    // o convite, não por permissão — é exatamente a prova de que o dono
+    // atravessou `comoDono` e chegou em `cancelarConvite` de verdade.
+    const resultado = await cancelarConviteAction("00000000-0000-0000-0000-000000000000");
+    expect(resultado).toEqual({ ok: false, erro: "Convite não encontrado." });
     conferencias++;
   });
 });

@@ -295,8 +295,14 @@ primeira tentativa (`0.55`) cabia nos 480px mas estourava a largura em
 `zoom` estão citadas em documento nenhum do Design; fica registrado até o
 Design formalizar uma prévia própria para esta tela. A cor de fundo branca
 da caixa (`#FFFFFF`, exclusiva do impresso na tabela de Cores) e o
-`text-[16px]` do círculo de 56px de `UploadLogo.tsx` somam à mesma lacuna —
-ver `docs/planos/item-10-configuracoes-conta-e-usuarios.md`, "Tarefa 2 —
+`text-[16px]` do círculo de 56px de `UploadLogo.tsx` somam à mesma lacuna.
+**Mesmo valor, três usos a mais, achado do `/revisar` na Tarefa 4:**
+`conta/usuarios/page.tsx` (badge da empresa, 56px), `conta/usuarios/[id]/
+page.tsx` (badge da pessoa, 56px) e `TelaAceitarConvite.tsx` (badge da
+empresa na tela pública, 56px) reaproveitam o mesmo `text-[16px]` — a
+lacuna nomeava só `UploadLogo.tsx`, e virou afirmação incompleta assim que
+um segundo, terceiro e quarto lugar passaram a usar o mesmo valor sem
+confirmação — ver `docs/planos/item-10-configuracoes-conta-e-usuarios.md`, "Tarefa 2 —
 achados do `/revisar`".
 
 **De volta à Tarefa 2 do item 8 (dashboard, não a do item 10 acima) — a
@@ -364,9 +370,14 @@ de sessão.** Cinco telas passaram a abrir com a marca do FretiGate
 centralizada — Entrar, Criar conta, Esqueci a senha, Redefinir senha e Termos
 no modo cadastro (`src/components/auth/Marca.tsx`, 14/08/2026). **Não é a
 lista de telas sem barra da seção acima, que tem seis:** Aceitar convite não
-está aqui, e não porque tenha sido decidido que não tem marca — ninguém
-definiu o caso, e aquela tela ainda não existe em código. Também vai para a
-lista do Design abaixo.
+está aqui — e agora é decisão, não lacuna. Decisão do fundador, item 10,
+Tarefa 4 (01/09/2026): **Aceitar convite nunca leva `<Marca />`**, em nenhum
+estado (válido, convite indisponível, trava). Quem chega já foi convidado
+por alguém que conhece — o que precisa reconhecer é a empresa que convidou,
+não o produto; pôr a marca do FretiGate no topo dividiria a atenção entre
+duas identidades num momento em que só uma importa, e o FretiGate ela
+conhece assim que entrar. Exceção com razão escrita, não esquecimento
+(`CLAUDE.md` §2) — fecha a lacuna que este parágrafo registrava.
 
 A marca usa **140px de largura**, valor que **não é formal desta folha**: veio
 do documento que o Design mandou (`referencia/Design/Marca nas telas de
@@ -406,9 +417,7 @@ acrescentada ao fechamento da seção Cores.
 **Falta o Design definir:** largura definitiva, distância até o título,
 confirmação do respiro do topo, se o título passa a `28px/800` e se entra um
 subtítulo (as duas últimas coisas o mockup desenha e **não** foram
-construídas), se sai uma versão vetorial da marca — hoje só existe PNG — e se
-Aceitar convite leva a marca do FretiGate junto da marca da empresa que
-convidou.
+construídas), se sai uma versão vetorial da marca — hoje só existe PNG.
 
 **Lacuna resolvida — corpo de texto em tela de fora de sessão.** Registrada
 em 07/08/2026 pelo `/auditar-tela` da tarefa 8, fatia 2 (o "Texto de campo"
