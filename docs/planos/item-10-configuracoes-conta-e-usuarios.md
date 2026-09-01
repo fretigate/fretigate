@@ -493,3 +493,217 @@ fazer), o município nunca resolve, e todo o propósito de
 fica sem dado. Rótulo e placeholder já pedem algo mais curto ("De onde a
 frota sai"), mas não é garantia. Registrado para o fundador decidir se
 ajusta o texto do campo — não é bloqueio, porque nada quebra hoje.
+
+---
+
+## Tarefa 4 — decisões finais antes de construir, 01/09/2026
+
+Última tarefa do item 10. Dois lados: autenticado (`/conta/usuarios`,
+`/conta/usuarios/novo`, `/conta/usuarios/[id]`, todos `comoDono` — decisão
+1) e público (`(auth)/aceitar-convite`, sem sessão nenhuma). O serviço
+inteiro (`src/lib/servicos/usuarios.ts`) e a função de banco
+(`localizar_convite_por_token`) já existem da Tarefa 1, com os 17 casos de
+`tests/usuarios.test.ts` já verdes — esta tarefa é tela, ação de servidor e
+rate limit, sem mudança de schema.
+
+**1. Marca no topo de "Aceitar convite": só a marca da empresa, nunca a do
+FretiGate — decisão do fundador, 01/09/2026, com o motivo escrito.** A
+regra geral (`docs/estilo.md`, `src/components/auth/Marca.tsx`) é que toda
+tela de fora de sessão abre com a marca do FretiGate, porque é ali que a
+pessoa decide confiar no produto. Aceitar convite é o caso contrário: quem
+chega já foi convidado por alguém que conhece — o que precisa reconhecer é
+a transportadora que convidou, não o produto. Pôr a marca do FretiGate no
+topo dividiria a atenção entre duas identidades num momento em que só uma
+importa; o FretiGate ela conhece assim que entrar. Fecha a lacuna que
+`docs/estilo.md` linha 406-411 já registrava ("Falta o Design definir... se
+Aceitar convite leva a marca do FretiGate junto da marca da empresa") —
+exceção com razão escrita, não esquecimento (`CLAUDE.md` §2). A tela usa só
+o círculo de logo/iniciais da empresa, 56px (já documentado, "Iniciais da
+empresa" — regra de empresa, `nome_fantasia`), sem `<Marca />` em nenhum
+estado, inclusive nos de erro/trava.
+
+**2. O e-mail que faltava (decisão 9 da Tarefa 1) entra como campo próprio
+da tela, junto da senha.** Bloco de identidade no topo (círculo/logo +
+"[Empresa] te convidou" + uma linha fixa do que um operador pode fazer no
+MVP — nunca dado do plano/assinatura, que ainda não existe, item 13),
+depois **E-MAIL DA CONTA** e **SENHA** (com revelar, mesma variante de
+Entrar/Criar conta, decisão do fundador de 12/08/2026), principal **Entrar
+na conta**, texto neutra **Não conheço essa empresa** (leva a `/entrar` —
+quem já tem conta própria loga por lá; quem não tem, simplesmente não
+segue). Rótulos e o texto de "o que a pessoa vai poder fazer" não têm lastro
+em nenhum documento — mesma categoria de pendência-do-Design já registrada
+para as tarefas anteriores deste item, entram na lista do que pedir ao
+Design ao fechar.
+
+**3. Convite indisponível — token ausente, inexistente, já aceito ou
+cancelado mostram a MESMA mensagem genérica, sem distinguir qual.** A regra
+de negócio (`status !== "pendente"` cobre aceito/cancelado; token que não
+bate não existe) já está inteira no serviço desde a Tarefa 1 — esta tarefa
+só escolhe como a tela apresenta a recusa. Distinguir os motivos revelaria
+informação a quem não deveria ter (ex.: confirmar que um número de telefone
+específico já tem convite aceito ali) — mesmo princípio de privacidade que
+`redefinir-senha`/`esqueci-a-senha` já aplicam ("não revela se o e-mail
+existe"). **Achado do fundador ao aprovar o plano: mensagem genérica sem
+saída deixa a pessoa parada numa tela que só nega — precisa dizer o que
+fazer.** Texto: "Este convite não está mais disponível. Peça a quem te
+convidou para mandar um novo." — a saída é a instrução em si (falar com
+quem convidou), não um botão de self-service: só o dono reenvia, de dentro
+de `/conta/usuarios`, e a tela pública não sabe quem é essa pessoa para
+linkar direto a ela (só teria `nome`/`telefone` do convite morto, e mostrar
+isso de volta reabriria a mesma pergunta de privacidade do item acima). Não
+existe "vencido" como estado à parte — não há prazo
+de expiração no schema (lacuna já registrada, mantida — ver abaixo), então
+"vencido" na fala do fundador é o mesmo caso de "cancelado"/"aceito" que o
+serviço já recusa.
+
+**4. Fluxo de criar o convite e abrir o WhatsApp — mecanismo novo, primeira
+vez que o link depende de um dado que só existe depois de gravar no
+banco.** Nas duas ações que já existem (Cobrar no WhatsApp, Enviar ordem de
+serviço), a mensagem inteira já está pronta antes do toque — por isso
+`window.open` roda sempre antes do primeiro `await` (regra escrita duas
+vezes no código, `CLAUDE.md`-style "ORDEM É REGRA, NÃO DETALHE"). Aqui o
+link (`/aceitar-convite?token=...`) só existe depois que o servidor cria o
+`Convite` e gera o token (`gerarTokenDeConvite`, `crypto.randomBytes` —
+continua gerado no servidor, nunca no cliente: mudar isso enfraqueceria a
+garantia de token imprevisível que a Tarefa 1 já decidiu). Solução: abrir
+uma aba em branco **antes** do `await` (`window.open("", "_blank",
+"noopener,noreferrer")` — ainda dentro da cadeia de gesto do toque), esperar
+`criarConviteAction` devolver o convite criado, montar o link e a mensagem
+(`montarMensagemConvite`, nova função em `mensagens.ts`, mesmo padrão de
+`montarMensagemCobranca`/`montarMensagemOrdem`) e só então apontar a aba já
+aberta para lá (`janela.location.href = link`). Preserva o mesmo
+comportamento de toque único que as outras duas ações têm, sem tocar no
+lugar onde o token é gerado.
+
+**Achado do fundador ao aprovar o plano: este é o ponto mais delicado da
+tarefa — foi exatamente aqui, `window.open` depois de um `await`, que já
+apareceu um defeito real de navegador de celular (`AcaoOrdemDeServico.tsx`,
+achado do `/revisar` na Tarefa 2 do item 5).** A técnica da aba em branco
+evita repetir esse defeito, mas testar só no navegador do computador não
+prova nada — o bloqueio é um comportamento específico de navegador de
+celular (a cadeia de gesto confiável do toque), que o Chromium de desktop
+nunca reproduz mesmo com a emulação de viewport móvel ligada, porque ainda
+é o motor de renderização do computador por baixo, não o da Safari/Chrome
+de verdade num aparelho. Verificação desta tarefa: emulação de celular no
+navegador do Browser pane como primeira conferência (viewport, toque),
+**e o fundador confirma no aparelho dele antes de considerar o item 4
+fechado** — mesmo critério já usado para medir o tempo de lançar frete
+(`CLAUDE.md` §1: "quem mede é ele, no aparelho dele").
+
+Mesmo mecanismo para **"Reenviar"** (pílula em
+linha, `docs/componentes.md`, "Usuários — lista"): regenera o token
+(`reenviarConvite`, já existe) e reabre o WhatsApp com o link novo — reenviar
+significa mandar de novo, não só trocar o token em silêncio.
+
+**5. "Ver o que ela recebe" é um link de verdade para a própria tela
+pública, com o token do convite pendente, em nova aba.** `docs/navegacao.md`
+já registra esse caminho como "demonstração": não simula nada à parte — é
+`<a href="/aceitar-convite?token=..." target="_blank">`, token já conhecido
+(veio de `listarConvitesPendentes`), sem chamada de servidor nenhuma, sem
+o problema do item 4 acima (nada precisa ser criado, o convite já existe).
+
+**6. Rate limit novo — `travaDeAceiteDeConvite`, mesma família de
+`trava-de-redefinicao.ts`.** Requisito explícito desde a Tarefa 1: token tem
+256 bits de entropia (força bruta não é o risco), o risco é custo — cada
+carregamento da página e cada tentativa de aceite consultam o banco.
+Limite folgado (mesma ordem de grandeza da consulta de código de senha, 20
+por 60s), chaveado por IP, mesmo mecanismo (`incrementOne` sobre
+`rate_limit`, falha fechada). Aplicado nos dois pontos que tocam o banco:
+o carregamento da página (`localizarConvitePorToken`, para montar a prévia
+do convite) e o envio do formulário (`aceitarConviteAction`, antes de
+chamar o serviço) — mesma chave, mesmo balde, para os dois contarem juntos.
+Sem teste automatizado próprio — mesmo padrão de `trava-de-redefinicao.ts`/
+`trava-de-cadastro.ts`, nenhuma das duas tem arquivo em `tests/`.
+
+**7. A regra de "iniciais de pessoa" (`docs/componentes.md`, "Iniciais da
+empresa": "as duas primeiras letras dos dois primeiros nomes... reservada a
+`Usuario`") ganha implementação agora — primeiro consumidor real.** A
+lista de Usuários mostra um círculo por linha (badge de cada pessoa),
+diferente da regra de empresa que `iniciais()` já implementa (usada no
+badge da empresa no topo da mesma tela). Função nova em
+`src/lib/utils/iniciais.ts`, ao lado da existente — não é abstração
+especulativa (`CLAUDE.md` §6): o comentário da função atual já registrava
+essa regra como esperada, só sem caso real até agora.
+
+**Achado do fundador ao aprovar o plano: confirmar que as duas regras
+divergem de verdade neste caso** — a mesma regra de pessoa já foi adiada
+duas vezes (Cliente e Motorista) com o argumento de que "as duas regras
+coincidem para nome digitado normalmente, e divergem só quando o nome vem
+todo em maiúsculas" (comentário de `iniciais.ts`). Conferido: **divergem,
+sim, mas só nesse caso estreito** — primeiro nome com até 3 letras, digitado
+todo em maiúsculas. Exemplo real: "ANA PAULA" — a regra de empresa lê "ANA"
+como sigla (≤3 letras, tudo maiúsculo) e devolve **"ANA"** (3 letras); a
+regra de pessoa, sem essa exceção, devolve **"AP"** (2 letras, primeira
+letra dos dois nomes). Para nome digitado normalmente ("Ana Paula") as duas
+já coincidem ("AP"), sem divergência nenhuma. É a mesma situação já aceita
+como consequência para Motorista — não é motivo para recusar a implementação
+aqui, porque `docs/componentes.md` já decide, por escrito, que Usuários usa
+a regra de pessoa (inclusive para os dois badges da mesma tela — o da
+empresa no topo, o de cada pessoa nas linhas — não ficarem confundíveis
+"não podem ser trocadas uma pela outra"); é a confirmação de que a
+implementação nova tem um caso real por trás, não só o texto do documento.
+
+**8. `ultimo_acesso_em` está no schema e na especificação (§4.9: "lista com
+nome, e-mail, papel e último acesso"), mas nada escreve nesse campo hoje —
+lacuna nova, não corrigida nesta tarefa.** É um requisito à parte (marcar o
+campo a cada login bem-sucedido, provavelmente um hook do Better Auth) que
+ninguém pediu para esta tarefa — o pedido do fundador foi convite por
+WhatsApp e a tela de aceitar, não rastreamento de acesso.
+
+**Corrigido pelo achado do fundador ao aprovar o plano: "Ainda não entrou"
+para todo mundo, sempre, é informação que parece dado e não é — o campo
+nunca é escrito, então `null` não significa "nunca entrou", significa
+"ninguém registrou". Mostrar essa frase afirmaria algo que o sistema não
+sabe de verdade** (a mesma classe de erro que `CLAUDE.md` §2 já nomeia,
+"texto que está certo só por coincidência de estado" — aqui o estado nem
+chega a ficar certo por coincidência, porque nunca existe um caso em que o
+campo tenha valor para provar a frase errada). Desenho corrigido: a linha
+de "último acesso" **não aparece** na lista — nem a frase, nem a data, nem
+um traço no lugar dela — até o dia em que algo escrever nesse campo de
+verdade (mesmo princípio do §8, "número incompleto não é exibido", levado
+ao limite: incompleto **sempre**, em **toda** linha, não é caso de mostrar
+convite nenhum, é caso de omitir o campo inteiro). A lista mostra só nome,
+e-mail e papel — três dos quatro que `docs/especificacao.md` §4.9 promete.
+Registrada em `CLAUDE.md` §14: falta o rastreamento de acesso (hook de
+login) antes de "último acesso" poder aparecer na tela.
+
+**Confirmações pedidas pelo fundador, e como são verificadas:**
+- **A pessoa não consegue remover a si mesma.** Já garantido no serviço
+  desde a Tarefa 1 (`removerAcesso`, por `papel === "dono"` no alvo, não por
+  comparação com quem chama — único dono por empresa hoje, então as duas
+  coisas coincidem). Esta tarefa soma a camada de tela: o botão "Remover
+  acesso" nunca aparece na própria linha do dono (`/conta/usuarios/[id]`
+  quando `usuario.papel === "dono"`), e o teste de serviço já cobre a
+  chamada direta recusando mesmo sem passar pela tela. Verificado ao vivo no
+  navegador: dono abre o próprio detalhe, confirma que não há o botão.
+- **Convite já aceito ou cancelado.** Regra no serviço desde a Tarefa 1
+  (item 3 acima) — esta tarefa verifica que a tela pública mostra o estado
+  de indisponível certo nos três casos (token inexistente, `status:
+  "aceito"`, `status: "cancelado"`), manual no navegador, criando um convite
+  de teste e forçando cada estado.
+
+**Server actions e a exceção declarada:**
+`src/app/(app)/conta/usuarios/acoes.ts` — `criarConviteAction`,
+`reenviarConviteAction`, `cancelarConviteAction`, `removerAcessoAction`,
+todas `comoDono`. `src/app/(auth)/aceitar-convite/acoes.ts` —
+`aceitarConviteAction`, sem envelope (não existe sessão nesse instante,
+mesmo motivo de `criarConta`) — entra na lista `EXCECOES` de
+`tests/protecao-de-acoes.test.ts`, com o motivo ao lado.
+
+**Testes:** os cinco casos de serviço já estão prontos (Tarefa 1). Esta
+tarefa soma, se necessário, algum caso de serviço que só apareça na
+integração tela↔ação (nenhum previsto hoje — a camada de tela não introduz
+regra de negócio nova). `tests/protecao-de-acoes.test.ts` varre os quatro
+`acoes.ts` novos automaticamente. Verificação do fluxo inteiro
+(convidar → link do WhatsApp → aceitar → login automático → entrar) é
+manual no navegador — mesma lacuna estrutural já registrada (`CLAUDE.md`
+§14, "entradas de navegação sem cobertura automatizada"): o produto não tem
+suíte de tela ainda.
+
+**Lacunas herdadas da Tarefa 1, confirmadas como ainda em aberto — não
+corrigidas nesta tarefa:** convites duplicados para o mesmo telefone ou
+para quem já tem conta na empresa; convite sem prazo de validade próprio
+(vale até ser usado ou cancelado à mão); `arquivado_em` de `Convite` não
+conferido por `localizar_convite_por_token`/`aceitarConvite` (hoje
+inofensivo, nada arquiva convite). Somada nesta tarefa: `ultimo_acesso_em`
+nunca escrito (item 8 acima).
