@@ -247,10 +247,12 @@ Tela inicial. Só entra número que muda o que ele faz depois de ver.
   anterior · **quantidade de fretes** · **média por frete**. Abaixo, o atalho
   Gerar relatório.
 
-  **Marca da empresa nasce não-tocável** — decisão do fundador, item 8
-  (`docs/planos/item-8-dashboard.md`): "Conta da empresa" é o item 10, ainda
-  não construído; levar a "Mais" seria destino de consolação. Vira tocável
-  quando aquela tela nascer.
+  **Marca da empresa é tocável para o dono, levando a Conta da empresa —
+  resolvido no item 10, Tarefa 2** (`docs/planos/
+  item-10-configuracoes-conta-e-usuarios.md`). Continua não-tocável para o
+  operador: "Conta da empresa" exige o dono (decisão 1 do plano — identidade
+  e regra financeira da empresa), e um operador tocando a marca cairia num
+  404.
 
   **Só um atalho, não dois** — "Importar fretes" não nasce ao lado de Gerar
   relatório: corte já registrado (ver "O que o corte da importação deixa em
@@ -629,17 +631,25 @@ que gere custo. Os números, aprovados em 07/08/2026:
 | Criar conta | **5 por 10 minutos** |
 | Enviar comprovante | **20 por 5 minutos** |
 | Gerar relatório | **10 por 5 minutos** |
+| Trocar a logo da empresa | **20 por 5 minutos** |
 
 A contagem é por endereço de rede e por rota, e fica **no banco** — a
 hospedagem roda várias instâncias, e contagem em memória viraria uma contagem
 por instância. As travas de **Criar conta**, de **consultar o código em
-`/redefinir-senha`**, de **Enviar comprovante** e de **Gerar relatório** não
-são rota do Better Auth (são Server Action, Server Component, rota de API e
-Server Action, respectivamente — `src/lib/servicos/trava-de-cadastro.ts`,
-`trava-de-redefinicao.ts`, `trava-de-comprovante.ts` e
-`trava-de-relatorio.ts`), mas usam a mesma tabela `rate_limit` e o mesmo
-mecanismo atômico; estão aqui, e não só no código, para as listas nunca
-divergirem de novo — já aconteceu três vezes.
+`/redefinir-senha`**, de **Enviar comprovante**, de **Gerar relatório** e de
+**Trocar a logo da empresa** não são rota do Better Auth (são Server Action,
+Server Component, rota de API, Server Action e rota de API, respectivamente —
+`src/lib/servicos/trava-de-cadastro.ts`, `trava-de-redefinicao.ts`,
+`trava-de-comprovante.ts`, `trava-de-relatorio.ts` e `trava-de-logo.ts`), mas
+usam a mesma tabela `rate_limit` e o mesmo mecanismo atômico; estão aqui, e
+não só no código, para as listas nunca divergirem de novo — já aconteceu três
+vezes.
+
+**"Trocar a logo da empresa" reaproveita o número de "Enviar comprovante"
+(mesmo perfil de custo por requisição — decodifica, redimensiona, recomprime,
+grava no storage), confirmado pelo fundador, 01/09/2026** — item 10, Tarefa 2,
+achado do `/revisar`: a rota (`src/app/api/conta/logo/route.ts`,
+`trava-de-logo.ts`) tinha nascido sem trava nenhuma, contra o mesmo §4.
 
 **Contar por endereço de rede tem um efeito colateral nomeado, não
 escondido** (decisão do fundador ao aprovar o número de "Enviar
@@ -672,6 +682,7 @@ vezes seguidas — a saída certa depende de qual travou:
 | **Criar conta** | falar com a empresa — quem trava aqui ainda não tem conta, "esqueci a senha" não é saída para quem nunca teve senha |
 | **Mandar link de recuperação · Reenviar confirmação de e-mail · Redefinir a senha pelo link** | nenhuma — esperar **é** a saída. Quem trava aqui já está dentro do próprio caminho de autoatendimento; oferecer "recuperar a senha" a quem já está recuperando a senha não ajuda, só confunde |
 | **Enviar comprovante** | nenhuma — esperar **é** a saída, mesmo raciocínio da linha acima: quem travou aqui já está dentro do próprio fluxo de anexar comprovante. A foto continua na galeria do aparelho — a mensagem precisa dizer isso, não só "espere" |
+| **Trocar a logo da empresa** | nenhuma — esperar **é** a saída, mesmo raciocínio das duas linhas acima. A logo atual continua exatamente como estava — a mensagem precisa dizer isso, não só "espere" (decisão do fundador, 01/09/2026: como a logo é trocada raramente, quem esbarra nesta trava provavelmente está tentando de novo porque algo deu errado, não por uso normal — a dúvida "será que a logo sumiu?" não pode somar à frustração) |
 
 Sem a saída certa, quem trava conclui que o produto está quebrado e some —
 mesmo desfecho da recuperação que cai em spam. Oferecer a saída errada (ex.:

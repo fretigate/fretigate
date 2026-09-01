@@ -136,7 +136,7 @@ export default async function Pagina() {
         paddingBottom: "var(--folga-rolagem)",
       }}
     >
-      <CartaoEscuro nomeEmpresa={nomeEmpresa} resumo={resumoMes} />
+      <CartaoEscuro nomeEmpresa={nomeEmpresa} resumo={resumoMes} ehDono={sessao.papel === "dono"} />
 
       <div className="grid grid-cols-2 gap-8">
         <Pastilha href="/cobrancas" rotulo="A receber" valor={`R$ ${formatarCentavos(cobrancas.aReceber)}`} />
@@ -184,12 +184,20 @@ export default async function Pagina() {
 /**
  * O cartão de faturamento no topo — única superfície escura fora do aviso
  * do sistema e da barra (`docs/estilo.md`, "Superfícies: as três
- * categorias"). Marca da empresa **não-tocável** (decisão do fundador,
- * plano do item 8): a tela de Conta é o item 10, ainda não construída.
+ * categorias"). Marca da empresa agora É tocável para o dono, levando a
+ * `/conta` — item 10, Tarefa 2 fecha a pendência que o item 8 deixou
+ * registrada (a tela de Conta não existia ainda quando a dashboard nasceu).
+ *
+ * **Continua não-tocável para o operador** (`ehDono` decide) — `/conta` é
+ * `comoDono`/`exigirDono()` (decisão 1 do plano: identidade e regra
+ * financeira da empresa), então um operador tocando o mesmo cartão cairia
+ * num 404 (`CLAUDE.md` §8, nunca botão sem destino alcançável por quem o
+ * vê).
  */
 function CartaoEscuro({
   nomeEmpresa,
   resumo,
+  ehDono,
 }: {
   nomeEmpresa: string;
   resumo: {
@@ -198,6 +206,7 @@ function CartaoEscuro({
     mediaPorFrete: number | null;
     variacaoPercentual: number | null;
   };
+  ehDono: boolean;
 }) {
   const pecas: ReactNode[] = [];
   if (resumo.variacaoPercentual !== null) {
@@ -241,12 +250,26 @@ function CartaoEscuro({
 
   return (
     <div className="flex flex-col gap-18 rounded-cartao-escuro bg-tinta px-20 pb-24 pt-18">
-      <div className="flex items-center gap-10">
-        <div className="flex h-30 w-30 flex-none items-center justify-center rounded-pilula bg-acao text-[12px] font-bold tracking-[.02em] text-white">
-          {iniciais(nomeEmpresa)}
+      {ehDono ? (
+        // `-my-9 py-9`: alvo de toque 48px (30px do círculo + 9+9 de
+        // padding — CLAUDE.md §8) sem empurrar o resto do cartão pra baixo —
+        // a margem negativa cancela o padding na visual, só a área tocável
+        // cresce. Achado do `/revisar`: a primeira versão tinha ~30px de
+        // alvo.
+        <Link href="/conta" className="-my-9 flex items-center gap-10 self-start py-9">
+          <div className="flex h-30 w-30 flex-none items-center justify-center rounded-pilula bg-acao text-[12px] font-bold tracking-[.02em] text-white">
+            {iniciais(nomeEmpresa)}
+          </div>
+          <span className="text-nome-empresa font-bold text-white/82">{nomeEmpresa}</span>
+        </Link>
+      ) : (
+        <div className="flex items-center gap-10">
+          <div className="flex h-30 w-30 flex-none items-center justify-center rounded-pilula bg-acao text-[12px] font-bold tracking-[.02em] text-white">
+            {iniciais(nomeEmpresa)}
+          </div>
+          <span className="text-nome-empresa font-bold text-white/82">{nomeEmpresa}</span>
         </div>
-        <span className="text-nome-empresa font-bold text-white/82">{nomeEmpresa}</span>
-      </div>
+      )}
 
       <div className="flex flex-col gap-8">
         <span className="text-eyebrow font-bold uppercase tracking-[.16em] text-white/45">

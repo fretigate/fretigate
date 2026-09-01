@@ -6,6 +6,178 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 31/08/2026 — Tarefa 2 do item 10: Conta da empresa
+
+Tela `/conta` (`comoDono`/`exigirDono()` — primeira vez que o envelope roda
+de verdade numa tela, `CLAUDE.md` §9): razão social, CNPJ, endereço,
+telefone, e-mail, chave Pix, upload de logo, prévia do cabeçalho do
+relatório, linha para Termos, Sair da conta. Fecha três pendências:
+marca da empresa tocável na dashboard e em Mais (só para o dono — operador
+continua sem link, `/conta` responde `notFound()` pra ele), a logo embutida
+como `data:` URI no PDF do relatório (`logoComoDataUri`, corrigindo um
+`<img src>` que nunca teria carregado — o Chromium do gerador não tem
+rede), e a barra de navegação de verdade em `/termos` no modo "vindo de
+Ajustes" (só com sessão de dono, mesma condição de `/conta`).
+
+**Pipeline de logo compartilha o mecanismo do comprovante.** O miolo de
+reprocessamento (decodificar HEIC, `.rotate()`, redimensionar, recomprimir)
+saiu de `comprovantes.ts` para `src/lib/utils/imagem.ts` — segundo caso de
+uso real, não abstração especulativa (`CLAUDE.md` §6). Limite próprio pra
+logo: 480px/~80KB (decisão do fundador, plano), contra 1600px/~300KB do
+comprovante — `CLAUDE.md` §4 corrigido pra distinguir os dois. Balde
+`logos` novo (migration `20260831070000_balde_logos_storage`), RLS
+reaproveitada da política já table-wide dos baldes anteriores (sem
+duplicar). Client-side de upload também compartilhado
+(`useUploadDeImagem.ts`) entre `AnexarComprovante.tsx` e `UploadLogo.tsx`
+— achado do `/revisar`, os dois tinham nascido copiados.
+
+**Três passes do `/revisar`** — o terceiro justificado por achado de rigor
+total (`tests/protecao-server-only.test.ts`: `logo.ts` guarda a chave
+`service_role` e tinha ficado fora da lista por nome que protege esse
+arquivo contra ir pro navegador; corrigido e confirmado rodando o teste).
+Passe 1: rota de logo sem trava de tentativas (criada,
+`trava-de-logo.ts`); alvo de toque da marca abaixo de 48px na dashboard;
+`/conta` só com a linha de Termos, sem atualizar `docs/componentes.md`;
+cartão de identidade de Mais continuava não-tocável apesar de a tela já
+existir; rótulo da linha da AJUSTES ("Conta", devia ser "Conta da
+empresa"); barra de Termos aparecendo sem checar sessão de verdade
+(reabriria o incidente já registrado — "a tela de Termos herdou a barra no
+modo cadastro"); textos desatualizados em três documentos (`docs/estilo.md`,
+`CLAUDE.md` §14 sobre o terceiro escritor de storage). Passe 2: a prévia do
+cabeçalho cortava conteúdo real com uma altura chutada (trocada por `zoom`,
+que não corta); iniciais do avatar calculadas de um campo diferente do
+resto do produto (corrigido pra `nome_fantasia`, igual dashboard/Mais);
+componente de upload e o botão "Voltar" copiados (extraídos:
+`useUploadDeImagem`, `BotaoVoltar`); barra de Termos abria mesmo pra
+operador, com "Voltar" pra uma tela que ele não pode abrir (corrigido pra
+exigir `papel === "dono"`); teste da logo com um laço que rodaria zero
+verificações num buffer vazio sem reprovar (`CLAUDE.md` §3 item 4,
+corrigido). Passe 3: o achado de rigor total acima, mais três referências
+desatualizadas (`CLAUDE.md` §4 sem o limite próprio da logo, `CLAUDE.md`
+§8 e `docs/estilo.md` ainda descrevendo Termos-no-modo-Ajustes como
+pendente, um comentário se contradizendo com a própria entrada de
+`docs/especificacao.md` sobre o número da trava não estar aprovado ainda).
+
+**Trava de upload de logo confirmada pelo fundador, 01/09/2026 — 20 por 5
+minutos, mesmo número do comprovante (mesmo perfil de custo).** Pedido dele
+ao confirmar: a mensagem precisa reforçar que a logo atual não mudou, não
+só "espere" — como a logo é trocada raramente, quem esbarra nesta trava
+provavelmente está tentando de novo porque algo deu errado, não por uso
+normal, e a dúvida "será que a logo sumiu?" não pode somar à frustração.
+Mensagem e `docs/especificacao.md` § "Trava de tentativas" ajustados.
+
+**Lacunas registradas, não corrigidas agora** (decisão de domínio do
+Design, ou caso hoje inalcançável) — lista completa em `docs/planos/
+item-10-configuracoes-conta-e-usuarios.md`, "Tarefa 2 — achados do
+`/revisar`": textos novos sem lastro em documento (pílula de logo,
+mensagens de erro, placeholders do formulário); ícone da linha de Termos
+desenhado inline, sem arquivo em `docs/icones/`; fundo branco e tamanho de
+fonte da prévia do cabeçalho, sem tratamento do Design; `logoComoDataUri`
+sem checagem de posse própria (hoje inalcançável — o único chamador já lê
+por `db(empresaId)`); rota de logo e página `/conta` sem teste automatizado
+de HTTP (mesmo limite estrutural do `comprovante/route.ts`, conferido à
+mão contra o servidor de verdade nesta tarefa). "Usuários" e "Minha
+assinatura" não entram em `/conta` ainda — mesmo critério de "nasce só com
+as linhas que têm destino", entram nas Tarefas 4 e no item 13.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` limpos.
+`tests/isolamento/logo.test.ts` (novo, 12/12), `tests/isolamento/
+enviar-comprovante.test.ts`, `tests/isolamento/storage.test.ts`,
+`tests/protecao-de-acoes.test.ts`, `tests/protecao-server-only.test.ts`,
+`tests/documentos/gerador.test.ts`, `tests/empresas.test.ts`,
+`tests/relatorios.test.ts`, `tests/dashboard.test.ts`,
+`tests/sessao-e-papel.test.ts` — todos verdes contra o banco de
+desenvolvimento. Um rerun por instabilidade: `enviar-comprovante.test.ts`
+estourou "Unable to start a transaction" (pool esgotado, mesmo formato já
+catalogado) rodando junto de outros arquivos logo depois de várias
+conexões manuais de verificação; sozinho, passou limpo. Local, contra o
+banco de desenvolvimento — não entra na proporção de reruns da esteira
+(`CLAUDE.md` §2). Verificado também no navegador: conta criada de ponta a
+ponta, upload de logo real via a rota HTTP de verdade (confirma
+`exigirDono()` e o pipeline inteiro), `/conta`/`/mais`/`/termos`
+conferidos em 375px (mobile) sem rolagem horizontal, alvo de toque das
+duas marcas medido por `getBoundingClientRect` (48px e 64px). **Ainda sem
+commit** — achados dos três passes trazidos ao fundador, aguardando decisão
+item a item antes do commit (`CLAUDE.md` §2 item 7).
+
+Próximo: depois da decisão do fundador sobre os achados dos três passes do
+`/revisar` (a trava de logo já foi confirmada, 01/09/2026), commit e push;
+em seguida, Tarefa 3 do item 10 — Configurações: pátio, prazo padrão,
+numeração do relatório.
+
+---
+
+## 31/08/2026 — Diagnóstico do vermelho em `2f91a9c`: quinto formato de novo em `titulos.test.ts`, e a hipótese da conexão por bloco cai
+
+Achado ao rodar `/onde-paramos` nesta sessão: a esteira do commit `2f91a9c`
+("Plano do item 10") tinha `conclusion: "failure"`, sem diagnóstico no
+diário — a entrada seguinte (abaixo, "Tarefa 1 do item 10") só registrou o
+cancelamento de `765ed02`, nunca esta falha.
+
+**O que falhou.** `tests/titulos.test.ts`, `12b. registrarCobrancaEnviadaEmGrupo
+— tudo ou nada (item 7, segundo commit) > um título inválido no meio do
+grupo recusa TODOS — nenhum fica gravado`: `Error: Test timed out in
+30000ms`, sem nenhum erro de driver por baixo — o quinto formato do
+catálogo (`CLAUDE.md` §2), mesmo arquivo do episódio de 29/08 (`1ce8ac8`).
+Suíte inteira: 616 passaram, 1 falhou, 2886s de duração de teste — bem
+acima do normal.
+
+**O commit seguinte (`d59a8b7`, Tarefa 1 do item 10) rodou `success`, com
+muito mais código tocando o mesmo domínio** (migration nova — `Empresa`
+ganha `patio_endereco`/`patio_municipio_id`, tabela `Convite`; serviços
+novos em `empresas.ts` e `usuarios.ts`) — reforça instabilidade, não
+regressão: o mesmo padrão de raciocínio já usado em 27/08 (`11a4654` falhou,
+`748c669`, com mais código, passou limpo).
+
+**O que isso faz com a hipótese da conexão por bloco (`8de7c8a`,
+30/08/2026, "Reabre causa raiz").** Esta é a **segunda** evidência contra
+ela, não a primeira:
+
+1. **Primeira evidência, já existia, só não estava nomeada como tal:**
+   `9f01d69` (30/08/2026) rodou a suíte inteira — `titulos.test.ts` incluído,
+   ainda sem nenhuma correção, com a conexão `raiz` aberta uma vez só para o
+   arquivo inteiro — e passou limpo; só `cobrancas.test.ts` falhou
+   (diagnosticado à parte, entrada "Margem pequena..." abaixo). Se a duração
+   da conexão fosse a causa, esperava-se instabilidade ali também, antes de
+   qualquer correção existir.
+2. **Segunda evidência, esta entrada:** com a correção já aplicada e
+   confirmada verde uma vez (`2f57719`, `success`, suíte inteira incluindo
+   `titulos.test.ts`), o mesmo arquivo voltou a estourar em `2f91a9c`, no
+   mesmo teste de sempre.
+
+**A correção continua valendo por princípio — conexão aberta 19min26s é
+ruim de qualquer jeito, reduz exposição —, mas não resolveu o que se
+esperava dela, e isso precisa estar escrito.** A entrada abaixo ("Pendência
+fechada em 31/08/2026... A esteira confirmou — parou de travar") descrevia
+o estado depois de um único envio verde; esta entrada é a correção: não
+parou. Quem ler "corrigido"/"parou de travar" sem chegar até aqui procura a
+causa raiz no lugar errado.
+
+**Proporção, mesmo método da entrada "Reabre causa raiz" ("2 vermelhos em 5
+envios") — envios completos, cancelamento de rotina (push seguinte supera o
+anterior, `CLAUDE.md` §2) excluído da contagem:**
+
+| Envio | Conclusão |
+|---|---|
+| `1ce8ac8` (29/08) | falha — quinto formato, `titulos.test.ts` |
+| `9f01d69` (30/08) | falha — quinto formato, `cobrancas.test.ts` |
+| `2f57719` (30/08) | sucesso |
+| `2f91a9c` (31/08) | falha — quinto formato, `titulos.test.ts` |
+| `d59a8b7` (31/08) | sucesso |
+
+**3 vermelhos em 5 envios — 60%, bem acima do 1 em 3 que `CLAUDE.md` §2
+define como o ponto em que "o vermelho perdeu significado de novo".** A
+investigação de causa raiz reabre — desta vez **sem** a hipótese de conexão
+por bloco, descartada pelas duas evidências acima. Decisão do fundador,
+nesta sessão: não bloqueia a Tarefa 2 do item 10 (`CLAUDE.md` §2 item 9,
+motivo alheio não trava a próxima tarefa) — fica registrado como achado de
+prioridade alta, retomado depois da Tarefa 2.
+
+Próximo: Tarefa 2 do item 10 — Conta da empresa: dados, logo e as três
+pendências que fecham.
+
+---
+
 ## 31/08/2026 — Tarefa 1 do item 10: Fundamentos — schema e serviços
 
 **Nota sobre o fechamento do item 8 (commit `765ed02`): ficou sem esteira

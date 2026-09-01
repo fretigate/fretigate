@@ -1,9 +1,8 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { fileTypeFromBuffer } from "file-type";
-import libheif from "libheif-js/wasm-bundle";
-import sharp from "sharp";
 import { uuidv7 } from "uuidv7";
+import { reprocessarImagem, TIPOS_PERMITIDOS_IMAGEM } from "@/lib/utils/imagem";
 import { buscarServico, salvarCaminhoComprovante } from "./servicos";
 
 /**
@@ -145,7 +144,9 @@ export async function gerarUrlComprovante(
  *    `sharp` só vem com decodificação de AVIF (`libaom`), nunca com
  *    `libde265`/`x265` (a licença desses dois exige compilar o `libvips`
  *    global à parte). As DUAS etapas do `libheif-js` importam, nessa
- *    ordem — `decodificarHeic`, abaixo:
+ *    ordem — `decodificarHeic`, em `src/lib/utils/imagem.ts` (extraída
+ *    nesta tarefa, item 10 Tarefa 2, quando a logo virou o segundo caso de
+ *    uso do mesmo mecanismo):
  *    a. `decoder.decode(buffer)` só faz o parse do contêiner (dimensões,
  *       lista de imagens) — NÃO aloca os pixels ainda.
  *    b. `imagem.get_width()/get_height()` já estão disponíveis depois de
@@ -237,81 +238,25 @@ export const MENSAGENS_SEGURAS_DE_COMPROVANTE = new Set([
   "Não deu para enviar agora.",
 ]);
 
-const TIPOS_PERMITIDOS = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
-
-/** Generoso o bastante para qualquer foto de celular real, curto o bastante para não deixar uma imagem pequena expandir para gigabytes na decodificação. */
-const LIMITE_PIXELS_ENTRADA = 60_000_000;
-
-const LADO_MAXIMO_PX = 1600;
-const ALVO_BYTES = 300 * 1024;
-const QUALIDADE_INICIAL = 80;
-/** Piso — abaixo disso o resultado fica feio (CLAUDE.md §4). */
-const QUALIDADE_MINIMA = 50;
+const LIMITES_COMPROVANTE = {
+  ladoMaximoPx: 1600,
+  alvoBytes: 300 * 1024,
+  qualidadeInicial: 80,
+  qualidadeMinima: 50,
+};
 
 /**
- * Decodifica HEIC/HEIF em duas etapas — ver o item 3 do comentário acima.
- * Devolve os pixels crus (RGBA) prontos para `sharp({ raw: ... })`. Lança se
- * o arquivo não abrir como HEIC (`imagens.length === 0` — medido nesta
- * tarefa: `libheif-js` não lança exceção para entrada inválida, devolve
- * lista vazia) ou se a dimensão passar do limite.
+ * Casca fina sobre `reprocessarImagem` (`src/lib/utils/imagem.ts`, extraída
+ * nesta tarefa) — só decide o alvo de saída e as mensagens de erro do
+ * comprovante. Ver o item 3-5 do comentário de `enviarComprovante`, abaixo,
+ * para o mecanismo (decodificação HEIC em duas etapas, `.rotate()` antes do
+ * resize, EXIF removido por padrão).
  */
-async function decodificarHeic(buffer: Buffer): Promise<{ width: number; height: number; data: Buffer }> {
-  await libheif.ready;
-  const decoder = new libheif.HeifDecoder();
-  const imagens = decoder.decode(buffer);
-
-  try {
-    if (!imagens.length) throw new Error("Envie uma foto em JPEG, PNG, WEBP ou HEIC.");
-
-    const imagem = imagens[0];
-    const width = imagem.get_width();
-    const height = imagem.get_height();
-    if (width * height > LIMITE_PIXELS_ENTRADA) {
-      throw new Error("Imagem grande demais.");
-    }
-
-    const resultado = await new Promise<{ data: Uint8ClampedArray; width: number; height: number }>(
-      (resolve, reject) => {
-        imagem.display({ data: new Uint8ClampedArray(width * height * 4), width, height }, (saida) => {
-          if (!saida) return reject(new Error("Não deu para abrir a imagem."));
-          resolve(saida);
-        });
-      },
-    );
-
-    return {
-      width,
-      height,
-      data: Buffer.from(resultado.data.buffer, resultado.data.byteOffset, resultado.data.byteLength),
-    };
-  } finally {
-    for (const imagem of imagens) imagem.free();
-    decoder.decoder.delete();
-  }
-}
-
 async function reprocessarComprovante(entrada: Buffer, mimeDetectado: string): Promise<Buffer> {
-  const origemSharp =
-    mimeDetectado === "image/heic" || mimeDetectado === "image/heif"
-      ? await decodificarHeic(entrada).then(({ width, height, data }) => ({
-          buffer: data,
-          opcoes: { raw: { width, height, channels: 4 as const }, limitInputPixels: LIMITE_PIXELS_ENTRADA },
-          aplicarRotate: false,
-        }))
-      : { buffer: entrada, opcoes: { limitInputPixels: LIMITE_PIXELS_ENTRADA }, aplicarRotate: true };
-
-  async function recodificar(qualidade: number): Promise<Buffer> {
-    let pipeline = sharp(origemSharp.buffer, origemSharp.opcoes);
-    if (origemSharp.aplicarRotate) pipeline = pipeline.rotate();
-    return pipeline
-      .resize({ width: LADO_MAXIMO_PX, height: LADO_MAXIMO_PX, fit: "inside", withoutEnlargement: true })
-      .jpeg({ quality: qualidade })
-      .toBuffer();
-  }
-
-  const primeiraPassada = await recodificar(QUALIDADE_INICIAL);
-  if (primeiraPassada.length <= ALVO_BYTES) return primeiraPassada;
-  return recodificar(QUALIDADE_MINIMA);
+  return reprocessarImagem(entrada, mimeDetectado, LIMITES_COMPROVANTE, {
+    tipoInvalido: "Envie uma foto em JPEG, PNG, WEBP ou HEIC.",
+    imagemGrande: "Imagem grande demais.",
+  });
 }
 
 /**
@@ -332,7 +277,7 @@ export async function enviarComprovante(
   }
 
   const tipo = await fileTypeFromBuffer(arquivo);
-  if (!tipo || !TIPOS_PERMITIDOS.has(tipo.mime)) {
+  if (!tipo || !TIPOS_PERMITIDOS_IMAGEM.has(tipo.mime)) {
     throw new Error("Envie uma foto em JPEG, PNG, WEBP ou HEIC.");
   }
 

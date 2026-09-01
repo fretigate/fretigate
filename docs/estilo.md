@@ -277,8 +277,31 @@ pendência. As duas reaproveitam o valor do protótipo por ser o precedente
 mais próximo, mesmo padrão já usado nos casos acima; fica registrado até o
 Design formalizar.
 
-**A mesma tarefa também deixou três tamanhos de fonte e um uso de cor sem
-confirmação — achado do segundo `/revisar`.** A linha de comparação do
+**Mesma lacuna, sétimo caso: a escala da prévia do cabeçalho do relatório em
+Conta da empresa (item 10, Tarefa 2, 31/08/2026).** `page.tsx` usa `zoom:
+ESCALA_PREVIA` (`0.4`), não `transform: scale()` — corrigido no segundo
+passe do `/revisar`: a primeira versão escalava por `transform` dentro de
+uma caixa de altura FIXA chutada (`150px`) com `overflow:hidden`, que
+cortaria conteúdo real (razão social comprida, contato com duas linhas),
+contra `CLAUDE.md` §8. `zoom` encolhe a própria caixa de layout, não só a
+pintura — sem altura chutada, sem corte. Nenhuma linha desta tabela cobre
+miniatura de documento fora da tela "Documento A4" (que já tem a própria
+escala, `0.466`, documentada em § Impresso, e ali a técnica de
+`transform`+altura fixa é certa, porque a página A4 inteira TEM altura
+fixa). `0.4` calculado contra o menor viewport que o projeto testa
+(`375px`), não contra os `480px` do `max-w` — achado no navegador: a
+primeira tentativa (`0.55`) cabia nos 480px mas estourava a largura em
+375px, criando rolagem horizontal na página. Nem a escala nem a técnica
+`zoom` estão citadas em documento nenhum do Design; fica registrado até o
+Design formalizar uma prévia própria para esta tela. A cor de fundo branca
+da caixa (`#FFFFFF`, exclusiva do impresso na tabela de Cores) e o
+`text-[16px]` do círculo de 56px de `UploadLogo.tsx` somam à mesma lacuna —
+ver `docs/planos/item-10-configuracoes-conta-e-usuarios.md`, "Tarefa 2 —
+achados do `/revisar`".
+
+**De volta à Tarefa 2 do item 8 (dashboard, não a do item 10 acima) — a
+mesma tarefa também deixou três tamanhos de fonte e um uso de cor sem
+confirmação, achado do segundo `/revisar` daquela tarefa.** A linha de comparação do
 cartão escuro ("12% · 8 fretes · média R$…") usa `14px/700` (a única fonte
 é o protótipo, mesma célula "Comparação"); o círculo de iniciais da
 dashboard (30px) usa `12px/700`; o rótulo do mês sob cada barra usa `11px/600`.
@@ -316,10 +339,11 @@ nova sem barra entra por decisão explícita, não por analogia. As duas
 últimas entraram na tarefa 8, fatia 2 (07/08/2026) — mesma razão das
 anteriores, telas de fora de sessão.
 
-Termos no **modo Ajustes** não está nesta lista — é dentro da sessão e, na
-regra final, ganha barra. Mas Ajustes ainda não existe, e sem Ajustes não há
-barra para reservar folga contra: até lá, os dois modos de `/termos` usam a
-mesma margem provisória do modo cadastro (CLAUDE.md §8, mesma nota).
+Termos no **modo Ajustes** não está nesta lista — é dentro da sessão e ganha
+barra. **Resolvido no item 10, Tarefa 2**: Ajustes existe agora (`/conta`,
+dentro de Mais), e o modo "vindo de Ajustes" de `/termos` ganhou
+`<BarraDeNavegacao />` de verdade e a folga de rolagem padrão — os dois
+modos não dividem mais a margem provisória do modo cadastro.
 
 **Lacuna aberta — "margem inferior padrão" ainda não é um valor formal
 desta folha.** A tela Criar conta (`src/app/(auth)/criar-conta/page.tsx`)

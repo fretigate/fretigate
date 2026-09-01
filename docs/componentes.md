@@ -226,7 +226,7 @@ A barra de navegação é permanente **dentro** da sessão. Fora dela, não exis
 
 **Sem barra:** Entrar · Criar conta · Esqueci a senha (e o estado **Recuperação enviada**, mesma rota) · Redefinir senha (e o estado **Redefinir senha — link expirado**, mesma rota) · Termos **vindo do cadastro** · Aceitar convite. As seis rotas são as do `CLAUDE.md` §8 — lista fechada, tela nova sem barra entra aqui só com decisão explícita, não por analogia; os dois estados citados entre parênteses não contam como rota nova, porque `TelaRedefinirSenha` e `PedidoDeRecuperacao` já documentam os dois como estados de um componente só, não telas.
 
-**Com barra:** todo o resto. Termos **vindo de Ajustes**, na regra final, também ganha barra — mas Ajustes ainda não existe, então os dois modos de `/termos` usam por enquanto a mesma margem provisória do modo cadastro, sem barra nenhuma para reservar folga contra. Não é o valor final do modo Ajustes; corrigir quando Ajustes for construído.
+**Com barra:** todo o resto. Termos **vindo de Ajustes** também ganha barra — resolvido no item 10, Tarefa 2: Ajustes agora existe (`/conta`, dentro de Mais), e é de lá que o modo "vindo de Ajustes" de `/termos` passou a ganhar `<BarraDeNavegacao />` de verdade e a folga de rolagem padrão, em vez da margem provisória sem barra que os dois modos dividiam antes.
 
 A distinção não é a tela, é a **origem**: o mesmo componente de Termos aparece dos dois jeitos, e quem decide é a prop `origem`. Nenhuma tela fora de sessão reserva a folga de rolagem de `138px` — sem barra, o conteúdo termina no respiro normal de `40px`.
 
@@ -483,12 +483,12 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Configurações | sem principal · linhas de OPERAÇÃO e MENSAGENS abrem os dois modelos |
 | Modelo de cobrança | principal **Salvar modelo** · chips de variável {cliente} {valor} {vencimento} {rota} {empresa} · prévia abaixo do campo |
 | Modelo de ordem de serviço | principal **Salvar modelo** · chips {motorista} {cliente} {carga} {origem} {destino} {data} — **sem {valor}**, o motorista não vê o preço |
-| Conta da empresa | principal **Salvar dados** · linhas para Usuários, Minha assinatura e Termos · prévia do cabeçalho do relatório · texto destrutiva **Sair da conta** |
+| Conta da empresa | principal **Salvar dados** · linhas para Usuários, Minha assinatura e Termos · prévia do cabeçalho do relatório · texto destrutiva **Sair da conta**. **Construído no item 10, Tarefa 2: só a linha Termos tem destino hoje** — Usuários (`/conta/usuarios`) é a Tarefa 4; Minha assinatura é o item 13. Mesmo critério de "nasce só com as linhas que têm destino" já usado em Mais; entram quando as telas nascerem |
 | Usuários — lista | sem principal · pílula de cabeçalho **+ Convidar** · pílulas em linha **Reenviar** e **Ver o que ela recebe** · texto destrutiva **Cancelar** no convite pendente |
 | Usuários — convite | principal **Mandar convite no WhatsApp** · prévia da mensagem |
 | Usuários — detalhe | texto destrutiva **Remover acesso**, visível só para o dono; o acesso do dono não é removível |
 | Aceitar convite | principal **Entrar na conta** · texto neutra **Não conheço essa empresa** · sem barra de navegação: quem abre ainda não está dentro do app |
-| Mais | sem principal · cartão de identidade tocável · pílula em linha **Assinar e liberar a frota** no plano gratuito · texto destrutiva **Sair da conta** |
+| Mais | sem principal · cartão de identidade tocável (item 10, Tarefa 2: só para o dono — leva a Conta da empresa, que exige dono; operador vê o mesmo cartão sem link) · pílula em linha **Assinar e liberar a frota** no plano gratuito · texto destrutiva **Sair da conta** |
 | Novidades — lista | sem principal · linha não lida em lilás com ponto; lida volta ao claro |
 | Novidades — detalhe | no máximo **uma** ação por mensagem, como principal |
 | Entrar | **marca no topo** (provisória, pendente do Design — a lacuna e o que falta ele definir estão em `docs/estilo.md`) · campos **E-MAIL** e **SENHA** (com **revelar**, decisão do fundador em 12/08/2026 — mesma variante de Redefinir senha) · principal **Entrar**, com estado carregando · secundária **Criar conta** · texto neutra **Esqueci a senha**. Login é e-mail e senha; o app **nunca** envia mensagem sozinho, então não existe código por WhatsApp aqui |

@@ -64,19 +64,25 @@ function circuloIniciais(nome: string): string {
   return `<span style="display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:999px;border:${FIO_FORTE};flex:none;font:700 16px/1 ${FONTE_ARCHIVO};letter-spacing:.02em;color:${TINTA_PRINCIPAL}">${escaparHtml(iniciais(nome))}</span>`;
 }
 
+export type CabecalhoDocumentoA4Props = {
+  empresa: CabecalhoEmpresaDocumento;
+  titulo: string;
+  numero: string;
+  emissao: string;
+};
+
 // O "Nº {numero}" sai em Azeret Mono, não Archivo — mesma regra da placa do
 // caminhão (`docs/estilo.md` § Impresso, "Número do documento"): número
 // identificador, lido caractere por caractere e citado por telefone ("o
 // relatório 12"), não texto corrido. Decisão do fundador, achado do
 // `/revisar` na Tarefa 2 do item 7, 28/08/2026.
-export function montarMoldeDocumentoA4({
-  empresa,
-  titulo,
-  numero,
-  emissao,
-  notaDeRodape,
-  corpoHtml,
-}: MoldeDocumentoA4Props): string {
+//
+// **Extraída de `montarMoldeDocumentoA4` no item 10, Tarefa 2** — a "prévia
+// do cabeçalho do relatório" da tela Conta da empresa
+// (`src/app/(app)/conta/page.tsx`) reaproveita esta função direto, sem
+// corpo/rodapé nenhum: "componente existe uma vez" (`CLAUDE.md` §8) vale
+// para marcação de documento igual vale para tela.
+export function montarCabecalhoDocumentoA4({ empresa, titulo, numero, emissao }: CabecalhoDocumentoA4Props): string {
   const logoOuIniciais = empresa.logoUrl
     ? `<img src="${escaparHtml(empresa.logoUrl)}" alt="" style="width:46px;height:46px;border-radius:999px;object-fit:cover;flex:none">`
     : circuloIniciais(empresa.nome);
@@ -89,8 +95,7 @@ export function montarMoldeDocumentoA4({
           .join("<br>")}</span>`
       : "";
 
-  return `<div style="width:794px;height:1123px;box-sizing:border-box;padding:64px 56px;background:#FFFFFF;color:${TINTA_PRINCIPAL};font-family:${FONTE_ARCHIVO};display:flex;flex-direction:column">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:32px;padding-bottom:22px;border-bottom:${FIO_FORTE}">
+  return `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:32px;padding-bottom:22px;border-bottom:${FIO_FORTE}">
       <div style="display:flex;align-items:center;gap:14px;min-width:0">
         ${logoOuIniciais}
         <div style="min-width:0;display:flex;flex-direction:column;gap:5px">
@@ -103,7 +108,19 @@ export function montarMoldeDocumentoA4({
         <span style="font:500 13px/1.4 ${FONTE_AZERET_MONO};color:${TINTA_APOIO}">Nº ${escaparHtml(numero)}</span>
         <span style="font:400 12px/1.4 ${FONTE_ARCHIVO};color:${TINTA_APOIO}">Emitido em ${escaparHtml(emissao)}</span>
       </div>
-    </div>
+    </div>`;
+}
+
+export function montarMoldeDocumentoA4({
+  empresa,
+  titulo,
+  numero,
+  emissao,
+  notaDeRodape,
+  corpoHtml,
+}: MoldeDocumentoA4Props): string {
+  return `<div style="width:794px;height:1123px;box-sizing:border-box;padding:64px 56px;background:#FFFFFF;color:${TINTA_PRINCIPAL};font-family:${FONTE_ARCHIVO};display:flex;flex-direction:column">
+    ${montarCabecalhoDocumentoA4({ empresa, titulo, numero, emissao })}
     ${corpoHtml}
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:24px;padding-top:20px">
       <span style="font:400 11px/1.4 ${FONTE_ARCHIVO};color:${TINTA_TERCIARIA}">${escaparHtml(notaDeRodape)}</span>

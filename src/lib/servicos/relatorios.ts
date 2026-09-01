@@ -5,6 +5,7 @@ import { buscarCliente } from "@/lib/servicos/clientes";
 import { faturarServico } from "@/lib/servicos/titulos";
 import { gerarDocumento } from "@/lib/documentos/gerador";
 import { assinarUrlRelatorio } from "@/lib/documentos/armazenamento";
+import { logoComoDataUri } from "@/lib/servicos/logo";
 import {
   diaEmFortaleza,
   formatarDataNumerica,
@@ -500,10 +501,20 @@ async function montarDadosDocumentoRelatorio(
     ? `${tipoDocumento(cliente.documento) === "cnpj" ? "CNPJ" : "CPF"} ${formatarDocumento(cliente.documento)}`
     : null;
 
+  // A logo embute como `data:` URI, nunca a URL/caminho crus — o Chromium
+  // do gerador (`src/lib/documentos/gerador.ts`) não tem acesso a rede, e a
+  // mesma marcação alimenta a prévia em tela (`buscarDadosParaPreviaDocumento`,
+  // abaixo), então um só ponto de conversão serve os dois (`CLAUDE.md` §8).
+  // Achado do item 10, Tarefa 2: até esta tarefa `logo_url` era sempre nulo
+  // (nenhuma tela gravava logo ainda), então este `<img src>` nunca chegou a
+  // quebrar — mas gravar a URL/caminho crus aqui já era o defeito, só ainda
+  // sem sintoma.
+  const logoDataUri = empresa.logo_url ? await logoComoDataUri(empresa.logo_url) : null;
+
   return {
     numero: formatarNumeroRelatorio(relatorio.numero),
     emissao: formatarDataPorExtenso(diaEmFortaleza(relatorio.gerado_em)),
-    empresa: { nome: nomeDoDocumento, linhaDados, linhaContato, logoUrl: empresa.logo_url },
+    empresa: { nome: nomeDoDocumento, linhaDados, linhaContato, logoUrl: logoDataUri },
     notaDeRodape: `Documento emitido por ${nomeDoDocumento} · confira os valores e fale com a gente em caso de divergência.`,
     corpo: {
       cliente: cliente.nome,

@@ -328,3 +328,46 @@ produto, não só na função de auth isolada.
   inofensivo; mas se algo um dia arquivar uma linha, ela continuaria
   aceitável pelo token. Registrado para quando essa lacuna deixar de ser
   hipotética (mesmo critério do `CLAUDE.md` §2 sobre estado novo).
+
+### Tarefa 2 — achados do `/revisar`, registrados
+
+- **Textos novos de Conta da empresa sem lastro em documento** — "Adicionar
+  logo"/"Trocar logo" (pílula em linha, mesmo tratamento de "Anexar
+  comprovante"), as mensagens de `logo.ts`/`route.ts` ("Envie uma imagem em
+  JPEG, PNG, WEBP ou HEIC.", "Só o dono da empresa pode trocar a logo.",
+  "Muitos envios seguidos por aqui..."), e os seis placeholders de
+  `FormularioContaDaEmpresa.tsx`. `docs/componentes.md:486` não lista o
+  botão de logo entre o inventário de "Conta da empresa". Mesmo padrão de
+  inferência-pendente-do-Design já usado nas tarefas anteriores.
+- **Ícone da linha "Termos" em Conta da empresa é provisório, desenhado
+  inline** — não existe arquivo em `docs/icones/` para ele (comentário no
+  código, `conta/page.tsx`). Rótulo da linha ("Termos e privacidade", ajustado
+  para bater com o `<h1>` da própria tela de Termos) também não está fixado
+  em nenhum documento — `docs/componentes.md:486` só diz "Termos".
+- **A caixa branca da prévia do cabeçalho (`bg-white`, `rounded-campo`,
+  `p-16`) não tem tratamento definido pelo Design** — `docs/estilo.md`
+  registra só a escala (`0.4`) como lacuna; a tabela de Cores marca
+  `#FFFFFF` como "exclusivo do impresso", e esta é a primeira miniatura de
+  documento dentro de uma tela comum (fora de "Documento A4"). Círculo de
+  56px de `UploadLogo.tsx` também usa `text-[16px]` sem essa combinação
+  (56px/16px) estar na tabela de Tipografia.
+- **`logoComoDataUri(caminho)` baixa qualquer caminho do balde `logos` com
+  `service_role`, sem conferir a que empresa o prefixo pertence** —
+  diferente de `gerarUrlComprovante`, que confere posse antes de assinar.
+  Hoje é inalcançável por entrada não confiável: o único chamador
+  (`relatorios.ts`) sempre passa `Empresa.logo_url`, já lido por
+  `db(empresaId)` — a função nunca recebe `caminho` de fora do servidor.
+  Registrado para o dia em que um segundo chamador aparecer.
+- **Rota `src/app/api/conta/logo/route.ts` sem teste próprio** — mesmo
+  limite estrutural de `comprovante/route.ts` (nunca teve um: rota de API
+  não é testável direto no Vitest do mesmo jeito que Server Action, por
+  causa de `next/headers()`). `exigirDono()`/a trava foram conferidos
+  manualmente contra o servidor de verdade nesta tarefa (pedido HTTP real,
+  200 autenticado como dono), não por suíte automatizada.
+- ~~"Trocar a logo da empresa" (20 por 5 minutos) reaproveita o número do
+  comprovante, ainda sem confirmação do fundador~~ — **confirmado pelo
+  fundador, 01/09/2026** (mesmo perfil de custo do comprovante). A mensagem
+  da trava foi ajustada por pedido dele: reforça que a logo atual não mudou,
+  não só "espere" — logo é trocada raramente, então quem esbarra nesta
+  trava provavelmente está tentando de novo por algo ter dado errado, não
+  por uso normal.

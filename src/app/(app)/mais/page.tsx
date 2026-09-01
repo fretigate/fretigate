@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { exigirSessao } from "@/lib/auth/sessao";
 import { db } from "@/lib/db";
 import { listarClientes } from "@/lib/servicos/clientes";
@@ -28,9 +29,28 @@ import { BotaoSairDaConta } from "../BotaoSairDaConta";
  * "nunca 'Relatório' sozinho" — sem checar que os dois já estavam
  * documentados).
  *
- * O nome da empresa também não é tocável ainda: o cartão de identidade
- * (`docs/componentes.md` linha 392) leva à tela de Conta, que é item 10 e
- * não existe. Vira o cartão de verdade quando essa tela nascer.
+ * **Seção AJUSTES nasceu no item 10, Tarefa 2** — "Conta da empresa", ícone
+ * `conta.svg` (`docs/componentes.md` linha 282, já previsto desde 09/08 —
+ * o rótulo da linha é o mesmo daquela linha, "Conta da empresa", não só
+ * "Conta"; achado do `/revisar`, mesma regra já citada acima para
+ * "Relatório do cliente"), visível só para o dono (decisão 1 do plano: as
+ * telas de Ajustes mexem em identidade e regra financeira da empresa). Um
+ * operador nunca vê a seção — não é só esconder o link, é que `/conta` e
+ * `/configuracoes` recusam quem não é dono (`exigirDono()`), então mostrar a
+ * linha pra quem não pode entrar seria a mesma falha que `CLAUDE.md` §8 já
+ * proíbe. **"Configurações" ainda não entra** — mesmo critério de "nasce só
+ * com as linhas que têm destino": a tela é a Tarefa 3, ainda não construída.
+ * Entra nesta mesma seção quando a Tarefa 3 nascer.
+ *
+ * **O cartão de identidade (nome da empresa, no topo) também virou tocável
+ * para o dono nesta tarefa** — `docs/componentes.md` linha 491 ("Mais |
+ * ... cartão de identidade tocável") e `docs/navegacao.md`, linha Mais
+ * ("Cartão de identidade → Conta"). Achado do `/revisar`: o comentário
+ * antigo ("o nome da empresa também não é tocável ainda... vira o cartão de
+ * verdade quando essa tela nascer") tinha sido apagado sem o código
+ * correspondente ter sido escrito — a tela (`/conta`) já existe desde este
+ * mesmo commit. Continua não-tocável para o operador, mesma razão da seção
+ * AJUSTES.
  */
 export default async function Pagina() {
   const sessao = await exigirSessao();
@@ -75,9 +95,20 @@ export default async function Pagina() {
         paddingBottom: "var(--folga-rolagem)",
       }}
     >
-      <p className="text-nome-empresa font-extrabold text-tinta">
-        {empresa?.nome_fantasia}
-      </p>
+      {sessao.papel === "dono" ? (
+        // `min-h-48 flex items-center`, não o truque de padding+margem
+        // negativa do cartão escuro da dashboard (`(app)/page.tsx`) —
+        // achado do `/revisar`, medido: só texto (sem o círculo de 30px que
+        // dá altura lá) rende ~22px de linha, e um padding calculado para
+        // aquele caso deixava este com ~40px de alvo, abaixo do mínimo de
+        // 48px do `CLAUDE.md` §8. `min-h-48` garante o alvo não importa a
+        // métrica exata da fonte.
+        <Link href="/conta" className="-my-3 flex min-h-48 items-center self-start">
+          <p className="text-nome-empresa font-extrabold text-tinta">{empresa?.nome_fantasia}</p>
+        </Link>
+      ) : (
+        <p className="text-nome-empresa font-extrabold text-tinta">{empresa?.nome_fantasia}</p>
+      )}
 
       <div className="flex flex-col gap-6">
         <span className="px-4 pb-2 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
@@ -113,6 +144,19 @@ export default async function Pagina() {
           <path d="M5.16 6.24h13.68v9.18a0.9 0.9 0 0 1 -0.9 0.9H6.06a0.9 0.9 0 0 1 -0.9 -0.9V6.24ZM8.04 9.3h7.92M8.04 12.36h4.5" />
         </ItemMenu>
       </div>
+
+      {sessao.papel === "dono" ? (
+        <div className="flex flex-col gap-6">
+          <span className="px-4 pb-2 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
+            Ajustes
+          </span>
+          {/* `docs/icones/conta.svg` — `docs/componentes.md` linha 282. */}
+          <ItemMenu href="/conta" nome="Conta da empresa">
+            <path d="M5.34 10.2 12 5.34 18.66 10.2v8.1a0.36 0.36 0 0 1 -0.36 0.36H5.7a0.36 0.36 0 0 1 -0.36 -0.36V10.2Z" />
+            <path d="M9.84 18.66v-4.68h4.32v4.68" />
+          </ItemMenu>
+        </div>
+      ) : null}
 
       <form action={sairDaConta}>
         <BotaoSairDaConta />

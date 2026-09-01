@@ -683,7 +683,15 @@ O risco não é vírus — é arquivo que o navegador executa.
   declarado pelo cliente.
 - Rejeitar acima de **10 MB** e acima de um limite de dimensão **antes de abrir
   o arquivo** — imagem pequena pode expandir para gigabytes na memória.
-- **Comprimir**: maior lado em 1600px, alvo de ~300 KB.
+- **Comprimir**: maior lado em 1600px, alvo de ~300 KB — vale para o
+  comprovante. **A logo da empresa tem limite próprio, menor** (item 10,
+  Tarefa 2, decisão do fundador, 31/08/2026): maior lado **480px**, alvo
+  **~80 KB** — ela embute como `data:` URI dentro do PDF do relatório
+  (`src/lib/servicos/logo.ts`, `logoComoDataUri`), e um payload maior infla
+  o HTML que o Chromium do gerador precisa montar a cada geração; a maior
+  exibição do produto para a logo é 56px (Conta e no convite), então 480px
+  já é generoso. O mecanismo de reprocessamento é um só,
+  `src/lib/utils/imagem.ts` — só o alvo de saída muda por caso de uso.
 - **Remover metadados EXIF.** Isso é privacidade, não só segurança: foto de
   celular carrega coordenada de GPS do motorista.
 - Nome de arquivo aleatório, nunca o do usuário.
@@ -997,13 +1005,13 @@ Vieram de defeitos reais encontrados nos protótipos. São obrigatórias.
   originais: são telas de fora de sessão, sem app shell nenhum para reservar
   folga contra.
 
-  **Termos no modo Ajustes é caso à parte, não coberto por esta lista.** A
-  regra final é: aquele modo é dentro da sessão, então ganha barra — mas
-  Ajustes ainda não existe, e sem Ajustes não existe barra nenhuma para
-  reservar folga contra. Até Ajustes nascer, os dois modos de `/termos`
-  usam a mesma margem provisória do modo cadastro, por não ter escolha —
-  **não é o valor final do modo Ajustes**, é o que sobra enquanto a barra não
-  existe. Corrigir quando Ajustes for construído.
+  **Termos no modo Ajustes era caso à parte — resolvido no item 10, Tarefa 2
+  (31/08/2026).** Ajustes existe agora (`/conta`, dentro de Mais, só para o
+  dono), e o modo "vindo de Ajustes" de `/termos` ganhou
+  `<BarraDeNavegacao />` de verdade e a folga de rolagem padrão — os dois
+  modos não dividem mais a margem provisória do modo cadastro. A barra só
+  aparece com sessão de dono (mesma condição de `/conta`); qualquer outro
+  caso (sem sessão, ou operador) cai no modo de leitura sem barra.
 - **Área segura** = a do dispositivo + 8px. Nenhum conteúdo sob a barra de
   status ou a ilha dinâmica.
 - **Três superfícies, três significados** — nunca compartilham tratamento:
@@ -1804,6 +1812,15 @@ Não invente resposta. Pergunte.
   estado envelhece calado"). O PDF do relatório soma ao mesmo problema — mais
   um tipo de arquivo crescendo sem teto — e não tem o problema do objeto
   órfão (um relatório nunca é regravado, cada geração é um arquivo novo).
+
+  **Terceiro escritor em 31/08/2026** (item 10, Tarefa 2, achado do
+  `/revisar`): a logo da empresa (`src/lib/servicos/logo.ts`, `enviarLogo`,
+  balde `logos`). **Tem o mesmo problema do objeto órfão que o comprovante**
+  — diferente do relatório: trocar a logo não apaga o caminho antigo (§7,
+  mesmo raciocínio de `enviarComprovante`), medido em
+  `tests/isolamento/logo.test.ts`. Soma ao mesmo teto ausente; arquivo bem
+  menor por envio (~80 KB, contra ~300 KB do comprovante), mas mais um
+  escritor sem trava nenhuma.
 - **Modelo de IA da importação** — testar a extração com o material real do
   usuário antes de escolher. Decidir por acerto, não por preço: a diferença de
   custo entre os candidatos é inferior a 2% da receita por cliente.

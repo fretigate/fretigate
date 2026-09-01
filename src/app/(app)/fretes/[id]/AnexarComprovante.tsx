@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
-import { useRouter } from "next/navigation";
 import { PilulaEmLinha } from "@/components/ui/PilulaEmLinha";
 import { AvisoDoSistema } from "@/components/ui/AvisoDoSistema";
+import { useUploadDeImagem } from "@/lib/utils/useUploadDeImagem";
 
 /**
  * Pílula em linha para anexar comprovante — detalhe do frete, entre os
@@ -16,6 +15,13 @@ import { AvisoDoSistema } from "@/components/ui/AvisoDoSistema";
  * `<input type="file">` nativo por trás, escondido — é a folha do próprio
  * sistema (câmera/galeria) quem decide como escolher a foto, não este
  * componente.
+ *
+ * A orquestração do envio (limpeza do `<input>`, `fetch`, erro,
+ * `router.refresh()`) mora em `useUploadDeImagem` (`src/lib/utils/
+ * useUploadDeImagem.ts`), extraída no item 10, Tarefa 2 quando
+ * `UploadLogo.tsx` (logo da empresa) virou o segundo caso de uso do mesmo
+ * mecanismo — achado do `/revisar`, `CLAUDE.md` §8 ("Proibido copiar
+ * componente").
  *
  * `urlAssinada` vem do servidor (`gerarUrlComprovante`,
  * `src/lib/servicos/comprovantes.ts`), gerada de novo a cada carregamento
@@ -48,41 +54,9 @@ type Props = {
 const TIPOS_ACEITOS = "image/jpeg,image/png,image/webp,image/heic,image/heif";
 
 export function AnexarComprovante({ servicoId, urlAssinada }: Props) {
-  const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [enviando, setEnviando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-
-  async function aoEscolherArquivo(evento: ChangeEvent<HTMLInputElement>) {
-    const arquivo = evento.target.files?.[0];
-    // Limpa o valor já aqui — sem isto, escolher o MESMO arquivo de novo
-    // depois de um erro não dispara `onChange` (o navegador só notifica
-    // troca de valor), e a pessoa ficaria sem jeito de tentar de novo com a
-    // mesma foto.
-    evento.target.value = "";
-    if (!arquivo) return;
-
-    setEnviando(true);
-    setErro(null);
-    try {
-      const formData = new FormData();
-      formData.append("arquivo", arquivo);
-      const resposta = await fetch(`/api/fretes/${servicoId}/comprovante`, {
-        method: "POST",
-        body: formData,
-      });
-      const corpo: { erro?: string } | null = await resposta.json().catch(() => null);
-      if (!resposta.ok) {
-        setErro(corpo?.erro ?? "Não deu para enviar agora.");
-        return;
-      }
-      router.refresh();
-    } catch {
-      setErro("Não deu para enviar agora.");
-    } finally {
-      setEnviando(false);
-    }
-  }
+  const { inputRef, enviando, erro, setErro, aoEscolherArquivo } = useUploadDeImagem(
+    `/api/fretes/${servicoId}/comprovante`,
+  );
 
   return (
     <div className="flex flex-col gap-10">
