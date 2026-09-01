@@ -17,10 +17,12 @@ const marca = process.hrtime.bigint().toString(16).slice(-8);
 
 let raiz: Client;
 const empresasParaLimpar: string[] = [];
-let umMunicipioId: number;
+
+/** Fortaleza/CE — codigo_ibge fixo, mesmo usado em `tests/servicos.test.ts` para resolução sem ambiguidade. */
+const FORTALEZA = 2304400;
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 15;
+const CONFERENCIAS_ESPERADAS = 20;
 
 async function criarEmpresaDeTeste(sufixo: string): Promise<string> {
   const id = randomUUID();
@@ -43,11 +45,11 @@ function comDigitoErrado(documento: string): string {
 beforeAll(async () => {
   raiz = new Client({ connectionString: process.env.DIRECT_URL });
   await raiz.connect();
-  const { rows } = await raiz.query<{ codigo_ibge: number }>(
-    `SELECT codigo_ibge FROM "municipio" LIMIT 1`,
+  const { rows } = await raiz.query(
+    `SELECT 1 FROM "municipio" WHERE codigo_ibge = $1`,
+    [FORTALEZA],
   );
   if (!rows[0]) throw new Error("Seed de municípios ausente — rode `npm run seed:municipios`.");
-  umMunicipioId = rows[0].codigo_ibge;
 });
 
 afterAll(async () => {
@@ -144,16 +146,38 @@ describe("2. atualizarContaDaEmpresa", () => {
 });
 
 describe("3. atualizarConfiguracoes", () => {
-  it("grava pátio (endereço + município) e prazo padrão", async () => {
+  it("grava pátio (endereço, com município resolvido do próprio texto) e prazo padrão", async () => {
     const empresaId = await criarEmpresaDeTeste("g");
     const config = await atualizarConfiguracoes(empresaId, {
-      patioEndereco: "Av. do Pátio, 456",
-      patioMunicipioId: umMunicipioId,
+      patioEndereco: "Fortaleza",
       prazoPadraoDias: 30,
     });
-    expect(config.patio_endereco).toBe("Av. do Pátio, 456");
-    expect(config.patio_municipio_id).toBe(umMunicipioId);
+    expect(config.patio_endereco).toBe("Fortaleza");
+    // Nunca entrada externa — nasce só de resolverMunicipio rodando sobre o
+    // próprio patioEndereco (item 10, Tarefa 3, decisão do fundador).
+    expect(config.patio_municipio_id).toBe(FORTALEZA);
     expect(config.prazo_padrao_dias).toBe(30);
+    conferencias++;
+  });
+
+  it("pátio com texto ambíguo grava o texto e não chuta um município", async () => {
+    // "Bom Jesus" existe em PI, RN, PB, SC e RS — mesmo caso de
+    // `tests/municipios.test.ts`. Nunca bloqueia o salvar (`docs/
+    // especificacao.md` §6), mas também nunca resolve para um dos vários.
+    const empresaId = await criarEmpresaDeTeste("g2");
+    const config = await atualizarConfiguracoes(empresaId, { patioEndereco: "Bom Jesus" });
+    expect(config.patio_endereco).toBe("Bom Jesus");
+    expect(config.patio_municipio_id).toBeNull();
+    conferencias++;
+  });
+
+  it("pátio com texto que não resolve continua salvando, com município nulo", async () => {
+    const empresaId = await criarEmpresaDeTeste("g3");
+    const config = await atualizarConfiguracoes(empresaId, {
+      patioEndereco: "Cidade Que Nao Existe Em Lugar Nenhum",
+    });
+    expect(config.patio_endereco).toBe("Cidade Que Nao Existe Em Lugar Nenhum");
+    expect(config.patio_municipio_id).toBeNull();
     conferencias++;
   });
 
@@ -163,6 +187,31 @@ describe("3. atualizarConfiguracoes", () => {
     const config = await atualizarConfiguracoes(empresaId, { patioEndereco: "Só o pátio" });
     expect(config.patio_endereco).toBe("Só o pátio");
     expect(config.prazo_padrao_dias).toBe(20);
+    conferencias++;
+  });
+
+  it("prazo padrão aceita os dois limites da faixa — 0 e 90", async () => {
+    const empresaId = await criarEmpresaDeTeste("faixa1");
+    const zero = await atualizarConfiguracoes(empresaId, { prazoPadraoDias: 0 });
+    expect(zero.prazo_padrao_dias).toBe(0);
+    const noventa = await atualizarConfiguracoes(empresaId, { prazoPadraoDias: 90 });
+    expect(noventa.prazo_padrao_dias).toBe(90);
+    conferencias++;
+  });
+
+  it("prazo padrão recusa abaixo do mínimo, com a faixa na mensagem", async () => {
+    const empresaId = await criarEmpresaDeTeste("faixa2");
+    await expect(atualizarConfiguracoes(empresaId, { prazoPadraoDias: -1 })).rejects.toThrow(
+      "entre 0 e 90 dias",
+    );
+    conferencias++;
+  });
+
+  it("prazo padrão recusa acima do máximo, com a faixa na mensagem", async () => {
+    const empresaId = await criarEmpresaDeTeste("faixa3");
+    await expect(atualizarConfiguracoes(empresaId, { prazoPadraoDias: 91 })).rejects.toThrow(
+      "entre 0 e 90 dias",
+    );
     conferencias++;
   });
 

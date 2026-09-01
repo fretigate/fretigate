@@ -428,6 +428,37 @@ export function buscarUltimoServico(empresaId: string) {
 }
 
 /**
+ * A origem pré-preenchida olha para trás até achar um frete com origem —
+ * não necessariamente o mesmo frete de `buscarUltimoServico` (item 10,
+ * Tarefa 3). Um frete pode ter sido lançado sem origem preenchida; nesse
+ * caso o mais recente de todos não serve de fallback, mas um anterior pode
+ * servir. Roda em paralelo com `buscarUltimoServico`, nunca em série — é
+ * mais uma consulta concorrente na tela de lançamento, não uma segunda ida
+ * ao banco depois da primeira.
+ */
+export function buscarUltimaOrigemPreenchida(empresaId: string) {
+  return db(empresaId).servico.findFirst({
+    where: { arquivado_em: null, origem_texto: { not: null } },
+    orderBy: { criado_em: "desc" },
+    select: { origem_texto: true },
+  });
+}
+
+/**
+ * A regra de pré-preenchimento em si (item 10, Tarefa 3, decisão do
+ * fundador, 01/09/2026): "origem do último frete que tiver origem; pátio
+ * quando não houver nenhuma". Função pura, separada das duas consultas
+ * acima, para a regra ficar testável sem depender do banco — e para não
+ * morar dentro do componente de tela (`CLAUDE.md` §6).
+ */
+export function origemPadraoDoLancamento(dados: {
+  ultimaOrigemPreenchida: string | null;
+  patioEndereco: string | null;
+}): string {
+  return dados.ultimaOrigemPreenchida || dados.patioEndereco || "";
+}
+
+/**
  * A folha de busca lista "ordenada por uso mais recente" (`docs/
  * especificacao.md` §4.1), não por data de cadastro. Quem nunca entrou num
  * frete fica no fim, na ordem de `listarClientes` (mais recém-cadastrado

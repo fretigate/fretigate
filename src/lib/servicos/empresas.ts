@@ -2,6 +2,7 @@ import { cnpj as validadorCnpj } from "cpf-cnpj-validator";
 import { db } from "@/lib/db";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { normalizarDocumento } from "@/lib/utils/documento";
+import { resolverMunicipio } from "@/lib/servicos/municipios";
 
 /**
  * Empresa: leitura completa e as duas telas do item 10 (Conta da empresa,
@@ -128,10 +129,13 @@ export async function atualizarContaDaEmpresa(empresaId: string, dados: DadosCon
 
 export type DadosConfiguracoes = {
   patioEndereco?: string | null;
-  patioMunicipioId?: number | null;
   prazoPadraoDias?: number;
   proximoNumeroRelatorio?: number;
 };
+
+/** 0 é à vista (comum em frete de carga); acima de 90 é quase sempre engano de dígito (300 no lugar de 30). */
+const PRAZO_MINIMO_DIAS = 0;
+const PRAZO_MAXIMO_DIAS = 90;
 
 /**
  * A tela "Configurações" (item 10, Tarefa 3) — pátio, prazo padrão de
@@ -153,8 +157,30 @@ export type DadosConfiguracoes = {
  * geração de relatório. `updateMany` com o piso na própria cláusula `WHERE`
  * faz o banco conferir e gravar atomicamente — mesmo princípio do contador
  * de `criarRelatorio`, só que aqui é "não decrescer" em vez de "incrementar".
+ *
+ * **`patioMunicipioId` nunca é entrada externa** (item 10, Tarefa 3, decisão
+ * do fundador, 01/09/2026) — só nasce de `resolverMunicipio` rodando aqui
+ * dentro, sobre `patioEndereco`. Mesmo princípio de `empresa_id` vir sempre
+ * de um lugar controlado, nunca de input externo (`CLAUDE.md` §3), aplicado
+ * ao município: o Postgres não confere se um id de fora corresponde a um
+ * município que existe de verdade (só a FK, que sobe erro cru). Resolução
+ * `ambigua` ou `nao_encontrada` grava o texto do mesmo jeito e não mexe no
+ * município — nunca bloqueia o salvar, mesma regra do frete
+ * (`resolverMunicipio`, `docs/especificacao.md` §6).
  */
 export async function atualizarConfiguracoes(empresaId: string, dados: DadosConfiguracoes) {
+  if (dados.prazoPadraoDias !== undefined) {
+    if (
+      !Number.isInteger(dados.prazoPadraoDias) ||
+      dados.prazoPadraoDias < PRAZO_MINIMO_DIAS ||
+      dados.prazoPadraoDias > PRAZO_MAXIMO_DIAS
+    ) {
+      throw new Error(
+        `O prazo padrão precisa estar entre ${PRAZO_MINIMO_DIAS} e ${PRAZO_MAXIMO_DIAS} dias.`,
+      );
+    }
+  }
+
   if (dados.proximoNumeroRelatorio !== undefined) {
     const resultado = await db(empresaId).empresa.updateMany({
       where: { id: empresaId, proximo_numero_relatorio: { lte: dados.proximoNumeroRelatorio } },
@@ -172,6 +198,12 @@ export async function atualizarConfiguracoes(empresaId: string, dados: DadosConf
     }
   }
 
+  const patioEndereco = dados.patioEndereco !== undefined ? dados.patioEndereco?.trim() || null : undefined;
+  const patioMunicipio =
+    patioEndereco !== undefined && patioEndereco !== null
+      ? await resolverMunicipio(empresaId, patioEndereco)
+      : null;
+
   // `proximo_numero_relatorio` NÃO entra aqui — já foi gravado, com o piso
   // conferido atomicamente, no `updateMany` acima. Gravá-lo de novo aqui
   // (achado do segundo `/revisar`, 31/08/2026) desfazia a própria proteção:
@@ -180,10 +212,11 @@ export async function atualizarConfiguracoes(empresaId: string, dados: DadosConf
   return db(empresaId).empresa.update({
     where: { id: empresaId },
     data: {
-      ...(dados.patioEndereco !== undefined && {
-        patio_endereco: dados.patioEndereco?.trim() || null,
+      ...(patioEndereco !== undefined && { patio_endereco: patioEndereco }),
+      ...(patioEndereco !== undefined && {
+        patio_municipio_id:
+          patioMunicipio?.situacao === "resolvido" ? patioMunicipio.municipio.codigo_ibge : null,
       }),
-      ...(dados.patioMunicipioId !== undefined && { patio_municipio_id: dados.patioMunicipioId }),
       ...(dados.prazoPadraoDias !== undefined && { prazo_padrao_dias: dados.prazoPadraoDias }),
     },
     select: CAMPOS,

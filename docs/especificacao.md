@@ -97,16 +97,19 @@ data pode ser futura.
   campo de busca.
 - Tocar no valor abre o **teclado numérico sobrepondo** as linhas. As linhas
   mantêm altura definida; nada é comprimido. O botão salvar nunca fica coberto.
-- **Origem** vem pré-preenchida com a origem do **último frete lançado**,
-  editável. Só quando não existe frete anterior (empresa nova, primeiro
-  frete) é que vem com o **pátio cadastrado** (item 10) — decisão do
-  fundador, 31/08/2026: quem sai sempre do mesmo pátio já vê o pátio ali de
-  qualquer jeito, porque foi de lá que o último frete saiu; os dois só
-  divergem quando a rota anterior começou em outro lugar (uma carreta que
-  foi entregar fora e volta carregando de lá), e nesse caso é o último
-  frete que aponta para onde a próxima carga realmente está — o pátio como
-  padrão fixo obrigaria reescrever a origem toda vez que a empresa sai da
-  base.
+- **Origem** vem pré-preenchida com a origem do **último frete que tiver
+  origem preenchida**, editável — não necessariamente o frete mais recente
+  de todos: um frete pode ter sido lançado sem origem, e nesse caso o
+  pré-preenchimento olha para trás até achar um que tenha. Só cai para o
+  **pátio cadastrado** (item 10) quando **nenhum** frete tiver origem
+  preenchida (empresa nova, ou nenhum frete até hoje preencheu o campo) —
+  decisão do fundador, 31/08/2026, refinada em 01/09/2026 (item 10, Tarefa
+  3): quem sai sempre do mesmo pátio já vê o pátio ali de qualquer jeito,
+  porque foi de lá que o último frete saiu; os dois só divergem quando a
+  rota anterior começou em outro lugar (uma carreta que foi entregar fora e
+  volta carregando de lá), e nesse caso é o último frete que aponta para
+  onde a próxima carga realmente está — o pátio como padrão fixo obrigaria
+  reescrever a origem toda vez que a empresa sai da base.
 - **Destino:** chips com os destinos já usados **com aquele cliente**. Ao digitar
   um destino novo, sugestões de município aparecem abaixo do campo. **Não
   bloqueia o salvar** se não reconhecer — grava o texto e resolve depois.
@@ -431,8 +434,10 @@ Entrada por "Mais" e pelo card de Lucro quando ele estiver no estado de convite.
 
 ### 4.9 Configurações, conta e usuários
 
-**Configurações:** endereço padrão do pátio, prazo padrão de vencimento, e
-acesso aos **dois modelos de mensagem** (cobrança e ordem de serviço).
+**Configurações:** endereço padrão do pátio, prazo padrão de vencimento —
+construídos no item 10, Tarefa 3 (01/09/2026) — e acesso aos **dois modelos
+de mensagem** (cobrança e ordem de serviço), quando essas telas de edição
+existirem (item 9 é MVP parcial, `docs/especificacao.md` §9).
 
 **Conta da empresa:** logo, razão social, CNPJ, endereço, telefone, e-mail e
 chave Pix, com prévia do cabeçalho do relatório. Sem logo, círculo com as
@@ -782,6 +787,15 @@ O número 15 já estava vigente em `docs/componentes.md` ("Números de regra de
 produto"), que diz que valores de regra vêm daqui — só que aqui nunca tinham
 sido escritos. Registrado em 09/08/2026 para fechar essa lacuna.
 
+**Faixa aceita: 0 a 90 dias, inclusive** — decisão do fundador, item 10,
+Tarefa 3, 01/09/2026. Zero é válido de propósito: pagamento à vista, comum em
+frete de carga, a cobrança nasce vencendo no próprio dia. Negativo nunca —
+não existe combinar prazo para trás; o efeito seria cobrança nascendo vencida
+sem ninguém ter pedido. Acima de 90 é tratado como engano de dígito (300 no
+lugar de 30) — prazo real de transportadora fica entre 0 e 60 na prática.
+Validado em `atualizarConfiguracoes` (`src/lib/servicos/empresas.ts`),
+mensagem nomeando os dois limites.
+
 **A coluna entra no item 2, antes da tela que a edita (item 10)**, e é exceção
 consciente ao critério de "coluna sem tela que a preencha é peso morto": ela
 já tem **quem a leia** no item 2 — o formulário e o perfil do cliente precisam
@@ -802,10 +816,20 @@ envelhece calado quando um estado novo passa a existir).
 (item 10, Tarefa 1)** — mesma exceção, mesmo motivo: `buscarEmpresa` já lê
 as duas colunas e `atualizarConfiguracoes` já grava as duas
 (`src/lib/servicos/empresas.ts`), achado do `/revisar` na própria tarefa que
-as criou. O consumidor de comportamento (a origem do frete caindo para o
-pátio quando não há frete anterior, §4.1) só nasce na Tarefa 3 — a coluna já
-tem leitor e lugar de preencher antes disso, mesmo padrão de `chave_pix`
-acima.
+as criou. O consumidor de `patio_endereco` (a origem do frete caindo para o
+pátio quando nenhum frete tiver origem preenchida, §4.1) nasceu na Tarefa 3
+(01/09/2026, `src/app/(app)/fretes/novo/page.tsx`).
+
+**`patio_municipio_id` especificamente ainda não tem consumidor** —
+achado do `/revisar` na Tarefa 3: o fallback de origem usa só o texto
+(`patio_endereco`); o município resolvido (`resolverMunicipio`, mesmo
+mecanismo de `origem_texto`/`destino_texto`) fica gravado sem nada ler.
+Existe para o mesmo propósito que motivou origem/destino a resolver
+município (comparação de rota entre empresas, `CLAUDE.md` §9), mas esse
+consumidor ainda não foi construído. Soma-se a outra lacuna da mesma
+tarefa: o rótulo "Endereço do pátio" convida a digitar um endereço de rua
+completo, e `resolverMunicipio` só resolve por igualdade exata de nome de
+cidade — na prática, hoje, a resolução tende a nunca acontecer.
 
 **`termos_aceitos_em` e `termos_versao`** são obrigatórios — o aceite acontece
 no cadastro, então não existe Empresa sem aceite.

@@ -2,14 +2,17 @@ import { z } from "zod";
 import { exigirSessao } from "@/lib/auth/sessao";
 import { buscarCaminhao } from "@/lib/servicos/caminhoes";
 import { buscarCliente } from "@/lib/servicos/clientes";
+import { buscarEmpresa } from "@/lib/servicos/empresas";
 import { buscarMotorista } from "@/lib/servicos/motoristas";
 import {
+  buscarUltimaOrigemPreenchida,
   buscarUltimoServico,
   listarCaminhoesPorUsoRecente,
   listarCargasRecentes,
   listarClientesPorUsoRecente,
   listarDestinosDoCliente,
   listarMotoristasPorUsoRecente,
+  origemPadraoDoLancamento,
 } from "@/lib/servicos/servicos";
 import { nomeCaminhao, TIPOS_VEICULO } from "@/lib/utils/caminhao";
 import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
@@ -57,6 +60,8 @@ export default async function Pagina({
     motoristas,
     cargasRecentes,
     ultimoServico,
+    ultimaOrigemPreenchida,
+    empresa,
     clienteIdPreSelecionado,
     veiculoIdPreSelecionado,
     motoristaIdPreSelecionado,
@@ -66,6 +71,11 @@ export default async function Pagina({
     listarMotoristasPorUsoRecente(sessao.empresaId),
     listarCargasRecentes(sessao.empresaId),
     buscarUltimoServico(sessao.empresaId),
+    // Nunca em série depois de `buscarUltimoServico` — é mais uma consulta
+    // concorrente no mesmo Promise.all, não uma segunda ida ao banco que
+    // atrasaria a tela toda vez, só no caso raro (item 10, Tarefa 3).
+    buscarUltimaOrigemPreenchida(sessao.empresaId),
+    buscarEmpresa(sessao.empresaId),
     resolverPreSelecao(buscarCliente, sessao.empresaId, parametros.cliente),
     resolverPreSelecao(buscarCaminhao, sessao.empresaId, parametros.caminhao),
     resolverPreSelecao(buscarMotorista, sessao.empresaId, parametros.motorista),
@@ -130,7 +140,10 @@ export default async function Pagina({
         clienteId,
         veiculoId,
         motoristaId,
-        origemTexto: ultimoServico?.origem_texto ?? "",
+        origemTexto: origemPadraoDoLancamento({
+          ultimaOrigemPreenchida: ultimaOrigemPreenchida?.origem_texto ?? null,
+          patioEndereco: empresa?.patio_endereco ?? null,
+        }),
       }}
     />
   );

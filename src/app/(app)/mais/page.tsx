@@ -38,9 +38,8 @@ import { BotaoSairDaConta } from "../BotaoSairDaConta";
  * operador nunca vê a seção — não é só esconder o link, é que `/conta` e
  * `/configuracoes` recusam quem não é dono (`exigirDono()`), então mostrar a
  * linha pra quem não pode entrar seria a mesma falha que `CLAUDE.md` §8 já
- * proíbe. **"Configurações" ainda não entra** — mesmo critério de "nasce só
- * com as linhas que têm destino": a tela é a Tarefa 3, ainda não construída.
- * Entra nesta mesma seção quando a Tarefa 3 nascer.
+ * proíbe. **"Configurações" entrou junto da Tarefa 3 do item 10
+ * (01/09/2026)** — `/configuracoes`, mesma proteção de `exigirDono()`.
  *
  * **O cartão de identidade (nome da empresa, no topo) também virou tocável
  * para o dono nesta tarefa** — `docs/componentes.md` linha 491 ("Mais |
@@ -150,6 +149,12 @@ export default async function Pagina() {
           <span className="px-4 pb-2 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
             Ajustes
           </span>
+          {/* `docs/icones/barra-mais.svg` — já previsto para esta linha desde
+              09/08 (`docs/componentes.md` linha 278: "Item 'Mais' da barra ·
+              linha 'Configurações' em Mais"). */}
+          <ItemMenu href="/configuracoes" nome="Configurações">
+            <path d="M6.06 8.4h11.88M6.06 12h11.88M6.06 15.6h7.56" />
+          </ItemMenu>
           {/* `docs/icones/conta.svg` — `docs/componentes.md` linha 282. */}
           <ItemMenu href="/conta" nome="Conta da empresa">
             <path d="M5.34 10.2 12 5.34 18.66 10.2v8.1a0.36 0.36 0 0 1 -0.36 0.36H5.7a0.36 0.36 0 0 1 -0.36 -0.36V10.2Z" />

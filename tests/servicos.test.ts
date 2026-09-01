@@ -15,6 +15,8 @@ import {
   valoresTotaisPorCliente,
   estatisticasPorCaminhao,
   estatisticasPorMotorista,
+  buscarUltimaOrigemPreenchida,
+  origemPadraoDoLancamento,
   type Periodo,
 } from "@/lib/servicos/servicos";
 import { resumoFinanceiroDoCliente } from "@/lib/servicos/titulos";
@@ -42,7 +44,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 52;
+const CONFERENCIAS_ESPERADAS = 58;
 
 /** Uma janela de 2 dias em volta de agora — cobre `data_servico: new Date()` de `dadosMinimos`. */
 function periodoAmplo(): Periodo {
@@ -454,6 +456,54 @@ describe("4. resolução de município — nunca bloqueia o salvar", () => {
     expect(s.origem_municipio_id).toBeNull();
     expect(s.destino_texto).toBeNull();
     expect(s.destino_municipio_id).toBeNull();
+    conferencias++;
+  });
+});
+
+describe("4b. buscarUltimaOrigemPreenchida e origemPadraoDoLancamento — item 10, Tarefa 3", () => {
+  it("o mais recente tem origem — é ele que volta", async () => {
+    const e = await criarEmpresaDeTeste("uop1");
+    await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { origem_texto: "Fortaleza" }));
+    await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { origem_texto: "Sobral" }));
+    const ultima = await buscarUltimaOrigemPreenchida(e.empresaId);
+    expect(ultima?.origem_texto).toBe("Sobral");
+    conferencias++;
+  });
+
+  it("o mais recente NÃO tem origem — olha pra trás até achar uma preenchida", async () => {
+    const e = await criarEmpresaDeTeste("uop2");
+    await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { origem_texto: "Fortaleza" }));
+    // Frete mais recente, sem origem — não é este que deve voltar.
+    await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e));
+    const ultima = await buscarUltimaOrigemPreenchida(e.empresaId);
+    expect(ultima?.origem_texto).toBe("Fortaleza");
+    conferencias++;
+  });
+
+  it("nenhum frete tem origem — devolve null (quem decide o pátio é origemPadraoDoLancamento)", async () => {
+    const e = await criarEmpresaDeTeste("uop3");
+    await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e));
+    const ultima = await buscarUltimaOrigemPreenchida(e.empresaId);
+    expect(ultima?.origem_texto).toBeUndefined();
+    conferencias++;
+  });
+
+  it("origemPadraoDoLancamento: origem preenchida manda, mesmo com pátio cadastrado", () => {
+    expect(
+      origemPadraoDoLancamento({ ultimaOrigemPreenchida: "Sobral", patioEndereco: "Av. do Pátio" }),
+    ).toBe("Sobral");
+    conferencias++;
+  });
+
+  it("origemPadraoDoLancamento: sem origem preenchida, cai pro pátio", () => {
+    expect(
+      origemPadraoDoLancamento({ ultimaOrigemPreenchida: null, patioEndereco: "Av. do Pátio" }),
+    ).toBe("Av. do Pátio");
+    conferencias++;
+  });
+
+  it("origemPadraoDoLancamento: nem origem nem pátio — campo nasce vazio", () => {
+    expect(origemPadraoDoLancamento({ ultimaOrigemPreenchida: null, patioEndereco: null })).toBe("");
     conferencias++;
   });
 });

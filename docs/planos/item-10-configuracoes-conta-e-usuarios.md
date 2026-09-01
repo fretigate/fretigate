@@ -474,3 +474,22 @@ acima); `atualizarConfiguracoes` resolvendo `patioMunicipioId` via
 salvam o texto, só o primeiro grava o município); fallback de origem em
 `fretes/novo` com e sem frete anterior, com e sem pátio cadastrado (três
 casos, não dois).
+
+**Lacuna encontrada na construção, não corrigida agora — o rótulo
+"Endereço do pátio" pode induzir a digitar algo que nunca resolve.**
+`resolverMunicipio` (`src/lib/servicos/municipios.ts`) separa só a UF do
+fim do texto e casa o resto por **igualdade exata** com o nome de um
+município — funciona para "Sobral", "Sobral/CE", "Fortaleza (CE)", nunca
+para um endereço de rua de verdade ("Av. do Pátio, 456 - Sobral/CE"), que
+normaliza para uma string que não bate com nenhum `nome_normalizado`. É o
+mesmo motivo já registrado para `Cliente.endereco` (Explorado nesta mesma
+tarefa): `resolverMunicipio` é o mecanismo certo para texto curto de
+cidade, não para endereço completo. **Nunca quebra nada** — resolução que
+falha grava o texto e deixa `patio_municipio_id` nulo, mesma regra de
+sempre —, mas se o dono digitar o endereço de rua completo (o que o rótulo
+"Endereço do pátio", herdado de `docs/especificacao.md` §4.9, convida a
+fazer), o município nunca resolve, e todo o propósito de
+`patio_municipio_id` (comparação de rota entre empresas, `CLAUDE.md` §9)
+fica sem dado. Rótulo e placeholder já pedem algo mais curto ("De onde a
+frota sai"), mas não é garantia. Registrado para o fundador decidir se
+ajusta o texto do campo — não é bloqueio, porque nada quebra hoje.

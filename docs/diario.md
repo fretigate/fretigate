@@ -6,6 +6,143 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 01/09/2026 — Tarefa 3 do item 10: Configurações — pátio, prazo padrão, numeração do relatório
+
+Schema e `atualizarConfiguracoes` já existiam da Tarefa 1; esta tarefa
+fecha duas decisões que ficaram em aberto para o Design/fundador e
+constrói a tela `/configuracoes`.
+
+**Duas decisões do fundador, antes de construir** (`docs/planos/
+item-10-configuracoes-conta-e-usuarios.md`, "Tarefa 3 — decisões
+finais"): faixa do prazo padrão de vencimento **0 a 90 dias** (zero é à
+vista, negativo nunca, acima de 90 é quase sempre engano de dígito); e
+`patioMunicipioId` deixou de ser entrada externa — `atualizarConfiguracoes`
+resolve o município internamente via `resolverMunicipio`, mesmo princípio
+de `empresa_id` nunca vir de fora (`CLAUDE.md` §3, aplicado aqui ao
+município).
+
+**Contradição achada antes de montar a tela:** `docs/componentes.md`
+dizia "Configurações | sem principal" — descrevia a tela de quando ela
+era só os dois modelos de mensagem, que ficaram fora do MVP. Perguntado ao
+fundador: a tela tem principal, campo editável pede ação explícita. O
+rótulo em si — "Salvar" — foi achado do segundo `/revisar`: era abreviação
+de conversa, não decisão de rótulo, e quebrava o padrão do resto do
+inventário (todo botão de gravar nomeia o objeto — "Salvar cliente",
+"Salvar dados", "Salvar frete"). Corrigido para **Salvar configurações**,
+antes do commit. `docs/componentes.md` atualizado.
+
+**Regra de fallback da origem, corrigida pelo fundador durante o
+planejamento:** não é "sem frete anterior, cai pro pátio" — é "origem do
+**último frete que tiver origem**; pátio quando não houver nenhuma". Um
+frete pode ter sido lançado sem origem preenchida, e nesse caso o mais
+recente de todos não serve de fallback. Nova consulta,
+`buscarUltimaOrigemPreenchida` (`src/lib/servicos/servicos.ts`), roda em
+paralelo com `buscarUltimoServico` no mesmo `Promise.all` de
+`fretes/novo/page.tsx` — nunca em série, para não atrasar a tela no caso
+comum. A regra em si (`origemPadraoDoLancamento`) é função pura, testável
+sem banco, para não morar dentro do componente (`CLAUDE.md` §6).
+
+**Achado do `/revisar` (nesta sessão, antes do commit): teto de 60s no
+teste 12b de `titulos.test.ts` sem medição própria** — não é desta tarefa,
+mas fechado antes dela por já estar registrado. Ver commits `56b3201`/
+`ec33b0c`, já enviados.
+
+**Dois achados na própria construção, verificando no navegador:**
+1. `type="number"` com `min`/`max` no HTML deixa o **navegador** bloquear
+   o envio com um popup nativo, antes de chegar ao servidor — a mensagem
+   de erro cuidadosamente escrita (`CLAUDE.md`: "erro nunca é sinalizado
+   só pela cor do fundo", texto próprio do produto) nunca aparecia.
+   Removidos `min`/`max`; a validação (e a mensagem) já são inteiramente
+   do servidor, como em todo o resto do produto.
+2. Campo de prazo deixado em branco: `Number("")` é `0`, um valor válido
+   de verdade (à vista). Sem checar a string vazia à parte, limpar o campo
+   por engano salvaria silenciosamente "à vista" em vez de pedir para
+   preencher. Corrigido com uma checagem explícita antes da conversão.
+
+**Lacuna registrada, não corrigida agora — rótulo "Endereço do pátio" pode
+convidar a digitar algo que nunca resolve.** `resolverMunicipio` casa por
+**igualdade exata** de nome de cidade (só separa a UF do fim) — funciona
+para "Sobral"/"Sobral-CE", nunca para um endereço de rua completo. Nunca
+quebra nada (resolução que falha só deixa `patio_municipio_id` nulo), mas
+se o dono digitar o endereço de verdade, o município nunca resolve.
+Detalhe em `docs/planos/item-10-configuracoes-conta-e-usuarios.md`.
+
+**Verificação: local e manual no navegador.** `npx tsc --noEmit`,
+`npm run lint` limpos. `tests/empresas.test.ts` (21/21, com os casos novos
+de faixa e resolução de município) e `tests/servicos.test.ts` (59/59, com
+os seis casos novos de `buscarUltimaOrigemPreenchida`/
+`origemPadraoDoLancamento`) — contra o banco de desenvolvimento. Testado
+ao vivo: conta criada, `/configuracoes` salva pátio (com município
+resolvido — conferido direto no banco, "Fortaleza" → `2304400`), recusa
+prazo fora da faixa e numeração descendo, com as mensagens certas; em
+`/fretes/novo`, confirmado o caso que motivou a correção do fundador — um
+frete mais recente **sem** origem não esconde a origem de um frete mais
+antigo que tinha.
+
+**Segundo passe do `/revisar`, achados corrigidos antes do commit.**
+`docs/especificacao.md` §4.1 e a nota de `patio_endereco`/
+`patio_municipio_id` ainda diziam a regra antiga (pátio só "quando não há
+frete anterior", sem a correção "que tiver origem") — corrigidas para
+bater com o código. Faixa do prazo (0 a 90 dias) não estava em nenhum
+documento, só no plano e no código — é "número de regra de produto"
+(`docs/componentes.md`), então tem que vir da especificação: adicionada.
+`docs/navegacao.md` (linha da Configurações e da "Modelo de ordem de
+serviço") e `docs/especificacao.md` §4.9 continuavam prometendo a seção
+MENSAGENS como se já existisse — corrigido para deixar explícito que ela
+só entra quando as telas de edição dos modelos nascerem (item 9, MVP
+parcial). Nota de `patio_municipio_id` também corrigida: o consumidor que
+nasceu nesta tarefa é só de `patio_endereco` (texto) — o município
+resolvido continua sem nenhum leitor.
+
+**O que foi pedido ao Design** (`CLAUDE.md` §13 — toda correção de estado
+feita no repositório entra nesta lista, mesmo quando o conteúdo já foi
+decidido pelo fundador em conversa):
+- `docs/componentes.md`, linha "Configurações" — trocada de "sem
+  principal · linhas de OPERAÇÃO e MENSAGENS" para "principal **Salvar
+  configurações** · campos de OPERAÇÃO", pela decisão do fundador nesta
+  sessão. O Design ainda não viu esta seção — a próxima exportação precisa
+  refletir isso, não sobrescrever de volta para "sem principal".
+- Rótulos e textos novos de `FormularioConfiguracoes.tsx` sem lastro em
+  documento nenhum: "Operação" (eyebrow), "Endereço do pátio" (só o rótulo
+  estava registrado, não o placeholder "De onde a frota sai"), "Prazo
+  padrão de vencimento (dias)", "Próximo relatório será Nº", e as três
+  linhas de apoio abaixo dos campos — mesma categoria já registrada para
+  `/conta` na Tarefa 2.
+- **O rótulo do botão principal — achado do `/revisar`, corrigido antes do
+  commit.** A primeira versão tinha só "Salvar", quebrando o padrão do
+  resto do inventário (todo outro formulário nomeia o objeto — "Salvar
+  cliente", "Salvar dados", "Salvar frete"). O fundador confirmou: era
+  abreviação de conversa, não decisão de rótulo — corrigido para **Salvar
+  configurações**.
+
+**Lacunas registradas, não corrigidas agora:**
+- `proximoNumeroRelatorio` sem teto documentado nem validado (só `>= 1`) —
+  o campo é `Int` de 32 bits; um valor absurdo passa pela ação e devolve a
+  mensagem crua do Prisma. Caso extremo, não decisão de produto ainda
+  tomada.
+- `patio_municipio_id` sem consumidor (acima, já em
+  `docs/especificacao.md`) — soma com o rótulo "Endereço do pátio" convidar
+  a texto que nunca resolve; as duas lacunas se reforçam.
+- `/configuracoes` (`page.tsx`/`acoes.ts`) sem teste automatizado — só
+  verificação manual no navegador, mesma lacuna estrutural já registrada
+  para `/conta` e para as entradas de navegação (`CLAUDE.md` §14).
+
+**Pedido do fundador, registrado, não bloqueia o fechamento:** remedir os
+26 segundos do lançamento de frete (medidos em 14/08/2026) no celular dele,
+contra a meta do `CLAUDE.md` §1 — é a primeira mudança na tela desde a
+medição, e a fonte do texto pré-preenchido mudar pode afetar quantas vezes
+ele corrige o campo, mesmo sem adicionar toque nenhum ao fluxo.
+
+Próximo: Tarefa 4 do item 10 — Usuários: convite por WhatsApp e a tela de
+Aceitar convite. Duas coisas já registradas para ela (`docs/planos/
+item-10-configuracoes-conta-e-usuarios.md`): o rate limit de
+`aceitarConvite`, requisito explícito desde a Tarefa 1 (não havia rota
+ainda para pendurar a trava); e a tela pública de aceite, que usa a
+função de banco `localizar_convite_por_token` criada na Tarefa 1. É onde
+`comoDono` volta a valer — só o dono vê e mexe em `/conta/usuarios`.
+
+---
+
 ## 31/08/2026 — Tarefa 2 do item 10: Conta da empresa
 
 Tela `/conta` (`comoDono`/`exigirDono()` — primeira vez que o envelope roda
