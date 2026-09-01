@@ -371,3 +371,106 @@ produto, não só na função de auth isolada.
   não só "espere" — logo é trocada raramente, então quem esbarra nesta
   trava provavelmente está tentando de novo por algo ter dado errado, não
   por uso normal.
+
+---
+
+## Tarefa 3 — decisões finais antes de construir, 01/09/2026
+
+Duas lacunas que a própria Tarefa 1 já tinha registrado como "decisão do
+Design/fundador, ainda não tomada" — resolvidas agora, antes de escrever
+qualquer linha da tela, por pedido explícito (`CLAUDE.md` §2: não escolher
+o mais provável).
+
+**1. Faixa do prazo padrão de vencimento: 0 a 90 dias, inclusive.**
+Zero é válido — pagamento à vista, comum em frete de carga, a cobrança nasce
+vencendo hoje e isso está certo. Negativo nunca — não existe combinar prazo
+para trás; o efeito seria cobrança nascendo vencida sem ninguém ter pedido.
+90 como teto porque acima disso é quase certamente engano de dígito (300 no
+lugar de 30) — prazo real de transportadora fica entre 0 e 60 na prática.
+`atualizarConfiguracoes` (`src/lib/servicos/empresas.ts`) ganha a validação,
+recusando fora da faixa com mensagem nomeando os dois limites — nunca
+"valor inválido" sozinho, a pessoa precisa saber qual número serve. Mesmo
+padrão de mensagem amigável já usado na numeração (decisão 5, acima).
+
+**A tela precisa deixar explícito que este prazo vale para quem não tem
+prazo próprio** — pedido do fundador: o valor atual (15) é herdado por todo
+cliente sem prazo cadastrado; baixar para zero muda o vencimento de toda
+cobrança futura desses clientes, não só "daqui pra frente" de um cliente
+específico. Texto de apoio sob o campo, não só o rótulo.
+
+**2. Campo do pátio: texto livre, resolvido no servidor — mesmo padrão do
+campo Origem do lançamento de frete, não o de Destino.** Levantado antes de
+decidir: a tela de lançar frete já tem DOIS padrões diferentes para texto de
+cidade — Destino sugere município em pílulas enquanto a pessoa digita;
+Origem é campo de texto puro, resolvido silenciosamente no servidor
+(`resolverMunicipio`, dentro de `normalizarEntrada`) só no momento de
+salvar, sem nunca bloquear o salvar se não resolver. Como o pátio existe
+para **alimentar exatamente o campo Origem** (fallback quando não há frete
+anterior), ele usa o mesmo padrão de Origem — sem sugestão em pílulas.
+Evita inventar uma terceira forma de campo de cidade sem necessidade
+(`CLAUDE.md` §6, nada de abstração/variante nova sem dois casos reais que
+peçam por ela).
+
+**Fecha a lacuna "`patioMunicipioId` inválido sobe o erro cru de FK"
+(registrada na Tarefa 1) por construção, não por validação adicional.**
+`DadosConfiguracoes.patioMunicipioId` deixa de ser entrada direta de fora —
+`atualizarConfiguracoes` passa a chamar `resolverMunicipio` internamente
+quando `patioEndereco` é fornecido, e só grava um `patio_municipio_id` que
+veio dessa resolução (nunca um id que o chamador tenha fornecido). Mesmo
+princípio de `empresa_id` vir sempre de um lugar controlado, nunca de input
+externo (`CLAUDE.md` §3) — aqui aplicado ao município, que é a mesma classe
+de "referência que o Postgres não valida contra outra empresa nem contra
+existência real" se vier direto do formulário. Resolução `ambigua` ou
+`nao_encontrada`: o texto grava do mesmo jeito (`patio_endereco`), e
+`patio_municipio_id` fica como estava antes — mesma regra de nunca bloquear
+o salvar que o frete já usa.
+
+**3. Numeração do relatório — campo editável, pré-preenchido com o valor
+atual.** Rótulo proposto: "Próximo relatório será Nº ___", pré-preenchido
+com `proximo_numero_relatorio`. Editável e salvo junto dos outros campos da
+tela (mesmo "Salvar" único, sem ação separada) — a regra de nunca baixar já
+está pronta no serviço (decisão 5), a tela só precisa mostrar a mensagem de
+erro dele quando a gravação recusar. Fica registrado aqui como proposta de
+construção, não pergunta bloqueante — copy é o mais barato de ajustar depois
+se não bater com o gosto do fundador ao ver a tela pronta.
+
+**4. `fretes/novo/page.tsx` — fallback para o pátio, regra corrigida pelo
+fundador: "origem do último frete QUE TIVER origem; pátio quando não houver
+nenhuma".** Não é só "sem frete anterior" — um frete antigo pode ter sido
+lançado sem origem preenchida, e nesse caso o campo nasceria vazio tendo o
+pátio disponível. `cliente_id`/`veiculo_id`/`motorista_id` continuam vindo
+do frete **mais recente de todos** (`buscarUltimoServico`, sem mudança) —
+só a origem passa a olhar para trás até achar uma preenchida, o que pode
+ser um frete diferente do mais recente.
+
+Serviço novo, `buscarUltimaOrigemPreenchida(empresaId)`
+(`src/lib/servicos/servicos.ts`): `findFirst` por `origem_texto: { not: "" }`,
+`orderBy: criado_em desc`. Roda **em paralelo** com `buscarUltimoServico` e
+`buscarEmpresa`, no mesmo `Promise.all` que já busca os outros dados da
+tela — não é uma segunda ida ao banco em série (que atrasaria a tela toda
+vez, não só no caso raro), é mais uma consulta concorrente com as que já
+existem. `origemTexto` final: a origem preenchida achada, senão
+`empresa.patio_endereco`, senão `""` — três níveis, não dois.
+
+**5. A métrica de 30s (`CLAUDE.md` §1) — como remedir.** O registro de
+14/08/2026 (26s) foi cronômetro manual do fundador, no celular, contra o
+app rodando — não existe script nem teste automatizado para isso
+(`docs/diario.md`, mesma entrada). Esta tarefa não adiciona nenhuma tela
+nem toque obrigatório ao fluxo de lançar frete — o fallback do pátio só
+muda **qual texto já vem preenchido**, nunca um passo novo.
+
+**Pedido do fundador, mantido mesmo com a leitura acima confirmada:**
+remedir depois de pronta, porque é a primeira mexida na tela desde a
+medição, e a fonte do texto pré-preenchido mudar pode afetar **quantas
+vezes ele corrige o campo** — o cronômetro mede o fluxo inteiro, não só se
+apareceu um toque a mais; um valor pré-preenchido errado com mais frequência
+custa tempo mesmo sem adicionar etapa nenhuma. Registrado como pedido,
+**não bloqueia o fechamento da tarefa** — quem mede é ele, no aparelho
+dele, depois que a tela estiver no ar.
+
+**Testes:** validação de faixa do prazo (dentro, nos dois limites, abaixo,
+acima); `atualizarConfiguracoes` resolvendo `patioMunicipioId` via
+`resolverMunicipio` (resolvido, ambíguo, não encontrado — os três casos
+salvam o texto, só o primeiro grava o município); fallback de origem em
+`fretes/novo` com e sem frete anterior, com e sem pátio cadastrado (três
+casos, não dois).
