@@ -236,3 +236,187 @@ até essa faixa, não antes. Os outros catorze ficam de fora até chegarem lá.
 O número é heurística de observação, no mesmo espírito do limiar de
 `sugerirRelatorio` (item 8) — ajustável se a experiência mostrar que está
 alto ou baixo demais, não regra de negócio travada.
+
+## Segunda rodada — 01/09/2026: a hipótese de conexão por bloco cai de vez
+
+Motivo de reabrir: proporção de vermelhos passou de 1 em 3 (`CLAUDE.md` §2)
+para **3 em 5** entre 29 e 31/08 (`1ce8ac8` falha, `9f01d69` falha,
+`2f57719` sucesso, `2f91a9c` falha, `d59a8b7` sucesso) — e `2f91a9c` estourou
+**depois** do conserto de conexão por bloco já estar no código, no mesmo
+arquivo que o conserto mudou. Duas evidências já registradas acima
+descartavam a hipótese; decisão do fundador foi investigar agora, antes da
+Tarefa 3 do item 10, em vez de deixar a suíte crescer mais em cima do
+problema não resolvido.
+
+### O que mudou desde 29/08 — medido, não suposto
+
+Denominador de `gh run list --branch main --json headSha,conclusion,status`
+no período, mesmo critério do `CLAUDE.md` §2 ("Envio é execução que de fato
+rodou"). Cinco envios completos entram na tabela; dois do mesmo período
+ficam de fora, cada um por um motivo próprio, registrado para a tabela
+poder ser reconferida sem depender de outra entrada do diário:
+
+- `765ed02` (30/08) — **excluído**: `cancelled`, cancelamento de rotina
+  (`2f91a9c`, o push seguinte, superou-o antes de terminar —
+  `concurrency: cancel-in-progress`, `CLAUDE.md` §2). Nunca chegou a
+  concluir, não é "sucesso" nem "falha".
+- `9e32173` (31/08, HEAD no momento desta investigação) — **excluído**:
+  ainda `in_progress` quando esta tabela foi montada, sem `conclusion`
+  final. Entra na próxima contagem quando resolver.
+
+| Envio | Arquivos/testes | Duração total | `titulos.test.ts` | `cobrancas.test.ts` |
+|---|---|---|---|---|
+| `1ce8ac8` (29/08) | 30 / 600 | 2643,4s | 1165,7s — falhou | 261,9s — falhou |
+| `9f01d69` (30/08) | 31 / 617 | 2433,4s | 1007,7s | 227,2s — falhou |
+| `2f57719` (30/08, pós-fix) | 31 / 617 | 2486,5s | 1027,5s | 240,7s |
+| `2f91a9c` (31/08, pós-fix) | 31 / 617 | 2906,7s | 1200,2s — falhou | 281,6s |
+| `d59a8b7` (31/08, hoje) | 33 / 654 | 1913,5s | 765,9s | 180,2s |
+
+3 falhas em 5 envios (60%) — acima do 1 em 3 do `CLAUDE.md` §2. É este
+número, não uma impressão, que justificou reabrir a investigação antes da
+Tarefa 3 do item 10.
+
+A suíte não cresceu em linha reta — a duração total oscila 2433↔2907s com o
+mesmo tamanho de suíte, e `titulos.test.ts` sozinho varia 766↔1200s (57%)
+rodando exatamente o mesmo código. Isso já pesa mais para ruído de ambiente
+do que para acúmulo por crescimento de suíte.
+
+### O achado novo: não é "um teste aleatório" — é sempre o mesmo
+
+Lido direto do log de cada execução (`gh run view --log`), a linha `FAIL`
+mostra o teste exato, não só o arquivo:
+
+- `titulos.test.ts`: **sempre** `12b. registrarCobrancaEnviadaEmGrupo — tudo
+  ou nada > um título inválido no meio do grupo recusa TODOS` — em
+  `1ce8ac8` e de novo em `2f91a9c`, este **depois** do conserto de conexão
+  por bloco já estar no arquivo.
+- `cobrancas.test.ts`: **sempre** `4. listarCobrancas > teto de 3 não corta
+  um relatório de 5 fretes` — em `1ce8ac8` e `9f01d69`, nunca mais desde o
+  teto próprio de 60s (`docs/planos/margem-teste-teto-cobrancas.md`,
+  vigente a partir de `2f57719`). **Este já está resolvido** — mecanismo
+  identificado (o teste faz trabalho real demais: 5 fretes, 5 finalizações,
+  1 relatório, 5 faturamentos, 1 consulta), não é o mesmo caso do de
+  `titulos.test.ts`.
+
+O de `titulos.test.ts` continua aberto, e é **leve** — 3 títulos, 1
+recebimento, 1 chamada, 1 `SELECT` de verificação. Não bate com "o teste faz
+trabalho demais", o motivo que resolveu `cobrancas.test.ts`.
+
+### A pista fora do teste, corrigida por medição — não é o que parecia
+
+**Primeira leitura (por código, antes de medir) — errada, e o erro fica
+registrado.** As únicas quatro chamadas de transação interativa do Prisma
+(`emTransacao`) em `src/lib/servicos` são `cadastro.ts`, `relatorios.ts`
+(`criarRelatorio`), `servicos.ts` (`criarServico`) e `titulos.ts`
+(`registrarCobrancaEnviadaEmGrupo`) — e os dois testes que falharam
+percorrem essas rotas. Isso levou a cogitar algo fora do teste: `emTransacao`
+roda em `clienteBase`, via `DATABASE_URL` (pooler de transação do Supabase,
+porta 6543), nunca tocado pelo conserto de 30/08 (que mexeu só no `raiz`,
+`DIRECT_URL`). Uma leitura do corpo do teste 12b contou 6 `await` e concluiu
+"o teste é leve" — e daí veio uma "contradição": a transação interativa do
+Prisma teria teto próprio (≈2s para conseguir conexão, ≈5s para rodar), então
+se fosse só lentidão do pooler o Prisma erraria sozinho bem antes dos 30s do
+Vitest — o que não bate com o sintoma observado (silêncio total até o
+timeout puro).
+
+**O `/revisar` recusou o teto de 60s por falta de medição — e a medição
+derrubou a leitura, não só o teto.** `npx vitest run tests/titulos.test.ts -t
+"um título inválido..." --reporter=verbose`, isolado, local: **10,8s**, não
+instantâneo. O erro: contar os `await` **literais do corpo do teste** e
+ignorar que `criarEmpresaDeTeste`/`criarTituloAberto` (chamado 3×) são
+funções compostas — cada uma dispara de 3 a 5 idas ao banco por dentro
+(`criarServico`/`faturarServico`, via `emTransacao`; `marcarServicoFinalizado`,
+via `db()`). **A contagem real é ~25-30 idas ao banco, não 6.** Com o fator
+de desaceleração da esteira já documentado (~3×, medido em investigações
+anteriores desta mesma suíte), isso projeta **~32s na esteira** — exatamente
+onde os timeouts caíram, sem sobra nem falta.
+
+**Isso fecha a "contradição" em vez de aprofundá-la: não há transação
+interativa nenhuma perto do próprio teto de 5s — há ~25-30 transações
+curtas e independentes, cada uma normal, cuja SOMA cruza os 30s do Vitest
+sob a desaceleração da esteira.** Nenhuma trava de rede, nenhum pooler
+hipoteticamente travado sem avisar — o mesmo mecanismo, medido, do
+`cobrancas.test.ts`: soma de idas ao banco perto do teto, só que ali por
+poucas operações pesadas (5 fretes × 5 etapas) e aqui por várias operações
+leves encadeadas. **Registrado como o mesmo erro que o `CLAUDE.md` já
+nomeia — "explicação plausível não é explicação verificada"** — com a
+diferença de que aqui a medição chegou antes do commit, pelo `/revisar`,
+não depois.
+
+### Decisão do fundador, 01/09/2026: instrumentar + conter, sem pedir a credencial do banco de teste
+
+**Por que não pedir a credencial do projeto de teste** (opção descartada
+explicitamente): ela é a chave da esteira — trazê-la para investigação
+manual cria um caminho de vazamento novo que hoje não existe (a proteção
+atual, mais simples e mais forte, é ela nunca sair do GitHub). E o retorno
+seria baixo mesmo se buscada: precisaria estar consultando
+`pg_stat_activity`/`pg_locks` no instante exato de uma falha imprevisível
+— na prática, não pegaria.
+
+**O que fica, os dois juntos, de propósito — um sozinho não bastava:**
+1. **Instrumentação** (`tests/titulos.test.ts`, dentro do teste 12b) — uma
+   marca de tempo (`console.log`) antes e depois de cada chamada
+   `await` do teste. Só no arquivo de teste, nunca em `src/`. Quando
+   estourar de novo, a última marca "início" sem a "fim" correspondente no
+   log da esteira aponta exatamente qual chamada estava em voo.
+2. **Teto próprio de 60s** — **contenção, com baseline medido**: 10,8s
+   local isolado (acima) × ~3× da esteira ≈ 32s projetado, quase o dobro de
+   folga com 60s — mesmo critério de dimensionamento do
+   `TIMEOUT_TETO_RELATORIO` em `cobrancas.test.ts`. Ainda é contenção, não
+   correção: não reduz o número de idas ao banco, só dá margem para elas.
+
+Os dois resolvem um conflito que nenhum dos dois sozinho resolveria: só o
+teto esconderia o problema (a esteira para de mentir, mas a instrumentação
+nunca teria uma falha real para revelar onde travou, se travar de novo);
+só a instrumentação deixaria o ruído vermelho continuar contando contra a
+proporção do §2 do `CLAUDE.md` enquanto espera. Com os dois, a esteira
+fica verde e o dado continua sendo coletado.
+
+**Critério de saída — decisão do fundador, 01/09/2026: não é prazo nem
+contagem.** Um número arbitrário ("depois de N envios sem estourar") não
+provaria que a causa fechou — ausência de falha é o esperado com teto
+maior, não evidência de causa resolvida. O critério que já vale continua
+sendo o mesmo do `cobrancas.test.ts`: **se estourar de novo mesmo com 60s,
+é o teste fazendo trabalho demais** (as ~25-30 idas ao banco crescendo
+ainda mais, ou a esteira ficando mais lenta), **não falta de margem** — a
+correção nesse caso é reduzir o que o teste faz, não subir o teto de novo.
+A instrumentação sai quando a causa fechar, não por prazo — se nunca
+disparar porque nada mais estoura, ela é barata e fica.
+
+**O gatilho que vale revisitar, não este teste isolado:** `titulos.test.ts`
+(teste 12b) é o **segundo** teste da suíte com teto próprio, depois de
+`cobrancas.test.ts`. Se aparecer um terceiro, deixa de ser caso a caso — a
+pergunta muda de "este teste precisa de mais tempo" para "o teto global de
+30s (`vitest.config.mts`, `testTimeout`) ainda serve para uma suíte que
+cresceu 4× desde que foi escolhido" (`titulos.test.ts` tinha 8 testes em
+20/08/2026, tem 92 hoje). Essa pergunta não é desta investigação — é do
+dia em que o terceiro teste pedir teto próprio.
+
+**Pendência em aberto, não fechada por esta decisão:** a causa raiz do
+formato — por que a soma de idas ao banco fica perto do teto justamente
+nestes dois testes — está explicada (mecanismo medido: soma de operações,
+não fila nem trava de rede), mas **não eliminada**: continua vulnerável à
+desaceleração normal da esteira. Pedir a credencial do banco de teste para
+telemetria ao vivo (`pg_stat_activity`/`pg_locks`) foi considerado e
+descartado: ela é a chave da esteira, trazê-la para investigação manual
+cria caminho de vazamento novo, e o retorno seria baixo mesmo assim
+(precisaria do instante exato de uma falha imprevisível).
+
+## Verificação
+
+- `npx tsc --noEmit`, `npm run lint` — limpos.
+- `npx vitest run tests/titulos.test.ts` (arquivo inteiro, local, banco de
+  desenvolvimento): **92/92, 405,15s**.
+- `npx vitest run tests/titulos.test.ts -t "um título inválido..."`
+  (isolado, `--reporter=verbose`): passou, **10,8s**, marcas de tempo
+  aparecendo linha a linha como esperado.
+- **Por que a rodada do arquivo inteiro (reporter padrão) não mostrou
+  nenhuma marca**: o Vitest só imprime `console.log` de um teste que passa
+  quando o reporter é `verbose`; no reporter padrão, só aparece para teste
+  que falha — comportamento do próprio Vitest, não falha da
+  instrumentação. É exatamente esse comportamento que faz a instrumentação
+  funcionar no caso que importa: quando o teste **falhar** na esteira
+  (reporter padrão), as marcas aparecem junto do erro.
+- Sem confirmação da esteira ainda — é o próximo envio real que mede se o
+  teto de 60s segura, e se a instrumentação captura algo no dia em que não
+  segurar.

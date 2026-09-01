@@ -96,13 +96,102 @@ banco de desenvolvimento — não entra na proporção de reruns da esteira
 ponta, upload de logo real via a rota HTTP de verdade (confirma
 `exigirDono()` e o pipeline inteiro), `/conta`/`/mais`/`/termos`
 conferidos em 375px (mobile) sem rolagem horizontal, alvo de toque das
-duas marcas medido por `getBoundingClientRect` (48px e 64px). **Ainda sem
-commit** — achados dos três passes trazidos ao fundador, aguardando decisão
-item a item antes do commit (`CLAUDE.md` §2 item 7).
+duas marcas medido por `getBoundingClientRect` (48px e 64px).
 
-Próximo: depois da decisão do fundador sobre os achados dos três passes do
-`/revisar` (a trava de logo já foi confirmada, 01/09/2026), commit e push;
-em seguida, Tarefa 3 do item 10 — Configurações: pátio, prazo padrão,
+**Commit e push confirmados** (`9e32173`) — correção de registro: esta
+entrada dizia "ainda sem commit" quando escrita; a decisão do fundador
+sobre os três passes veio logo em seguida e o commit já saiu antes da
+sessão seguinte abrir. Atualizado aqui, junto do próximo commit real
+(`CLAUDE.md` §2, item 9 — correção de diário nunca vira commit próprio).
+
+Próximo: Tarefa 3 do item 10 — Configurações: pátio, prazo padrão,
+numeração do relatório.
+
+---
+
+## 01/09/2026 — Investigação: segunda rodada da instabilidade em `titulos.test.ts` (quinto formato)
+
+Antes da Tarefa 3 do item 10: `/onde-paramos` desta sessão achou a
+investigação de causa raiz reaberta em 30/08/2026 (ver entrada abaixo,
+"Reabre causa raiz") parada desde então, sem hipótese nova, enquanto duas
+tarefas inteiras (item 10, Tarefas 1 e 2) foram somadas à suíte por cima do
+problema não resolvido. Decisão do fundador: investigar agora, não depois.
+
+**A hipótese de conexão por bloco (30/08) cai de vez — terceira evidência.**
+`2f91a9c` (31/08) estourou no mesmo teste de sempre, `titulos.test.ts`,
+**depois** do conserto já estar no código. Medido: a suíte não cresce em
+linha reta (duração total oscila 2433↔2907s com o mesmo tamanho, `titulos.
+test.ts` sozinho varia 766↔1200s rodando o mesmo código) — mais ruído de
+ambiente que acúmulo.
+
+**Achado novo, lendo o `FAIL` exato de cada execução (não só o arquivo):**
+não é "um teste aleatório" — é **sempre o mesmo teste**, em cada arquivo.
+`cobrancas.test.ts` (teste "4. listarCobrancas") parou de falhar desde o
+teto próprio de 60s (`2f57719` em diante) — mecanismo já fechado, teste
+pesado de verdade (17 operações). `titulos.test.ts` (teste "12b.
+registrarCobrancaEnviadaEmGrupo... um título inválido") continuava aberto.
+
+**Hipótese testada e descartada por medição, não por leitura de código —
+segundo achado do dia.** Primeira leitura (minha, antes de medir): o teste
+12b é "leve" (6 `await` no corpo) e por isso o mecanismo teria que ser algo
+fora do teste (cogitei transação interativa do Prisma contra o pooler de
+transação do Supabase, e uma "contradição" de que o Prisma erraria sozinho
+antes dos 30s se fosse só lentidão). O `/revisar` recusou o teto de 60s por
+falta de medição — e a medição (`npx vitest run ... --reporter=verbose`,
+isolado) mostrou o teste levando **10,8s sozinho, local**, não
+instantâneo. O motivo do erro: contei os `await` literais do corpo do
+teste e ignorei que `criarEmpresaDeTeste`/`criarTituloAberto` (chamado 3×)
+são funções compostas, cada uma disparando de 3 a 5 idas ao banco por
+dentro (`emTransacao` em `criarServico`/`faturarServico`) — a contagem
+real é **~25-30 idas ao banco**, não 6. Com o fator de desaceleração da
+esteira já documentado (~3×), projeta ~32s — exatamente onde os timeouts
+caíram. **Mesmo mecanismo de `cobrancas.test.ts`** (soma de idas ao banco
+perto do teto), não uma trava de rede nova. Registrado como o mesmo erro
+que o `CLAUDE.md` já nomeia: explicação plausível não é explicação
+verificada — a diferença aqui é que a medição chegou antes do commit, pelo
+`/revisar`, não depois.
+
+**Decisão do fundador: instrumentação + teto de 60s, sem pedir a
+credencial do banco de teste.** A credencial é a chave da esteira — trazê-la
+para investigação manual criaria caminho de vazamento novo, e o retorno
+seria baixo mesmo assim (precisaria pegar o instante exato de uma falha
+imprevisível). Instrumentação (`tests/titulos.test.ts`, marcas de tempo só
+no teste 12b, nunca em `src/`) e teto de 60s (contenção, com baseline
+medido desta vez) entram juntos: só o teto esconderia o problema da
+próxima falha real; só a instrumentação deixaria o ruído vermelho contando
+contra a proporção do `CLAUDE.md` §2 enquanto espera.
+
+**Critério de saída, decisão do fundador — não é prazo nem contagem.** Um
+número arbitrário ("depois de N envios sem estourar") não provaria que a
+causa sumiu — ausência de falha é o esperado com teto maior, não evidência
+de causa fechada. O critério que já vale continua sendo o mesmo do
+`cobrancas.test.ts`: se estourar de novo mesmo com 60s, é o teste fazendo
+trabalho demais, não falta de margem. A instrumentação sai quando a causa
+fechar, não por prazo — se nunca disparar, é barata e fica.
+
+**O gatilho que vale revisitar, registrado para não esquecer:** este é o
+**segundo** teste da suíte com teto próprio (depois de
+`cobrancas.test.ts`). Se aparecer um terceiro, deixa de ser caso isolado —
+e a pergunta muda de "este teste precisa de mais tempo" para "o teto
+global de 30s ainda serve para uma suíte que cresceu 4× desde que ele foi
+calibrado" (`CLAUDE.md` §2, `titulos.test.ts` tinha 8 testes em 20/08,
+tem 92 hoje).
+
+Detalhe completo, tabela de medição e a correção da explicação em
+`docs/planos/investiga-conexao-longa-em-titulos-test.md`, seção "Segunda
+rodada". `CLAUDE.md` §2 (catálogo do quinto formato) atualizado para não
+descrever mais a hipótese de conexão por bloco como "em teste".
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` limpos.
+`tests/titulos.test.ts` isolado, arquivo inteiro: 92/92, 405s. Teste 12b
+isolado com `--reporter=verbose`: passou, 10,8s, marcas de tempo
+aparecendo como esperado (o Vitest só mostra `console.log` de teste que
+passa com reporter verbose, ou de teste que falha, em qualquer reporter —
+por isso a rodada de arquivo inteiro, no reporter padrão, não mostrou
+nada: nenhum teste falhou). Sem confirmação da esteira ainda — é o próximo
+envio real que mede de verdade se o teto de 60s segura.
+
+Próximo: Tarefa 3 do item 10 — Configurações: pátio, prazo padrão,
 numeração do relatório.
 
 ---
