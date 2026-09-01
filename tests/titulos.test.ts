@@ -2180,30 +2180,64 @@ describe("12b. registrarCobrancaEnviadaEmGrupo — tudo ou nada (item 7, segundo
    * deixaria a lista mostrar o grupo como "cobrado" para uma fração dele ou
    * "não cobrado" depois de ter cobrado parte. A checagem roda ANTES de
    * qualquer gravação (`registrarCobrancaEnviadaEmGrupo`, `titulos.ts`).
+   *
+   * TETO PRÓPRIO E INSTRUMENTAÇÃO — investigação reaberta em 01/09/2026
+   * (`docs/planos/investiga-conexao-longa-em-titulos-test.md`, seção
+   * "Segunda rodada"). Este teste é o único ponto de falha aberto do
+   * catálogo do `CLAUDE.md` §2 (quinto formato) — estourou de novo depois do
+   * conserto de 30/08 (conexão por bloco), que nunca tocou a conexão que o
+   * código sob teste usa de verdade (`emTransacao`, via `DATABASE_URL`, o
+   * pooler de transação — o conserto mexeu só no `raiz`, via `DIRECT_URL`).
+   *
+   * O teto de 60s é CONTENÇÃO, não correção — mesmo critério do
+   * `TIMEOUT_TETO_RELATORIO` em `cobrancas.test.ts`: reduz o ruído vermelho
+   * na esteira enquanto a instrumentação espera a próxima falha, não prova
+   * nem resolve nada. Diferente daquele caso, aqui NÃO é margem — o teste
+   * faz pouquíssimo trabalho (3 títulos, 1 recebimento, 1 chamada, 1
+   * SELECT). Se estourar mesmo com 60s, não é "aumenta de novo": é sinal de
+   * que a instrumentação abaixo vai revelar onde trava.
+   *
+   * As marcas de tempo (`marca(...)`) ficam só até a causa ser confirmada —
+   * quando o teste travar de novo, a última marca "início" sem a "fim"
+   * correspondente no log da esteira aponta exatamente qual chamada estava
+   * em voo. Log de teste, nunca de produção: não toca nenhum arquivo em
+   * `src/`.
    */
   it("um título inválido no meio do grupo recusa TODOS — nenhum fica gravado", async () => {
+    const t0 = Date.now();
+    const marca = (rotulo: string) =>
+      console.log(`[investiga-timeout-12b] ${rotulo} — ${Date.now() - t0}ms`);
+
+    marca("início criarEmpresaDeTeste");
     const e = await criarEmpresaDeTeste("grp3");
+    marca("fim criarEmpresaDeTeste / início criarTituloAberto(valido1)");
     const valido1 = await criarTituloAberto(e);
+    marca("fim criarTituloAberto(valido1) / início criarTituloAberto(jaPago)");
     const jaPago = await criarTituloAberto(e);
+    marca("fim criarTituloAberto(jaPago) / início registrarRecebimento");
     await registrarRecebimento(e.empresaId, e.usuarioId, jaPago.id, {
       valor: e.valorServico,
       data: new Date(),
       forma: "Pix",
     });
+    marca("fim registrarRecebimento / início criarTituloAberto(valido2)");
     const valido2 = await criarTituloAberto(e);
+    marca("fim criarTituloAberto(valido2) / início registrarCobrancaEnviadaEmGrupo");
 
     await expect(
       registrarCobrancaEnviadaEmGrupo(e.empresaId, e.usuarioId, [valido1.id, jaPago.id, valido2.id]),
     ).rejects.toThrow("Esta cobrança já foi recebida ou cancelada.");
+    marca("fim registrarCobrancaEnviadaEmGrupo / início SELECT de verificação");
 
     const envios = await raiz.query(
       `SELECT titulo_id FROM cobranca_enviada WHERE titulo_id = ANY($1)`,
       [[valido1.id, jaPago.id, valido2.id]],
     );
+    marca("fim SELECT de verificação");
     // Nem os dois títulos válidos foram marcados — tudo ou nada de verdade.
     expect(envios.rows).toHaveLength(0);
     conferencias++;
-  });
+  }, 60_000);
 
   it("recusa título de outra empresa dentro do grupo — mesma conferência de FK do CLAUDE.md §3", async () => {
     const a = await criarEmpresaDeTeste("grp4a");
