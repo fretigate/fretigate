@@ -73,6 +73,48 @@ export async function resumoDoMes(empresaId: string, hoje: string): Promise<Resu
   };
 }
 
+export type ResumoDeLucro = {
+  /**
+   * `null` quando nenhuma despesa foi lançada no mês — convite, não a conta
+   * "faturamento − 0" tratada como lucro real (`CLAUDE.md` §8, regra 10;
+   * mesmo critério de `ResumoDeRodagem.kmMesMetros`: a ausência de
+   * lançamento decide o convite, nunca o valor da soma — os dois coincidem
+   * hoje porque toda despesa tem `valor > 0`, mas o gatilho é a
+   * **contagem**, não a conta). Decisão do fundador, 01/09/2026
+   * (`docs/planos/item-11-despesas.md`).
+   */
+  lucroCentavos: number | null;
+  faturamentoCentavos: number;
+  despesasCentavos: number;
+};
+
+/**
+ * Lucro do mês para a pastilha da dashboard (item 11) — faturamento (mesma
+ * soma-base de `resumoDoMes`, "somar é diferente de cobrar") menos despesas
+ * lançadas no mês (`arquivado_em: null`, mesma janela `[gte, lt)` de
+ * `limitesDoMes`).
+ */
+export async function resumoDeLucroDoMes(empresaId: string, hoje: string): Promise<ResumoDeLucro> {
+  const primeiroDiaDoMesAtual = `${hoje.slice(0, 7)}-01`;
+  const { inicio, fimExclusivo } = limitesDoMes(primeiroDiaDoMesAtual);
+
+  const [faturamento, despesas] = await Promise.all([
+    somaDoMes(empresaId, primeiroDiaDoMesAtual),
+    db(empresaId).despesa.aggregate({
+      where: { arquivado_em: null, data: { gte: inicio, lt: fimExclusivo } },
+      _sum: { valor: true },
+      _count: true,
+    }),
+  ]);
+
+  const despesasCentavos = despesas._sum.valor ?? 0;
+  return {
+    lucroCentavos: despesas._count > 0 ? faturamento.faturamentoCentavos - despesasCentavos : null,
+    faturamentoCentavos: faturamento.faturamentoCentavos,
+    despesasCentavos,
+  };
+}
+
 export type ResumoDeRodagem = {
   /** `null` quando nenhum frete do mês tem km preenchido — convite, não zero (`CLAUDE.md` §8). */
   kmMesMetros: number | null;

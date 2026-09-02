@@ -133,6 +133,7 @@ const POLITICAS_ESPERADAS: Record<string, Politica[]> = {
   cobranca_enviada: [politicaDeIsolamento("cobranca_enviada", "empresa_id")],
   relatorio: [politicaDeIsolamento("relatorio", "empresa_id")],
   relatorio_servico: [politicaDeIsolamento("relatorio_servico", "empresa_id")],
+  despesa: [politicaDeIsolamento("despesa", "empresa_id")],
   // Segunda política, só para `fretigate_convite` — a busca do convite pelo
   // token acontece antes de saber a empresa, mesma necessidade de
   // `usuario_autenticacao`, mas restrita a um papel que só existe para a

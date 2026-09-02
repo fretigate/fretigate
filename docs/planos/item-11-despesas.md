@@ -282,5 +282,21 @@ sai do convite e mostra o valor certo.
 - **Ícone da linha "Despesas" em Mais** — nenhum ícone existente foi feito
   para isso; pedido ao Design.
 - **Trava de data futura em `Despesa.data`** — decisão da construção
-  (mesmo padrão de `Recebimento.data`), não confirmada em documento —
-  registrada para o fundador corrigir se discordar.
+  (mesmo padrão de `Recebimento.data`), confirmada pelo fundador na
+  aprovação do plano.
+- **Prejuízo (lucro negativo) sem tratamento visual definido** — achado do
+  `/revisar`: com despesa maior que o faturamento, a pastilha "Lucro no mês"
+  mostra `formatarCentavos` de um número negativo ("R$ -X,XX", o sinal
+  depois de "R$", sem cor de alerta). Nenhum documento define sinal, rótulo
+  ou cor para prejuízo — `docs/estilo.md` só nomeia `#B3401A` para
+  "vencido", outro domínio. O número está certo (medido em
+  `tests/dashboard.test.ts`, "despesa maior que o faturamento"); só o
+  tratamento visual fica em aberto. Pedido ao Design.
+- **`Voltar` de Despesas fixo em `/mais`, embora existam duas origens**
+  (Mais e o card de Lucro da dashboard, `docs/navegacao.md` linha 47) —
+  achado do `/revisar`: "Regras de navegação" define Voltar como "leva de
+  volta à origem", sem cobrir o caso de duas origens diferentes. Mesma
+  lacuna que já existe em outras telas com mais de uma origem (ex.:
+  Relatório — montagem); não é peculiar desta tarefa. `/mais` escolhido por
+  ser a origem mais estável (Despesas passa a viver ali permanentemente;
+  a pastilha Lucro é um atalho a mais, não o lar da tela).

@@ -5,12 +5,14 @@ import {
   contarCobrancasVencidasAgrupadas,
   contarFretesEmAndamento,
   faturamentoPorMes,
+  resumoDeLucroDoMes,
   resumoDeRodagemDoMes,
   resumoDoMes,
   sugerirRelatorio,
 } from "@/lib/servicos/dashboard";
 import { arquivarServico, criarServico } from "@/lib/servicos/servicos";
 import { criarCliente } from "@/lib/servicos/clientes";
+import { arquivarDespesa, criarDespesa } from "@/lib/servicos/despesas";
 import { instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
 
 /**
@@ -32,7 +34,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 17;
+const CONFERENCIAS_ESPERADAS = 23;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -143,6 +145,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (empresasParaLimpar.length) {
+    await raiz.query(`DELETE FROM "despesa" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
     await raiz.query(`DELETE FROM "titulo_receber" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
     await raiz.query(`DELETE FROM "relatorio_servico" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
     await raiz.query(`DELETE FROM "relatorio" WHERE empresa_id = ANY($1)`, [empresasParaLimpar]);
@@ -204,6 +207,96 @@ describe("1. resumoDoMes — soma é diferente de cobrar, e a comparação com o
     expect(resumo.faturamentoCentavos).toBe(0);
     expect(resumo.qtdFretes).toBe(0);
     expect(resumo.mediaPorFrete).toBeNull();
+    conferencias++;
+  });
+});
+
+describe("1b. resumoDeLucroDoMes — convite pela ausência de lançamento, nunca pela conta", () => {
+  const hoje = "2026-08-15";
+
+  it("faturamento sem despesa lançada no mês: convite (null), nunca \"faturamento − 0\"", async () => {
+    // A armadilha nomeada pelo fundador (`docs/planos/item-11-despesas.md`):
+    // `faturamentoCentavos - 0` daria um número que parece lucro real e não
+    // é — mesma armadilha do R$/km sem km. O gatilho do convite é a
+    // EXISTÊNCIA de despesa no mês, não o valor da soma.
+    const e = await criarEmpresaDeTeste("lucro-1");
+    await criarFrete(e, { valor: 50_000, dataServico: instanteDoDiaEmFortaleza("2026-08-05") });
+
+    const resumo = await resumoDeLucroDoMes(e.empresaId, hoje);
+    expect(resumo.faturamentoCentavos).toBe(50_000);
+    expect(resumo.despesasCentavos).toBe(0);
+    expect(resumo.lucroCentavos).toBeNull();
+    conferencias++;
+  });
+
+  it("a partir da primeira despesa lançada, número real, mesmo pequena", async () => {
+    const e = await criarEmpresaDeTeste("lucro-2");
+    await criarFrete(e, { valor: 50_000, dataServico: instanteDoDiaEmFortaleza("2026-08-05") });
+    await criarDespesa(e.empresaId, {
+      data: instanteDoDiaEmFortaleza("2026-08-06"),
+      valor: 20_000,
+    });
+
+    const resumo = await resumoDeLucroDoMes(e.empresaId, hoje);
+    expect(resumo.faturamentoCentavos).toBe(50_000);
+    expect(resumo.despesasCentavos).toBe(20_000);
+    expect(resumo.lucroCentavos).toBe(30_000);
+    conferencias++;
+  });
+
+  it("despesa maior que o faturamento: lucro negativo, ainda número real (nunca convite)", async () => {
+    // Achado do `/revisar`: a primeira versão deste arquivo afirmava medir
+    // este caso no título do teste anterior sem medir de verdade
+    // (`CLAUDE.md` §13, "afirmação de medição sobre coisa que não existe").
+    const e = await criarEmpresaDeTeste("lucro-2b");
+    await criarFrete(e, { valor: 20_000, dataServico: instanteDoDiaEmFortaleza("2026-08-05") });
+    await criarDespesa(e.empresaId, {
+      data: instanteDoDiaEmFortaleza("2026-08-06"),
+      valor: 50_000,
+    });
+
+    const resumo = await resumoDeLucroDoMes(e.empresaId, hoje);
+    expect(resumo.faturamentoCentavos).toBe(20_000);
+    expect(resumo.despesasCentavos).toBe(50_000);
+    expect(resumo.lucroCentavos).toBe(-30_000);
+    conferencias++;
+  });
+
+  it("despesa fora do mês corrente não entra na soma", async () => {
+    const e = await criarEmpresaDeTeste("lucro-3");
+    await criarDespesa(e.empresaId, {
+      data: instanteDoDiaEmFortaleza("2026-07-20"),
+      valor: 10_000,
+    });
+    await criarDespesa(e.empresaId, {
+      data: instanteDoDiaEmFortaleza("2026-08-05"),
+      valor: 5_000,
+    });
+
+    const resumo = await resumoDeLucroDoMes(e.empresaId, hoje);
+    expect(resumo.despesasCentavos).toBe(5_000);
+    conferencias++;
+  });
+
+  it("despesa arquivada não entra na soma nem destrava o convite", async () => {
+    const e = await criarEmpresaDeTeste("lucro-4");
+    const arquivada = await criarDespesa(e.empresaId, {
+      data: instanteDoDiaEmFortaleza("2026-08-05"),
+      valor: 10_000,
+    });
+    await arquivarDespesa(e.empresaId, arquivada.id);
+
+    const resumo = await resumoDeLucroDoMes(e.empresaId, hoje);
+    expect(resumo.despesasCentavos).toBe(0);
+    expect(resumo.lucroCentavos).toBeNull();
+    conferencias++;
+  });
+
+  it("sem frete e sem despesa no mês: faturamento zero, convite", async () => {
+    const e = await criarEmpresaDeTeste("lucro-5");
+    const resumo = await resumoDeLucroDoMes(e.empresaId, hoje);
+    expect(resumo.faturamentoCentavos).toBe(0);
+    expect(resumo.lucroCentavos).toBeNull();
     conferencias++;
   });
 });

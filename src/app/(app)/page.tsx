@@ -7,6 +7,7 @@ import {
   contarCobrancasVencidasAgrupadas,
   contarFretesEmAndamento,
   faturamentoPorMes,
+  resumoDeLucroDoMes,
   resumoDeRodagemDoMes,
   resumoDoMes,
   sugerirRelatorio,
@@ -36,16 +37,18 @@ import { BotaoReenviarEmail } from "./BotaoReenviarEmail";
  * corte já foi aplicado em Mais sem essa linha ser corrigida; fica
  * registrado para pedir ao Design.
  *
- * **A pastilha Lucro leva a `/despesas`, que nasceu nesta tarefa** — o
- * plano já linkava para lá supondo que a rota existia com o próprio estado
- * vazio; sem a página, o toque caía num 404 (`CLAUDE.md` §8). Ver
- * `src/app/(app)/despesas/page.tsx`.
+ * **A pastilha Lucro mostra número real desde o item 11**
+ * (`docs/planos/item-11-despesas.md`) — `resumoDeLucroDoMes` (faturamento
+ * menos despesas do mês). Convite só quando **nenhuma despesa foi lançada
+ * no mês**, nunca quando a conta "faturamento − 0" daria um número —
+ * mesma armadilha do R$/km sem km (`CLAUDE.md` §8, regra 10; decisão do
+ * fundador, 01/09/2026).
  */
 export default async function Pagina() {
   const sessao = await exigirSessao();
   const hoje = diaEmFortaleza(new Date());
 
-  const [empresa, usuario, resumoMes, rodagem, cobrancas, fretesAFaturar, emAndamento, vencidasAgrupadas, sugestao, meses] =
+  const [empresa, usuario, resumoMes, lucro, rodagem, cobrancas, fretesAFaturar, emAndamento, vencidasAgrupadas, sugestao, meses] =
     await Promise.all([
       db(sessao.empresaId).empresa.findUnique({
         where: { id: sessao.empresaId },
@@ -56,6 +59,7 @@ export default async function Pagina() {
         select: { email_verificado: true },
       }),
       resumoDoMes(sessao.empresaId, hoje),
+      resumoDeLucroDoMes(sessao.empresaId, hoje),
       resumoDeRodagemDoMes(sessao.empresaId, hoje),
       resumoDeCobrancas(sessao.empresaId, hoje),
       contarFretesAFaturar(sessao.empresaId),
@@ -146,7 +150,20 @@ export default async function Pagina() {
           valor={`R$ ${formatarCentavos(cobrancas.vencido)}`}
           vencida
         />
-        <Pastilha href="/despesas" rotulo="Lucro no mês" convite="O lucro aparece quando houver despesa lançada." />
+        {lucro.lucroCentavos === null ? (
+          <Pastilha
+            href="/despesas"
+            rotulo="Lucro no mês"
+            convite="O lucro aparece quando houver despesa lançada."
+          />
+        ) : (
+          <Pastilha
+            href="/despesas"
+            rotulo="Lucro no mês"
+            valor={`R$ ${formatarCentavos(lucro.lucroCentavos)}`}
+            apoio={`R$ ${formatarCentavos(lucro.faturamentoCentavos)} de faturamento − R$ ${formatarCentavos(lucro.despesasCentavos)} de despesas`}
+          />
+        )}
         {rodagem.kmMesMetros === null ? (
           <Pastilha rotulo="Rodagem no mês" convite="Preencha o km ao lançar para ver o R$/km." />
         ) : (

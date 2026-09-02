@@ -1,40 +1,55 @@
-import Link from "next/link";
 import { exigirSessao } from "@/lib/auth/sessao";
-import { EstadoVazio } from "@/components/ui/EstadoVazio";
+import { listarDespesas } from "@/lib/servicos/despesas";
+import { BotaoVoltar } from "@/components/ui/BotaoVoltar";
+import { PilulaCabecalho } from "@/components/ui/PilulaCabecalho";
+import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { nomeCaminhao } from "@/lib/utils/caminhao";
+import { resolverLimiteDaLista, resolverPeriodoDaUrl, rotuloDoPeriodo } from "@/lib/utils/periodo";
+import { ListaDespesas, type DespesaParaLista } from "./ListaDespesas";
 
 /**
- * Despesas — PROVISÓRIA, mesmo tratamento das telas de Fretes e Cobranças na
- * "casca do app" (commit `3b7561f`, 10/08/2026): fica ativa desde já, no
- * destino que já existe (a pastilha Lucro da dashboard), apontando para uma
- * tela curta que diz o que falta em vez de dar erro. **Esperado até o item
- * 11 da ordem de construção (Despesas, `docs/especificacao.md` §9)
- * substituir esta tela.**
+ * Despesas — lista (item 11). Substitui a tela provisória do item 8
+ * (`docs/planos/item-8-dashboard.md`), que só mostrava o estado vazio
+ * explicando por que o Lucro não tinha número.
  *
- * `docs/navegacao.md` linha 47. Item 11 (Despesa) ainda não existe no
- * schema, então esta tela nasce só com o estado vazio que explica por que o
- * Lucro da dashboard ainda não tem número — mesmo texto já decidido em
- * `docs/navegacao.md` ("Estado vazio explica que o Lucro depende dela") e
- * usado no card de Lucro em estado de convite (item 8, Tarefa 2).
+ * `docs/navegacao.md` linha 47: chega de "Mais" (linha nova nesta tarefa,
+ * `src/app/(app)/mais/page.tsx`) e do card de Lucro da dashboard em estado
+ * de convite. **Voltar → `/mais`** — mesmo padrão de Clientes/Caminhões/
+ * Motoristas (todos na mesma seção "Mais — cadastros" do mapa de
+ * navegação); a versão provisória usava `/` porque "Mais" ainda não tinha
+ * linha própria para cá (comentário removido nesta tarefa, junto da
+ * substituição da tela inteira).
  *
- * Nasceu nesta tarefa, fora do escopo original de `docs/planos/
- * item-8-dashboard.md`: o plano já linkava a pastilha Lucro para cá supondo
- * que a rota já respondia com esse mesmo estado vazio — sem esta página, o
- * toque levava a um 404 (`CLAUDE.md` §8: nunca um botão sem destino).
- * Decisão do fundador, 30/08/2026: correto manter o destino (diferente da
- * pastilha Rodagem, que não tem destino porque nenhum foi definido — aqui
- * existe um definido, só não construído). Sem "+ Nova despesa" nem lista —
- * os dois só nascem no item 11.
- *
- * **Voltar → `/`, não `/mais`** — toda tela de nível 2 tem Voltar no canto
- * superior esquerdo, levando de volta à origem (`docs/navegacao.md`,
- * "Regras de navegação"). Achado do segundo `/revisar`: a primeira versão
- * usava `/mais` por analogia com Clientes/Caminhões/Motoristas, mas hoje o
- * único caminho até aqui é a pastilha Lucro da dashboard — "Mais" ainda não
- * tem linha de Despesas (`src/app/(app)/mais/page.tsx`, nasce no item 11).
- * `/mais` não seria "voltar à origem", seria um destino novo.
+ * Só `periodo` (e `de`/`ate`) vira parâmetro de URL — mesma decisão de
+ * "Meus fretes" (item 4, Tarefa 2): trocar Período dispara nova consulta ao
+ * servidor; Categoria filtra no cliente (`ListaDespesas`), com itens
+ * derivados do que já foi carregado (decisão do fundador, `docs/planos/
+ * item-11-despesas.md`, decisão 2).
  */
-export default async function Pagina() {
-  await exigirSessao();
+export default async function Pagina({
+  searchParams,
+}: {
+  searchParams: Promise<{ periodo?: string; de?: string; ate?: string }>;
+}) {
+  const sessao = await exigirSessao();
+  const { periodo: janela, de, ate } = await searchParams;
+
+  const periodo = resolverPeriodoDaUrl(janela, de, ate);
+  const limite = resolverLimiteDaLista(janela, periodo);
+
+  const despesas = await listarDespesas(sessao.empresaId, {
+    periodo: periodo ?? undefined,
+    limite,
+  });
+
+  const paraLista: DespesaParaLista[] = despesas.map((d) => ({
+    id: d.id,
+    dia: diaEmFortaleza(d.data),
+    categoria: d.categoria,
+    valorCentavos: d.valor,
+    descricao: d.descricao,
+    veiculoNome: d.veiculo ? nomeCaminhao(d.veiculo) : null,
+  }));
 
   return (
     <main
@@ -45,33 +60,32 @@ export default async function Pagina() {
         className="flex items-center gap-10 px-20 pb-14"
         style={{ paddingTop: "var(--area-segura-topo)" }}
       >
-        <Link
-          href="/"
-          aria-label="Voltar"
-          className="-ml-10 flex h-44 w-44 flex-none items-center justify-center"
-        >
-          <svg width={12} height={20} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M15.6 4.35 8.4 12l7.2 7.65"
-              stroke="currentColor"
-              strokeWidth={2.2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Link>
+        <BotaoVoltar href="/mais" />
         <span
           className="min-w-0 flex-1 text-titulo-tela font-bold tracking-[-0.01em] text-tinta-apoio-forte"
           style={{ fontVariationSettings: "'wdth' 96" }}
         >
           Despesas
         </span>
+        {/* Some só quando o estado vazio de primeira vez está na tela — ele já
+            tem o próprio principal "Lançar a primeira despesa" (mesma regra
+            de `clientes/page.tsx`: duas ações com o mesmo destino repete
+            "uma ação, um nome", `CLAUDE.md` §8). Zero despesas com um
+            período escolhido é "nenhuma despesa **neste período**", não o
+            estado vazio de primeira vez — a pílula continua. */}
+        {despesas.length > 0 || periodo !== null ? (
+          <PilulaCabecalho href="/despesas/nova">+ Nova</PilulaCabecalho>
+        ) : null}
       </div>
 
       <div className="px-16">
-        <EstadoVazio
-          titulo="Ainda sem despesas"
-          texto="O lucro aparece quando houver despesa lançada."
+        <ListaDespesas
+          despesas={paraLista}
+          hoje={diaEmFortaleza(new Date())}
+          janelaAtual={janela}
+          filtroDePeriodoAtivo={periodo !== null}
+          limitadoA50={limite === 50 && despesas.length === 50}
+          rotuloPeriodo={rotuloDoPeriodo(janela, de, ate, "Todas as despesas")}
         />
       </div>
     </main>

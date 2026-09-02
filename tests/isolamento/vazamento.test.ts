@@ -122,6 +122,11 @@ const TABELAS_DO_LACO: Record<
       where: { empresa_id: { in: [A, B] } },
       select: { empresa_id: true },
     }),
+  despesa: (empresaId) =>
+    db(empresaId).despesa.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
 };
 
 const semear = async (id: string, nome: string) => {
@@ -243,6 +248,16 @@ const semear = async (id: string, nome: string) => {
      VALUES (gen_random_uuid(), $1, '85999990000', $2, 'operador', $3, now())`,
     [id, `Convidado ${nome}`, `token-${id}-${marca}`],
   );
+  // Uma Despesa por empresa (item 11), mesma razão acima. A regra de negócio
+  // (valor > 0, data/valor obrigatórios, conferência de FK de `veiculo_id`)
+  // é testada em `tests/despesas.test.ts`. Sem vínculo (`veiculo_id`/
+  // `servico_id` nulos) — a prova de vazamento não precisa deles, e nenhuma
+  // outra linha semeada aqui referencia esta.
+  await raiz.query(
+    `INSERT INTO "despesa" (id, empresa_id, data, valor)
+     VALUES (gen_random_uuid(), $1, now(), 10000)`,
+    [id],
+  );
 };
 
 beforeAll(async () => {
@@ -265,7 +280,10 @@ afterAll(async () => {
   // antes dele; `servico` referencia os quatro da tarefa 1, então sai antes
   // deles; `motorista` referencia `veiculo` (`veiculo_habitual_id`), então
   // sai antes dele; `convite` (item 10, Tarefa 1) só referencia `empresa`,
-  // então pode sair em qualquer ponto antes dela.
+  // então pode sair em qualquer ponto antes dela; `despesa` (item 11), nesta
+  // semente, também só referencia `empresa` (`veiculo_id`/`servico_id`
+  // nulos), mesmo caso de `convite`.
+  await raiz.query(`DELETE FROM "despesa" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "convite" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "cobranca_enviada" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "recebimento" WHERE empresa_id IN ($1,$2)`, [A, B]);

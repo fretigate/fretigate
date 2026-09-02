@@ -157,6 +157,7 @@ model Empresa {
   relatorios         Relatorio[]
   relatorio_servicos RelatorioServico[]
   convites           Convite[]
+  despesas           Despesa[]
 
   @@map("empresa")
 }
@@ -414,6 +415,10 @@ model Veiculo {
   /// `Motorista`), mas o Prisma exige o campo dos dois lados da relação.
   motoristas Motorista[]
   servicos   Servico[]
+  /// Despesas vinculadas a este caminhão (item 11) — vínculo informativo,
+  /// não altera `resumoDoCaminhao`/R$-por-km (`docs/planos/
+  /// item-11-despesas.md`, decisão 3).
+  despesas   Despesa[]
 
   criado_em     DateTime  @default(now()) @db.Timestamptz(6)
   atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
@@ -653,6 +658,10 @@ model Servico {
 
   titulos_receber    TituloReceber[]
   relatorio_servicos RelatorioServico[]
+  /// Lado inverso de `Despesa.servico_id` (item 11) — coluna existe desde a
+  /// migration da entidade, sem tela para gravá-la ainda (`docs/planos/
+  /// item-11-despesas.md`, decisão 1).
+  despesas           Despesa[]
 
   @@unique([empresa_id, numero])
   @@index([empresa_id])
@@ -1006,6 +1015,64 @@ model RelatorioServico {
   @@index([empresa_id])
   @@index([servico_id])
   @@map("relatorio_servico")
+}
+
+/// Gasto lançado (item 11 — `docs/planos/item-11-despesas.md`).
+/// `docs/especificacao.md` §4.8, §6. Alimenta a pastilha Lucro da dashboard
+/// (faturamento − despesas do mês).
+///
+/// **Só `data` e `valor` são obrigatórios.** `categoria` é texto livre, sem
+/// inventário fechado no banco — mesmo padrão de `Recebimento.forma`; a
+/// lista fechada (Diesel · Manutenção · Motorista · Pedágio · Pneu ·
+/// Documento · Outro) é da interface (`src/lib/utils/despesa.ts`).
+///
+/// **`veiculo_id`** é vínculo informativo a um caminhão desta empresa,
+/// conferido contra a empresa no serviço antes de gravar (`CLAUDE.md` §3 —
+/// o Postgres não aplica RLS na checagem de FK; ver `src/lib/servicos/
+/// despesas.ts`). Não altera `resumoDoCaminhao`/R$-por-km — decisão do
+/// fundador, 01/09/2026 (`docs/planos/item-11-despesas.md`, decisão 3):
+/// descontar despesa ali trocaria receita por margem sem trocar o rótulo.
+///
+/// **`servico_id`** entra nesta migration porque a especificação já lista
+/// os dois vínculos desde a definição da entidade, mas **sem tela para
+/// gravá-lo ainda e sem conferência de posse no serviço** — mesmo padrão
+/// já usado em `TituloReceber.relatorio_id` antes da Tarefa 4 do item 7:
+/// nenhum caminho grava este campo hoje. Decisão do fundador, 01/09/2026:
+/// o vínculo a caminhão tem consumidor (custo por veículo); o vínculo a
+/// frete não alimenta nenhuma tela hoje. Ganha tela e conferência quando
+/// existir quem leia — requisito explícito para quem construir isso depois.
+model Despesa {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  /// O dia da despesa, escolhido em chips Hoje · Ontem · Outra data — nunca
+  /// digitação (`CLAUDE.md` §8). Trava contra o futuro, mesmo padrão de
+  /// `Recebimento.data`: despesa é fato que já aconteceu, diferente do
+  /// frete (a ordem nasce antes da execução — `CLAUDE.md` §1).
+  data DateTime @db.Timestamptz(6)
+
+  categoria String?
+
+  /// Centavos, inteiro (`CLAUDE.md` §7). Sempre positivo.
+  valor Int
+
+  descricao String?
+
+  veiculo_id String?  @db.Uuid
+  veiculo    Veiculo? @relation(fields: [veiculo_id], references: [id], onDelete: Restrict)
+
+  servico_id String?  @db.Uuid
+  servico    Servico? @relation(fields: [servico_id], references: [id], onDelete: Restrict)
+
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  /// §7 — nada é apagado. Preenchido = arquivado.
+  arquivado_em DateTime? @db.Timestamptz(6)
+
+  @@index([empresa_id])
+  @@map("despesa")
 }
 
 enum StatusConvite {
