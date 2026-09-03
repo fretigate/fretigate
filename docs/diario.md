@@ -6,6 +6,71 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 02/09/2026 — Item 11: Despesas — fundamentos e telas, item 11 fecha
+
+Entrada que faltava no diário — o item 11 foi planejado e construído depois
+da Tarefa 4 do item 10 (abaixo), sem registro próprio; commits `ef08faf`
+(plano) e `efc26cd` (construção). Decisão do fundador, 01/09/2026: entra
+antes do item 13 por ser o mais barato dos que restam (lista, formulário e
+filtros, sem integração e sem decisão em aberto) e fecha duas pendências já
+existentes — a pastilha Lucro da dashboard presa no convite desde o item 8, e
+`/despesas` como tela provisória desde o mesmo item.
+
+**Construído:**
+- Entidade `Despesa` (`data`, `categoria` texto livre, `valor`, `descricao`,
+  vínculo opcional a caminhão com conferência de posse contra a empresa,
+  coluna `servico_id` já na migration, sem tela), isolamento por
+  `empresa_id`, serviço com CRUD (`src/lib/servicos/despesas.ts`).
+- `resumoDeLucroDoMes` em `src/lib/servicos/dashboard.ts`.
+- Telas: lista (`/despesas`) com filtro de período (servidor) e categoria
+  (cliente, dinâmico a partir do já lançado); cadastro/edição
+  (`/despesas/nova`, `/despesas/[id]`) com teclado numérico próprio, chips de
+  categoria (as sete do protótipo, "Outro" com texto livre) e de vínculo,
+  data travada contra o futuro, arquivar.
+- Entrada em Mais; a pastilha Lucro da dashboard sai do convite fixo —
+  convite só quando nenhuma despesa foi lançada no mês, nunca pela conta
+  "faturamento − 0" (a armadilha nomeada pelo fundador no plano).
+
+**Três decisões do fundador ao aprovar o plano, 01/09/2026** (detalhe em
+`docs/planos/item-11-despesas.md`):
+1. Vínculo só a caminhão nesta tarefa — `servico_id` nasce no schema, sem
+   tela (sem consumidor hoje).
+2. Categoria: texto livre no banco, chip fechado na interface, mesmo padrão
+   de `Recebimento.forma`.
+3. R$/km líquido de despesa fica fora do item 11 — decisão de produto em
+   aberto, não fase 2 (descontar despesa trocaria receita por margem sem
+   trocar o rótulo).
+
+**`/revisar`, achados corrigidos antes do commit** (lista do próprio
+commit): componente de voltar copiado à mão em vez de reutilizado; tamanho
+de fonte fora do sistema; rodapé fixo indevido — copiava a exceção do
+teclado numérico de Lançar Frete para o bloco inteiro de ações, escondendo
+os botões atrás da barra de navegação, só apareceu testando de verdade;
+vínculo por chip em vez de folha de busca; texto que prometia efeito no
+R$/km que a decisão do fundador já tinha recusado; teste que afirmava medir
+um caso que não testava; `docs/navegacao.md` desatualizado.
+
+**Verificação: local**, confirmada nesta sessão (a original não ficou
+registrada) — `npx tsc --noEmit` e `npm run lint` limpos; `tests/
+despesas.test.ts` (16) + `tests/dashboard.test.ts` (23) = 39/39, contra o
+banco de desenvolvimento. Este item não tem suíte de tela — verificação
+ficou só no navegador, por decisão já registrada no item 7/8 (`CLAUDE.md`
+§14).
+
+**Lacunas registradas, não corrigidas agora** (detalhe no plano): vínculo a
+frete (`Despesa.servico_id`) sem tela; R$/km líquido de despesa vinculada;
+ícone próprio da linha "Despesas" em Mais; prejuízo (lucro negativo) sem
+tratamento visual definido, pedido ao Design; `Voltar` de Despesas fixo em
+`/mais` apesar de duas origens (mesma lacuna já existente noutras telas).
+
+Próximo: item 13 da ordem de construção do produto (`docs/especificacao.md`
+§9) — Assinatura, plano gratuito, limites e tela de limite. **Depende de
+decisão do fundador: qual gateway de pagamento** (`CLAUDE.md` §14, "Gateway
+de pagamento") — o gateway define tela, schema, como a assinatura vence e o
+que acontece quando o pagamento falha.
+
+---
+
 ## 01/09/2026 — Tarefa 4 do item 10: Usuários — convite por WhatsApp e Aceitar convite
 
 Última tarefa do item 10. Serviço e função de banco já existiam da Tarefa 1

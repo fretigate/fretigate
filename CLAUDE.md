@@ -1858,15 +1858,30 @@ Não invente resposta. Pergunte.
   **recuperação que cai em spam é cliente perdido em silêncio** — ele não
   reclama, some. Por isso a tarefa 7 não fecha sem envio conferido de verdade.
 
-- Gateway de pagamento
+- ~~Gateway de pagamento~~ — **RESOLVIDO em 03/09/2026.** Checkout de
+  terceiro (Kiwify), não gateway direto — decisão do fundador,
+  planejamento do item 13 (`docs/planos/item-13-assinatura.md`): antifraude,
+  retentativa de cobrança, emissão fiscal opcional e programa de afiliado já
+  vêm prontos, contra uma taxa efetiva medida (~10,7% de Kiwify contra ~3,3%
+  de um gateway direto como a Asaas, na mesma pesquisa). A venda é direta ao
+  checkout (Fluxo B) — sem cadastro entre o anúncio e o pagamento; a conta
+  nasce a partir do link de confirmação da compra, mesmo mecanismo do
+  convite de usuário (token, tela pública, reivindicação atômica). Sem
+  abstração de múltiplos gateways agora (§6) — se um segundo entrar depois,
+  quem garante a troca é o estado da assinatura, os limites e as telas
+  serem do FretiGate, não uma camada de abstração construída sem o segundo
+  gateway existir.
 - **Prazo de retenção de leitura/exportação depois de cancelamento
   voluntário** — os 90 dias do §10 valem para assinatura **vencida**
   (pagamento que falhou), não para cancelamento por vontade própria. O texto
   dos Termos promete retenção "por um período" depois do cancelamento, sem
   dizer quanto — esse prazo ainda não foi decidido. Achado ao revisar a
   publicação dos Termos em 18/08/2026.
-- Revisão do valor do plano anual — R$ 840 dá 53% de desconto sobre o mensal, o
-  que pode sinalizar que o mensal é inflado. Recomendação em aberto: R$ 990.
+- ~~Revisão do valor do plano anual~~ — **RESOLVIDO em 03/09/2026.** R$
+  840/ano confirmado (o valor já publicado acima, em §10) — R$ 990 nunca
+  foi decisão, era a recomendação do fundador na conversa que originou este
+  item; `docs/navegacao.md` ("Planos") tinha sido desenhado a partir da
+  recomendação, corrigido no planejamento do item 13.
 - Valor à vista no Pix do plano anual
 - Percentual e regra de comissão do afiliado
 - Política de desconto
