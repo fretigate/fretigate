@@ -191,35 +191,46 @@ model PagamentoPendente {
 Sem `arquivado_em` — o `status` já cobre o ciclo de vida inteiro
 (`pendente`/`aceito`/`estornado`), mesmo raciocínio do `Convite`.
 
-### A exceção ao isolamento — a primeira desde `municipio`, por motivo diferente
+### A exceção ao isolamento — não é bem como `municipio`, e só a suíte mostrou isso
 
-`pagamento_pendente` é a **primeira tabela do produto fora do isolamento
-por empresa desde `municipio`** — `tests/isolamento/schema.test.ts` só
-conhece seis nomes na lista de tabelas sem `empresa_id`
-(`session`/`account`/`verification`/`empresa`/`rate_limit`/`municipio`),
-conferida por **igualdade exata**: tabela nova sem `empresa_id` que não
-está nessa lista reprova a suíte sozinha, de propósito (`CLAUDE.md` §3).
+**Correção feita depois de rodar a suíte de isolamento pela primeira vez
+contra a tabela nova** (achado da construção, não da conversa que aprovou
+o plano — registrado aqui porque a formulação original estava errada,
+`CLAUDE.md` §2, "explicação plausível não é explicação verificada"):
+`pagamento_pendente` **não** é "tabela sem `empresa_id`" no sentido que
+`tests/isolamento/schema.test.ts` mede — ela **tem** a coluna
+(`empresa_id UUID`, nullable). `SEM_EMPRESA_ID` é para tabela sem a coluna
+nenhuma (`session`/`account`/`verification`/`empresa`/`rate_limit`/
+`municipio`); rodar a suíte com `pagamento_pendente` lá dentro reprovou —
+o mecanismo confere presença de coluna, não se ela está sendo usada para
+isolamento.
 
-**O motivo é diferente do de `municipio`, e vale registrado assim, não por
-analogia**: `municipio` está fora porque é dado global, o mesmo dono (o
-IBGE) para sempre — a política `municipio_leitura` (`USING (true) WITH
-CHECK (false)`) existe porque a ausência de `empresa_id` é permanente e
-por desenho. `pagamento_pendente` está fora porque é **dado que ainda não
-tem dono** — a ausência é temporária, dura só até `reivindicar_pagamento`
-gravar o `empresa_id` (o campo é nullable exatamente por isso). As duas
-são "tabela sem `empresa_id`" pela letra do teste, mas por razões opostas:
-uma nunca vai ter dono, a outra está esperando o dela nascer.
+**O que de fato diferencia esta tabela é a política, não a coluna**: em vez
+de `empresa_id = contexto` (a forma de toda tabela de domínio), ela tem uma
+política própria e nomeada — `USING (true) WITH CHECK (true)`, restrita a
+`fretigate_pagamento` — porque o acesso não é "cada empresa vê a si mesma",
+é "um papel específico, sem contexto de empresa nenhum, grava e lê a tabela
+inteira, com a guarda de verdade dentro de cada função `SECURITY DEFINER`
+(`WHERE status = 'pendente'`)". Foi por isso que `empresa` também ganhou
+uma **segunda** política (`empresa_busca_por_assinante_gateway`, também
+`fretigate_pagamento`) — o mesmo padrão de tabela com mais de uma política
+que `convite`/`municipio` já usam, só que em `empresa`, não numa tabela
+nova.
 
-**Requisito de construção, Tarefa 1 — os dois lugares que o teste
-confere, os dois precisam da entrada nova:**
-- `SEM_EMPRESA_ID` (`tests/isolamento/schema.test.ts`) ganha
-  `pagamento_pendente`, com o motivo escrito acima (ausência temporária,
-  não permanente) — sem essa entrada a suíte reprova sozinha, é o próprio
-  mecanismo fazendo o que promete.
-- `POLITICAS_ESPERADAS` ganha a política de `pagamento_pendente` (`USING
-  (true) WITH CHECK (true)`, restrita a `fretigate_pagamento`), mesma
-  forma de declaração já usada para `convite_busca_por_token` e
-  `municipio_leitura`, logo abaixo delas no mesmo objeto.
+**Requisito de construção, Tarefa 1 — os dois lugares que a suíte confere,
+medidos ao rodar, não a formulação original:**
+- `POLITICAS_ESPERADAS` (`tests/isolamento/schema.test.ts`) ganha a entrada
+  de `pagamento_pendente` (a política acima) **e** uma segunda política em
+  `empresa` (`empresa_busca_por_assinante_gateway`) — sem as duas, a suíte
+  reprova sozinha, é o próprio mecanismo fazendo o que promete.
+- `FORA_DO_LACO` (`tests/isolamento/vazamento.test.ts`) ganha
+  `pagamento_pendente` — o laço genérico de vazamento testa tabelas
+  alcançáveis por `db(empresaId)`, e `fretigate_app` não tem nenhum
+  privilégio direto nesta tabela (todo acesso passa pelas funções
+  `SECURITY DEFINER`); não há o que esse laço, construído sobre esse
+  caminho, testar aqui. A prova de que `fretigate_pagamento` não vaza é
+  outra — fica para `tests/pagamentos.test.ts` (Tarefa 1, ainda não
+  escrito nesta sessão).
 
 ### RLS e função — mesmo padrão do convite, papel novo
 
@@ -415,19 +426,181 @@ dessa resposta. Fica registrado para quando o item 17 voltar à mesa: **a
 primeira pergunta, antes de desenhar qualquer tela de afiliado, é se ele
 ainda faz sentido** — não "como construir", mas "vale construir".
 
+## Tarefa 1 — construída (03/09/2026)
+
+Migration `20260903060000_pagamento_pendente` aplicada no banco de
+desenvolvimento (tabela, `Empresa.gateway_assinante_id`, papel
+`fretigate_pagamento`, **sete** funções `SECURITY DEFINER` — uma a mais que
+o plano original: `marcar_email_de_pagamento_enviado`, somada quando o
+e-mail de ativação virou o único caminho de entrega confirmado, abaixo).
+Serviço (`src/lib/servicos/pagamentos.ts`), rota de webhook
+(`api/webhooks/kiwify`), tela `/ativar-assinatura` (os dois textos de
+indisponível), comando `npm run pagamentos:pendentes` (lista e reenvia),
+`criarEmpresaEDono` extraído de `cadastro.ts` para servir aos dois
+caminhos de entrada, mecanismo de e-mail extraído de `src/lib/auth/email.ts`
+para `src/lib/email` (terceiro momento de e-mail transacional — ver abaixo).
+16 testes automatizados novos (`tests/pagamentos.test.ts`) + ajustes em
+`tests/isolamento/schema.test.ts`, `vazamento.test.ts` e
+`protecao-de-acoes.test.ts` — 180 testes verdes, local, contra o banco de
+desenvolvimento. Verificado também manualmente no navegador: registrar →
+listar → reenviar → clicar → criar conta (plano pago, periodicidade e
+`gateway_assinante_id` certos, `PagamentoPendente` vinculado) → clicar de
+novo (mensagem "já ativado").
+
+**Dois erros que a própria construção encontrou, corrigidos antes deste
+registro:**
+- `reivindicar_pagamento` tentava gravar `empresa_id` antes de a Empresa
+  existir — violaria a chave estrangeira. Corrigido: a função só reivindica
+  o token; `vincular_pagamento_a_empresa` (função nova) grava o vínculo
+  depois que a Empresa já existe.
+- `estornarPagamentoPendente` (`src/lib/db`) usava `$executeRaw`, que conta
+  linhas da consulta externa (`SELECT função(...)` sempre devolve uma linha),
+  não o valor de dentro da função — sempre devolvia `estornou: true`, mesmo
+  quando a função não tinha estornado nada. Achado pelo próprio
+  `tests/pagamentos.test.ts` (item "estornar um pagamento já aceito não faz
+  nada"), corrigido para `$queryRaw`, lendo o valor de verdade.
+
+**Achado que mudou o desenho do plano, com decisão do fundador:** a
+premissa "o mesmo link vai no e-mail que a Kiwify manda" não se sustentava
+— medido, não suposto: a página de obrigado da Kiwify é uma URL fixa por
+produto sem identificador de venda anexado, e o e-mail automático da
+Kiwify leva para o painel deles, nunca para uma URL externa (a central de
+ajuda da Kiwify confirma: produto de integração externa depende do
+vendedor mandar o acesso). Decisão do fundador, 03/09/2026: o FretiGate
+manda o próprio e-mail de ativação — **terceiro momento de e-mail
+transacional** do produto (`docs/especificacao.md` §"E-mail transacional",
+`CLAUDE.md` §5/§11 atualizados). A rota do webhook nunca engole falha de
+envio: devolve erro para a Kiwify reentregar.
+
+## `/revisar` — achados corrigidos antes deste registro
+
+Primeiro passe: 15 divergências, 8 lacunas. Todas as divergências corrigidas
+neste mesmo passe (nenhuma da categoria "registra e segue" — a maioria era
+contradição entre o que o plano/comentário prometia e o que o código fazia,
+ou afirmação imprecisa):
+
+- Formulário de `/ativar-assinatura` não pedia o aceite dos Termos, mas
+  `criarEmpresaEDono` grava `termos_aceitos_em`/`termos_versao` como se
+  aceito — somado o mesmo texto/mecanismo de `FormularioCriarConta.tsx`.
+  **Republicação da versão dos Termos** (03/09/2026, Kiwify entrou nos
+  subprocessadores) — `VERSAO_TERMOS_PUBLICADA` avançou junto.
+- Rota do webhook sem rate limit nenhum — somado `trava-de-webhook.ts`
+  (60/min, mais folgado que as travas de pessoa porque quem chama é a
+  Kiwify, não alguém tentando adivinhar) e a linha na tabela de travas de
+  `docs/especificacao.md`.
+- `vincular_pagamento_a_empresa` e `marcar_email_de_pagamento_enviado`
+  gravavam sem nenhuma guarda de `status`, contradizendo o que a própria
+  migration já dizia sobre onde mora a escrita segura — somadas as guardas
+  (`status = 'aceito'` e `status = 'pendente'`, respectivamente).
+- `ativarAssinaturaAction` não mandava e-mail de verificação — mesmo
+  defeito já corrigido uma vez em `aceitarConviteAction` (dashboard
+  afirmando um envio de e-mail que nunca aconteceu). Corrigido, mesmo
+  padrão dos outros dois caminhos de entrada.
+- `registrarPagamento` descartava o `status` devolvido pela função de
+  banco — uma reentrega de `compra_aprovada` depois do token já aceito ou
+  estornado reenviava o link morto. Corrigido: o e-mail só sai quando
+  `status === "pendente"`.
+- "Esta conta já foi criada. Entre normalmente." não tinha saída nenhuma —
+  somado o botão **Entrar**, levando a `/entrar`.
+- Kiwify ausente da lista de subprocessadores (`ConteudoTermos.tsx`,
+  `CLAUDE.md` §11) — somada, mesma categoria de peso do Resend (dado do
+  próprio cliente do FretiGate, não de terceiro).
+- `net_amount` aceitava decimal e seria gravado em centavos por um cast
+  que arredondaria em silêncio — trocado para `.int()`, recusa em vez de
+  arredondar.
+- Cinco citações/contagens desatualizadas no próprio commit ("seis
+  funções" quando já eram sete, "cinco valores fixos" no `ci.yml` quando
+  já eram seis, `KIWIFY_WEBHOOK_TOKEN` dizendo "a confirmar" sobre um
+  teste que já existia neste mesmo commit, `termos_versao` ainda citando
+  `cadastro.ts` depois de mudar de arquivo, duas vezes) — corrigidas.
+- Comentário de `atualizarStatusAssinaturaPorAssinanteGateway` dizia que a
+  rota "registra" quando não acha a empresa; a rota só devolvia
+  `ok: true` sem fazer nada — um `subscription_canceled` que não achasse a
+  empresa deixava a assinatura `ativa` para sempre, em silêncio. Corrigido
+  para falha alta: HTTP 500 (a Kiwify reentrega) com log, nos quatro
+  eventos de assinatura pós-primeiro-pagamento.
+
+Um achado do revisor **não procede** — verificado antes de aceitar: ele
+leu o `git status` do início da sessão de revisão como `??`
+(não rastreado) para `docs/planos/item-13-assinatura.md`, mas o arquivo
+está commitado desde `9b601d9` ("Plano do item 13") e aparecia `M`
+(modificado) no status real desta sessão — `git log`/`git status`
+conferidos de novo para confirmar.
+
+**Os dois achados de mais peso, na palavra do fundador ao aprovar as
+correções:** a conta nascendo com os Termos aceitos sem ninguém ter visto
+o texto **é aceite fabricado** — e a correção puxou a republicação da
+versão, porque a Kiwify entrou nos subprocessadores. E o
+`subscription_canceled` deixando a assinatura `ativa` em silêncio quando
+não acha a empresa **é dinheiro parando de entrar sem nada acusar** —
+falhar alto é o certo.
+
+## Duas perguntas do plano, respondidas pelo fundador — 03/09/2026
+
+1. **`/ativar-assinatura` entra na lista fechada de telas sem barra de
+   navegação.** Entra. É tela de fora de sessão, sem conta ainda, e a
+   pessoa não tem para onde navegar — mesmo critério das outras seis; a
+   barra pressupõe estar dentro do produto. Somada ao `CLAUDE.md` §8 e ao
+   espelho em `docs/estilo.md`, com o motivo.
+2. **O comando `pagamentos:pendentes` pode imprimir nome/e-mail do
+   comprador no terminal, ou deveria mascarar?** Mostra completo — nunca
+   mascara. É o terminal do fundador, ele é o controlador desses dados, e
+   o comando existe para ele descobrir quem pagou e não entrou; mascarar
+   o e-mail tornaria o comando inútil, porque é por ele que se identifica
+   a pessoa. **A tela pública mascara por outro motivo, não pelo
+   mesmo** — ela é alcançável por qualquer um que tenha o link, que pode
+   não ser quem pagou (caso 3). São situações diferentes, e os dois
+   motivos ficam escritos nos dois lugares (`pagamentos.ts`,
+   `pagamentos-pendentes.mts`) — de propósito, para que ninguém "corrija"
+   um pelo outro por analogia depois.
+
 ## Lacunas registradas, não corrigidas agora
 
-- Autenticidade do webhook (assinatura/token) — mecanismo exato a
-  confirmar contra um envio de teste real da Kiwify antes de escrever a
-  rota.
+- **Formato do payload do webhook e mecanismo de autenticidade — não
+  confirmados contra entrega real.** O corpo esperado
+  (`src/app/api/webhooks/kiwify/route.ts`) e o token de segurança em
+  `corpo.token` são a melhor leitura da documentação oficial disponível,
+  não uma medição — precisa de "Testar Webhook" contra uma conta Kiwify de
+  verdade antes de considerar pronto para produção.
+- **`PERIODICIDADE_POR_PRODUTO_KIWIFY` está vazio** (`route.ts`) — a rota
+  recusa `compra_aprovada` com HTTP 500 até a Tarefa 2 configurar as duas
+  ofertas na Kiwify e preencher o mapa; a Kiwify reentrega, então a
+  reentrega passa a funcionar sozinha assim que o mapa existir.
+- **`valor_centavos` vem de `net_amount` — bruto ou líquido, não
+  confirmado.** Nenhuma fonte consultada diz se o webhook manda o que o
+  cliente pagou (R$ 149/R$ 840, §10) ou o que a Kiwify repassa já
+  descontada a taxa (8,99% + R$ 2,49). Os dois números divergem, e o campo
+  hoje presume o bruto sem confirmação — medir contra entrega real junto
+  do item acima.
 - Estado parcial: se `reivindicar_pagamento` suceder e a criação da
   Empresa falhar logo depois — mesma classe de risco já aceita em
   `aceitarConvite` (`usuarios.ts`) e em `gerarRelatorio` (item 7): raro,
   sem transação cobrindo as duas conexões, não resolvido agora.
-- Texto exato do e-mail parcial mascarado (`an***@gmail.com` é proposta
-  desta tarefa, não confirmado pelo Design) e da tela de confirmação de
-  compra — pedido ao Design.
+- **Tela `/ativar-assinatura` sem lastro em documento do Design, e sem
+  entrada em `docs/navegacao.md`/`docs/componentes.md`** — não estava
+  desenhada antes deste item (diferente de "Planos"/"Minha assinatura"/
+  "Limite do gratuito"/"Assinatura vencida", que já tinham desenho).
+  Layout e texto seguem `TelaAceitarConvite.tsx` por analogia, registrado
+  como pedido de confirmação ao Design — inclusive o formato do e-mail
+  mascarado (`an***@gmail.com`) e a ausência de `<Marca />` (que
+  `docs/estilo.md` trata como decisão nomeada por tela, e aqui só está no
+  comentário do código, não no documento).
+- **`origem_declarada` fica nulo em todo o Fluxo B** — quem entra pagando
+  direto nunca vê a pergunta declarada do cadastro (`CLAUDE.md` §11). Não
+  decidido se algum valor fixo ("Anúncio", por exemplo) deveria entrar
+  aqui, ou se fica nulo mesmo — mesma família da pendência já registrada
+  para `origem_cadastro` (`CLAUDE.md` §14).
+- **`CLAUDE.md` §9 previa revisitar o padrão de rota de API que grava
+  estado "depois da segunda ou terceira rota"** — esta é a segunda
+  (`api/webhooks/kiwify`), e nenhum padrão comum foi decidido ainda,
+  continua checagem manual caso a caso.
 - `documento_comprador` guardado sem consumidor além do comando de
   visibilidade (caso 1) — mesmo critério já usado para `dados_bancarios`
   (`CLAUDE.md` §14): existe porque a Kiwify manda, sem tela própria por
   enquanto.
+- **E-mail de ativação sem "confira a caixa de spam" em tela nenhuma** —
+  não existe tela no momento do envio (acontece dentro do webhook, sem
+  ninguém do lado de dentro do produto); o texto e o risco do Outlook
+  ficaram registrados em `docs/especificacao.md` e `CLAUDE.md` §14, mas o
+  lugar natural que outras mensagens desse tipo têm (uma tela que a pessoa
+  está olhando) não existe aqui.

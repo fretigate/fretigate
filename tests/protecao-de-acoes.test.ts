@@ -28,6 +28,8 @@ const EXCECOES: Record<string, string> = {
   criarConta: "cria a empresa; sessão não existe nesse momento",
   aceitarConviteAction:
     "cria o usuário a partir de um convite público, por token; sessão não existe nesse momento — mesmo motivo de criarConta (item 10, Tarefa 4)",
+  ativarAssinaturaAction:
+    "cria a empresa e o usuário dono a partir de um pagamento aprovado, por token; sessão não existe nesse momento — mesmo motivo de criarConta/aceitarConviteAction (item 13, Tarefa 1)",
 };
 
 type Classificacao = "comoUsuario" | "comoDono" | "sem-envelope";

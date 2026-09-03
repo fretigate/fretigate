@@ -118,7 +118,24 @@ function politicaDeAutenticacao(tabela: string): Politica {
  * declaração.
  */
 const POLITICAS_ESPERADAS: Record<string, Politica[]> = {
-  empresa: [politicaDeIsolamento("empresa", "id")],
+  // Segunda política, só para `fretigate_pagamento` — item 13
+  // (`docs/planos/item-13-assinatura.md`): eventos de assinatura depois do
+  // primeiro pagamento (renovação, atraso, cancelamento) precisam achar a
+  // empresa pelo `gateway_assinante_id`, antes de saber `empresa_id` de
+  // contexto. `WITH CHECK (false)` explícito, mesma forma de
+  // `municipio_leitura`/`convite_busca_por_token`: este papel só tem
+  // `SELECT` concedido em `empresa`, nunca gravaria de qualquer jeito.
+  empresa: [
+    politicaDeIsolamento("empresa", "id"),
+    {
+      nome: "empresa_busca_por_assinante_gateway",
+      tipo: "PERMISSIVE",
+      papeis: ["fretigate_pagamento"],
+      comando: "ALL",
+      usando: "true",
+      comCheck: "false",
+    },
+  ],
   usuario: [
     politicaDeIsolamento("usuario", "empresa_id"),
     politicaDeAutenticacao("usuario"),
@@ -164,6 +181,26 @@ const POLITICAS_ESPERADAS: Record<string, Politica[]> = {
       comando: "ALL",
       usando: "true",
       comCheck: "false",
+    },
+  ],
+  // NÃO é isolamento por empresa (item 13 — `docs/planos/
+  // item-13-assinatura.md`): `empresa_id` aqui é nullable, preenchido só
+  // depois que a Empresa nasce — a tabela TEM a coluna (por isso não entra
+  // em `SEM_EMPRESA_ID`, que é para tabela sem a coluna nenhuma), mas o
+  // acesso não é "empresa_id = contexto", é um papel próprio
+  // (`fretigate_pagamento`) com alcance total sobre a tabela inteira —
+  // mesmo desenho de `fretigate_convite`, só que também grava (`WITH CHECK
+  // (true)`, não `(false)`). A escrita real é condicionada por dentro de
+  // cada função `SECURITY DEFINER` (`WHERE status = 'pendente'`), não pela
+  // política.
+  pagamento_pendente: [
+    {
+      nome: "pagamento_pendente_acesso",
+      tipo: "PERMISSIVE",
+      papeis: ["fretigate_pagamento"],
+      comando: "ALL",
+      usando: "true",
+      comCheck: "true",
     },
   ],
   session: [politicaDeAutenticacao("session")],

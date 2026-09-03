@@ -253,6 +253,181 @@ export async function localizarConvitePorToken(
 }
 
 /**
+ * `PagamentoPendente` — o pagamento que ainda não é conta (item 13 —
+ * `docs/planos/item-13-assinatura.md`). Mesma família de
+ * `localizarConvitePorToken`: nasce/é lido/é reivindicado ANTES de saber a
+ * empresa, então passa por funções `SECURITY DEFINER` dedicadas
+ * (`fretigate_pagamento`, migration `20260903060000_pagamento_pendente`),
+ * nunca por `db(empresaId)`.
+ */
+
+type LinhaPagamentoRegistrado = { id: string; token: string; status: "pendente" | "aceito" | "estornado" };
+
+/**
+ * Registra (ou, em reentrega da Kiwify, apenas devolve) um pagamento
+ * pendente — chamada pela rota de webhook quando `compra_aprovada` chega
+ * sem `s1` (venda que não passou pelo produto).
+ *
+ * A deduplicação por `transacao_externa` mora DENTRO da função
+ * (`ON CONFLICT ... DO UPDATE` como no-op) — a Kiwify reenvia webhook em
+ * caso de falha na entrega, e duas chegadas do mesmo evento não podem virar
+ * dois tokens para a mesma compra.
+ */
+export async function registrarPagamentoPendente(dados: {
+  id: string;
+  token: string;
+  gateway: string;
+  transacaoExterna: string;
+  emailComprador: string;
+  nomeComprador: string;
+  gatewayAssinanteId: string;
+  documentoComprador: string | null;
+  periodicidade: "mensal" | "anual";
+  valorCentavos: number;
+  recebidoEm: Date;
+}): Promise<LinhaPagamentoRegistrado> {
+  const linhas = await clienteBase.$queryRaw<LinhaPagamentoRegistrado[]>`
+    SELECT id, token, status FROM registrar_pagamento_pendente(
+      ${dados.id}::uuid, ${dados.token}, ${dados.gateway}, ${dados.transacaoExterna},
+      ${dados.emailComprador}, ${dados.nomeComprador}, ${dados.gatewayAssinanteId},
+      ${dados.documentoComprador}, ${dados.periodicidade}::periodicidade_plano,
+      ${dados.valorCentavos}::integer, ${dados.recebidoEm}::timestamptz
+    )`;
+  const linha = linhas[0];
+  if (!linha) {
+    throw new Error("registrar_pagamento_pendente não devolveu linha nenhuma.");
+  }
+  return linha;
+}
+
+type LinhaPagamentoLocalizado = {
+  id: string;
+  email_comprador: string;
+  recebido_em: Date;
+  status: "pendente" | "aceito" | "estornado";
+};
+
+/**
+ * Acha um `PagamentoPendente` pelo token — tela `/ativar-assinatura`. Só os
+ * campos da confirmação de compra (caso 3 do plano: e-mail e data, nunca
+ * nome completo nem documento) — o mascaramento do e-mail acontece em
+ * `src/lib/servicos/pagamentos.ts`, não aqui.
+ */
+export async function localizarPagamentoPorToken(
+  token: string,
+): Promise<LinhaPagamentoLocalizado | null> {
+  const linhas = await clienteBase.$queryRaw<LinhaPagamentoLocalizado[]>`
+    SELECT id, email_comprador, recebido_em, status
+      FROM localizar_pagamento_por_token(${token})`;
+  return linhas[0] ?? null;
+}
+
+type LinhaPagamentoReivindicado = {
+  id: string;
+  nome_comprador: string;
+  periodicidade: "mensal" | "anual";
+  gateway_assinante_id: string;
+};
+
+/**
+ * Reivindica o token — uso único atômico (caso 2 do plano):
+ * `UPDATE ... WHERE token = $1 AND status = 'pendente'`, dentro da função.
+ * Devolve `null` se o token não existir ou já não estiver `pendente` — quem
+ * chama (`src/lib/servicos/pagamentos.ts`) decide a mensagem, a função só
+ * decide se a reivindicação valeu.
+ *
+ * **NÃO recebe `empresaId`** — achado ao construir a rota que chama isto:
+ * a Empresa ainda não existe neste instante (o id é só um uuid gerado na
+ * aplicação); gravar `empresa_id` aqui violaria a chave estrangeira de
+ * `pagamento_pendente.empresa_id`, que ainda não tem linha correspondente.
+ * O vínculo é gravado depois, por `vincularPagamentoAEmpresa`, só quando a
+ * Empresa já existe de verdade.
+ */
+export async function reivindicarPagamento(
+  token: string,
+): Promise<LinhaPagamentoReivindicado | null> {
+  const linhas = await clienteBase.$queryRaw<LinhaPagamentoReivindicado[]>`
+    SELECT id, nome_comprador, periodicidade, gateway_assinante_id
+      FROM reivindicar_pagamento(${token})`;
+  return linhas[0] ?? null;
+}
+
+/**
+ * Grava o rastro de qual pagamento originou qual empresa — DEPOIS que a
+ * Empresa já existe de verdade (ver o comentário de `reivindicarPagamento`,
+ * acima, para o motivo de não gravar isso antes). Melhor esforço: se isto
+ * falhar depois de `criarEmpresaEDono` já ter criado a conta com sucesso, a
+ * pessoa ainda entra normalmente — só o rastro de auditoria fica
+ * incompleto, mesma classe de estado parcial já aceita em `aceitarConvite`
+ * (`usuarios.ts`) e em `gerarRelatorio` (item 7).
+ */
+export function vincularPagamentoAEmpresa(
+  pagamentoId: string,
+  empresaId: string,
+): Promise<number> {
+  return clienteBase.$executeRaw`SELECT vincular_pagamento_a_empresa(${pagamentoId}::uuid, ${empresaId}::uuid)`;
+}
+
+/**
+ * Registra que o e-mail de ativação (com o link de reivindicação) saiu com
+ * sucesso pela Resend — chamada só depois de confirmar o envio, nunca
+ * antes. É o único caminho de entrega confirmado para quem paga pelo Fluxo
+ * B (decisão do fundador, 03/09/2026 — ver `docs/planos/
+ * item-13-assinatura.md`): a página de obrigado da Kiwify não carrega
+ * identificador nenhum, e o e-mail automático da própria Kiwify não serve
+ * para produto de integração externa. O comando de visibilidade (caso 1 do
+ * plano) usa este campo para separar "aguardando clique" de "e-mail nunca
+ * saiu — olhar aqui primeiro".
+ */
+export function marcarEmailDePagamentoEnviado(pagamentoId: string): Promise<number> {
+  return clienteBase.$executeRaw`SELECT marcar_email_de_pagamento_enviado(${pagamentoId}::uuid)`;
+}
+
+/**
+ * Estorna um pagamento ainda não reivindicado — webhook de reembolso ou
+ * chargeback chegando antes do clique (caso 4 do plano). Devolve quantas
+ * linhas mudaram (0 ou 1): 0 quer dizer que o token não existia mais como
+ * `pendente` — nesse caso a rota do webhook trata como o outro caso
+ * (assinatura já existente mudando de estado), via
+ * `localizarEmpresaPorAssinanteGateway`.
+ *
+ * `$queryRaw`, não `$executeRaw` — achado por `tests/pagamentos.test.ts`:
+ * `estornar_pagamento_pendente` devolve `integer` (quantas linhas mudaram
+ * DENTRO da função), mas `SELECT estornar_pagamento_pendente(...)` é, ele
+ * mesmo, um `SELECT` que sempre devolve UMA linha (a linha contendo o
+ * resultado da função) — `$executeRaw` conta linhas da consulta externa,
+ * não lê o valor de dentro, então sempre devolvia `1`, mesmo quando a
+ * função não tinha estornado nada. Mesma armadilha que `marcar_email_de_
+ * pagamento_enviado` (`RETURNS void`) não tem, porque ali ninguém lê o
+ * número — aqui o número É a resposta.
+ */
+export async function estornarPagamentoPendente(transacaoExterna: string): Promise<number> {
+  const linhas = await clienteBase.$queryRaw<{ estornar_pagamento_pendente: number }[]>`
+    SELECT estornar_pagamento_pendente(${transacaoExterna})`;
+  return linhas[0]?.estornar_pagamento_pendente ?? 0;
+}
+
+/**
+ * Acha a `Empresa` pelo identificador do assinante no gateway — eventos de
+ * assinatura DEPOIS do primeiro pagamento (renovação, atraso, cancelamento)
+ * chegam sem `empresa_id` de contexto, do mesmo jeito que `compra_aprovada`
+ * chega. Devolve só o `id`: a rota do webhook usa isso para chamar
+ * `db(empresaId)` normalmente dali em diante — RLS por `empresa_id =
+ * contexto` volta a valer no próximo passo.
+ *
+ * ⚠️ `gatewayAssinanteId` (Kiwify `customer.id`) não foi confirmado contra
+ * entrega real de evento de assinatura — ver o comentário de
+ * `Empresa.gateway_assinante_id` em `prisma/schema.prisma`.
+ */
+export async function localizarEmpresaPorAssinanteGateway(
+  gatewayAssinanteId: string,
+): Promise<{ id: string } | null> {
+  const linhas = await clienteBase.$queryRaw<{ id: string }[]>`
+    SELECT id FROM localizar_empresa_por_assinante_gateway(${gatewayAssinanteId})`;
+  return linhas[0] ?? null;
+}
+
+/**
  * Fecha o pool de conexões do `clienteBase` — para processo CURTO que usa
  * `db()`/`emTransacao()` e depois termina (comando de terminal, suíte de
  * teste), nunca para o servidor em execução (lá o processo é longo, e o pool

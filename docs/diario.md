@@ -6,6 +6,136 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 03/09/2026 — Item 13, Tarefa 1: o caminho do pagamento até a conta
+
+Planejamento e construção da Tarefa 1 do item 13 — assinatura via checkout
+de terceiro (Kiwify), Fluxo B (venda direta ao checkout, sem cadastro no
+meio). Plano em `docs/planos/item-13-assinatura.md`, commit `9b601d9`
+(junto da entrada de diário do item 11, que faltava desde `efc26cd`).
+
+**Decisões do fundador, nesta sessão:**
+1. Gateway: Kiwify (checkout de terceiro), não gateway direto — antifraude,
+   retentativa, emissão fiscal opcional e programa de afiliado prontos,
+   contra uma taxa efetiva medida (~10,7% contra ~3,3% de um gateway
+   direto como a Asaas).
+2. Fluxo B: venda direta ao checkout. A conta nasce a partir do pagamento,
+   por um link com identificador próprio — mesmo mecanismo do convite de
+   usuário (token, tela pública, reivindicação atômica).
+3. Os quatro casos de risco do link (nunca clicou, clicou duas vezes,
+   vazou, estorno antes do clique) resolvidos por analogia com o convite,
+   ajustados onde a analogia quebra.
+4. Preço do anual: R$ 840 (não R$ 990, que era recomendação do fundador na
+   conversa, nunca decisão) — corrigido em `docs/navegacao.md` e
+   `CLAUDE.md` §14.
+5. A janela entre `inadimplente` e `vencida` é a da própria Kiwify, sem
+   sobreposição própria — registrada como vinda do fornecedor.
+6. Só Kiwify — nenhuma abstração de múltiplos gateways agora.
+7. **O e-mail de ativação deixou de ser reforço e virou o único caminho de
+   entrega confirmado** — medido, não suposto: a página de obrigado da
+   Kiwify não carrega identificador de venda, e o e-mail automático da
+   própria Kiwify não serve para produto de integração externa (a central
+   de ajuda deles confirma: o botão de acesso desse e-mail leva para o
+   painel da Kiwify, nunca para uma URL externa). **Terceiro momento de
+   e-mail transacional do produto** (`docs/especificacao.md`, `CLAUDE.md`
+   §5/§11 atualizados).
+
+**Construído:** migration `20260903060000_pagamento_pendente` (tabela
+`PagamentoPendente`, `Empresa.gateway_assinante_id`, papel
+`fretigate_pagamento`, sete funções `SECURITY DEFINER`), serviço
+(`src/lib/servicos/pagamentos.ts`), `criarEmpresaEDono` extraído de
+`cadastro.ts` para servir aos dois caminhos de entrada, mecanismo de
+e-mail extraído de `src/lib/auth/email.ts` para `src/lib/email`, rota de
+webhook (`api/webhooks/kiwify`), tela `/ativar-assinatura`, comando `npm
+run pagamentos:pendentes` (lista pagamentos sem conta + reenvia o
+e-mail).
+
+**Dois erros que a própria construção encontrou e corrigiu, antes do
+`/revisar`:**
+- `reivindicar_pagamento` tentava gravar `empresa_id` antes de a Empresa
+  existir — violaria a chave estrangeira. Corrigido: função separada
+  (`vincular_pagamento_a_empresa`) grava o vínculo só depois que a Empresa
+  já existe.
+- `estornarPagamentoPendente` (`src/lib/db`) usava `$executeRaw`, que
+  sempre devolvia `1` (a linha que `SELECT função(...)` retorna), nunca o
+  valor de dentro da função — sempre respondia `estornou: true`, mesmo
+  sem estornar nada. Achado pelo próprio `tests/pagamentos.test.ts`
+  escrito para provar o caso 4, corrigido para `$queryRaw`.
+
+**`/revisar`, primeiro passe — 15 divergências, todas corrigidas; 8
+lacunas registradas.** Achados de peso: formulário não pedia aceite dos
+Termos (empresa nascia com `termos_aceitos_em` gravado sem o texto na
+tela — somado, e a versão dos Termos republicada porque a Kiwify entrou
+nos subprocessadores); rota do webhook sem rate limit (somada
+`trava-de-webhook.ts`); duas funções `SECURITY DEFINER`
+(`vincular_pagamento_a_empresa`, `marcar_email_de_pagamento_enviado`)
+gravavam sem guarda de `status`, contradizendo o que a própria migration
+já prometia; `ativarAssinaturaAction` não mandava e-mail de verificação —
+mesmo defeito já corrigido uma vez em `aceitarConviteAction`; reentrega
+de `compra_aprovada` depois de aceito/estornado reenviaria o link morto
+(corrigido, o e-mail só sai com `status === "pendente"`); "Esta conta já
+foi criada" sem saída (somado botão **Entrar**); Kiwify ausente dos
+subprocessadores; `net_amount` aceitava decimal e seria arredondado em
+silêncio (trocado para `.int()`, recusa); comentário afirmando que a rota
+"registra" quando não acha a empresa por `gateway_assinante_id` — a rota
+só devolvia sucesso sem fazer nada, deixando uma assinatura cancelada
+"ativa" para sempre em silêncio (corrigido para falha alta, HTTP 500, a
+Kiwify reentrega); mais cinco citações/contagens desatualizadas no
+próprio commit. Um achado do revisor não procedia (leu o plano como não
+commitado; estava, `9b601d9`) — conferido e descartado.
+
+Segundo passe: sem divergências novas depois das correções do primeiro —
+fecha aqui, lacunas registradas no plano (formato do payload do webhook
+não confirmado contra entrega real — mesmo o mecanismo de autenticidade;
+`valor_centavos` bruto ou líquido, não confirmado; `/ativar-assinatura`
+sem entrada em `docs/navegacao.md`/`docs/componentes.md` e sem decisão
+explícita para entrar na lista fechada de telas sem barra; `origem_declarada`
+nulo no Fluxo B; e mais três menores, todas em
+`docs/planos/item-13-assinatura.md`).
+
+**Verificação: local.** `npx tsc --noEmit`/`npm run eslint` limpos.
+`tests/pagamentos.test.ts` (16/16, novo) + ajustes em `tests/isolamento/
+schema.test.ts`, `vazamento.test.ts` e `protecao-de-acoes.test.ts` — 180
+testes no total (isolamento inteiro + cadastro + convite + proteção de
+ações + pagamentos), contra o banco de desenvolvimento. `npm test`
+completo também rodou verde nesta sessão (723 passos, 8 pulados —
+Chromium não roda no Windows, já esperado) antes do `/revisar`, e a
+suíte relevante de novo depois dos ajustes. Verificado manualmente no
+navegador, contra o banco de desenvolvimento, com dado sintético (nunca
+Kiwify de verdade — não existe conta ainda): registrar pagamento → listar
+pelo comando → reenviar e-mail (Resend de verdade, endereço sintético) →
+abrir o link → aceite dos Termos aparece → criar conta (plano pago,
+periodicidade e `gateway_assinante_id` corretos, `PagamentoPendente`
+vinculado à Empresa) → login automático → clicar no mesmo link de novo
+("Esta conta já foi criada", com o botão Entrar).
+
+**Pendente, não fechado nesta sessão:**
+- Tarefas 2 e 3 do item 13 (telas dentro do produto — Planos, Minha
+  assinatura, Limite do gratuito, Assinatura vencida — e o bloqueio do
+  plano gratuito) não começaram.
+- `PERIODICIDADE_POR_PRODUTO_KIWIFY` está vazio — a rota recusa
+  `compra_aprovada` com 500 até a Tarefa 2 configurar as duas ofertas na
+  Kiwify.
+- Formato real do payload do webhook e do mecanismo de autenticidade —
+  precisa de "Testar Webhook" contra uma conta Kiwify de verdade, que
+  ainda não existe.
+- Achado, registrado, não decidido: o programa de afiliado da Kiwify pode
+  tornar o item 17 (Afiliados) desnecessário — só relevante quando esse
+  item voltar à mesa, fora do MVP.
+- Duas perguntas para o fundador, registradas no plano: `/ativar-assinatura`
+  entra na lista fechada de telas sem barra? O comando de operação pode
+  imprimir nome/e-mail do comprador no terminal, ou deveria mascarar
+  também?
+
+Esteira: disparada com o push do commit do plano (`9b601d9`), ainda sem
+confirmação nesta entrada — a Tarefa 1 ainda não foi commitada (aguardando
+aprovação do fundador para o commit, com o diff apresentado).
+
+Próximo: aprovação do fundador para o commit da Tarefa 1; depois, Tarefa 2
+do item 13 — telas dentro do produto (bloqueada até o fundador responder
+as duas perguntas acima e a Tarefa 2 configurar as ofertas na Kiwify).
+
+---
+
 ## 02/09/2026 — Item 11: Despesas — fundamentos e telas, item 11 fecha
 
 Entrada que faltava no diário — o item 11 foi planejado e construído depois

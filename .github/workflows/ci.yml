@@ -108,24 +108,28 @@ jobs:
       # especial em senha já custou três rodadas neste projeto — ver
       # `docs/diario.md`, 08/08/2026.
       #
-      # RESEND_API_KEY, EMAIL_REMETENTE, EMAIL_RESPOSTA, NEXT_PUBLIC_APP_URL e
-      # SUPABASE_URL são valor FIXO, não secret — de propósito.
-      # `src/lib/auth/index.ts`, `src/lib/auth/email.ts` e
-      # `src/lib/servicos/comprovantes.ts` lançam erro no carregamento se
+      # RESEND_API_KEY, EMAIL_REMETENTE, EMAIL_RESPOSTA, NEXT_PUBLIC_APP_URL,
+      # SUPABASE_URL e KIWIFY_WEBHOOK_TOKEN são valor FIXO, não secret — de
+      # propósito. `src/lib/auth/index.ts`, `src/lib/email/index.ts`,
+      # `src/lib/servicos/comprovantes.ts` e `src/app/api/webhooks/kiwify/
+      # route.ts` (item 13, Tarefa 1) lançam erro no carregamento se
       # qualquer uma faltar, mas nenhum teste desta suíte manda e-mail de
-      # verdade nem assina sessão de cliente real — só precisam existir para o
-      # módulo carregar. Colocar chave de verdade do Resend aqui mandaria
-      # e-mail a cada execução da esteira, sem necessidade. EMAIL_REMETENTE/
-      # EMAIL_RESPOSTA em endereços diferentes de propósito — mesmo padrão do
-      # valor real (subdomínio de envio / domínio raiz,
+      # verdade, assina sessão de cliente real, nem dispara a rota de
+      # webhook contra um endpoint da Kiwify de verdade — só precisam
+      # existir para o módulo carregar. Colocar chave de verdade do Resend
+      # aqui mandaria e-mail a cada execução da esteira, sem necessidade.
+      # EMAIL_REMETENTE/EMAIL_RESPOSTA em endereços diferentes de propósito
+      # — mesmo padrão do valor real (subdomínio de envio / domínio raiz,
       # `docs/especificacao.md`), só que com valor fake. SUPABASE_URL é só o
       # endereço da API do projeto de TESTE (`qutzsvrkaqvpluqxbhmp`,
       # `CLAUDE.md` §5) — o projeto já é público no sentido de que
       # `DATABASE_URL` (secret) já entrega o mesmo identificador no host do
-      # pooler; não há segredo extra aqui.
+      # pooler; não há segredo extra aqui. KIWIFY_WEBHOOK_TOKEN é um valor
+      # que ninguém, além desta esteira, precisa reconhecer — nenhuma conta
+      # Kiwify real existe apontando para cá.
       #
       # BETTER_AUTH_SECRET e SUPABASE_SERVICE_ROLE_KEY SÃO SECRET DO GITHUB,
-      # não valor fixo como os cinco acima — mas por motivos diferentes entre
+      # não valor fixo como os seis acima — mas por motivos diferentes entre
       # si. BETTER_AUTH_SECRET não protege sessão real (`docs/diario.md`,
       # 08/08/2026): um valor com FORMA de segredo, versionado, aciona
       # scanner de segredo (inclusive o do próprio GitHub) e ensina a ignorar
@@ -144,6 +148,7 @@ jobs:
           EMAIL_RESPOSTA=ci@fretigate.com
           BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET_CI }}
           NEXT_PUBLIC_APP_URL=http://localhost:3000
+          KIWIFY_WEBHOOK_TOKEN=ci-nao-e-segredo-nenhuma-conta-kiwify-aponta-pra-ca
           SUPABASE_URL=https://qutzsvrkaqvpluqxbhmp.supabase.co
           SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY_CI }}
           EOF

@@ -339,11 +339,13 @@ espaço para o deslocamento de 18px da animação de entrada.
 
 **Exceção (CLAUDE.md §8, 07/08/2026):** tela sem barra de navegação — Entrar,
 Criar conta, Esqueci a senha, Redefinir senha, Termos e privacidade (modo
-cadastro) e Aceitar convite — não reserva essa folga, porque não existe barra
-para não ficar embaixo dela. Usa margem inferior padrão. Lista fechada; tela
-nova sem barra entra por decisão explícita, não por analogia. As duas
-últimas entraram na tarefa 8, fatia 2 (07/08/2026) — mesma razão das
-anteriores, telas de fora de sessão.
+cadastro), Aceitar convite e Ativar assinatura — não reserva essa folga,
+porque não existe barra para não ficar embaixo dela. Usa margem inferior
+padrão. Lista fechada; tela nova sem barra entra por decisão explícita, não
+por analogia. As duas do meio entraram na tarefa 8, fatia 2 (07/08/2026) —
+mesma razão das anteriores, telas de fora de sessão. **Ativar assinatura
+entrou em 03/09/2026, item 13 Tarefa 1** — mesmo critério: fora de sessão,
+sem conta ainda, sem para onde navegar.
 
 Termos no **modo Ajustes** não está nesta lista — é dentro da sessão e ganha
 barra. **Resolvido no item 10, Tarefa 2**: Ajustes existe agora (`/conta`,
@@ -369,8 +371,8 @@ ser um valor formal ainda. Mesmo destino: token quando o Design decidir.
 de sessão.** Cinco telas passaram a abrir com a marca do FretiGate
 centralizada — Entrar, Criar conta, Esqueci a senha, Redefinir senha e Termos
 no modo cadastro (`src/components/auth/Marca.tsx`, 14/08/2026). **Não é a
-lista de telas sem barra da seção acima, que tem seis:** Aceitar convite não
-está aqui — e agora é decisão, não lacuna. Decisão do fundador, item 10,
+lista de telas sem barra da seção acima, que tem sete:** Aceitar convite
+não está aqui — e agora é decisão, não lacuna. Decisão do fundador, item 10,
 Tarefa 4 (01/09/2026): **Aceitar convite nunca leva `<Marca />`**, em nenhum
 estado (válido, convite indisponível, trava). Quem chega já foi convidado
 por alguém que conhece — o que precisa reconhecer é a empresa que convidou,
@@ -378,6 +380,13 @@ não o produto; pôr a marca do FretiGate no topo dividiria a atenção entre
 duas identidades num momento em que só uma importa, e o FretiGate ela
 conhece assim que entrar. Exceção com razão escrita, não esquecimento
 (`CLAUDE.md` §2) — fecha a lacuna que este parágrafo registrava.
+
+**Ativar assinatura também não está na lista das cinco com marca — mas
+aqui é lacuna, não decisão fechada.** O código (`page.tsx`, item 13,
+Tarefa 1) segue a mesma razão do convite por analogia, sem confirmação
+própria do fundador ainda — diferente de Aceitar convite, que tem a razão
+escrita acima. Registrado em `docs/planos/item-13-assinatura.md`, pedido
+de confirmação ao Design.
 
 A marca usa **140px de largura**, valor que **não é formal desta folha**: veio
 do documento que o Design mandou (`referencia/Design/Marca nas telas de

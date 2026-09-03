@@ -51,7 +51,22 @@ let raiz: Client;
  * que este laço — construído sobre a coluna `empresa_id` — não enxerga e não
  * precisa enxergar.
  */
-const FORA_DO_LACO = new Set(["usuario"]);
+/**
+ * `pagamento_pendente` (item 13 — `docs/planos/item-13-assinatura.md`) TEM
+ * a coluna `empresa_id`, mas por um motivo diferente de `usuario`: o papel
+ * que este laço testa (`fretigate_app`, via `db(empresaId)`) não tem
+ * NENHUM privilégio direto na tabela — todo acesso passa por funções
+ * `SECURITY DEFINER` restritas a `fretigate_pagamento`
+ * (`localizar_pagamento_por_token`, `reivindicar_pagamento` etc.), nunca
+ * por uma consulta comum do Prisma. `db(empresaId).pagamentoPendente...`
+ * não é um caminho de código que existe no produto — não há o que este
+ * laço, construído sobre esse caminho, testar aqui. A prova de que
+ * `fretigate_pagamento` não vaza entre chamadas vive em
+ * `tests/pagamentos.test.ts`, por um mecanismo próprio (a função nunca
+ * recebe `empresa_id` de fora — não há corte entre empresas para testar do
+ * jeito que este laço testa).
+ */
+const FORA_DO_LACO = new Set(["usuario", "pagamento_pendente"]);
 
 /**
  * As tabelas de domínio cobertas pelo laço de vazamento, e como perguntar a

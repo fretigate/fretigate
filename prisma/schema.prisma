@@ -107,6 +107,20 @@ model Empresa {
 
   status_assinatura StatusAssinatura @default(ativa)
 
+  /// Identificador do assinante no gateway (Kiwify: `customer.id`, estável
+  /// por comprador — não muda a cada renovação, diferente do id da
+  /// transação). É a chave que os eventos de assinatura DEPOIS do primeiro
+  /// pagamento (renovação, atraso, cancelamento) usam para achar esta
+  /// empresa sem saber `empresa_id` de antemão — mesmo problema que
+  /// `localizar_convite_por_token` resolve para convite, aqui para
+  /// assinatura (item 13 — `docs/planos/item-13-assinatura.md`).
+  ///
+  /// NÃO CONFIRMADO CONTRA ENTREGA REAL — medido só no objeto de venda da
+  /// API REST da Kiwify (`docs.kiwify.com.br`), nunca visto num payload de
+  /// evento de assinatura de verdade. Confirmar contra um webhook de teste
+  /// real antes de considerar este mecanismo pronto para produção.
+  gateway_assinante_id String? @unique
+
   /// Topo dos três níveis de prazo de pagamento — empresa → cliente → edição
   /// ao faturar (`docs/especificacao.md` §4.7). É dele que
   /// `Cliente.prazo_pagamento_dias` vazio herda.
@@ -158,6 +172,7 @@ model Empresa {
   relatorio_servicos RelatorioServico[]
   convites           Convite[]
   despesas           Despesa[]
+  pagamentos_pendentes PagamentoPendente[]
 
   @@map("empresa")
 }
@@ -1150,6 +1165,102 @@ model Convite {
 
   @@index([empresa_id])
   @@map("convite")
+}
+
+enum StatusPagamentoPendente {
+  pendente
+  aceito
+  estornado
+
+  @@map("status_pagamento_pendente")
+}
+
+/// O pagamento que ainda não é conta (item 13 — `docs/planos/
+/// item-13-assinatura.md`). Nasce do webhook `compra_aprovada` da Kiwify
+/// quando a venda não passou pelo produto (sem `empresa_id` de contexto no
+/// link de checkout) — alguém pagou direto num anúncio, sem cadastro no
+/// meio (Fluxo B, decisão do fundador). `token` é o link de reivindicação:
+/// a pessoa clica, cria e-mail + senha, e a Empresa nasce ligada a este
+/// pagamento.
+///
+/// **NÃO é como `Municipio`, mesmo tendo a coluna `empresa_id` — achado só
+/// ao rodar a suíte contra a tabela nova.** `empresa_id` é nullable, e a
+/// ausência é temporária, dura só até `vincular_pagamento_a_empresa` gravar
+/// o valor, DEPOIS que a Empresa já existe de verdade (por isso o campo é
+/// opcional — `reivindicar_pagamento` não grava `empresa_id`: nesse
+/// instante a Empresa ainda não existe, e a FK recusaria). Mas a tabela TEM
+/// a coluna — `tests/isolamento/schema.test.ts` não a trata como
+/// `SEM_EMPRESA_ID` (essa lista é para tabela sem a coluna nenhuma); o que
+/// a diferencia de toda tabela de domínio é a POLÍTICA, não a coluna:
+/// `POLITICAS_ESPERADAS` tem uma entrada própria para ela, e
+/// `tests/isolamento/vazamento.test.ts` a declara em `FORA_DO_LACO` (o
+/// laço genérico testa acesso por `db(empresaId)`, e `fretigate_app` não
+/// tem privilégio nenhum aqui).
+///
+/// Sem RLS por `empresa_id = contexto` (não existe contexto antes de a
+/// empresa nascer): acesso é por um papel próprio, `fretigate_pagamento`,
+/// com política nomeada (`USING (true) WITH CHECK (true)`, restrita a ele),
+/// mesmo desenho de `fretigate_convite`/`fretigate_reversor` (`CLAUDE.md`
+/// §9) — nunca `BYPASSRLS` genérico. As sete funções `SECURITY DEFINER`
+/// (`registrar_pagamento_pendente`, `localizar_pagamento_por_token`,
+/// `reivindicar_pagamento`, `vincular_pagamento_a_empresa`,
+/// `marcar_email_de_pagamento_enviado`, `estornar_pagamento_pendente`,
+/// `localizar_empresa_por_assinante_gateway`) vivem na migration deste
+/// modelo.
+model PagamentoPendente {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  token String @unique
+
+  /// "kiwify" — sem abstração de múltiplos gateways agora (`CLAUDE.md` §6);
+  /// campo de registro, não ponto de extensão.
+  gateway String
+
+  /// Id da venda no gateway — chave de deduplicação: a Kiwify reenvia
+  /// webhook em caso de falha na entrega, pode haver duplicata.
+  transacao_externa String @unique
+
+  email_comprador String
+  nome_comprador  String
+
+  /// Copiado para `Empresa.gateway_assinante_id` quando reivindicado — ver o
+  /// comentário lá para o motivo e a ressalva (não confirmado contra entrega
+  /// real).
+  gateway_assinante_id String
+
+  /// CPF/CNPJ — guardado para o comando de visibilidade (caso 1 do plano),
+  /// NUNCA renderizado na tela pública de reivindicação (caso 3: expor nome
+  /// completo e documento numa tela alcançável só por token vazaria dado de
+  /// quem pagou para quem só tem o link).
+  documento_comprador String?
+
+  periodicidade  PeriodicidadePlano
+  valor_centavos Int
+
+  status StatusPagamentoPendente @default(pendente)
+
+  /// Preenchido só quando `status = aceito`.
+  empresa_id String? @db.Uuid
+  empresa    Empresa? @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  recebido_em  DateTime  @db.Timestamptz(6)
+  aceito_em    DateTime? @db.Timestamptz(6)
+  estornado_em DateTime? @db.Timestamptz(6)
+
+  /// Quando o e-mail de ativação (com o link) saiu com sucesso pela Resend
+  /// — nulo enquanto nunca saiu, ou se o envio falhou. É o único caminho de
+  /// entrega confirmado (decisão do fundador, 03/09/2026: a página de
+  /// obrigado da Kiwify não carrega identificador nenhum, e o e-mail
+  /// automático da própria Kiwify não serve para produto de integração
+  /// externa — ver `docs/planos/item-13-assinatura.md`). O comando de
+  /// visibilidade (caso 1 do plano) usa este campo para distinguir "e-mail
+  /// saiu, aguardando clique" de "e-mail nunca saiu — foco aqui primeiro".
+  email_enviado_em DateTime? @db.Timestamptz(6)
+
+  criado_em     DateTime @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("pagamento_pendente")
 }
 
 // ---------------------------------------------------------------------------

@@ -772,6 +772,7 @@ todo pedido, mas é falha **no ar**, não falha **ao publicar**. Ver a pendênci
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | **valor fixo em `ci.yml`** (`http://localhost:3000`) — não é segredo, e nenhum e-mail sai de verdade para usar esse endereço | **variável de ambiente da Vercel** — domínio real de produção |
 | `SUPABASE_URL` | URL do projeto de desenvolvimento | **valor fixo em `ci.yml`** — URL do projeto de teste (`https://qutzsvrkaqvpluqxbhmp.supabase.co`), não é segredo por si só (o mesmo identificador de projeto já aparece no host de `DATABASE_URL`, que esse sim é secret) | **variável de ambiente da Vercel** — URL do projeto de produção, ainda não existe |
 | `SUPABASE_SERVICE_ROLE_KEY` | chave `service_role` do projeto de desenvolvimento (painel do Supabase → Project Settings → API) | **secret do GitHub** (`SUPABASE_SERVICE_ROLE_KEY_CI`) — chave `service_role` do projeto de teste | **variável de ambiente da Vercel** — chave `service_role` do projeto de produção, ainda não existe |
+| `KIWIFY_WEBHOOK_TOKEN` | token de segurança configurado no painel da Kiwify (Apps > Webhooks) do produto de teste/desenvolvimento | **valor fixo em `ci.yml`** (item 13, Tarefa 1) — `tests/pagamentos.test.ts` chama `src/lib/servicos/pagamentos.ts` direto, nunca a rota `api/webhooks/kiwify` por HTTP, então nenhum teste desta suíte dispara a checagem de token de verdade; a variável só precisa existir para o módulo carregar, mesmo motivo das demais fixas | **variável de ambiente da Vercel** — token do webhook configurado na Kiwify de produção |
 
 **Por que a maioria de e-mail/autenticação pode ser valor fixo na esteira, e
 as três do banco (mais `SUPABASE_SERVICE_ROLE_KEY`) não:** as três do banco
@@ -995,15 +996,20 @@ Vieram de defeitos reais encontrados nos protótipos. São obrigatórias.
   **Exceção, e é isto — nenhuma outra**: telas sem barra de navegação não
   reservam essa folga, porque não existe barra para não ficar embaixo dela.
   São as telas de fora de sessão — **Entrar, Criar conta, Esqueci a senha,
-  Redefinir senha, Termos e privacidade (no modo vindo do cadastro) e
-  Aceitar convite** — que usam margem inferior padrão. Lista fechada, para não
-  virar exceção decidida caso a caso: tela nova sem barra entra aqui só com
-  decisão explícita, não por analogia.
+  Redefinir senha, Termos e privacidade (no modo vindo do cadastro), Aceitar
+  convite e Ativar assinatura** — que usam margem inferior padrão. Lista
+  fechada, para não virar exceção decidida caso a caso: tela nova sem barra
+  entra aqui só com decisão explícita, não por analogia.
 
   **Redefinir senha e Termos (modo cadastro) entraram em 07/08/2026, tarefa 8
   fatia 2, por decisão explícita do fundador** — mesma razão das quatro
   originais: são telas de fora de sessão, sem app shell nenhum para reservar
   folga contra.
+
+  **Ativar assinatura entrou em 03/09/2026, item 13 Tarefa 1, por decisão
+  explícita do fundador, achado do `/revisar`** — mesmo critério das outras
+  seis: é tela de fora de sessão, a pessoa ainda não tem conta, e não tem
+  para onde navegar — a barra pressupõe estar **dentro** do produto.
 
   **Termos no modo Ajustes era caso à parte — resolvido no item 10, Tarefa 2
   (31/08/2026).** Ajustes existe agora (`/conta`, dentro de Mais, só para o
@@ -1336,9 +1342,16 @@ para `src/lib/auth` — mesmo mecanismo que já tranca
 escopo da regra, pelo mesmo motivo que `/tests` já pode SQL cru (§3).
 `tests/protecao-de-acoes.test.ts` lê o código-fonte de toda ação de servidor
 (varredura, não lista de arquivo à mão) e confere que cada exportação usa um
-dos dois envelopes, com só duas exceções aprovadas — `sairDaConta` (sessão
-pode já ter vencido) e `criarConta` (cria a empresa; sessão não existe
-ainda) —, cada uma conferida por igualdade exata nos dois sentidos.
+dos dois envelopes, com só quatro exceções aprovadas — `sairDaConta` (sessão
+pode já ter vencido), `criarConta` (cria a empresa; sessão não existe
+ainda), `aceitarConviteAction` (item 10, Tarefa 4 — cria o usuário a partir
+de um convite público, por token; mesmo motivo de `criarConta`) e
+`ativarAssinaturaAction` (item 13, Tarefa 1 — cria a empresa e o dono a
+partir de um pagamento aprovado, por token; mesmo motivo) —, cada uma
+conferida por igualdade exata nos dois sentidos. **A contagem aqui é
+fotografia, não a fonte de verdade** — quem manda é a lista `EXCECOES` do
+próprio teste; esta frase já ficou desatualizada uma vez (dizia "duas"
+quando já eram três) por não ter sido atualizada junto da terceira.
 
 **Limitação conhecida, aceita — igual às duas de `sem-filtro-de-empresa`
 (tarefa 2): ação com a diretiva `"use server"` dentro do corpo da função
@@ -1418,7 +1431,8 @@ declarar depois não conserta, porque não se pede autorização retroativa.
 |---|---|---|
 | **Supabase** | todo o banco e os arquivos | banco de dados e armazenamento |
 | **Vercel** | o tráfego da aplicação | hospedagem |
-| **Resend** | nome e e-mail de quem recebe a mensagem | e-mail transacional: recuperação de senha e verificação de e-mail. **Convite de usuário não manda e-mail** — é sempre por WhatsApp, envio manual (item 10, Tarefa 4, 01/09/2026; corrigido aqui para bater com `docs/especificacao.md` §"E-mail transacional", já corrigido na Tarefa 1) |
+| **Resend** | nome e e-mail de quem recebe a mensagem | e-mail transacional: recuperação de senha, verificação de e-mail e **ativação de assinatura** (item 13, 03/09/2026 — quem paga pelo Fluxo B só recebe o link que cria a conta por este e-mail, é o único caminho de entrega confirmado, ver `docs/especificacao.md` §"E-mail transacional"). **Convite de usuário não manda e-mail** — é sempre por WhatsApp, envio manual (item 10, Tarefa 4, 01/09/2026; corrigido aqui para bater com `docs/especificacao.md` §"E-mail transacional", já corrigido na Tarefa 1) |
+| **Kiwify** | nome, e-mail, CPF/CNPJ e valor pago de quem assina pelo Fluxo B (item 13, 03/09/2026) | checkout de terceiro — a pessoa paga direto na Kiwify, nunca no FretiGate (`CLAUDE.md` §10, "não construir checkout próprio"); o webhook de compra aprovada repassa esses dados para o FretiGate criar a conta. É dado do próprio cliente do FretiGate (quem assina), não de terceiro (cliente/motorista da transportadora) — mesma categoria de peso do Resend, não a do e-mail/IA abaixo |
 | **Cloudflare** | o conteúdo das respostas que chegam em `contato@`, **de passagem** | redirecionamento do e-mail de contato. Quem responde pedindo ajuda costuma colar dado do próprio negócio na mensagem |
 | **Google** | o conteúdo dessas mesmas respostas, **armazenado** | a caixa que recebe o redirecionamento é Gmail. Quem guarda entra com mais razão que quem só vê passar — **sai desta tabela quando existir caixa própria no domínio**, e essa é uma das razões para migrar |
 | **fornecedor de IA** *(a decidir — §14)* | o conteúdo da conversa colada na importação | extração dos fretes |
@@ -1612,23 +1626,43 @@ Não invente resposta. Pergunte.
   mecanismo à parte que ninguém construiu ainda. **Precisa existir antes de
   ligar os anúncios** — o mesmo marco já usado para o reteste do e-mail
   transacional (§ tarefa 7 no diário). Decidido em 07/08/2026.
+- **PRAZO, COM DESTAQUE — o e-mail de ativação de assinatura (item 13)
+  precisa do próprio teste de entrega antes de ligar qualquer anúncio.**
+  Decisão do fundador, 03/09/2026, ao aprovar a construção. O teste já
+  feito com o e-mail de recuperação de senha (§ "Confira a caixa de spam",
+  `docs/especificacao.md`) mediu Gmail/Outlook **para aquele e-mail** —
+  assunto, remetente percebido e contexto diferentes não garantem o mesmo
+  resultado para este. E o risco aqui é maior: recuperação de senha que cai
+  em spam tem alternativa (a conta existe, a pessoa tenta de novo); este
+  e-mail é o **único** caminho de entrega confirmado do Fluxo B (a página
+  de obrigado da Kiwify não carrega identificador nenhum, e o e-mail
+  automático da própria Kiwify não serve para produto de integração
+  externa — `docs/especificacao.md` §"E-mail transacional", "Ativação de
+  assinatura"). Se este e-mail cair em spam sem ninguém notar, a pessoa
+  pagou e não tem conta, nem caminho de auto-recuperação — o comando de
+  visibilidade (item 13) é a única rede de segurança, e depende de alguém
+  rodá-lo.
 - **CONFERIR ANTES DE PUBLICAR — variáveis de ambiente na Vercel.** Achado na
-  tarefa 9 (08/08/2026): nada verifica, hoje, que as dez variáveis da tabela
-  em "Ambientes" (§5, sete linhas desde o item 5, Tarefa 4) estão
+  tarefa 9 (08/08/2026): nada verifica, hoje, que as onze variáveis da tabela
+  em "Ambientes" (§5, oito linhas desde o item 13, Tarefa 1) estão
   configuradas na Vercel antes da primeira publicação. E o jeito como isso falha importa:
-  `src/lib/auth/index.ts`, `src/lib/auth/email.ts`, (desde o item 5, Tarefa 4)
-  `src/lib/servicos/comprovantes.ts` e (desde o item 10, Tarefa 4)
-  `src/lib/utils/convite.ts` lançam erro **no carregamento do módulo**, mas
-  nenhuma rota que os importa é avaliada durante `next build` (são rota de
-  API e Server Actions, não página estática) — então a publicação **termina
-  com sucesso** mesmo faltando uma variável, e o erro só aparece no
-  **primeiro pedido real** que tocar login, sessão, comprovante ou convite.
-  Sem conferência manual antes de publicar, isso apareceria com cliente
-  pagante já usando o produto, não durante o deploy. **`convite.ts` é o
-  primeiro destes também importado por componente de cliente**
-  (`ListaUsuarios.tsx`, `FormularioConvite.tsx`) — faltando a variável, o
-  primeiro sintoma pode ser o próprio navegador quebrando ao carregar o
-  pacote, antes mesmo de um pedido ao servidor.
+  `src/lib/auth/index.ts`, `src/lib/email/index.ts` (mecanismo de envio,
+  antes em `src/lib/auth/email.ts` — mudou de casa no item 13, Tarefa 1),
+  `src/lib/servicos/comprovantes.ts`, (desde o item 10, Tarefa 4)
+  `src/lib/utils/convite.ts` e (desde o item 13, Tarefa 1)
+  `src/lib/utils/pagamento.ts`/`src/app/api/webhooks/kiwify/route.ts`
+  lançam erro **no carregamento do módulo**, mas nenhuma rota que os importa
+  é avaliada durante `next build` (são rota de API e Server Actions, não
+  página estática) — então a publicação **termina com sucesso** mesmo
+  faltando uma variável, e o erro só aparece no **primeiro pedido real** que
+  tocar login, sessão, comprovante, convite, ou o primeiro webhook que a
+  Kiwify entregar. Sem conferência manual antes de publicar, isso apareceria
+  com cliente pagante já usando o produto — no caso do webhook, com dinheiro
+  já recebido e ninguém sabendo. **`convite.ts` é o primeiro destes também
+  importado por componente de cliente** (`ListaUsuarios.tsx`,
+  `FormularioConvite.tsx`) — faltando a variável, o primeiro sintoma pode
+  ser o próprio navegador quebrando ao carregar o pacote, antes mesmo de um
+  pedido ao servidor.
 
   **O sintoma exato, se `NEXT_PUBLIC_APP_URL` estiver errado ou faltando**
   (achado do fundador, 12/08/2026, testando login pelo celular): **login

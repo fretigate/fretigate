@@ -220,17 +220,24 @@ const eslintConfig = defineConfig([
       ],
     },
   },
-  // Exceção nomeada, só para este arquivo — decisão do fundador, 18/08/2026
-  // (CLAUDE.md §6, §9): a seed de municípios fala com o banco por fora de
-  // db(), porque município não tem empresa_id e a leitura/gravação usa
-  // DIRECT_URL, não DATABASE_URL. É a mesma classe de exceção que
-  // municipio_leitura é em RLS (USING (true) WITH CHECK (false)): nomeada,
-  // escrita, com o motivo ao lado — não um "liga tudo de novo" (o bloco
-  // abaixo reabre só o cliente próprio, mantendo SQL cru e
-  // sem-filtro-de-empresa banidos, que a seed não usa e não tem motivo
-  // para usar).
+  // Exceção nomeada, só para os arquivos listados — decisão do fundador,
+  // 18/08/2026 (CLAUDE.md §6, §9): a seed de municípios fala com o banco
+  // por fora de db(), porque município não tem empresa_id e a
+  // leitura/gravação usa DIRECT_URL, não DATABASE_URL. É a mesma classe de
+  // exceção que municipio_leitura é em RLS (USING (true) WITH CHECK
+  // (false)): nomeada, escrita, com o motivo ao lado — não um "liga tudo de
+  // novo" (o bloco abaixo reabre só o cliente próprio, mantendo SQL cru e
+  // sem-filtro-de-empresa banidos, que nenhum destes scripts usa nem tem
+  // motivo para usar).
+  //
+  // `scripts/pagamentos-pendentes.mts` somou em 03/09/2026 (item 13, Tarefa
+  // 1 — `docs/planos/item-13-assinatura.md`), mesmo motivo: lista
+  // `PagamentoPendente`, tabela que `fretigate_app` não tem privilégio
+  // nenhum de alcançar direto (só pelas funções `SECURITY DEFINER`) —
+  // comando de operação, fala pela conexão das migrations, não da
+  // aplicação.
   {
-    files: ["scripts/seed/municipios.mts"],
+    files: ["scripts/seed/municipios.mts", "scripts/pagamentos-pendentes.mts"],
     rules: {
       "no-restricted-imports": [
         "error",

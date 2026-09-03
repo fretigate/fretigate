@@ -51,7 +51,10 @@ const PARAGRAFOS_PRIVACIDADE = [
   "Os serviços abaixo têm acesso a parte dos dados, cada um só ao que " +
     "precisa para fazer o que faz: Supabase (banco de dados e " +
     "armazenamento de arquivos), Vercel (hospedagem), Resend (envio de " +
-    "e-mail de recuperação de senha e confirmação), Cloudflare e " +
+    "e-mail de recuperação de senha, confirmação e ativação de " +
+    "assinatura), Kiwify (checkout de terceiro para quem assina direto " +
+    "pelo anúncio, sem passar pelo cadastro — recebe nome, e-mail, " +
+    "documento e valor pago de quem assinou dessa forma), Cloudflare e " +
     "Google (encaminhamento e caixa do e-mail de contato) e um fornecedor " +
     "de inteligência artificial, ainda em avaliação, para a importação de " +
     "fretes a partir de conversa colada pela empresa — nenhum deles treina " +

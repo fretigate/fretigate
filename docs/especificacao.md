@@ -533,9 +533,11 @@ Vocabulário, no topo deste documento.
 
 ### E-mail transacional
 
-O produto manda e-mail em dois momentos, e só nesses dois: **recuperação de
-senha** e **verificação de e-mail**. Nenhum dos dois é opcional para o produto
-funcionar — quem perde a senha só volta por e-mail.
+O produto manda e-mail em três momentos: **recuperação de senha**,
+**verificação de e-mail** e **ativação de assinatura** (item 13, somado em
+03/09/2026 — abaixo). Nenhum dos três é opcional — quem perde a senha só
+volta por e-mail, e quem paga pelo Fluxo B (checkout direto, sem cadastro
+no meio) só entra no produto por ele.
 
 **Convite de usuário não manda e-mail** — corrigido em 31/08/2026, planejamento
 do item 10: a versão anterior desta lista incluía "convite de usuário" como
@@ -543,6 +545,37 @@ terceiro momento, mas a tela que o Design desenhou (`docs/componentes.md`,
 "Usuários — convite") só tem "Mandar convite no WhatsApp", nunca uma opção por
 e-mail. O convite (§4.9, abaixo) é sempre por WhatsApp, com envio manual pela
 própria pessoa — o produto nunca despacha essa mensagem sozinho.
+
+#### Ativação de assinatura (item 13) — e por que ele pesa mais que os outros dois
+
+Decisão do fundador, 03/09/2026, planejamento do item 13 (`docs/planos/
+item-13-assinatura.md`): quem paga pelo Fluxo B (anúncio → checkout Kiwify →
+pagamento, sem cadastro no FretiGate no meio) só descobre o link que cria a
+conta por este e-mail — medido, não suposto: a página de obrigado da Kiwify
+é uma URL fixa por produto, sem identificador de venda anexado; o e-mail
+automático da própria Kiwify leva para o painel deles, nunca para uma URL
+externa configurável (a própria central de ajuda da Kiwify diz que produto
+entregue por integração externa depende do vendedor mandar o acesso).
+
+**Isso muda o peso deste e-mail em relação aos outros dois.** Recuperação de
+senha tem alternativa se o e-mail não chegar — a pessoa tenta de novo mais
+tarde, ou fala com o suporte, porque a conta já existe. Aqui não: se o
+e-mail não sair (ou sair e cair em spam sem ninguém notar), a pessoa pagou
+e não tem acesso, e **nem conta existe** para ela reclamar de dentro do
+produto. É por isso que a rota do webhook (`api/webhooks/kiwify`) nunca
+engole falha de envio em silêncio — devolve erro para a Kiwify reentregar o
+evento, e a reentrega tenta mandar o e-mail de novo (`registrarPagamento` é
+deduplicado por transação, então a segunda tentativa manda o mesmo link,
+nunca um segundo). O comando de visibilidade do item 13 (pagamentos sem
+conta criada) é a rede de segurança para quando mesmo assim ninguém clica —
+seja porque fechou a aba, seja porque o e-mail nunca chegou.
+
+**Risco conhecido, com destaque: o domínio ainda cai em spam no Outlook**
+(ver "Confira a caixa de spam", abaixo — medido com o e-mail de recuperação
+de senha, não com este). **Este e-mail precisa do próprio teste de entrega
+antes de ligar qualquer anúncio** — passar no Gmail/Outlook com o e-mail de
+recuperação não prova nada sobre este, que tem assunto, remetente
+percebido e contexto diferentes. Lacuna registrada, não resolvida aqui.
 
 | | |
 |---|---|
@@ -645,19 +678,31 @@ que gere custo. Os números, aprovados em 07/08/2026:
 | Gerar relatório | **10 por 5 minutos** |
 | Trocar a logo da empresa | **20 por 5 minutos** |
 | Aceitar convite (carregar `/aceitar-convite` ou enviar o formulário) | **20 por minuto** |
+| Ativar assinatura (carregar `/ativar-assinatura` ou enviar o formulário) | **20 por minuto** |
+| Webhook da Kiwify (`api/webhooks/kiwify`) | **60 por minuto** |
 
 A contagem é por endereço de rede e por rota, e fica **no banco** — a
 hospedagem roda várias instâncias, e contagem em memória viraria uma contagem
 por instância. As travas de **Criar conta**, de **consultar o código em
 `/redefinir-senha`**, de **Enviar comprovante**, de **Gerar relatório**, de
-**Trocar a logo da empresa** e de **Aceitar convite** não são rota do Better
-Auth (são Server Action, Server Component, rota de API, Server Action, rota
-de API e a dupla Server Component + Server Action, respectivamente —
+**Trocar a logo da empresa**, de **Aceitar convite**, de **Ativar assinatura**
+e do **Webhook da Kiwify** não são rota do Better Auth (são Server Action,
+Server Component, rota de API, Server Action, rota de API, a dupla Server
+Component + Server Action, a mesma dupla, e rota de API, respectivamente —
 `src/lib/servicos/trava-de-cadastro.ts`, `trava-de-redefinicao.ts`,
-`trava-de-comprovante.ts`, `trava-de-relatorio.ts`, `trava-de-logo.ts` e
-`trava-de-convite.ts`), mas usam a mesma tabela `rate_limit` e o mesmo
-mecanismo atômico; estão aqui, e não só no código, para as listas nunca
-divergirem de novo — já aconteceu três vezes.
+`trava-de-comprovante.ts`, `trava-de-relatorio.ts`, `trava-de-logo.ts`,
+`trava-de-convite.ts`, `trava-de-ativacao.ts` e `trava-de-webhook.ts`), mas
+usam a mesma tabela `rate_limit` e o mesmo mecanismo atômico; estão aqui, e
+não só no código, para as listas nunca divergirem de novo — já aconteceu
+três vezes.
+
+**"Ativar assinatura" reaproveita o número de "Aceitar convite"** (item 13,
+Tarefa 1, mesmo perfil de custo — o token de pagamento também tem entropia
+alta demais para valer a pena adivinhar). **"Webhook da Kiwify" é mais
+folgado (60, não 20)** porque quem chama não é uma pessoa tentando entrar —
+é a Kiwify, que pode entregar rajadas legítimas de eventos em sequência
+(reentregas, picos de venda); a trava aqui é contra abuso de terceiro que
+ache a URL, não contra o uso normal.
 
 **"Aceitar convite" reaproveita o número de "Consultar o código em
 `/redefinir-senha`"** (item 10, Tarefa 4, mesmo perfil de custo — o token tem
@@ -746,8 +791,9 @@ o motivo, ou a suíte reprova.
 `municipio_id` · `logo_url` · `chave_pix` · `dados_bancarios` ·
 `patio_endereco` · `patio_municipio_id` · `prazo_padrao_dias` ·
 `proximo_numero_servico` · `modelo_mensagem_cobranca` · `modelo_mensagem_ordem` ·
-`plano` · `periodicidade` · `status_assinatura` · `afiliado_id` ·
-`origem_cadastro` · `origem_declarada` · `termos_aceitos_em` · `termos_versao`
+`plano` · `periodicidade` · `status_assinatura` · `gateway_assinante_id` ·
+`afiliado_id` · `origem_cadastro` · `origem_declarada` · `termos_aceitos_em` ·
+`termos_versao`
 
 **`proximo_numero_servico`** — contador interno, nunca exibido. Começa em 1;
 é dele que sai o `numero` sequencial de cada `Servico` da empresa (tarefa 1 do
@@ -862,11 +908,20 @@ a redação dos Termos e da Política de Privacidade foram ao ar por decisão do
 fundador, com a revisão jurídica das duas coisas virando pendência — sem
 bloquear lançamento — para depois do primeiro cliente pagante. `termos_versao`
 guarda a **data de publicação** da versão do texto aceita
-(`src/lib/servicos/cadastro.ts`), não um identificador provisório: toda
+(`src/lib/servicos/criar-empresa-e-dono.ts` — mudou de `cadastro.ts` no
+item 13, Tarefa 1, quando a constante passou a servir os dois caminhos de
+entrada), não um identificador provisório: toda
 Empresa que aceitar a mesma versão grava a mesma data ali, distinta de
 `termos_aceitos_em` (o momento em que aquela Empresa aceitou). Uma versão
 futura do texto ganha data nova e vale só a partir do próprio aceite — não
 retroage sobre quem já aceitou a anterior.
+
+**Republicado em 03/09/2026** (item 13, Tarefa 1, achado do `/revisar`): a
+Kiwify entrou na lista de subprocessadores (`ConteudoTermos.tsx`,
+`CLAUDE.md` §11) — cláusula nova o bastante para contar como versão nova,
+pela regra do parágrafo abaixo. Sem empresa nenhuma tendo aceitado a
+versão anterior de verdade ainda (zero clientes pagantes), não há
+reaceite a resolver agora.
 
 **Nem toda mudança no texto conta como versão nova.** Cláusula nova ou
 alterada — algo que muda o que o texto autoriza — exige aceite novo de quem
@@ -905,6 +960,34 @@ transacional" acima, "convite de usuário não manda e-mail"), então o que se
 guarda é o telefone de quem foi chamado, nunca um e-mail. O e-mail da conta
 nasce só quando a pessoa aceita — é ela quem digita, em
 `(auth)/aceitar-convite`, junto da senha —, nunca antes.
+
+### PagamentoPendente
+`token` · `gateway` · `transacao_externa` · `email_comprador` ·
+`nome_comprador` · `gateway_assinante_id` · `documento_comprador` ·
+`periodicidade` · `valor_centavos` · `status` (`pendente` · `aceito` ·
+`estornado`) · `empresa_id` (nulo até aceito) · `recebido_em` · `aceito_em` ·
+`estornado_em` · `email_enviado_em`
+
+O pagamento que ainda não é conta (item 13 — `docs/planos/
+item-13-assinatura.md`). Nasce do webhook `compra_aprovada` da Kiwify
+quando a venda não passou pelo produto (Fluxo B: anúncio → checkout →
+pagamento, sem cadastro no meio) — o `token` é o link de reivindicação que
+o e-mail de ativação manda; a pessoa clica, cria e-mail e senha, e a
+Empresa nasce ligada a este pagamento (`plano: pago`).
+
+**`empresa_id` é a única coluna de domínio deste produto que aponta para
+`Empresa` sem carregar isolamento por empresa** — a tabela inteira fica
+fora do isolamento normal (`empresa_id = contexto`), porque não existe
+contexto de empresa até o pagamento ser reivindicado. Ver `CLAUDE.md` §9
+para o desenho de acesso (papel `fretigate_pagamento`, funções `SECURITY
+DEFINER`).
+
+**`gateway_assinante_id` não é exclusivo desta tabela** — `Empresa` também
+ganha a coluna (nula até o primeiro pagamento), copiada daqui quando a
+conta nasce. É a chave que os eventos de assinatura DEPOIS do primeiro
+pagamento (renovação, atraso, cancelamento) usam para achar a empresa —
+⚠️ não confirmado contra entrega real de evento de assinatura, só contra o
+objeto de venda da API REST da Kiwify.
 
 ### Municipio
 Tabela global, base do IBGE, 5.570 registros.
@@ -1140,7 +1223,9 @@ só a experiência de transportadora de carga (`CLAUDE.md` §12).
 **Toda empresa nasce com os quatro, na mesma transação que cria a Empresa.**
 Não é um passo seguinte: se fosse, uma falha no meio deixaria empresa sem tipo
 nenhum, e o primeiro frete não teria o que escolher num campo obrigatório
-(§4.1). Quem faz é `src/lib/servicos/cadastro.ts`.
+(§4.1). Quem faz é `src/lib/servicos/criar-empresa-e-dono.ts` (mudou de
+`cadastro.ts` no item 13, Tarefa 1 — mesmo motivo do `termos_versao`
+acima).
 
 ### Servico
 A entidade central. Chama-se `Servico`, não `Frete`, para comportar outros ramos.

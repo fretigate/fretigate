@@ -217,7 +217,7 @@ Vale nas três telas que têm o padrão: `telDe()` no detalhe do frete, `campoDe
 | Número | Valor | Onde aparece |
 |---|---|---|
 | Validade do link de recuperação | **2 horas** | Recuperação enviada · Link expirado. O usuário pode não abrir o e-mail na hora |
-| Senha mínima | 6 caracteres | Redefinir senha · Criar conta · Aceitar convite |
+| Senha mínima | 6 caracteres | Redefinir senha · Criar conta · Aceitar convite · Ativar assinatura (item 13, 03/09/2026) |
 | Prazo padrão de vencimento | 15 dias | Configurações · perfil do cliente (herdado) |
 
 ## Barra de navegação: exceção fora de sessão

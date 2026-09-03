@@ -4,11 +4,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { uuidv7 } from "uuidv7";
 import { auth } from "@/lib/auth";
-import { emTransacao, reverterCadastroIncompleto } from "@/lib/db";
 import { OPCOES_ORIGEM, OUTRO_ORIGEM as OUTRO } from "./cadastro-opcoes";
 import { travaDeCadastro } from "./trava-de-cadastro";
-import { criarUsuarioDono } from "./criar-usuario-dono";
-import { criarTiposDeOperacaoIniciais } from "./tipos-de-operacao";
+import { criarEmpresaEDono } from "./criar-empresa-e-dono";
 
 /**
  * O cadastro: cria a Empresa e o Usuário dono na mesma operação — tarefa 8.
@@ -21,23 +19,11 @@ import { criarTiposDeOperacaoIniciais } from "./tipos-de-operacao";
  * HTTP. Ver o plano da tarefa 8 para o raciocínio completo.
  */
 
-/**
- * O valor é a data de publicação da versão do texto dos Termos e da
- * Política de Privacidade (`src/app/(auth)/termos/ConteudoTermos.tsx`) —
- * não um número sequencial. Toda Empresa que aceitar esta versão grava a
- * mesma data aqui; `termos_aceitos_em`, abaixo, é o momento em que aquela
- * Empresa aceitou, e os dois podem divergir. Empresas que já aceitaram esta
- * não são reescritas retroativamente quando a próxima versão nascer.
- *
- * Nem toda mudança no texto muda esta data: só cláusula nova ou alterada
- * exige aceite novo de quem já tinha aceitado (data nova aqui, e um fluxo
- * de reaceite que ainda não existe). Correção de redação que não muda o que
- * o texto autoriza — erro de digitação, clareza de frase — não precisa.
- *
- * Publicado em 18/08/2026 com revisão jurídica pendente, sem bloqueio de
- * lançamento (CLAUDE.md §14) — decisão do fundador.
- */
-const VERSAO_TERMOS_PUBLICADA = "2026-08-18";
+// `VERSAO_TERMOS_PUBLICADA` mudou de casa no item 13 (`docs/planos/
+// item-13-assinatura.md`, Tarefa 1): agora mora em `criar-empresa-e-dono.ts`,
+// junto da função que grava `termos_versao` — um arquivo `"use server"` só
+// pode exportar função assíncrona (Next.js), então não podia continuar aqui
+// como export.
 
 const schema = z.object({
   nomeEmpresa: z.string().trim().min(1),
@@ -169,71 +155,21 @@ export async function criarConta(
   // construir a captura. PRAZO (CLAUDE.md §14): precisa existir antes de
   // ligar os anúncios — é o mesmo marco já usado para o reteste de e-mail.
 
-  // Passo 1 — a Empresa e os quatro tipos de operação, na mesma transação
-  // (CLAUDE.md §9): uuid gerado aqui, `set_config` (dentro de `emTransacao`),
-  // insert da Empresa com esse id, e só então os tipos — que apontam para ela.
-  // Os tipos NÃO vão num passo seguinte: se fossem, uma falha no meio deixaria
-  // empresa sem tipo nenhum, e o primeiro frete não teria o que escolher num
-  // campo obrigatório.
-  try {
-    await emTransacao(empresaId, async (tx) => {
-      await tx.empresa.create({
-        data: {
-          id: empresaId,
-          nome_fantasia: dados.nomeEmpresa,
-          telefone: dados.seuTelefone || null,
-          origem_declarada: origemDeclarada,
-          termos_aceitos_em: new Date(),
-          termos_versao: VERSAO_TERMOS_PUBLICADA,
-        },
-      });
-      await criarTiposDeOperacaoIniciais(tx, empresaId);
-    });
-  } catch (erroEmpresa) {
-    // Nunca o objeto de erro cru: o `create` do Prisma pode ecoar de volta os
-    // dados enviados (nome_fantasia, telefone) na mensagem de validação —
-    // só nome do erro e o id gerado, nunca dado pessoal (§4).
-    console.error(
-      "[cadastro] falha ao criar empresa",
-      empresaId,
-      erroEmpresa instanceof Error ? erroEmpresa.name : "erro desconhecido",
-    );
-    return {
-      erroGeral: "Não deu para criar a conta agora. Tenta de novo em instantes.",
-    };
-  }
-
-  // Passo 2 — Usuário + senha, pela conexão da autenticação (`fretigate_auth`,
-  // dentro de `ctx`). Se falhar, passo 3 reverte o passo 1.
-  try {
-    await criarUsuarioDono(ctx, {
-      email: emailNormalizado,
-      nome: dados.seuNome,
-      empresaId,
-      senha: dados.senha,
-    });
-  } catch (erroUsuario) {
-    // Passo 3 — reverter. A empresa nunca teve usuário: nunca existiu de
-    // verdade (CLAUDE.md §7). Roda no catch em volta do passo inteiro, não só
-    // dos erros esperados — falha de conexão limpa igual.
-    await reverterCadastroIncompleto(empresaId).catch((erroLimpeza) => {
-      console.error(
-        "[cadastro] falha ao reverter empresa orfa",
-        empresaId,
-        erroLimpeza instanceof Error ? erroLimpeza.name : "erro desconhecido",
-      );
-    });
-    // Nunca o objeto de erro cru — só nome do erro e o id gerado, nunca
-    // e-mail/nome/telefone (§4).
-    console.error(
-      "[cadastro] falha ao criar usuario apos empresa",
-      empresaId,
-      erroUsuario instanceof Error ? erroUsuario.name : "erro desconhecido",
-    );
-    return {
-      erroGeral:
-        "Não deu para criar a conta agora. Tenta de novo — o que você já preencheu continua aqui.",
-    };
+  const resultadoConta = await criarEmpresaEDono({
+    empresaId,
+    nomeEmpresa: dados.nomeEmpresa,
+    telefone: dados.seuTelefone || null,
+    origemDeclarada,
+    plano: "gratuito",
+    periodicidade: null,
+    statusAssinatura: "ativa",
+    gatewayAssinanteId: null,
+    email: emailNormalizado,
+    nomeDono: dados.seuNome,
+    senha: dados.senha,
+  });
+  if ("erro" in resultadoConta) {
+    return { erroGeral: resultadoConta.erro };
   }
 
   // Melhor esforço: a conta já existe mesmo que o e-mail de verificação
