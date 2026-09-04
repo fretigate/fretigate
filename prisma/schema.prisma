@@ -107,18 +107,30 @@ model Empresa {
 
   status_assinatura StatusAssinatura @default(ativa)
 
-  /// Identificador do assinante no gateway (Kiwify: `customer.id`, estável
-  /// por comprador — não muda a cada renovação, diferente do id da
-  /// transação). É a chave que os eventos de assinatura DEPOIS do primeiro
-  /// pagamento (renovação, atraso, cancelamento) usam para achar esta
-  /// empresa sem saber `empresa_id` de antemão — mesmo problema que
+  /// Identificador do assinante no gateway: `subscription_id` da Kiwify,
+  /// não `customer.id` — o payload real não tem `id` nenhum dentro de
+  /// `Customer`. O CAMPO está confirmado contra entrega real (03/09/2026,
+  /// `docs/planos/corrige-webhook-kiwify.md`), mas só para `order_approved`
+  /// (a única entrega capturada) — que ele também venha nos eventos
+  /// DEPOIS do primeiro pagamento (renovação, atraso, cancelamento) é
+  /// leitura da doc oficial (descrito como propriedade da venda, não do
+  /// evento específico), não uma entrega desses três tipos vista de
+  /// verdade. É a chave que esses eventos usam para achar esta empresa sem
+  /// saber `empresa_id` de antemão — mesmo problema que
   /// `localizar_convite_por_token` resolve para convite, aqui para
   /// assinatura (item 13 — `docs/planos/item-13-assinatura.md`).
   ///
-  /// NÃO CONFIRMADO CONTRA ENTREGA REAL — medido só no objeto de venda da
-  /// API REST da Kiwify (`docs.kiwify.com.br`), nunca visto num payload de
-  /// evento de assinatura de verdade. Confirmar contra um webhook de teste
-  /// real antes de considerar este mecanismo pronto para produção.
+  /// LACUNA, NÃO DECIDIDA: `subscription_id` é por ASSINATURA, não por
+  /// COMPRADOR — diferente do que este campo presumia antes (`customer.id`
+  /// seria estável entre cancelamento e nova assinatura da mesma pessoa;
+  /// `subscription_id` não é). Se alguém cancelar e assinar de novo, a
+  /// Kiwify gera um `subscription_id` novo — os eventos da assinatura nova
+  /// não encontram esta empresa (o campo `@unique` ainda tem o valor
+  /// antigo), e `atualizarStatusAssinaturaPorAssinanteGateway` devolve
+  /// `false` para uma renovação legítima. Não corrigido agora — não existe
+  /// decisão de produto sobre o que "cancelar e assinar de novo" deveria
+  /// fazer (relacionado à pendência já registrada em `CLAUDE.md` §14,
+  /// "prazo de retenção depois de cancelamento voluntário").
   gateway_assinante_id String? @unique
 
   /// Topo dos três níveis de prazo de pagamento — empresa → cliente → edição
@@ -1176,7 +1188,9 @@ enum StatusPagamentoPendente {
 }
 
 /// O pagamento que ainda não é conta (item 13 — `docs/planos/
-/// item-13-assinatura.md`). Nasce do webhook `compra_aprovada` da Kiwify
+/// item-13-assinatura.md`). Nasce do evento `order_approved` da Kiwify
+/// (gatilho "Compra aprovada" — nome diferente do valor que chega no
+/// corpo, confirmado em `docs/planos/corrige-webhook-kiwify.md`)
 /// quando a venda não passou pelo produto (sem `empresa_id` de contexto no
 /// link de checkout) — alguém pagou direto num anúncio, sem cadastro no
 /// meio (Fluxo B, decisão do fundador). `token` é o link de reivindicação:

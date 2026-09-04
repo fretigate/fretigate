@@ -265,8 +265,8 @@ type LinhaPagamentoRegistrado = { id: string; token: string; status: "pendente" 
 
 /**
  * Registra (ou, em reentrega da Kiwify, apenas devolve) um pagamento
- * pendente — chamada pela rota de webhook quando `compra_aprovada` chega
- * sem `s1` (venda que não passou pelo produto).
+ * pendente — chamada pela rota de webhook quando `order_approved` (gatilho
+ * "Compra aprovada") chega sem `s1` (venda que não passou pelo produto).
  *
  * A deduplicação por `transacao_externa` mora DENTRO da função
  * (`ON CONFLICT ... DO UPDATE` como no-op) — a Kiwify reenvia webhook em
@@ -410,14 +410,21 @@ export async function estornarPagamentoPendente(transacaoExterna: string): Promi
 /**
  * Acha a `Empresa` pelo identificador do assinante no gateway — eventos de
  * assinatura DEPOIS do primeiro pagamento (renovação, atraso, cancelamento)
- * chegam sem `empresa_id` de contexto, do mesmo jeito que `compra_aprovada`
+ * chegam sem `empresa_id` de contexto, do mesmo jeito que `order_approved`
  * chega. Devolve só o `id`: a rota do webhook usa isso para chamar
  * `db(empresaId)` normalmente dali em diante — RLS por `empresa_id =
  * contexto` volta a valer no próximo passo.
  *
- * ⚠️ `gatewayAssinanteId` (Kiwify `customer.id`) não foi confirmado contra
- * entrega real de evento de assinatura — ver o comentário de
- * `Empresa.gateway_assinante_id` em `prisma/schema.prisma`.
+ * `gatewayAssinanteId` é o `subscription_id` da Kiwify — o CAMPO está
+ * confirmado contra entrega real, mas só para `order_approved` (a única
+ * entrega capturada, `docs/planos/corrige-webhook-kiwify.md`). Que ele
+ * também venha na raiz de `subscription_renewed`/`subscription_late`/
+ * `subscription_canceled` é leitura da doc oficial (o campo é descrito
+ * como propriedade da venda, não do evento específico), nunca uma
+ * entrega desses três tipos vista de verdade. Ver o comentário de
+ * `Empresa.gateway_assinante_id` em `prisma/schema.prisma` para a lacuna
+ * que o campo abre (cancelar e assinar de novo gera um `subscription_id`
+ * diferente).
  */
 export async function localizarEmpresaPorAssinanteGateway(
   gatewayAssinanteId: string,

@@ -91,6 +91,32 @@ item fechar. Sem essa correção, a próxima exportação da tela "Planos"
 traria o número errado de volta — preço errado na tela é pior que rótulo
 errado (`CLAUDE.md` §2, "confusão de quem lê é evidência sobre o texto").
 
+## Preço, decisão do fundador — R$ 197/R$ 1.164
+
+**Isto não é correção de documento — é o fundador mudando o que estava
+decidido.** O parágrafo anterior corrigiu um documento (`docs/navegacao.md`
+mostrava R$ 990 por engano, quando o decidido já era R$ 840); este aqui é
+diferente: ao configurar os planos de verdade no painel da Kiwify
+(03/09/2026, depois da construção da Tarefa 1), o fundador **decidiu** o
+preço novo: **Mensal R$ 197, Anual R$ 1.164** (parcelável em até 12x de
+R$ 97,00 — recurso padrão da Kiwify para plano acima de bimestral, não
+desconto). Confirmado pelo fundador como mudança de preço de verdade, não
+engano de cadastro — ver `docs/diario.md`, mesma data, para o registro
+explícito da decisão.
+
+**Isso desatualiza coisas fora deste repositório**, apontado pelo
+fundador ao aprovar: a página de vendas (ainda não existe), o briefing de
+marketing (fora deste repositório, não visível aqui) e a conta do
+"FretiNews" sobre o desconto do anual — R$ 1.164 contra R$ 2.364
+(R$ 197 × 12) é ~50,8% de desconto, não os 53% calculados sobre os
+valores antigos. Nenhum desses três é corrigido aqui — nenhum existe como
+arquivo neste repositório ainda; registrado para quem construir cada um
+não herdar o número velho por analogia.
+
+Atualizado em `CLAUDE.md` §10/§14, `docs/navegacao.md` ("Planos") e neste
+plano (abaixo, "Decisões fechadas"). Mesmo alerta do parágrafo anterior,
+de novo: avisar o Design — a fonte dele segue com R$ 990.
+
 ## Os quatro casos — requisito, com a fonte da decisão
 
 Fechados na conversa que aprovou este plano; viram requisito de construção.
@@ -283,13 +309,18 @@ testado em produção real (convite).
 `src/app/api/webhooks/kiwify/route.ts` — POST, sem sessão (quem chama é a
 Kiwify, não um usuário). Mapa de eventos:
 
-| Evento Kiwify | Ação |
-|---|---|
-| `compra_aprovada` | `registrar_pagamento_pendente` (se `tracking.s1` vier vazio — venda nova, sem empresa) **ou** atualiza `status_assinatura`/`plano` da empresa apontada por `s1` (se vier preenchido — upgrade de dentro do produto, ver seção abaixo) |
-| `subscription_renewed` | Empresa já existe (busca por `empresa_id` guardado em `PagamentoPendente.empresa_id` ou pelo `s1`) — `status_assinatura` volta a `ativa` se estava `inadimplente` |
-| `subscription_late` | `status_assinatura` → `inadimplente` |
-| `subscription_canceled` | `status_assinatura` → `vencida` (inicia os 90 dias, §10 `CLAUDE.md`) |
-| `compra_reembolsada` / `chargeback` | Se ainda `pendente`: `estornar_pagamento_pendente` (caso 4). Se já `aceito`: mesmo tratamento de `subscription_canceled` |
+**Nome do gatilho (painel da Kiwify) × valor real no corpo
+(`webhook_event_type`) — confirmado em `docs/planos/
+corrige-webhook-kiwify.md`, são diferentes.** A tabela abaixo usa o valor
+real, que é o que o código compara.
+
+| Evento (`webhook_event_type`) | Gatilho no painel | Ação |
+|---|---|---|
+| `order_approved` | Compra aprovada | `registrar_pagamento_pendente` (se `tracking.s1` vier vazio — venda nova, sem empresa) **ou** atualiza `status_assinatura`/`plano` da empresa apontada por `s1` (se vier preenchido — upgrade de dentro do produto, ver seção abaixo) |
+| `subscription_renewed` | Assinatura renovada | Empresa já existe (busca por `empresa_id` guardado em `PagamentoPendente.empresa_id` ou pelo `s1`) — `status_assinatura` volta a `ativa` se estava `inadimplente` |
+| `subscription_late` | Assinatura atrasada | `status_assinatura` → `inadimplente` |
+| `subscription_canceled` | Assinatura cancelada | `status_assinatura` → `vencida` (inicia os 90 dias, §10 `CLAUDE.md` — **lacuna já registrada em `CLAUDE.md` §14**: esses 90 dias valem para assinatura vencida por pagamento que falhou, e cancelamento é vontade própria; o prazo desse segundo caso ainda não foi decidido, e este mapeamento aplica o primeiro na falta do segundo) |
+| `order_refunded` / `chargeback` | Reembolso / Chargeback | Se ainda `pendente`: `estornar_pagamento_pendente` (caso 4). Se já `aceito`: mesmo tratamento de `subscription_canceled` |
 
 **A janela entre `inadimplente` e `vencida` é a da própria Kiwify (ela
 cancela depois de até 5 dias de atraso, medido na pesquisa que fundamentou
@@ -380,11 +411,13 @@ deduplicação de webhook reentregue, reivindicação concorrente).
 
 **Tarefa 2 — Telas dentro do produto: Planos, Minha assinatura, Limite do
 gratuito, Assinatura vencida.** Design já tem as quatro desenhadas
-(`docs/navegacao.md`, linhas 64-67), preço corrigido para R$ 840 (acima) —
-sem bloqueio de decisão de produto agora. O que falta antes de construir:
-o produto/oferta de cada periodicidade configurado na Kiwify com o valor
-certo (R$ 149 mensal, R$ 840 anual), para os links de checkout que a tela
-"Planos" gera existirem de verdade.
+(`docs/navegacao.md`, linhas 64-67), preço corrigido para R$ 197/R$ 1.164
+(acima) — sem bloqueio de decisão de produto agora. **Os dois planos já
+estão configurados na Kiwify** (Mensal R$ 197, Anual R$ 1.164 em até 12x) —
+falta confirmar o valor real de `Subscription.plan.frequency` que cada um
+manda no webhook (nenhuma fonte documentou o valor para o plano anual,
+só `"monthly"` no exemplo oficial), para preencher o mapa de periodicidade
+com dado medido, não suposto.
 
 **Tarefa 3 — Limite do plano gratuito.** Bloquear o segundo caminhão
 (`CLAUDE.md` §10), o segundo usuário, a sexta importação — cada limite já
@@ -394,10 +427,13 @@ da Tarefa 2 estar pronta (é para lá que o limite manda a pessoa).
 
 ## Decisões fechadas, 03/09/2026 — não reabrir por analogia
 
-1. **Preço do anual: R$ 840.** É o publicado (`CLAUDE.md` §10); R$ 990 era
-   a recomendação do fundador na conversa, nunca a decisão — corrigido em
-   `docs/navegacao.md` e em `CLAUDE.md` §14 (a pendência "revisão do valor
-   do plano anual" está marcada resolvida).
+1. **Preço: R$ 197/mês, R$ 1.164/ano — decisão do fundador, não correção.**
+   É o publicado (`CLAUDE.md` §10). R$ 990 era a recomendação do fundador
+   na conversa, nunca a decisão — R$ 840 corrigiu isso. R$ 197/R$ 1.164 é
+   outra coisa: o fundador decidiu mudar o preço, direto no painel da
+   Kiwify, o mesmo dia. Atualizado em `docs/navegacao.md` e em `CLAUDE.md`
+   §14 (a pendência "revisão do valor do plano anual" segue marcada
+   resolvida, com a nota do valor final e de que foi decisão, não engano).
 2. **A janela entre `inadimplente` e `vencida` é a da Kiwify, sem
    sobreposição própria** — "quem controla o pagamento controla o prazo".
    Registrado como número vindo do fornecedor (ver a nota sob a tabela de
@@ -556,22 +592,19 @@ falhar alto é o certo.
 
 ## Lacunas registradas, não corrigidas agora
 
-- **Formato do payload do webhook e mecanismo de autenticidade — não
-  confirmados contra entrega real.** O corpo esperado
-  (`src/app/api/webhooks/kiwify/route.ts`) e o token de segurança em
-  `corpo.token` são a melhor leitura da documentação oficial disponível,
-  não uma medição — precisa de "Testar Webhook" contra uma conta Kiwify de
-  verdade antes de considerar pronto para produção.
-- **`PERIODICIDADE_POR_PRODUTO_KIWIFY` está vazio** (`route.ts`) — a rota
-  recusa `compra_aprovada` com HTTP 500 até a Tarefa 2 configurar as duas
-  ofertas na Kiwify e preencher o mapa; a Kiwify reentrega, então a
-  reentrega passa a funcionar sozinha assim que o mapa existir.
-- **`valor_centavos` vem de `net_amount` — bruto ou líquido, não
-  confirmado.** Nenhuma fonte consultada diz se o webhook manda o que o
-  cliente pagou (R$ 149/R$ 840, §10) ou o que a Kiwify repassa já
-  descontada a taxa (8,99% + R$ 2,49). Os dois números divergem, e o campo
-  hoje presume o bruto sem confirmação — medir contra entrega real junto
-  do item acima.
+- **Formato do payload e os três defeitos que ele revelou — CORRIGIDOS.**
+  Tarefa própria, `docs/planos/corrige-webhook-kiwify.md` (03/09/2026,
+  entrada correspondente em `docs/diario.md`) — não ficou para a Tarefa 2.
+  `route.ts` e a nova peça `src/lib/servicos/verificacao-kiwify.ts` usam o
+  formato real (`Customer.full_name/email/CPF`, `Product.product_id`,
+  `Commissions.charge_amount`, `webhook_event_type`, `subscription_id`,
+  assinatura HMAC-SHA1 na querystring) — não mais o suposto. Lacunas que
+  sobraram depois da correção, registradas no plano novo: a fórmula da
+  assinatura nunca foi medida contra a URL/cabeçalhos de uma entrega real
+  (só o corpo); o valor de `Subscription.plan.frequency` dos dois planos
+  reais (R$ 197 mensal, R$ 1.164 anual) ainda não foi medido; e se
+  `Commissions.charge_amount`, no plano anual parcelado, traz o total ou a
+  parcela.
 - Estado parcial: se `reivindicar_pagamento` suceder e a criação da
   Empresa falhar logo depois — mesma classe de risco já aceita em
   `aceitarConvite` (`usuarios.ts`) e em `gerarRelatorio` (item 7): raro,

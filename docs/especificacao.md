@@ -969,8 +969,11 @@ nasce só quando a pessoa aceita — é ela quem digita, em
 `estornado_em` · `email_enviado_em`
 
 O pagamento que ainda não é conta (item 13 — `docs/planos/
-item-13-assinatura.md`). Nasce do webhook `compra_aprovada` da Kiwify
-quando a venda não passou pelo produto (Fluxo B: anúncio → checkout →
+item-13-assinatura.md`). Nasce do evento `order_approved` da Kiwify
+(gatilho "Compra aprovada" no painel — nome diferente do valor que chega
+no corpo, `webhook_event_type`; confirmado em `docs/planos/
+corrige-webhook-kiwify.md`) quando a venda não passou pelo produto (Fluxo
+B: anúncio → checkout →
 pagamento, sem cadastro no meio) — o `token` é o link de reivindicação que
 o e-mail de ativação manda; a pessoa clica, cria e-mail e senha, e a
 Empresa nasce ligada a este pagamento (`plano: pago`).
@@ -985,9 +988,22 @@ DEFINER`).
 **`gateway_assinante_id` não é exclusivo desta tabela** — `Empresa` também
 ganha a coluna (nula até o primeiro pagamento), copiada daqui quando a
 conta nasce. É a chave que os eventos de assinatura DEPOIS do primeiro
-pagamento (renovação, atraso, cancelamento) usam para achar a empresa —
-⚠️ não confirmado contra entrega real de evento de assinatura, só contra o
-objeto de venda da API REST da Kiwify.
+pagamento (renovação, atraso, cancelamento) usam para achar a empresa — é
+o `subscription_id` da Kiwify, não um identificador do comprador (o campo
+em si confirmado contra entrega real, `docs/planos/
+corrige-webhook-kiwify.md`, 03/09/2026 — mas só para `order_approved`, a
+única entrega capturada; que ele também venha nos três eventos
+posteriores é leitura da doc oficial, não medição própria). Isso abre uma
+lacuna registrada no mesmo plano: cancelar e
+assinar de novo gera um `subscription_id` diferente, e o campo `@unique`
+em `Empresa` continua com o valor antigo — não resolvido, sem decisão de
+produto sobre esse caso.
+
+**Autenticidade do webhook** (quem prova que a entrega veio mesmo da
+Kiwify) é assinatura HMAC-SHA1 na querystring da URL, verificada em
+`assinaturaValida` (`src/lib/servicos/verificacao-kiwify.ts`) — mecanismo
+e lacuna (a fórmula ainda não foi medida contra a URL de uma entrega real)
+documentados em `docs/planos/corrige-webhook-kiwify.md` e `CLAUDE.md` §14.
 
 ### Municipio
 Tabela global, base do IBGE, 5.570 registros.

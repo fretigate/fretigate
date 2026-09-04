@@ -6,6 +6,87 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 03/09/2026 — Corrige o webhook da Kiwify contra o formato real
+
+Tarefa própria, antes da Tarefa 2 do item 13 — decisão do fundador na mesma
+sessão da Tarefa 1 (abaixo), depois de configurar os planos reais na Kiwify
+e capturar um payload de teste de verdade: "sem o caminho de entrada
+funcionando de verdade, construir a tela de assinatura é construir em cima
+do que não foi provado." Plano em `docs/planos/corrige-webhook-kiwify.md`.
+
+**O que motivou:** pesquisa na documentação oficial real da Kiwify (Notion,
+linkada por `ajuda.kiwify.com.br`) e um payload de teste capturado via
+"Testar Webhook" contra a conta de verdade do fundador confirmaram que a
+rota construída na Tarefa 1 nunca funcionaria contra entrega real — três
+defeitos amarrados entre si (schema exigia um campo `token` que não existe;
+`gateway_assinante_id` vinha de `Customer.id`, que não existe; nome do
+evento vinha de campos errados).
+
+**Construído:** `src/lib/servicos/verificacao-kiwify.ts` (novo — schema,
+verificação de assinatura HMAC-SHA1, extração de evento, mapeamento de
+periodicidade; extraído da rota porque `route.ts` só pode exportar o que o
+Next.js reconhece). `route.ts` reescrito para orquestração HTTP: lê o corpo
+como texto (não mais `request.json()` direto, porque a assinatura precisa
+do texto exato), verifica `signature` na querystring, e passa a usar
+`Customer.full_name/email/CPF`, `Product.product_id`,
+`Commissions.charge_amount`, `webhook_event_type`, `subscription_id` — os
+nomes reais, não os supostos. `PERIODICIDADE_POR_PRODUTO_KIWIFY` virou
+`PERIODICIDADE_POR_FREQUENCIA_KIWIFY`, chave por `Subscription.plan.
+frequency` (confirmado: um produto só, vários planos).
+
+**Teste novo** — a rota nunca tinha teste automatizado.
+`tests/verificacao-kiwify.test.ts` (13 casos): assinatura correta/
+incorreta/ausente/comprimento diferente, schema contra o payload real
+capturado (verbatim), extração de evento, mapeamento de periodicidade
+(falha fechada), e os quatro conjuntos de eventos contra os valores reais.
+
+**`/revisar`, primeiro passe — 10 divergências e 4 lacunas, aceitas.**
+Achados de peso: dois comentários novos afirmavam "CONFIRMADO" sobre a
+fórmula da assinatura e sobre `charge_amount` ser o valor bruto — nenhum
+dos dois foi medido de verdade (só o corpo do payload de teste foi
+capturado, nunca a querystring/cabeçalhos onde `signature` chegaria, nem
+uma venda real dos planos pagos) — corrigido para não afirmar medição que
+não existe (`CLAUDE.md` §13, "afirmação de medição sobre coisa que não
+existe é o pior tipo de erro de documento"). Quatro comentários (`schema.
+prisma`, `db/index.ts`, `criar-empresa-e-dono.ts`, mais quatro citações de
+`compra_aprovada` em `especificacao.md`/`schema.prisma`/`pagamentos.ts`)
+citavam o formato antigo (`customer.id`, nome do evento errado) — corrigidos
+para o real (`subscription_id`, `order_approved`). Plano novo não tinha
+linha no diário apontando para ele — esta entrada é essa linha. Diário
+tinha uma pergunta já respondida marcada como "sem resposta", e uma
+afirmação "180 testes verdes" sem dizer local ou esteira — os dois
+corrigidos acima, na entrada da Tarefa 1. Teste de fixture usava um
+payload RECORTADO à mão do real, chamado de "não fabricado" — trocado pelo
+payload completo capturado, verbatim.
+
+**Três lacunas registradas, achados do próprio `/revisar`, não corrigidas
+agora:**
+- A fórmula da assinatura nunca foi medida contra uma entrega real (só o
+  corpo, nunca a querystring/cabeçalhos) — se estiver errada, toda entrega
+  cai em 401 e ninguém percebe do lado da Kiwify. Somado a `CLAUDE.md` §14,
+  "CONFERIR ANTES DE PUBLICAR".
+- `Commissions.charge_amount` no plano anual (12x): total ou parcela? Não
+  decidido, precisa de uma venda real do anual para medir.
+- `gateway_assinante_id` por `subscription_id` (não por comprador): cancelar
+  e assinar de novo gera identificador novo, órfão do `@unique` antigo —
+  sem decisão de produto sobre esse caso. Documentado em `prisma/
+  schema.prisma`.
+
+**Verificação: local.** `npx tsc --noEmit`/`npm run lint` limpos.
+`npx vitest run tests/verificacao-kiwify.test.ts` (13/13) e `tests/
+pagamentos.test.ts` (16/16) isolados; `npm test` completo rodou depois —
+736 passaram, 8 pulados (Chromium, esperado no Windows), 37 arquivos,
+contra o banco de desenvolvimento. Esteira: ainda não commitado, sem push.
+
+Próximo: aprovação do fundador para commitar; depois, o passo dele — trocar
+o endereço do webhook na Kiwify para o de teste e fazer a compra real, que
+revela a frequência dos planos e (se capturar a querystring/cabeçalhos)
+resolve a lacuna da assinatura. Depois, publicação na Vercel — checklist já
+dado nesta sessão, incluindo os quatro papéis de banco e a seed de
+municípios.
+
+---
+
 ## 03/09/2026 — Item 13, Tarefa 1: o caminho do pagamento até a conta
 
 Planejamento e construção da Tarefa 1 do item 13 — assinatura via checkout
@@ -26,7 +107,20 @@ meio). Plano em `docs/planos/item-13-assinatura.md`, commit `9b601d9`
    ajustados onde a analogia quebra.
 4. Preço do anual: R$ 840 (não R$ 990, que era recomendação do fundador na
    conversa, nunca decisão) — corrigido em `docs/navegacao.md` e
-   `CLAUDE.md` §14.
+   `CLAUDE.md` §14. **Horas depois, DECISÃO DE PREÇO DO FUNDADOR — não
+   correção de documento, o fundador mudando o que estava decidido**: ao
+   configurar os planos de verdade na Kiwify, decidiu R$ 197/mês, R$
+   1.164/ano (12x de R$ 97,00). Atualizado em `CLAUDE.md` §10/§14,
+   `docs/navegacao.md` e no plano — apontado com essa distinção explícita
+   pelo fundador ao revisar esta entrada, para o número não parecer ter
+   aparecido sozinho num commit de correção técnica.
+
+   **O que isso desatualiza, fora do código, apontado pelo fundador**: a
+   página de vendas (ainda não existe), o briefing de marketing (fora
+   deste repositório) e a conta do "FretiNews" sobre o desconto do anual —
+   R$ 1.164 contra R$ 2.364 (R$ 197 × 12) é ~50,8%, não os 53% calculados
+   sobre os valores antigos. Nenhum dos três corrigido aqui — nenhum
+   existe como arquivo neste repositório ainda.
 5. A janela entre `inadimplente` e `vencida` é a da própria Kiwify, sem
    sobreposição própria — registrada como vinda do fornecedor.
 6. Só Kiwify — nenhuma abstração de múltiplos gateways agora.
@@ -92,7 +186,7 @@ explícita para entrar na lista fechada de telas sem barra; `origem_declarada`
 nulo no Fluxo B; e mais três menores, todas em
 `docs/planos/item-13-assinatura.md`).
 
-**Verificação: local.** `npx tsc --noEmit`/`npm run eslint` limpos.
+**Verificação: local.** `npx tsc --noEmit`/`npm run lint` limpos.
 `tests/pagamentos.test.ts` (16/16, novo) + ajustes em `tests/isolamento/
 schema.test.ts`, `vazamento.test.ts` e `protecao-de-acoes.test.ts` — 180
 testes no total (isolamento inteiro + cadastro + convite + proteção de
@@ -108,31 +202,99 @@ periodicidade e `gateway_assinante_id` corretos, `PagamentoPendente`
 vinculado à Empresa) → login automático → clicar no mesmo link de novo
 ("Esta conta já foi criada", com o botão Entrar).
 
+**As duas perguntas em aberto, respondidas pelo fundador ao aprovar o
+commit:** `/ativar-assinatura` entra na lista fechada de telas sem barra
+(`CLAUDE.md` §8 e `docs/estilo.md` atualizados, com o motivo — tela de
+fora de sessão, sem conta ainda, sem para onde navegar). O comando de
+operação mostra e-mail/nome completos, nunca mascarados — motivo diferente
+do da tela pública (que mascara porque é alcançável por quem não pagou);
+os dois motivos ficam escritos nos dois lugares, para não virarem exceção
+um do outro por analogia.
+
+**Commitado e enviado — `408b866`.** 31 arquivos, migration aplicada no
+banco de desenvolvimento, 180 testes verdes **local** (banco de
+desenvolvimento — `CLAUDE.md` §2, "suíte verde local e esteira não são a
+mesma afirmação"), `tsc`/`eslint` limpos.
+
 **Pendente, não fechado nesta sessão:**
 - Tarefas 2 e 3 do item 13 (telas dentro do produto — Planos, Minha
   assinatura, Limite do gratuito, Assinatura vencida — e o bloqueio do
   plano gratuito) não começaram.
-- `PERIODICIDADE_POR_PRODUTO_KIWIFY` está vazio — a rota recusa
-  `compra_aprovada` com 500 até a Tarefa 2 configurar as duas ofertas na
-  Kiwify.
-- Formato real do payload do webhook e do mecanismo de autenticidade —
-  precisa de "Testar Webhook" contra uma conta Kiwify de verdade, que
-  ainda não existe.
+- **Fora da sessão de construção, mesmo dia**: dois planos configurados de
+  verdade na Kiwify (Mensal R$ 197, Anual R$ 1.164 em até 12x — preço real,
+  não o R$ 149/R$ 840 registrado acima, ver item 4) e um webhook criado
+  (link ainda não é o de produção). Pesquisa na documentação oficial da
+  Kiwify (não mais terceiros) confirmou o formato real do payload — e
+  revelou **três defeitos concretos em `route.ts`**, ainda não corrigidos:
+  o corpo espera um campo `token` que a Kiwify não manda (a assinatura de
+  verdade vem em `?signature=` na URL, HMAC-SHA1 do corpo); o código usa
+  `Customer.id` como `gateway_assinante_id`, e esse campo não existe no
+  payload real (o que existe é `subscription_id`); e o nome do evento é
+  `webhook_event_type` (`order_approved` etc.), não `event`/`order_status`
+  como o código tenta. Detalhe completo no plano, "Lacunas registradas".
+  **`PERIODICIDADE_POR_PRODUTO_KIWIFY` também muda de forma**: confirmado
+  que é **um produto só** com vários planos — a chave certa é
+  `Subscription.plan.frequency`, não um id de produto por periodicidade
+  (só existe um). O valor de `frequency` para o plano anual ainda não foi
+  medido — falta "Testar Webhook" contra a conta de verdade (já existe,
+  diferente do que este diário registrava antes de hoje).
 - Achado, registrado, não decidido: o programa de afiliado da Kiwify pode
   tornar o item 17 (Afiliados) desnecessário — só relevante quando esse
   item voltar à mesa, fora do MVP.
-- Duas perguntas para o fundador, registradas no plano: `/ativar-assinatura`
-  entra na lista fechada de telas sem barra? O comando de operação pode
-  imprimir nome/e-mail do comprador no terminal, ou deveria mascarar
-  também?
+- **Gatilho de saída do checkout, decisão do fundador, registrada em
+  `CLAUDE.md` §14**: avaliar migrar da Kiwify para gateway direto quando a
+  taxa anual passar de R$ 6.000 — com o preço novo (R$ 197), isso é por
+  volta de 25 assinantes mensais, não os ~30 da primeira conta. Recalcular
+  sempre que o preço mudar. Sair do checkout traz o item 17 (Afiliados) de
+  volta à mesa (o achado acima só vale enquanto for Kiwify).
 
-Esteira: disparada com o push do commit do plano (`9b601d9`), ainda sem
-confirmação nesta entrada — a Tarefa 1 ainda não foi commitada (aguardando
-aprovação do fundador para o commit, com o diff apresentado).
+**Achado ao conferir a esteira antes de fechar — vermelho de commit
+antigo, sem ninguém ter notado (`CLAUDE.md` §2, item 9, "por que 20 e não
+1"): `efc26cd` (Item 11: Despesas, 02/09/2026) reprovou.** Diagnosticado
+na hora: mesmo formato já catalogado (`CLAUDE.md` §2, "pool esgotado"/
+"fila serializada") — `tests/servicos.test.ts`, teste de concorrência,
+`PrismaClientKnownRequestError: Unable to start a transaction in the
+given time`, derrubando a contagem de verificações (57 de 58) em cascata.
+Não é defeito do código do item 11 — é contenção de transação sob o pool
+do projeto de teste. `9b601d9` (o commit seguinte, plano do item 13) já
+tinha rodado `success` normalmente, o que também aponta para instabilidade
+pontual, não regressão. Rerun não disparado na hora — a fila de
+concorrência da esteira (`CLAUDE.md` §2, "rerun entra na mesma fila") tinha
+o run de `408b866` em andamento; disparar teria cancelado os dois. Disparado
+só depois de `408b866` confirmar (abaixo) — `gh run rerun 33590534296
+--failed`, registrado aqui como rerun por instabilidade (contagem do §2:
+`efc26cd` ficou **dois envios** sem confirmação — o dele mesmo e o de
+`408b866` em cima — antes deste rerun).
 
-Próximo: aprovação do fundador para o commit da Tarefa 1; depois, Tarefa 2
-do item 13 — telas dentro do produto (bloqueada até o fundador responder
-as duas perguntas acima e a Tarefa 2 configurar as ofertas na Kiwify).
+**Esteira do commit desta tarefa (`408b866`): confirmada, `success`.**
+Achado que vale registrar, mesmo sem diagnosticar agora: o passo `npm
+test` levou **~33 minutos** (08:25:00–08:58:22 UTC), muito acima do normal
+do projeto — e não é nenhum dos cinco formatos catalogados (`CLAUDE.md`
+§2), porque esses são sobre **vermelho**; este passou. Conferido, para não
+supor: o job não tem `timeout-minutes` próprio em `ci.yml` (usa o padrão do
+GitHub, 360min — não é o que o segurou); os passos anteriores
+(`migrate reset`, 48s; `seed:municipios`, 5s) tiveram duração normal, o que
+aponta para dentro do próprio `npm test`, não para o banco. Não investigado
+a fundo nesta sessão — fica como observação para a próxima vez que a
+esteira demorar assim, comparar contra este número.
+
+**O rerun de `efc26cd` confirmou o mesmo padrão** — `npm test`
+09:57:30–10:36:46 UTC, **~39 minutos**, também `success`. Dois runs
+seguidos, no mesmo dia, os dois muito acima do normal e os dois verdes:
+não é falha, é lentidão sistêmica de hoje — do runner do GitHub ou do
+projeto de teste do Supabase, não diagnosticado, sem dado para apontar
+qual. Registrado para quem olhar de novo: se voltar a acontecer, já são
+três pontos medidos, não um.
+
+**Rerun por instabilidade, contagem do §2**: `efc26cd`, `gh run rerun
+33590534296 --failed`, resultado `success`. Um rerun neste envio.
+
+Esteira do commit desta tarefa (`408b866`): `success`, confirmado.
+
+Próximo: Tarefa 2 do item 13. **A pergunta sobre os três defeitos do
+`route.ts` foi respondida na mesma sessão** — tarefa própria, antes da
+Tarefa 2 — ver a entrada acima ("Corrige o webhook da Kiwify contra o
+formato real").
 
 ---
 

@@ -1388,7 +1388,14 @@ que ser trocar uma peça. O modelo ainda não está decidido (ver §14).
 
 ## 10. Preço, planos e limites
 
-- **Plano único**, R$ 149/mês ou R$ 840/ano.
+- **Plano único**, R$ 197/mês ou R$ 1.164/ano (12x de R$ 97,00 — mesmo
+  total, parcelado; a Kiwify permite parcelar plano anual em até 12x).
+  **Decisão de preço do fundador, 03/09/2026**, ao configurar os planos de
+  verdade na Kiwify — não correção de documento: o valor decidido antes
+  disso era R$ 149/R$ 840 (§14), que por sua vez já tinha corrigido a
+  imprecisão anterior (R$ 990, nunca decisão — recomendação do fundador
+  numa conversa). Esta linha muda o que estava decidido, não ajusta um
+  documento para bater com o que já era decisão.
 - **Acesso gratuito permanente**, limitado a **1 caminhão**.
 
 | Limite | Gratuito | Pago |
@@ -1765,6 +1772,22 @@ Não invente resposta. Pergunte.
   binário e as fontes embarcando na função publicada na Vercel; local e
   esteira não passam por essa etapa (o gerador de PDF nem roda no Windows,
   ver abaixo), então continua sem confirmação até o primeiro deploy real.
+- **CONFERIR ANTES DE PUBLICAR — a fórmula da assinatura do webhook da
+  Kiwify nunca foi medida contra uma entrega real.** Achado do `/revisar`
+  na correção do webhook (item 13, `docs/planos/
+  corrige-webhook-kiwify.md`, 03/09/2026). A rota
+  (`api/webhooks/kiwify/route.ts`) verifica `signature` na querystring da
+  URL contra `HMAC-SHA1(JSON.stringify(corpo), token_do_webhook)` — a
+  fórmula do exemplo de referência da doc oficial da Kiwify, nunca uma
+  medição própria: só o CORPO de uma entrega real foi capturado nesta
+  sessão (colado na conversa), nunca a URL/querystring nem os cabeçalhos,
+  que é onde `signature` chegaria. **Se a fórmula estiver errada, toda
+  entrega real cai em 401** — quem paga nunca recebe o e-mail de ativação
+  (o único caminho de entrega confirmado do Fluxo B), e a Kiwify reentrega
+  só "até 5 vezes" (doc oficial) antes de desistir, sem nada do lado dela
+  acusar depois disso. Resolve com uma compra real capturando também a
+  querystring/cabeçalhos da entrega (não só o corpo) contra o endereço de
+  produção, antes de considerar esta rota pronta.
 - **ATENÇÃO AO RODAR — o gerador de PDF do relatório não roda no Windows
   local.** Item 7, Tarefa 2 (`docs/planos/item-7-relatorio.md`), 28/08/2026.
   `puppeteer-core` + `@sparticuz/chromium` — a combinação medida contra a
@@ -1905,17 +1928,46 @@ Não invente resposta. Pergunte.
   quem garante a troca é o estado da assinatura, os limites e as telas
   serem do FretiGate, não uma camada de abstração construída sem o segundo
   gateway existir.
+- **Gatilho de saída do checkout — número escrito, decisão do fundador,
+  03/09/2026.** Avaliar a migração da Kiwify para gateway direto quando a
+  taxa anual paga a ela passar de **R$ 6.000**. Com o preço atual (R$ 197
+  por cobrança, §10) e a taxa da Kiwify (8,99% + R$ 2,49 por cobrança),
+  isso acontece por volta de **25 assinantes mensais** — bem antes dos ~30
+  que a primeira conta (acima) supunha, porque o preço subiu depois
+  daquela conta. **Recalcular este número sempre que o preço do plano
+  mudar** — ele depende de R$ 197, não é fixo.
+
+  **Por que o gatilho existe, para não ser descartado como "só uma conta
+  antiga":** o checkout é mais caro que gateway direto por uns 7 a 8
+  pontos percentuais (mesma pesquisa do item resolvido acima), e essa
+  diferença cresce com o faturamento, em reais, mesmo constante em
+  percentual. Sem um número escrito, essa comparação nunca é revisitada —
+  fica sempre "óbvio" que vale a pena, porque ninguém marca o ponto em que
+  deixa de valer. O que se paga a mais, até esse ponto, é o preço de não
+  ter construído antifraude, retentativa de cobrança, emissão fiscal
+  opcional e o programa de afiliado — trade-off consciente, não descuido.
+
+  **Implicação sobre o item 17 (Afiliados):** o achado já registrado —
+  "o programa de afiliado da Kiwify pode tornar o item 17 desnecessário"
+  (Tarefa 1 do item 13, `docs/diario.md`) — só vale enquanto o checkout for
+  a Kiwify. Sair para gateway direto traz o item 17 de volta à mesa, porque
+  o programa de afiliado da Kiwify sai junto do checkout.
 - **Prazo de retenção de leitura/exportação depois de cancelamento
   voluntário** — os 90 dias do §10 valem para assinatura **vencida**
   (pagamento que falhou), não para cancelamento por vontade própria. O texto
   dos Termos promete retenção "por um período" depois do cancelamento, sem
   dizer quanto — esse prazo ainda não foi decidido. Achado ao revisar a
   publicação dos Termos em 18/08/2026.
-- ~~Revisão do valor do plano anual~~ — **RESOLVIDO em 03/09/2026.** R$
-  840/ano confirmado (o valor já publicado acima, em §10) — R$ 990 nunca
-  foi decisão, era a recomendação do fundador na conversa que originou este
-  item; `docs/navegacao.md` ("Planos") tinha sido desenhado a partir da
-  recomendação, corrigido no planejamento do item 13.
+- ~~Revisão do valor do plano anual~~ — **RESOLVIDO em 03/09/2026, com dois
+  eventos de natureza diferente no mesmo dia — não confundir um pelo
+  outro.** Primeiro, **correção de documento**: R$ 840/ano era o já
+  decidido, e `docs/navegacao.md` ("Planos") mostrava R$ 990 por engano —
+  recomendação do fundador numa conversa, nunca decisão publicada.
+  Corrigido para bater com o que já valia. Depois, horas mais tarde,
+  **decisão de preço do fundador**, direto no painel da Kiwify ao
+  configurar os planos de verdade — muda o que estava decidido, não
+  corrige um documento: **R$ 197/mês, R$ 1.164/ano**, já o valor publicado
+  em §10.
 - Valor à vista no Pix do plano anual
 - Percentual e regra de comissão do afiliado
 - Política de desconto

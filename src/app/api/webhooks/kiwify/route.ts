@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import {
   registrarPagamento,
   mandarEmailDeAtivacao,
@@ -7,41 +6,44 @@ import {
   atualizarStatusAssinaturaPorAssinanteGateway,
 } from "@/lib/servicos/pagamentos";
 import { travaDeWebhookKiwify } from "@/lib/servicos/trava-de-webhook";
+import {
+  schemaWebhook,
+  assinaturaValida,
+  extrairEvento,
+  mapearPeriodicidade,
+  EVENTOS_COMPRA_APROVADA,
+  EVENTOS_RENOVACAO,
+  EVENTOS_ATRASO,
+  EVENTOS_CANCELAMENTO,
+  EVENTOS_ESTORNO,
+  type CorpoWebhook,
+} from "@/lib/servicos/verificacao-kiwify";
 
 /**
  * Webhook da Kiwify (item 13, Tarefa 1 — `docs/planos/
- * item-13-assinatura.md`). Rota de API, não Server Action: quem chama é a
- * Kiwify, não um usuário logado — mesma categoria de
- * `api/fretes/[id]/comprovante`, fora do alcance de `comoUsuario`/
- * `comoDono` e de `tests/protecao-de-acoes.test.ts` (que só varre arquivo
- * com `"use server"`). É a SEGUNDA rota do produto que grava estado sem
- * passar por esse envelope — `CLAUDE.md` §9 já previa revisitar essa nota
- * "depois da segunda ou terceira rota". A checagem que substitui a sessão
- * aqui não é "quem está logado" — é "isto veio mesmo da Kiwify", abaixo.
+ * item-13-assinatura.md` — e a correção de formato em
+ * `docs/planos/corrige-webhook-kiwify.md`). Rota de API, não Server
+ * Action: quem chama é a Kiwify, não um usuário logado — mesma categoria
+ * de `api/fretes/[id]/comprovante`, fora do alcance de
+ * `comoUsuario`/`comoDono` e de `tests/protecao-de-acoes.test.ts` (que só
+ * varre arquivo com `"use server"`). É a SEGUNDA rota do produto que
+ * grava estado sem passar por esse envelope — `CLAUDE.md` §9 já previa
+ * revisitar essa nota "depois da segunda ou terceira rota". A checagem
+ * que substitui a sessão aqui não é "quem está logado" — é "isto veio
+ * mesmo da Kiwify" (`assinaturaValida`, `verificacao-kiwify.ts`).
  *
- * ⚠️ **FORMATO DO PAYLOAD NÃO CONFIRMADO CONTRA ENTREGA REAL.** A pesquisa
- * que fundamentou o plano confirmou o formato do objeto de venda pela API
- * REST da Kiwify (`docs.kiwify.com.br/api-reference/sales/single`) — nunca
- * um payload de webhook de verdade, porque isso exige uma conta Kiwify de
- * verdade disparando um evento de teste. O corpo abaixo (`SchemaWebhook`)
- * é a melhor leitura possível a partir da documentação oficial disponível,
- * não uma medição. **Antes de considerar esta rota pronta para produção**:
- * configurar o webhook na Kiwify, usar "Testar Webhook" no painel deles, e
- * conferir contra o que chega de verdade — campo a campo, principalmente o
- * nome do campo que identifica QUAL evento disparou (`compra_aprovada` vs.
- * `subscription_renewed` etc.) e o mecanismo de autenticidade (abaixo).
+ * A leitura do formato do payload e a verificação de assinatura moram em
+ * `src/lib/servicos/verificacao-kiwify.ts` — testável sem servidor HTTP,
+ * e porque `route.ts` só pode exportar o que o Next.js reconhece.
  *
- * ⚠️ **AUTENTICIDADE DO WEBHOOK, MESMA RESSALVA.** A Kiwify gera um "token
- * de segurança" por webhook configurado (`docs.kiwify.com.br/api-reference/
- * webhooks/create`, campo `token`), descrito pela documentação de
- * terceiros como enviado em toda entrega para o receptor comparar — mas o
- * mecanismo exato (corpo, cabeçalho, ou os dois) não foi confirmado nesta
- * pesquisa. Este arquivo assume que o valor chega em `token`, no corpo —
- * CONFERIR contra entrega real antes de confiar nisto em produção. Sem
- * essa confirmação, um endpoint público que cria dado a partir do que
- * recebe (`registrarPagamento`, que pode terminar criando uma Empresa
- * inteira) é exatamente o formato que mais precisa dessa checagem — pedido
- * explícito do fundador ao aprovar a construção desta tarefa.
+ * O que ainda falta, os dois bloqueando "pronto para produção"
+ * (`CLAUDE.md` §14): os valores de `Subscription.plan.frequency` dos dois
+ * planos reais (Mensal/Anual) — o payload de teste da Kiwify manda um
+ * exemplo genérico fixo (`"weekly"`, produto "Example product"), não uma
+ * venda de verdade; e a fórmula da assinatura (`assinaturaValida`,
+ * `verificacao-kiwify.ts`), nunca medida contra a URL/querystring de uma
+ * entrega real — só o corpo foi capturado até agora. Só uma compra real
+ * (com os cabeçalhos/querystring capturados) revela os dois.
  */
 
 const KIWIFY_WEBHOOK_TOKEN = process.env.KIWIFY_WEBHOOK_TOKEN;
@@ -54,98 +56,33 @@ if (!KIWIFY_WEBHOOK_TOKEN) {
   );
 }
 
-const schemaComprador = z.object({
-  id: z.string(),
-  email: z.email(),
-  name: z.string(),
-  cpf: z.string().nullish(),
-});
-
-const schemaProduto = z.object({ id: z.string() });
-
-/**
- * Kiwify `product.id` → periodicidade do plano — a Kiwify precisa de um
- * produto/oferta configurado por periodicidade (Tarefa 2 do plano, "as
- * telas dentro do produto"). Vazio de propósito até essa configuração
- * existir: sem entrada aqui, `mapearPeriodicidade` recusa — nunca grava um
- * palpite. Preencher com os ids reais assim que a Tarefa 2 criar as duas
- * ofertas na Kiwify.
- */
-const PERIODICIDADE_POR_PRODUTO_KIWIFY: Record<string, "mensal" | "anual"> = {};
-
-function mapearPeriodicidade(produtoId: string): "mensal" | "anual" | null {
-  return PERIODICIDADE_POR_PRODUTO_KIWIFY[produtoId] ?? null;
-}
-
-/**
- * Melhor leitura possível do objeto de venda da Kiwify — ver a ressalva no
- * topo do arquivo. `event` é o campo mais incerto de todos: nenhuma fonte
- * consultada confirmou o nome exato do campo que a Kiwify usa para dizer
- * qual gatilho disparou dentro do corpo entregue.
- */
-const schemaWebhook = z.object({
-  token: z.string(),
-  event: z.string().optional(),
-  order_status: z.string().optional(),
-  status: z.string().optional(),
-  order_id: z.string().optional(),
-  id: z.string().optional(),
-  payment_method: z.string().optional(),
-  customer: schemaComprador.optional(),
-  Customer: schemaComprador.optional(),
-  product: schemaProduto.optional(),
-  /** Confirmado no objeto de venda da API REST — presumidamente em
-   * centavos, como todo valor monetário do FretiGate (`CLAUDE.md` §7), mas
-   * não confirmado que o webhook usa o mesmo campo/unidade, NEM que é o
-   * valor bruto (o que o cliente pagou) e não líquido (o que a Kiwify
-   * repassa, já descontada a taxa) — ver a lacuna no plano. `.int()`
-   * recusa qualquer valor não inteiro em vez de arredondar em silêncio no
-   * `::integer` que gravaria — dinheiro nunca aceita decimal flutuante
-   * (`CLAUDE.md` §7). */
-  net_amount: z.number().int().optional(),
-});
-
-type CorpoWebhook = z.infer<typeof schemaWebhook>;
-
-/** Qual dos campos possíveis carrega o identificador do evento — ver a ressalva acima. */
-function extrairEvento(corpo: CorpoWebhook): string | null {
-  return corpo.event ?? corpo.order_status ?? corpo.status ?? null;
-}
-
 function extrairComprador(corpo: CorpoWebhook) {
-  return corpo.customer ?? corpo.Customer ?? null;
+  return corpo.Customer ?? null;
 }
-
-function extrairTransacaoExterna(corpo: CorpoWebhook): string | null {
-  return corpo.order_id ?? corpo.id ?? null;
-}
-
-const EVENTOS_COMPRA_APROVADA = new Set(["compra_aprovada", "paid", "PURCHASE_APPROVED"]);
-const EVENTOS_RENOVACAO = new Set(["subscription_renewed"]);
-const EVENTOS_ATRASO = new Set(["subscription_late"]);
-const EVENTOS_CANCELAMENTO = new Set(["subscription_canceled"]);
-const EVENTOS_ESTORNO = new Set(["compra_reembolsada", "chargeback", "refunded"]);
 
 /**
  * Eventos de assinatura DEPOIS do primeiro pagamento (renovação, atraso,
- * cancelamento) — achado do `/revisar`: a primeira versão silenciava tanto
- * a falta de `comprador` quanto `atualizarStatusAssinaturaPorAssinanteGateway`
- * devolvendo `false` (empresa não encontrada), sempre respondendo `ok:
- * true`. Isso é dinheiro — uma empresa cujo `subscription_canceled` some em
- * silêncio fica `ativa` para sempre, de graça, sem ninguém saber. Falha
- * alta: devolve 500 (a Kiwify reentrega) e loga, em vez de fingir sucesso.
+ * cancelamento) — achado do `/revisar` na Tarefa 1: a primeira versão
+ * silenciava tanto a falta de `comprador` quanto
+ * `atualizarStatusAssinaturaPorAssinanteGateway` devolvendo `false`
+ * (empresa não encontrada), sempre respondendo `ok: true`. Isso é
+ * dinheiro — uma empresa cujo `subscription_canceled` some em silêncio
+ * fica `ativa` para sempre, de graça, sem ninguém saber. Falha alta:
+ * devolve 500 (a Kiwify reentrega) e loga, em vez de fingir sucesso.
  */
 async function atualizarStatusOuFalhar(
   corpo: CorpoWebhook,
   novoStatus: "ativa" | "inadimplente" | "vencida" | "encerrada",
 ) {
-  const comprador = extrairComprador(corpo);
-  if (!comprador) {
-    console.error("[webhook kiwify] evento de assinatura sem dados do comprador");
+  if (!corpo.subscription_id) {
+    console.error("[webhook kiwify] evento de assinatura sem subscription_id");
     return NextResponse.json({ erro: "Formato inesperado." }, { status: 400 });
   }
 
-  const achou = await atualizarStatusAssinaturaPorAssinanteGateway(comprador.id, novoStatus);
+  const achou = await atualizarStatusAssinaturaPorAssinanteGateway(
+    corpo.subscription_id,
+    novoStatus,
+  );
   if (!achou) {
     console.error(
       "[webhook kiwify] nenhuma empresa com este gateway_assinante_id — status não atualizado",
@@ -163,9 +100,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ erro: "Muitas entregas em pouco tempo." }, { status: 429 });
   }
 
-  const bruto = await request.json().catch(() => null);
-  if (!bruto) {
+  const textoBruto = await request.text().catch(() => null);
+  if (!textoBruto) {
     return NextResponse.json({ erro: "Corpo inválido." }, { status: 400 });
+  }
+
+  let bruto: unknown;
+  try {
+    bruto = JSON.parse(textoBruto);
+  } catch {
+    return NextResponse.json({ erro: "Corpo inválido." }, { status: 400 });
+  }
+
+  const assinaturaRecebida = new URL(request.url).searchParams.get("signature");
+  if (!assinaturaValida(bruto, assinaturaRecebida, KIWIFY_WEBHOOK_TOKEN!)) {
+    console.error("[webhook kiwify] assinatura não confere");
+    return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
   }
 
   const resultado = schemaWebhook.safeParse(bruto);
@@ -182,23 +132,12 @@ export async function POST(request: Request) {
   }
   const corpo = resultado.data;
 
-  // Comparação simples, não `timingSafeEqual`: o valor comparado não é uma
-  // senha de usuário nem uma chave criptográfica nossa — é um segredo
-  // compartilhado configurado uma vez no painel da Kiwify, de baixa
-  // sensibilidade a ataque de tempo (a única coisa que vazaria por timing
-  // seria "quantos caracteres bateram", e o token não protege nada além
-  // desta própria checagem).
-  if (corpo.token !== KIWIFY_WEBHOOK_TOKEN) {
-    console.error("[webhook kiwify] token de segurança não confere");
-    return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
-  }
-
   const evento = extrairEvento(corpo);
-  const transacaoExterna = extrairTransacaoExterna(corpo);
-  if (!evento || !transacaoExterna) {
+  if (!evento || !corpo.order_id) {
     console.error("[webhook kiwify] evento ou id da transação ausente no corpo");
     return NextResponse.json({ erro: "Formato inesperado." }, { status: 400 });
   }
+  const transacaoExterna = corpo.order_id;
 
   if (EVENTOS_COMPRA_APROVADA.has(evento)) {
     const comprador = extrairComprador(corpo);
@@ -209,36 +148,43 @@ export async function POST(request: Request) {
 
     // ⚠️ `s1`/tracking (empresa_id do upgrade de dentro do produto — ver
     // "Upgrade de dentro do produto" no plano) ainda não tem campo
-    // confirmado no corpo. Por ora, todo `compra_aprovada` vira
+    // confirmado no corpo. Por ora, todo `order_approved` vira
     // `PagamentoPendente` (caminho do Fluxo B) — o caminho de upgrade com
-    // `s1` fica para quando a Tarefa 2 configurar as ofertas na Kiwify e
-    // confirmar o campo de rastreio na entrega real.
-    if (!corpo.product || corpo.net_amount == null) {
-      console.error("[webhook kiwify] compra aprovada sem produto ou valor");
+    // `s1` fica para quando a Tarefa 2 confirmar o campo de rastreio.
+    if (
+      !corpo.Product ||
+      !corpo.Commissions ||
+      !corpo.Subscription?.plan ||
+      !corpo.subscription_id
+    ) {
+      console.error("[webhook kiwify] compra aprovada sem produto, valor ou assinatura");
       return NextResponse.json({ erro: "Formato inesperado." }, { status: 400 });
     }
 
-    const periodicidade = mapearPeriodicidade(corpo.product.id);
+    const periodicidade = mapearPeriodicidade(corpo.Subscription.plan.frequency);
     if (!periodicidade) {
       // Falha alta de propósito (§9 — "falha fechada"), nunca grava um
-      // palpite de periodicidade: a Kiwify reenvia em caso de erro, então
-      // assim que `PERIODICIDADE_POR_PRODUTO_KIWIFY` for preenchida
-      // (Tarefa 2), a reentrega passa a funcionar sozinha.
+      // palpite de periodicidade: se PERIODICIDADE_POR_FREQUENCIA_KIWIFY
+      // for preenchida a tempo, a reentrega da Kiwify resolve sozinha —
+      // mas ela reentrega só "até 5 vezes" (doc oficial), não para sempre.
+      // ⚠️ Lacuna: nenhuma linha de PagamentoPendente é criada aqui — se o
+      // mapa continuar vazio depois das reentregas, o único rastro deste
+      // pagamento é este log (nunca o corpo, dado pessoal — CLAUDE.md §4).
       console.error(
-        "[webhook kiwify] produto sem periodicidade mapeada — falta configurar a Tarefa 2",
+        "[webhook kiwify] frequência sem periodicidade mapeada — falta confirmar contra compra real",
       );
-      return NextResponse.json({ erro: "Produto não mapeado." }, { status: 500 });
+      return NextResponse.json({ erro: "Frequência não mapeada." }, { status: 500 });
     }
 
     const pagamento = await registrarPagamento({
       gateway: "kiwify",
       transacaoExterna,
       emailComprador: comprador.email,
-      nomeComprador: comprador.name,
-      gatewayAssinanteId: comprador.id,
-      documentoComprador: comprador.cpf ?? null,
+      nomeComprador: comprador.full_name,
+      gatewayAssinanteId: corpo.subscription_id,
+      documentoComprador: comprador.CPF ?? null,
       periodicidade,
-      valorCentavos: corpo.net_amount,
+      valorCentavos: corpo.Commissions.charge_amount,
       recebidoEm: new Date(),
     });
 
@@ -295,7 +241,8 @@ export async function POST(request: Request) {
   }
 
   // Evento reconhecido pelo schema mas fora do mapa desta tarefa
-  // (boleto_gerado, pix_gerado, carrinho_abandonado, compra_recusada) —
-  // confirma recebimento sem fazer nada, para a Kiwify não reenviar à toa.
+  // (boleto_gerado, pix_gerado — a rota não está inscrita nesses
+  // gatilhos, mas responde ok se algum chegar) — confirma recebimento
+  // sem fazer nada, para a Kiwify não reenviar à toa.
   return NextResponse.json({ ok: true });
 }

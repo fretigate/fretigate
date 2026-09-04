@@ -48,9 +48,9 @@ export type DadosPagamentoAprovado = {
 
 /**
  * Registra um pagamento pendente — chamado pela rota de webhook quando
- * `compra_aprovada` chega sem `s1` (venda que não passou pelo produto,
- * caso comum do Fluxo B: anúncio → checkout → pagamento, sem cadastro no
- * meio).
+ * `order_approved` (gatilho "Compra aprovada") chega sem `s1` (venda que
+ * não passou pelo produto, caso comum do Fluxo B: anúncio → checkout →
+ * pagamento, sem cadastro no meio).
  *
  * A deduplicação por `transacaoExterna` mora dentro de
  * `registrar_pagamento_pendente` (a Kiwify reenvia webhook em caso de
@@ -58,7 +58,7 @@ export type DadosPagamentoAprovado = {
  * novo só na primeira chegada.
  *
  * **`status` vai junto do retorno, achado do `/revisar`** — a reentrega de
- * um `compra_aprovada` já processado (a Kiwify reenvia webhook em caso de
+ * um `order_approved` já processado (a Kiwify reenvia webhook em caso de
  * falha na entrega, mesmo depois de sucesso do lado dela) cai neste mesmo
  * caminho: sem saber o `status` atual, quem chama mandaria o e-mail de
  * ativação de novo mesmo para um token já `aceito` ou `estornado` — um

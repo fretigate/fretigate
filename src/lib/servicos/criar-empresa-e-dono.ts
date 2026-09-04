@@ -45,7 +45,7 @@ export type DadosCriarEmpresaEDono = {
   /** Nula no gratuito — mesma restrição do banco (`empresa_plano_coerente`). */
   periodicidade: "mensal" | "anual" | null;
   statusAssinatura: "ativa" | "inadimplente" | "vencida" | "encerrada";
-  /** Kiwify `customer.id` — nulo no gratuito. */
+  /** Kiwify `subscription_id` — nulo no gratuito. */
   gatewayAssinanteId: string | null;
   email: string;
   nomeDono: string;
