@@ -262,6 +262,25 @@ você escreve.** O padrão é o meu.
   não dá para verificar a tempo, registra o dado sozinho e nomeia o
   mecanismo como não identificado — foi o que este caso terminou fazendo
   (`docs/planos/reduz-concorrencia-teste-numeracao-relatorio.md`).
+- **A mesma classe acima também vale para citação, não só para explicação —
+  e desta vez veio do `/revisar`, não do fundador nem de quem escreve
+  código.** Registrado em 05/09/2026: revisando o preenchimento de
+  `PERIODICIDADE_POR_FREQUENCIA_KIWIFY` (item 13), o subagente citou uma
+  frase como se fosse do `CLAUDE.md` §9 — soava exatamente com o tom e o
+  vocabulário daqui, e o achado técnico por trás dela (um
+  `mapa[chave] ?? null` que não pega chave herdada de `Object.prototype`,
+  tipo `"constructor"`/`"toString"`) era real e valia corrigir por si só. A
+  frase citada não existe neste arquivo — conferida por busca direta antes
+  de aceitar. A correção do bug continuou de pé (não dependia da citação
+  para estar certa); só a referência era inventada.
+
+  **O que fazer diferente:** citação de regra — "o documento X diz Y",
+  entre aspas ou não — pede a mesma verificação que explicação causal já
+  pedia: abrir a fonte e conferir antes de repetir, nunca aceitar só porque
+  soa como o vocabulário certo ou vem de uma ferramenta que parece
+  autoritativa (`/revisar`, ou qualquer subagente). Uma citação inventada
+  que sustenta um achado correto ainda é uma citação inventada — e a próxima
+  pessoa a ler pode confiar nela para um achado que não é tão sólido.
 - Se auditassem esse código para comprar a empresa, não teria nada para ter vergonha.
 
 ### Como executar

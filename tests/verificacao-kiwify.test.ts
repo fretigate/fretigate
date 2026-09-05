@@ -23,7 +23,7 @@ import {
  */
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 12;
+const CONFERENCIAS_ESPERADAS = 14;
 
 const SEGREDO = "token-de-teste-nao-e-segredo-de-verdade";
 
@@ -260,6 +260,21 @@ describe("conjuntos de eventos — não mais os valores antigos supostos", () =>
     expect(EVENTOS_ESTORNO.has("order_refunded")).toBe(true);
     expect(EVENTOS_ESTORNO.has("chargeback")).toBe(true);
     expect(EVENTOS_ESTORNO.has("refunded")).toBe(false);
+    conferencias++;
+  });
+});
+
+describe("PERIODICIDADE_POR_FREQUENCIA_KIWIFY — valores reais confirmados", () => {
+  it("13. mapeia os dois planos reais do FretiGate, lidos da API de produtos da Kiwify (05/09/2026)", () => {
+    expect(mapearPeriodicidade("monthly")).toBe("mensal");
+    expect(mapearPeriodicidade("annually")).toBe("anual");
+    conferencias++;
+  });
+
+  it("14. nome herdado de Object.prototype não escapa pelo `?? null` — recusa mesmo assim", () => {
+    expect(mapearPeriodicidade("constructor")).toBeNull();
+    expect(mapearPeriodicidade("toString")).toBeNull();
+    expect(mapearPeriodicidade("hasOwnProperty")).toBeNull();
     conferencias++;
   });
 });

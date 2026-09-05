@@ -6,6 +6,134 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 05/09/2026 — Supabase de produção criado e configurado; passo 0 da Kiwify resolvido sem suporte
+
+Sessão longa, três partes: montar e executar o roteiro do Supabase de
+produção, resolver o passo 0 (frequência dos planos da Kiwify) sem esperar o
+suporte deles, e uma correção pequena de código que saiu dessa segunda parte.
+
+**`outputFileTracingIncludes` já estava pronto** — conferido, sem código
+novo: entrou no commit `c5e2e92` (Tarefa 3 do item 7, 29/08/2026), junto do
+rate limit da mesma rota. Faltava só a confirmação em produção de verdade,
+que só publicando se sabe.
+
+**Três decisões do fundador, para travar o roteiro do Supabase:**
+- Nome do projeto: `fretigate-producao`.
+- Região: São Paulo — coerente com o banco de desenvolvimento, o retorno de
+  bounce do Resend (`sa-east-1`) e a base de clientes no Ceará.
+- Domínio: subdomínio (`app.fretigate.com`). A raiz (`fretigate.com`) recebe
+  o tráfego pago; separar isola a página de vendas do produto contra briga de
+  DNS/cache/publicação entre os dois, que têm ciclos diferentes.
+
+**Três achados sobre plano e organização do Supabase, medidos contra a doc
+oficial, não supostos:**
+1. O limite de projetos gratuitos é por **conta inteira**, não por
+   organização — Desenvolvimento e Teste já ocupavam as duas vagas.
+2. Uma organização não mistura planos — Pro e Free não convivem juntos.
+3. Rebaixar de plano é autônomo e imediato pelo painel, com crédito
+   proporcional, mas só se a compra foi feita direto pelo Supabase (não pela
+   AWS Marketplace) — confirmado pelo fundador, não medido nesta sessão.
+
+Os achados 1 e 2 fecharam o caminho que se cogitou primeiro ("cria no
+gratuito, sobe depois"): não havia grátis disponível para este terceiro
+projeto. Organização nova, direto no Pro, decisão tomada com os três achados
+em mãos.
+
+**Roteiro executado do início ao fim, projeto `FretiGate Produção` (Pro),
+São Paulo:**
+- `prisma migrate deploy` aplicado com sucesso — tabelas, os cinco papéis
+  (`fretigate_app`, `fretigate_auth`, `fretigate_reversor`,
+  `fretigate_convite`, `fretigate_pagamento`), as políticas de storage,
+  todos conferidos no painel e por `pg_policies`.
+- **A rede do fundador não tem IPv6** — a conexão direta (porta 5432, host
+  `db.<projeto>.supabase.co`) nunca conectou (`P1001`); o caminho que
+  funcionou foi o **Session pooler** (porta 5432, host
+  `aws-0-sa-east-1.pooler.supabase.com`), que aceita IPv4 sem custo — o
+  add-on pago de IPv4 dedicado (US$4/mês) foi cogitado e **descartado**: ele
+  só afeta a conexão direta, e o pooler compartilhado já aceitava IPv4 sem
+  ele.
+- **A demora real não foi da Supabase** — foram várias tentativas de
+  `prisma migrate deploy` recusando a senha (`P1000`), incluindo depois de
+  reset de senha, restart do projeto e espera pelo suposto circuit breaker
+  do Supavisor. A causa, achada só depois de isolar com um teste direto
+  (`pg` puro, fora do Prisma, que conectou de primeira): o fundador estava
+  deixando os `<` `>` de marcação literalmente dentro da senha, copiando o
+  exemplo sem substituir por completo. Nenhum bug do Supabase.
+- `fretigate_app`/`fretigate_auth` receberam senha (`ALTER ROLE ... LOGIN
+  PASSWORD`); os outros três continuam sem login — conferido por
+  `pg_roles`.
+- `DATABASE_URL`/`AUTH_DATABASE_URL` (Transaction pooler, porta 6543)
+  montados e testados um a um — cada um autenticou como o papel certo
+  (`SELECT current_user`), nunca como `postgres`.
+- `seed:municipios` rodado duas vezes: primeira, 5.570 novos; segunda,
+  5.570 inalterados, 0 novos — confirma que gravou certo da primeira vez.
+- `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` copiados do painel.
+
+**Passo 0 resolvido sem falar com o suporte da Kiwify** — o fundador julgou
+o tempo de resposta deles longo demais e preferiu outra via: a própria API
+pública da Kiwify (`GET /products/{id}`, escopo `products`, autenticada por
+OAuth com `client_id`/`client_secret` gerados em `Apps → API`) devolve
+`subscriptions[].frequency` para cada plano cadastrado. Consultada contra o
+produto real do FretiGate: **`"monthly"` (Mensal) e `"annually"` (Anual)** —
+não veio de uma compra, veio da configuração real dos planos.
+
+**Código alterado a partir disso** (`src/lib/servicos/verificacao-kiwify.ts`,
+`src/app/api/webhooks/kiwify/route.ts`, `tests/verificacao-kiwify.test.ts`):
+- `PERIODICIDADE_POR_FREQUENCIA_KIWIFY` preenchido com os dois valores.
+- Comentários que diziam "vazio de propósito"/"ainda não medido" (no
+  arquivo de serviço, na rota, e nos dois planos —
+  `corrige-webhook-kiwify.md`, `item-13-assinatura.md`) corrigidos para o
+  estado atual — achado do `/revisar`, `CLAUDE.md` §2 ("texto que envelhece
+  calado").
+- **Achado do `/revisar`, corrigido no mesmo passe:** `mapearPeriodicidade`
+  fazia `mapa[frequencia] ?? null` sobre um objeto literal — uma
+  `frequencia` igual a `"toString"`/`"constructor"`/etc. resolve para algo
+  herdado de `Object.prototype`, não `undefined`, escapando do `?? null` e
+  quebrando a promessa de "falha fechada" do comentário ao lado. Trocado
+  por `Object.hasOwn(...)`. Dois testes novos (13 e 14) cobrem os valores
+  reais e esse caso — 14 verificações no total agora (era 12).
+
+**O que isto NÃO resolve** — continuam exigindo uma compra real, sem
+atalho: a fórmula da assinatura (`assinaturaValida`) nunca foi medida contra
+a querystring/cabeçalhos de uma entrega de verdade; e se `Commissions.
+charge_amount` do plano anual manda o total ou a parcela. `CLAUDE.md` §14
+segue com essas duas.
+
+**Uma terceira dúvida, decidida pelo fundador — risco conhecido, não
+bloqueio:** o "salto" entre o que foi medido (API de produtos) e o que a
+rota lê de verdade (`Subscription.plan.frequency` no webhook de compra)
+continua sem confirmação. Decisão do fundador, 05/09/2026: não entra no
+`CLAUDE.md` §14 como bloqueio — a compra real (que vai acontecer de
+qualquer forma, para resolver as duas de cima) confirma isso "de quebra";
+se o valor divergir, a compra cai no mesmo caminho de log que já existia
+antes desta tarefa, sem custo extra. Registrado aqui como risco conhecido,
+não como impedimento de publicar.
+
+**Achado, junto do `/revisar` desta tarefa: uma citação inventada, pega
+antes de aceitar.** O subagente citou uma frase como se fosse do próprio
+`CLAUDE.md` §9 (sobre o achado do `Object.prototype`, abaixo) — soava com o
+tom certo do arquivo, mas a frase não existe nele; conferida por busca
+direta antes de aceitar. O achado técnico por trás (o bug real) não
+dependia da citação para estar certo — só a referência era inventada.
+Fundador pediu para registrar por ser a mesma classe já catalogada em
+`CLAUDE.md` ("Explicação plausível não é explicação verificada"), agora
+também aplicada a citação, não só a explicação causal — extensão
+registrada no próprio `CLAUDE.md`, junto daquela entrada.
+
+**Verificação: local.** `npx vitest run tests/verificacao-kiwify.test.ts`
+(15/15), `npx tsc --noEmit` e `npm run lint` limpos. Commitado com aprovação
+do fundador, sem ver o diff linha a linha — ele julgou pelos achados
+relatados.
+
+Próximo: commitar esta correção. Depois, fora do código: gerar
+`BETTER_AUTH_SECRET` novo (só produção), configurar `NEXT_PUBLIC_APP_URL`
+como `https://app.fretigate.com` (falta o DNS do subdomínio), pegar
+`KIWIFY_WEBHOOK_TOKEN` no painel, configurar as variáveis na Vercel e
+publicar. A compra real (que resolve as duas lacunas acima) só depois de
+publicado. Ainda **não** a Tarefa 2 do item 13.
+
+---
+
 ## 03/09/2026 — Corrige o webhook da Kiwify contra o formato real
 
 Tarefa própria, antes da Tarefa 2 do item 13 — decisão do fundador na mesma
@@ -78,12 +206,36 @@ pagamentos.test.ts` (16/16) isolados; `npm test` completo rodou depois —
 736 passaram, 8 pulados (Chromium, esperado no Windows), 37 arquivos,
 contra o banco de desenvolvimento. Esteira: ainda não commitado, sem push.
 
-Próximo: aprovação do fundador para commitar; depois, o passo dele — trocar
-o endereço do webhook na Kiwify para o de teste e fazer a compra real, que
-revela a frequência dos planos e (se capturar a querystring/cabeçalhos)
-resolve a lacuna da assinatura. Depois, publicação na Vercel — checklist já
-dado nesta sessão, incluindo os quatro papéis de banco e a seed de
-municípios.
+**Commitado e enviado — `822bd8b`** (plano) **e `023f43d`** (correção,
+docs, decisão de preço). Esteira disparada, ainda sem confirmação.
+
+**Achado ao fechar a sessão: a ordem que eu tinha escrito estava errada —
+supunha produção existindo, e não existe.** Corrigido pelo fundador antes
+do `/clear`. Ordem certa, nenhum passo pulado:
+
+0. **Antes de tudo — perguntar ao suporte da Kiwify o valor de `frequency`
+   dos dois planos (Mensal/Anual).** Mais barato que medir por compra
+   real: sem isso, a primeira compra de teste cai em erro 500 (mapa de
+   periodicidade vazio) e não termina — pagaria por um teste que não
+   completa.
+1. **Produção — Supabase**: criar o projeto (`CLAUDE.md` §5, hoje "a
+   criar"), `npx prisma migrate deploy`, `npm run seed:municipios` (antes
+   do primeiro uso — §14, "CONFERIR ANTES DE PUBLICAR"), e dar `ALTER ROLE
+   ... WITH LOGIN PASSWORD` só a `fretigate_app` e `fretigate_auth` (as
+   migrations criam os quatro papéis sozinhas, `NOLOGIN`; `fretigate_
+   reversor`/`fretigate_pagamento` nunca precisam de senha — só
+   `SECURITY DEFINER`).
+2. **Vercel**: `outputFileTracingIncludes` para `/relatorio` no
+   `next.config.ts` — é código, entra antes de publicar, não depois (§14).
+   Configurar as variáveis de ambiente (ordem e lista já dadas nesta
+   sessão) e publicar.
+3. **Kiwify**: trocar o endereço do webhook para o de produção de verdade.
+4. **Compra real** — com o mapa de frequência já preenchido (passo 0), essa
+   compra testa o fluxo inteiro de uma vez, sem risco de falhar por falta
+   de mapeamento.
+
+Próximo: passo 0 acima (perguntar à Kiwify), depois a publicação — **não**
+a Tarefa 2 do item 13.
 
 ---
 

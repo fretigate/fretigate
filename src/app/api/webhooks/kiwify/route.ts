@@ -36,14 +36,19 @@ import {
  * `src/lib/servicos/verificacao-kiwify.ts` — testável sem servidor HTTP,
  * e porque `route.ts` só pode exportar o que o Next.js reconhece.
  *
- * O que ainda falta, os dois bloqueando "pronto para produção"
- * (`CLAUDE.md` §14): os valores de `Subscription.plan.frequency` dos dois
- * planos reais (Mensal/Anual) — o payload de teste da Kiwify manda um
- * exemplo genérico fixo (`"weekly"`, produto "Example product"), não uma
- * venda de verdade; e a fórmula da assinatura (`assinaturaValida`,
- * `verificacao-kiwify.ts`), nunca medida contra a URL/querystring de uma
- * entrega real — só o corpo foi capturado até agora. Só uma compra real
- * (com os cabeçalhos/querystring capturados) revela os dois.
+ * O que ainda falta bloqueando "pronto para produção" (`CLAUDE.md` §14):
+ * a fórmula da assinatura (`assinaturaValida`, `verificacao-kiwify.ts`),
+ * nunca medida contra a URL/querystring de uma entrega real — só o corpo
+ * foi capturado até agora. Só uma compra real (com os cabeçalhos/
+ * querystring capturados) revela isso.
+ *
+ * Os valores de `Subscription.plan.frequency` dos dois planos reais
+ * (Mensal/Anual) **já foram confirmados** (05/09/2026,
+ * `PERIODICIDADE_POR_FREQUENCIA_KIWIFY` em `verificacao-kiwify.ts`) — não
+ * por uma venda de verdade, mas pela API de produtos da própria Kiwify,
+ * lendo a configuração real dos dois planos. Ainda não confirmado: que um
+ * webhook de compra de verdade carregue esse mesmo valor no mesmo campo —
+ * só uma compra real fecha essa dúvida por completo.
  */
 
 const KIWIFY_WEBHOOK_TOKEN = process.env.KIWIFY_WEBHOOK_TOKEN;
@@ -164,14 +169,20 @@ export async function POST(request: Request) {
     const periodicidade = mapearPeriodicidade(corpo.Subscription.plan.frequency);
     if (!periodicidade) {
       // Falha alta de propósito (§9 — "falha fechada"), nunca grava um
-      // palpite de periodicidade: se PERIODICIDADE_POR_FREQUENCIA_KIWIFY
-      // for preenchida a tempo, a reentrega da Kiwify resolve sozinha —
-      // mas ela reentrega só "até 5 vezes" (doc oficial), não para sempre.
-      // ⚠️ Lacuna: nenhuma linha de PagamentoPendente é criada aqui — se o
-      // mapa continuar vazio depois das reentregas, o único rastro deste
-      // pagamento é este log (nunca o corpo, dado pessoal — CLAUDE.md §4).
+      // palpite de periodicidade. `PERIODICIDADE_POR_FREQUENCIA_KIWIFY` já
+      // tem os dois planos reais (Mensal/Anual) — este caminho só é
+      // alcançado se a Kiwify mandar uma frequência diferente das duas
+      // configuradas hoje (produto novo, plano novo, ou o campo do webhook
+      // de compra de verdade divergir do que a API de produtos informou).
+      // A reentrega da Kiwify não resolve sozinha um mapa que segue sem
+      // aquela entrada — ela reentrega só "até 5 vezes" (doc oficial), não
+      // para sempre.
+      // ⚠️ Lacuna: nenhuma linha de PagamentoPendente é criada aqui — o
+      // único rastro deste pagamento é este log (nunca o corpo, dado
+      // pessoal — CLAUDE.md §4).
       console.error(
-        "[webhook kiwify] frequência sem periodicidade mapeada — falta confirmar contra compra real",
+        "[webhook kiwify] frequência sem periodicidade mapeada",
+        corpo.Subscription.plan.frequency,
       );
       return NextResponse.json({ erro: "Frequência não mapeada." }, { status: 500 });
     }

@@ -419,6 +419,14 @@ manda no webhook (nenhuma fonte documentou o valor para o plano anual,
 só `"monthly"` no exemplo oficial), para preencher o mapa de periodicidade
 com dado medido, não suposto.
 
+**Atualização, 05/09/2026: confirmado — `"monthly"` (Mensal) e
+`"annually"` (Anual)**, lido direto da API de produtos da Kiwify
+(`GET /products/{id}`), não do webhook de uma venda.
+`PERIODICIDADE_POR_FREQUENCIA_KIWIFY` já está preenchido
+(`src/lib/servicos/verificacao-kiwify.ts`). Ainda não confirmado: se o
+webhook de uma compra de verdade carrega esse mesmo valor no mesmo campo —
+ver `docs/planos/corrige-webhook-kiwify.md`.
+
 **Tarefa 3 — Limite do plano gratuito.** Bloquear o segundo caminhão
 (`CLAUDE.md` §10), o segundo usuário, a sexta importação — cada limite já
 está na tabela do §10, falta o ponto de bloqueio em cada fluxo e a tela

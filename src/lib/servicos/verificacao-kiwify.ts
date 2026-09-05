@@ -84,10 +84,11 @@ const schemaComissoes = z.object({
 
 const schemaPlano = z.object({
   /** Semanal/Mensal/Bimestral/Trimestral/Semestral/Anual da Kiwify, num
-   * valor em inglês (confirmado: `"monthly"` na doc oficial, `"weekly"`
-   * no payload de teste capturado) — o valor exato dos planos Mensal/
-   * Anual do FretiGate ainda não foi medido, ver
-   * `PERIODICIDADE_POR_FREQUENCIA_KIWIFY` abaixo. */
+   * valor em inglês. Confirmado contra a configuração real dos dois planos
+   * do FretiGate (05/09/2026, ver `PERIODICIDADE_POR_FREQUENCIA_KIWIFY`
+   * abaixo): `"monthly"` (Mensal) e `"annually"` (Anual) — diferente do
+   * `"weekly"` do payload de teste genérico, que é de um plano de exemplo
+   * da Kiwify, não de um plano real do FretiGate. */
   frequency: z.string(),
 });
 
@@ -123,15 +124,38 @@ export function extrairEvento(corpo: CorpoWebhook): string | null {
 }
 
 /**
- * Kiwify `Subscription.plan.frequency` → periodicidade do plano. Vazio de
- * propósito até o fundador confirmar os dois valores reais (Mensal/Anual)
- * contra uma compra de verdade — sem entrada aqui, `mapearPeriodicidade`
- * recusa, nunca grava um palpite (`CLAUDE.md` §9, "falha fechada").
+ * Kiwify `Subscription.plan.frequency` → periodicidade do plano.
+ *
+ * CONFIRMADO EM 05/09/2026 — não por webhook de compra, mas pela própria
+ * API pública da Kiwify (`GET /products/{id}`, escopo `products`), lida
+ * contra a configuração real dos dois planos do FretiGate: devolve
+ * `subscriptions[].frequency` igual a `"monthly"` para o Mensal e
+ * `"annually"` para o Anual.
+ *
+ * O que isto confirma: a string que a Kiwify usa para os DOIS planos reais
+ * do produto. O que isto NÃO confirma: que um webhook de compra de verdade
+ * carregue esse mesmo valor em `Subscription.plan.frequency` — é a leitura
+ * mais provável (mesmo plano, mesmo campo da API), mas só uma compra real
+ * fecha essa dúvida por completo. Risco conhecido, registrado no diário —
+ * não bloqueia produção: se a compra real divergir, o pagamento cai no
+ * mesmo caminho de log de hoje, sem custo a mais (decisão do fundador,
+ * 05/09/2026). Qualquer frequência fora destas duas continua recusada —
+ * falha fechada, nunca um palpite.
  */
-export const PERIODICIDADE_POR_FREQUENCIA_KIWIFY: Record<string, "mensal" | "anual"> = {};
+export const PERIODICIDADE_POR_FREQUENCIA_KIWIFY: Record<string, "mensal" | "anual"> = {
+  monthly: "mensal",
+  annually: "anual",
+};
 
 export function mapearPeriodicidade(frequencia: string): "mensal" | "anual" | null {
-  return PERIODICIDADE_POR_FREQUENCIA_KIWIFY[frequencia] ?? null;
+  // `?? null` sozinho não bastava: `frequencia` vinda de fora podia ser
+  // "toString", "constructor" etc. — nomes que `{}[frequencia]` resolve
+  // para algo herdado de `Object.prototype`, não `undefined`, escapando do
+  // `?? null`. `Object.hasOwn` confere que a chave é uma entrada de
+  // verdade do mapa antes de ler o valor.
+  return Object.hasOwn(PERIODICIDADE_POR_FREQUENCIA_KIWIFY, frequencia)
+    ? PERIODICIDADE_POR_FREQUENCIA_KIWIFY[frequencia]
+    : null;
 }
 
 export const EVENTOS_COMPRA_APROVADA = new Set(["order_approved"]);

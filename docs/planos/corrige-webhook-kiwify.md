@@ -61,6 +61,16 @@ exemplo de referência da própria doc oficial. Novo formato:
   os dois valores reais — próximo passo dele é a compra real, que revela
   isso "de quebra".
 
+  **Atualização, 05/09/2026: os dois valores foram confirmados, mas não
+  pela compra real prevista acima — pela própria API de produtos da
+  Kiwify** (`GET /products/{id}`, escopo `products`), lendo a configuração
+  real dos dois planos do FretiGate: `"monthly"` (Mensal) e `"annually"`
+  (Anual). `PERIODICIDADE_POR_FREQUENCIA_KIWIFY` já não está mais vazio
+  (`src/lib/servicos/verificacao-kiwify.ts`). A compra real continua
+  pendente — ela é quem confirmaria que o webhook de compra de verdade
+  carrega esse mesmo valor no mesmo campo, e é a única fonte que resolve a
+  fórmula da assinatura (item abaixo, ainda em aberto).
+
 ## Teste novo
 
 A rota nunca teve teste automatizado — achado ao planejar esta tarefa.
@@ -85,6 +95,9 @@ para eventos como `carrinho_abandonado`, que não têm a maioria dos campos.
   (a rota) passava dado errado.
 - `PERIODICIDADE_POR_FREQUENCIA_KIWIFY` fica vazio — não é lacuna desta
   tarefa, é o próximo passo do fundador (compra real revela os valores).
+  **Resolvido em 05/09/2026** — ver a atualização acima, na seção
+  "O que muda": os dois valores vieram da API de produtos da Kiwify, não
+  de uma compra.
 
 ## Lacunas registradas, não corrigidas agora — achados do `/revisar`
 
