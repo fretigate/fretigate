@@ -6,6 +6,68 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 07/09/2026 — Produto no ar: publicação confirmada, quatro testes no endereço real, duas correções que só a publicação revelou
+
+Continuação direta da entrada anterior (mesmo dia). Commit `9440ebf` publicado
+e testado — o produto está no ar, pela primeira vez, em
+`https://fretigate.vercel.app` (endereço temporário; `app.fretigate.com` é o
+Passo 3, ainda pendente do DNS).
+
+**Duas correções que só apareceram ao publicar de verdade, nenhuma delas
+prevista no roteiro:**
+
+1. **Framework Preset da Vercel ficou "Other".** `vercel project add` criou o
+   projeto sem nenhum deploy ainda — sem deploy, não tem como a Vercel
+   detectar sozinha que é Next.js. O build passava limpo (`next build`
+   completo, rotas certas nos logs), mas o site inteiro respondia 404,
+   inclusive `/entrar` e arquivos estáticos — a Vercel tratava a saída como
+   site estático genérico, nunca roteando pro servidor de verdade. Corrigido
+   com `vercel.json` (`{"framework": "nextjs"}`), testado por redeploy direto
+   da CLI antes de commitar (`vercel --prod`), só depois commitado
+   (`9440ebf`) e republicado pelo Git.
+2. **`AUTH_DATABASE_URL`/`DATABASE_URL` na Vercel apontavam para conexão
+   direta, não o pooler.** Sintoma: `criar-conta` devolvia 500 —
+   `PrismaClientKnownRequestError P1001`, "Can't reach database server at
+   db.<projeto>.supabase.co" (achado nos logs de runtime da Vercel, `vercel
+   logs --status-code 500`). Mesmo problema já medido em 05/09 (rede sem
+   IPv6) — mas daquela vez era a rede do fundador; aqui era a variável de
+   ambiente colada errada (a String de "Direct connection" do painel do
+   Supabase, em vez de "Transaction pooler"). Fundador corrigiu as três
+   URLs de banco na Vercel; sem código novo, só configuração — redeploy
+   (`vercel redeploy`, sem commit) aplicou.
+
+**Quatro testes no endereço real, depois das duas correções:**
+
+1. **Criar conta** — passou. Empresa criada, sessão ativa, painel carregou.
+2. **Lançar frete + sugestão de município** — passou pelo campo Destino
+   ("Fortaleza" → Fortaleza/CE e variantes, a seed dos municípios está lá e
+   resolve). **Achado, não relacionado a esta publicação:** o campo Origem
+   nunca teve a busca ao vivo implementada — o efeito que dispara
+   `buscarMunicipiosAction` escuta só `destinoTexto`
+   (`TelaLancarFrete.tsx:189-205`). Vira tarefa própria, plano abaixo.
+3. **Gerar relatório** — passou. PDF gerado de verdade (Chromium + fontes
+   auto-hospedadas, publicados certos pelo `outputFileTracingIncludes`),
+   "Baixar PDF"/"Compartilhar no WhatsApp"/"Imprimir" disponíveis — confirma
+   que `pdf_url` gravou.
+4. **E-mail de verificação** — passou. Chegou de `contato@envio.fretigate.com`
+   (Resend de produção, nunca testado antes de hoje), link apontando pro
+   domínio certo, confirmação concluída.
+
+**Esteira do commit `9440ebf`: `success`** (confirmada, `gh run list`).
+
+**Verificação: produção real**, pelos quatro testes acima — não é `npm test`
+nem esteira, é o site publicado, testado com conta e dados descartáveis
+(`Transportadora Teste Publicacao`, e-mail temporário). Nenhum dado dessa
+conta de teste é de cliente real.
+
+Próximo: tarefa própria para a Origem sem resolução de município — plano
+antes de código, ver `docs/planos/`. Depois, seguir o roteiro: confirmar
+DNS do `app.fretigate.com` (Passo 3), trocar o endereço do webhook na
+Kiwify, e só então uma compra real (Passo 4). Ainda **não** a Tarefa 2 do
+item 13.
+
+---
+
 ## 07/09/2026 — Passo 2 do roteiro de publicação: projeto Vercel criado, conectado, variáveis configuradas
 
 Continuação do Passo 2 (`docs/diario.md`, 05/09/2026) — Passo 1 (Supabase de
