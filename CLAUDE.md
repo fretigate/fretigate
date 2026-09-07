@@ -281,6 +281,29 @@ você escreve.** O padrão é o meu.
   autoritativa (`/revisar`, ou qualquer subagente). Uma citação inventada
   que sustenta um achado correto ainda é uma citação inventada — e a próxima
   pessoa a ler pode confiar nela para um achado que não é tão sólido.
+- **Corrigir o código no meio de escrever a correção do documento deixa o
+  documento descrevendo o estado anterior — e a contradição só aparece para
+  quem olha o resultado final, sem o histórico de como se chegou lá.**
+  Registrado em 07/09/2026, correção da desambiguação de município na
+  Origem (`docs/planos/corrige-desambiguacao-origem-municipio.md`): o
+  segundo passe do `/revisar` mediu que a busca de sugestão disparava
+  sozinha na abertura da tela, com o campo pré-preenchido — achado real,
+  escrito em três lugares (`docs/especificacao.md`, o próprio plano, o
+  comentário de `buscarMunicipiosAction`) como problema em aberto. A
+  correção no código (`useSugestaoDeMunicipio`, guarda contra o valor de
+  montagem) aconteceu **depois** de escrever essas três frases, e nenhuma
+  delas foi atualizada — um terceiro passe do `/revisar` encontrou
+  documento e código dizendo coisas opostas sobre a mesma tela, a mesma
+  classe de erro que o §13 já nomeia ("documento e código dizendo coisas
+  opostas"), só que criada dentro da própria tarefa que corrigia o
+  problema, não por o mundo ter mudado depois.
+
+  **O que fazer diferente:** quando a correção de um achado do `/revisar`
+  muda o código, atualizar o documento não é "já fiz, está escrito" — é uma
+  tarefa que só termina depois de reler o que foi escrito **contra o código
+  que existe agora**, não contra o código de quando a frase foi digitada.
+  Vale sempre que documento e código forem editados na mesma tarefa, em
+  qualquer ordem entre os dois.
 - Se auditassem esse código para comprar a empresa, não teria nada para ter vergonha.
 
 ### Como executar

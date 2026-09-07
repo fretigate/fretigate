@@ -110,10 +110,78 @@ dois — conferido, não é preciso tocar em `editar/page.tsx`).
 
 **Cronômetro dos 26 segundos — portão de saída, não fecha sem medir.** Esta é
 a tela medida em 14/08/2026 (`docs/diario.md`), 26 segundos, contra a meta de
-30 do `CLAUDE.md` §1. Acrescentar uma lista de sugestões a mais campo (mesmo
-que só apareça quando o texto for ambíguo) é a primeira mudança nessa tela
-desde a medição — remedir no celular, do jeito que o item 3 original mediu,
-antes de considerar a tarefa fechada.
+30 do `CLAUDE.md` §1. Acrescentar uma lista de sugestões a mais campo é a
+primeira mudança nessa tela desde a medição — remedir no celular, do jeito
+que o item 3 original mediu, antes de considerar a tarefa fechada.
+
+**Correção, achado do `/revisar` (07/09/2026): a frase acima dizia "mesmo que
+só apareça quando o texto for ambíguo", e isso nunca foi verdade.**
+`buscarMunicipios` (`src/lib/servicos/municipios.ts`) casa por **prefixo**
+(`startsWith`), não por ambiguidade — a lista aparece sempre que existir
+qualquer município cujo nome comece com o texto digitado, ambíguo ou não
+("Fortaleza" mostra 4 opções mesmo resolvendo sozinho para uma). Isso já era
+assim para o Destino antes desta tarefa, testado em produção; a Tarefa 2 só
+espelha o mesmo comportamento para a Origem, como pedido. Decisão do
+fundador: mantém como está — mudar o critério de exibição não estava no
+pedido e alteraria comportamento do Destino, já no ar; além disso, ver a
+lista por prefixo tem valor além da desambiguação (escolher digitando só
+"Fort", sem terminar de digitar), o que ajuda os 26 segundos em vez de
+atrapalhar. O cuidado real é outro: dobrar de um campo para dois dobra também
+as chamadas ao servidor por tecla digitada — a remedição no celular
+(parágrafo acima) confere se isso muda algo perceptível; se mudar, é decisão
+nova, com dado.
+
+**Segunda correção, achado do `/revisar`, medida no navegador (07/09/2026) e
+já corrigida no código deste commit:** o custo não era só "por tecla
+digitada" — a busca também disparava sozinha na abertura da tela, sem a
+pessoa tocar em nada, porque o hook rodava com o valor que o campo já tinha
+no primeiro render. `useSugestaoDeMunicipio` chama `buscarMunicipiosAction`
+no `useEffect`, que sempre roda ao montar, independente de a pessoa ter
+editado o campo. Isso já acontecia para o Destino em modo edição
+(`destinoTexto` pré-preenchido pelo frete existente), mas era mascarado em
+modo criação porque `destinoTexto` sempre começava vazio. A Origem em
+criação **quase sempre** chega preenchida (`origemPadraoDoLancamento`) —
+então esta tarefa introduziria, sem a correção abaixo, uma chamada nova na
+abertura do caminho mais comum do produto (lançar um frete novo), não só
+"mais uma por tecla".
+
+**Medido, não suposto**, antes da correção (navegador, viewport 375×812,
+empresa de teste com origem do último frete = "Bom Jesus", ambíguo): a
+pílula "Município reconhecido" aparecia **imediatamente** ao abrir
+`/fretes/novo`, sem tocar em nada, e a linha "Carga" caía para
+`top: 814,5px` — fora da viewport de `812px`.
+
+**Decisão do fundador, 07/09/2026, na sessão que construiu esta tarefa:**
+a busca só vale a partir da primeira edição feita pela própria pessoa no
+campo — nunca no valor que ele já tinha ao abrir a tela. Razão, nas palavras
+do fundador: "a origem pré-preenchida é um valor que a pessoa não escolheu
+digitar. Mostrar sugestão pra ele é oferecer correção de algo que ela não
+fez — e o custo é a linha 'Carga' saindo da tela, no caminho mais comum do
+produto." A decisão do achado 1 (lista por prefixo, não só ambíguo) continua
+valendo: "quando ela digita, a lista aparece. É aí que ela quer escolher." A
+mesma regra passou a valer também para o Destino em modo edição, pelo mesmo
+motivo — decisão explícita do fundador de estender, não decisão de quem
+constrói: "eu diria que a correção está certa lá também, pelo mesmo motivo.
+Abrir um frete pra editar e ver sugestão de um destino que já está resolvido
+é ruído." Sem custo extra de escopo: os dois campos, nos dois modos, passam
+pelo mesmo hook (Tarefa 1), então uma correção só no hook já cobre todos.
+
+**Implementação e verificação, medida — não só descrita.** `useSugestaoDeMunicipio`
+compara `texto` contra `valorDeMontagem` (`useRef(texto)`, capturado uma vez,
+nunca reatribuído) — só busca quando o valor atual difere do valor de
+montagem. A primeira tentativa (uma `ref` booleana virada dentro do próprio
+`useEffect`, para marcar "já rodou uma vez") **falhou, observado no log do
+`next dev`**: mesmo com a marcação, `buscarMunicipiosAction("Bom Jesus")`
+continuava aparecendo no log ao abrir a tela. Causa: `React.StrictMode`, que
+o Next.js liga por padrão em desenvolvimento (nada em `next.config.ts`
+desliga), duplica montagem e efeito de propósito para achar efeito sem
+limpeza — a `ref` mutada dentro do efeito já estava em "já rodou" na segunda
+chamada da mesma dupla, e a busca disparava mesmo assim. Comparar contra um
+valor fixo de montagem (nunca reatribuído dentro do efeito) é imune a isso,
+porque as duas chamadas da dupla carregam o mesmo `texto`. Reconferido no
+navegador depois da correção: Origem pré-preenchida ambígua, em criação e em
+edição, e Destino pré-preenchido ambíguo em edição — nenhum dos três mostra
+a pílula ao abrir; os três mostram ao editar o campo.
 
 ## O que NÃO muda
 
@@ -125,6 +193,31 @@ antes de considerar a tarefa fechada.
   mudar essa função.
 - A automação da medição dos 10% — achado, registrado como pendência de
   operação, não parte da construção desta tarefa.
+
+## O que precisa chegar ao Design
+
+**Os dois blocos "Município reconhecido" (Origem + Destino) podem ficar
+visíveis ao mesmo tempo na tela, e não existe decisão de tratamento visual
+para esse caso.** Achado do `/revisar` (07/09/2026). A avaliação de
+frequência mudou de figura com a correção do gatilho, acima — registrando as
+duas versões, para não ficar confuso com o diário desta tarefa:
+
+- **Antes da correção do gatilho:** bastava a Origem chegar pré-preenchida
+  (comum, sempre) e a pessoa digitar o Destino (o fluxo normal) — os dois
+  blocos apareciam juntos quase sempre. Foi nesse cenário que o fundador
+  decidiu "não é caso raro — é o caminho comum".
+- **Depois da correção:** a Origem pré-preenchida não mostra bloco nenhum
+  sozinha — só depois que a pessoa a edita. Os dois blocos simultâneos agora
+  exigem que a pessoa edite **os dois** campos na mesma passagem pela tela
+  (por exemplo, corrigir a Origem porque o caminhão saiu de um pátio
+  diferente do usual, **e** digitar um Destino novo) — situação real, mas
+  bem menos frequente do que "toda vez que alguém lança um frete".
+
+O caso continua existindo e sem tratamento visual definido — só a frequência
+mudou. Fica registrado para o Design decidir o tratamento (posição,
+agrupamento, ou qualquer outra resposta) quando for revisitar esta tela, não
+corrigido agora por não ser decisão de quem constrói (`CLAUDE.md` §2, item
+5).
 
 ## Teste novo
 

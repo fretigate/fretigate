@@ -6,6 +6,73 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 07/09/2026 — Corrige a desambiguação de município ausente na Origem (Tarefas 1 e 2)
+
+Tarefa própria, achada testando a publicação (entrada anterior, abaixo). Plano
+aprovado e commitado em `a9b0059`.
+
+**Tarefa 1** (`dff9b82`, esteira confirmada `success`) — extrai
+`useSugestaoDeMunicipio` (debounce de 200ms + `buscarMunicipiosAction`),
+aplicado só ao Destino, sem mudança de comportamento. Achado do primeiro
+`/revisar` (rodado sobre um diff que ainda misturava as duas tarefas): as
+Tarefas 1 e 2 vieram juntas num commit só, contra `CLAUDE.md` §2, item 2 —
+separadas antes de commitar.
+
+**Tarefa 2** (commit desta entrada) — aplica a Origem, com o bloco
+"Município reconhecido" extraído para reuso (`MunicipioReconhecido`). Três
+achados do `/revisar`, em três passes:
+
+1. **Primeiro passe:** a lista aparece por **prefixo**, não só quando
+   ambíguo (`buscarMunicipios`, `startsWith`) — o plano dizia o contrário.
+   Decisão do fundador: mantém o comportamento (espelha o Destino, já no ar;
+   a lista por prefixo ajuda a escolher sem terminar de digitar), corrige só
+   a frase do plano.
+2. **Segundo passe:** a busca disparava sozinha na abertura da tela, com o
+   campo pré-preenchido, sem a pessoa editar nada — medido no navegador
+   (viewport 375×812: "Carga" caía para `top: 814,5px`, fora da tela de
+   `812px`). Decisão do fundador: só busca depois que a pessoa editar o
+   campo — vale para Origem e para Destino em edição, mesmo hook, sem custo
+   extra de escopo.
+3. **Terceiro passe:** a correção acima só tinha entrado no código; os três
+   documentos que descreviam o achado (`especificacao.md`, o plano,
+   `acoes.ts`) continuaram narrando o problema como se ainda existisse —
+   documento e código dizendo coisas opostas, criado dentro da própria
+   tarefa (novo registro em `CLAUDE.md` §2). Corrigido.
+
+**A correção do código, à parte, medida — não deduzida.** A primeira
+tentativa (uma `ref` marcando "já rodou uma vez" dentro do `useEffect`)
+falhou sob `React.StrictMode` (ligado por padrão no Next.js em
+desenvolvimento) — confirmado no log do `next dev`, que continuava
+mostrando `buscarMunicipiosAction` disparando na abertura mesmo com a
+marcação. A versão final compara contra o valor de montagem, capturado uma
+vez (`useRef`, nunca reatribuído dentro do efeito), imune à dupla invocação
+do Strict Mode.
+
+**Lacuna registrada para o Design** (`docs/planos/
+corrige-desambiguacao-origem-municipio.md`, "O que precisa chegar ao
+Design"): os dois blocos "Município reconhecido" podem aparecer juntos —
+hoje exige editar os dois campos na mesma passagem pela tela, mais raro do
+que seria sem a correção do gatilho.
+
+**Verificação: local.** `npx tsc --noEmit` e `npm run lint` limpos. Testado
+no navegador (viewport 375×812) em quatro cenários — Origem em criação e
+edição, Destino em edição, os dois com prefill ambíguo — nenhum mostra
+sugestão ao abrir, todos mostram ao editar. Salvamento e resolução de
+município confirmados direto no banco de desenvolvimento (frete de teste,
+empresa "Transportadora Teste Origem"): `origem_municipio_id` e
+`destino_municipio_id` resolvem certo ao escolher a pílula.
+
+**Esteira do commit desta entrada: disparada, ainda rodando, sem
+confirmação.**
+
+Próximo: o cronômetro dos 30 segundos, no celular, é portão de saída desta
+tarefa (três lançamentos seguidos, do toque no (+) até salvar, com
+cliente/caminhão/motorista já cadastrados) — fecha com o fundador. Depois,
+plano do PWA (instalável, offline ou não, convite de instalação nos dois
+sistemas) — plano commitado antes do código, ainda não construído.
+
+---
+
 ## 07/09/2026 — Produto no ar: publicação confirmada, quatro testes no endereço real, duas correções que só a publicação revelou
 
 Continuação direta da entrada anterior (mesmo dia). Commit `9440ebf` publicado

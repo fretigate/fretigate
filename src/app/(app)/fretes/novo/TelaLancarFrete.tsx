@@ -10,6 +10,7 @@ import { TecladoNumerico } from "@/components/ui/TecladoNumerico";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { deslocarDias, diaDaSemana } from "@/lib/utils/data-fortaleza";
 import { iniciais } from "@/lib/utils/iniciais";
+import type { Municipio } from "@/lib/servicos/municipios";
 import { CadastroRapido, type TipoCadastroRapido } from "../CadastroRapido";
 import {
   buscarSugestaoDeValorAction,
@@ -133,6 +134,30 @@ function LinhaDeChips({ itens, onEscolher }: { itens: string[]; onEscolher: (val
   );
 }
 
+function MunicipioReconhecido({
+  municipios,
+  onEscolher,
+}: {
+  municipios: Municipio[];
+  onEscolher: (valor: string) => void;
+}) {
+  if (municipios.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-6 px-4">
+      <span className="text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
+        Município reconhecido
+      </span>
+      <div className="flex flex-wrap gap-8">
+        {municipios.map((m) => (
+          <PilulaEmLinha key={m.codigo_ibge} onClick={() => onEscolher(`${m.nome}/${m.uf}`)}>
+            {m.nome}/{m.uf}
+          </PilulaEmLinha>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const ESTADO_INICIAL: EstadoServico = {};
 
 export function TelaLancarFrete({
@@ -164,6 +189,7 @@ export function TelaLancarFrete({
 
   const [destinosDoCliente, setDestinosDoCliente] = useState(destinosIniciais);
   const [sugestaoValor, setSugestaoValor] = useState<number | null>(null);
+  const municipiosOrigem = useSugestaoDeMunicipio(origemTexto);
   const municipiosDestino = useSugestaoDeMunicipio(destinoTexto);
 
   const [folhaAberta, setFolhaAberta] = useState<TipoCadastroRapido | null>(null);
@@ -373,6 +399,7 @@ export function TelaLancarFrete({
             onChange={setOrigemTexto}
             placeholder="De onde sai"
           />
+          <MunicipioReconhecido municipios={municipiosOrigem} onEscolher={setOrigemTexto} />
 
           <LinhaEditavel
             rotulo="Destino"
@@ -382,23 +409,7 @@ export function TelaLancarFrete({
             placeholder="Para onde vai"
           />
           <LinhaDeChips itens={destinosDoCliente} onEscolher={setDestinoTexto} />
-          {municipiosDestino.length > 0 ? (
-            <div className="flex flex-col gap-6 px-4">
-              <span className="text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
-                Município reconhecido
-              </span>
-              <div className="flex flex-wrap gap-8">
-                {municipiosDestino.map((m) => (
-                  <PilulaEmLinha
-                    key={m.codigo_ibge}
-                    onClick={() => setDestinoTexto(`${m.nome}/${m.uf}`)}
-                  >
-                    {m.nome}/{m.uf}
-                  </PilulaEmLinha>
-                ))}
-              </div>
-            </div>
-          ) : null}
+          <MunicipioReconhecido municipios={municipiosDestino} onEscolher={setDestinoTexto} />
 
           <LinhaEditavel
             rotulo="Carga"

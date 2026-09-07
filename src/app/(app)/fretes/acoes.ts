@@ -318,9 +318,13 @@ export const listarDestinosDoClienteAction = comoUsuario(async (
 });
 
 /**
- * Sugestões de município enquanto digita o destino
- * (`docs/especificacao.md` §4.1) — nunca bloqueia o salvar, só ajuda a
+ * Sugestões de município para Origem e Destino (`useSugestaoDeMunicipio`,
+ * `docs/especificacao.md` §4.1) — nunca bloqueia o salvar, só ajuda a
  * escrever o texto de um jeito que `resolverMunicipio` reconhece depois.
+ * Casa por prefixo, não só quando o texto é ambíguo: dispara sempre que o
+ * campo tiver um valor com 2+ letras — mas só a partir da primeira edição,
+ * nunca no valor que o campo já tinha ao montar (guarda em
+ * `useSugestaoDeMunicipio`).
  */
 export const buscarMunicipiosAction = comoUsuario(async (
   sessao,

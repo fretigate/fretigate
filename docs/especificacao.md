@@ -90,7 +90,12 @@ data pode ser futura.
 **Regra central:** o que já foi cadastrado uma vez **nunca mais é digitado**.
 
 - A tela abre **com o teclado fechado** e as seis linhas visíveis em altura
-  cheia: cliente, caminhão, motorista, origem, destino, carga.
+  cheia: cliente, caminhão, motorista, origem, destino, carga. A sugestão de
+  município (linha abaixo) nunca aparece só por o campo vir pré-preenchido —
+  só depois que a pessoa edita o texto, então esta regra continua valendo na
+  abertura mesmo com Origem/Destino preenchidos (`docs/planos/
+  corrige-desambiguacao-origem-municipio.md`, decisão do fundador,
+  07/09/2026).
 - Cliente, caminhão e motorista vêm pré-preenchidos com o último usado. Tocar
   numa linha abre **folha de busca em tela cheia**, lista ordenada por uso mais
   recente, "+ Novo" no topo. **O teclado não abre sozinho** — só ao tocar no
@@ -109,10 +114,22 @@ data pode ser futura.
   rota anterior começou em outro lugar (uma carreta que foi entregar fora e
   volta carregando de lá), e nesse caso é o último frete que aponta para
   onde a próxima carga realmente está — o pátio como padrão fixo obrigaria
-  reescrever a origem toda vez que a empresa sai da base.
-- **Destino:** chips com os destinos já usados **com aquele cliente**. Ao digitar
-  um destino novo, sugestões de município aparecem abaixo do campo. **Não
-  bloqueia o salvar** se não reconhecer — grava o texto e resolve depois.
+  reescrever a origem toda vez que a empresa sai da base. Mostra as mesmas
+  sugestões de município do Destino (linha abaixo) — mesmo mecanismo nos
+  dois campos, casando por **prefixo do nome**, não só quando o texto é
+  ambíguo (corrigido em 07/09/2026; antes desta correção só o Destino
+  mostrava sugestão, e uma origem ambígua falhava em silêncio). **Nunca
+  busca no valor que o campo já tinha ao montar** — decisão do fundador,
+  07/09/2026: o texto pré-preenchido não foi escolhido por quem está
+  digitando, e mostrar sugestão para ele seria oferecer correção de algo que
+  a pessoa não fez. A busca só passa a valer a partir da primeira edição
+  feita no campo (`docs/planos/corrige-desambiguacao-origem-municipio.md`).
+- **Destino:** chips com os destinos já usados **com aquele cliente**.
+  Mostra as mesmas sugestões de município da Origem (linha acima) — mesmo
+  mecanismo, mesma regra de só buscar depois de editado (vale também em
+  modo edição, quando o Destino já chega preenchido pelo frete existente).
+  **Não bloqueia o salvar** se não reconhecer — grava o texto e resolve
+  depois.
 - **Carga:** texto livre, com chips das cargas que o próprio usuário já digitou.
   Nenhuma lista de categorias imposta. A categoria comparável é classificada em
   segundo plano, sem ninguém esperando.
