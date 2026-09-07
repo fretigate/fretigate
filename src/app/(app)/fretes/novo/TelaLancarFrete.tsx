@@ -10,16 +10,15 @@ import { TecladoNumerico } from "@/components/ui/TecladoNumerico";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { deslocarDias, diaDaSemana } from "@/lib/utils/data-fortaleza";
 import { iniciais } from "@/lib/utils/iniciais";
-import type { Municipio } from "@/lib/servicos/municipios";
 import { CadastroRapido, type TipoCadastroRapido } from "../CadastroRapido";
 import {
-  buscarMunicipiosAction,
   buscarSugestaoDeValorAction,
   criarServicoAction,
   editarServicoAction,
   listarDestinosDoClienteAction,
   type EstadoServico,
 } from "../acoes";
+import { useSugestaoDeMunicipio } from "./useSugestaoDeMunicipio";
 
 /**
  * Lançar frete — `docs/planos/item-3-lancamento-frete.md`, Tarefa 2.
@@ -164,8 +163,8 @@ export function TelaLancarFrete({
   const [dataEscolhida, setDataEscolhida] = useState(edicao?.dataServico ?? hoje);
 
   const [destinosDoCliente, setDestinosDoCliente] = useState(destinosIniciais);
-  const [municipiosSugeridos, setMunicipiosSugeridos] = useState<Municipio[]>([]);
   const [sugestaoValor, setSugestaoValor] = useState<number | null>(null);
+  const municipiosDestino = useSugestaoDeMunicipio(destinoTexto);
 
   const [folhaAberta, setFolhaAberta] = useState<TipoCadastroRapido | null>(null);
   const [nomeParaCadastro, setNomeParaCadastro] = useState("");
@@ -185,24 +184,6 @@ export function TelaLancarFrete({
       cancelado = true;
     };
   }, [clienteId]);
-
-  useEffect(() => {
-    let cancelado = false;
-    const termo = destinoTexto.trim();
-    const temporizador = setTimeout(() => {
-      if (termo.length < 2) {
-        if (!cancelado) setMunicipiosSugeridos([]);
-        return;
-      }
-      buscarMunicipiosAction(destinoTexto).then((lista) => {
-        if (!cancelado) setMunicipiosSugeridos(lista);
-      });
-    }, 200);
-    return () => {
-      cancelado = true;
-      clearTimeout(temporizador);
-    };
-  }, [destinoTexto]);
 
   useEffect(() => {
     let cancelado = false;
@@ -277,9 +258,6 @@ export function TelaLancarFrete({
   };
 
   const temSugestao = sugestaoValor !== null && sugestaoValor > 0 && valorCentavos === 0;
-  const municipiosParaMostrar: Municipio[] = municipiosSugeridos.filter(
-    (m) => `${m.nome}/${m.uf}` !== destinoTexto.trim(),
-  );
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-papel">
@@ -404,13 +382,13 @@ export function TelaLancarFrete({
             placeholder="Para onde vai"
           />
           <LinhaDeChips itens={destinosDoCliente} onEscolher={setDestinoTexto} />
-          {municipiosParaMostrar.length > 0 ? (
+          {municipiosDestino.length > 0 ? (
             <div className="flex flex-col gap-6 px-4">
               <span className="text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
                 Município reconhecido
               </span>
               <div className="flex flex-wrap gap-8">
-                {municipiosParaMostrar.map((m) => (
+                {municipiosDestino.map((m) => (
                   <PilulaEmLinha
                     key={m.codigo_ibge}
                     onClick={() => setDestinoTexto(`${m.nome}/${m.uf}`)}
