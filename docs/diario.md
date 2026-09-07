@@ -6,6 +6,152 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 07/09/2026 — Passo 2 do roteiro de publicação: projeto Vercel criado, conectado, variáveis configuradas
+
+Continuação do Passo 2 (`docs/diario.md`, 05/09/2026) — Passo 1 (Supabase de
+produção) já tinha fechado antes desta sessão.
+
+**Projeto Vercel criado e conectado ao GitHub.** Nenhum projeto existia antes
+(conferido por `vercel projects ls` — zero resultados no time `freti-gate`).
+Criado `fretigate`, vinculado ao diretório local (`vercel link`), e o
+repositório conectado (`vercel git connect`) — travou duas vezes até
+resolver, e as duas travas eram do lado do GitHub, não da Vercel: primeiro
+faltava a "Login Connection" da conta Vercel com o GitHub (`fretigate` é
+conta de **usuário**, não organização); depois faltava o app da Vercel
+instalado de verdade em "Installed GitHub Apps" — ele aparecia só em
+"Authorized GitHub Apps" (autorização de identidade, não acesso a
+repositório), sem nunca ter sido usado. Resolvido pelo fundador nas duas
+telas certas. Branch de produção: `main` (padrão do repositório).
+
+**As onze variáveis de ambiente, todas em Production:**
+- `BETTER_AUTH_SECRET`: gerado agora, só para produção, direto pela CLI da
+  Vercel (`vercel env add ... --sensitive`) — nunca apareceu na conversa.
+- `NEXT_PUBLIC_APP_URL`: gravado como `https://fretigate.vercel.app`
+  (previsto, ainda não confirmado contra o domínio real que a Vercel vai
+  atribuir) — **pendência: confirmar depois do primeiro deploy**, e
+  lembrar que é variável `NEXT_PUBLIC_`, embutida no build — trocar o
+  valor sem publicar de novo não muda nada em produção.
+- As cinco do Supabase de produção (`DATABASE_URL`, `AUTH_DATABASE_URL`,
+  `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) e as quatro do
+  Resend/Kiwify (`RESEND_API_KEY`, `EMAIL_REMETENTE`, `EMAIL_RESPOSTA`,
+  `KIWIFY_WEBHOOK_TOKEN`) coladas pelo fundador direto no painel da Vercel
+  — nunca passaram pela conversa, por pedido dele.
+- Webhook da Kiwify criado apontando para o endereço temporário
+  (`https://fretigate.vercel.app/api/webhooks/kiwify`) — a troca para o
+  domínio final é o Passo 3 do roteiro, e o token não muda quando a URL
+  mudar.
+
+**Achado antes de publicar, verificado antes de aceitar — `postinstall`
+faltando para o Prisma Client, e a primeira correção proposta quebraria
+exatamente o que deveria salvar.** A Vercel só roda `npm install` e depois
+o build; sem um passo que gere o Prisma Client, o `next build` falharia
+(diferente das pendências do `CLAUDE.md` §14 que passam no build e falham
+depois em silêncio — esta quebraria a publicação na hora, visível). A
+esteira nunca pegou isso porque roda `npx prisma generate` como passo
+próprio (`ci.yml`), não via ciclo de vida do `npm install`.
+
+`/revisar` (primeiro passe) achou que a correção óbvia —
+`"postinstall": "prisma generate"` — quebraria a esteira e a Vercel pelo
+mesmo motivo que deveria resolver: `prisma.config.ts` chama
+`process.loadEnvFile()` sem condição, e isso já estava documentado num
+comentário do próprio `ci.yml` (linhas 101-103, antes desta tarefa).
+Medido antes de aceitar, três cenários:
+1. Sem `.env`: `prisma generate` quebra com `ENOENT` — confirma o achado.
+2. Sem `.env`, com `DIRECT_URL` como variável de ambiente direta (o jeito
+   que a Vercel entrega): funciona, com um guard em `prisma.config.ts` que
+   só chama `loadEnvFile()` se o arquivo existir.
+3. Mesmo guard, sem `.env` **e** sem `DIRECT_URL` nenhuma (o estado exato
+   da esteira entre o `npm ci` e a criação do `.env` de teste): também
+   funciona — `generate` não valida a URL, só precisa do schema.
+
+**Segundo passe: o guard por `existsSync(".env")` resolvia o build, mas
+trocava a falha alta original por falha aberta** — qualquer comando do
+Prisma sem `.env` passaria a seguir em frente com o que estivesse
+exportado no terminal, não só o `generate` do `postinstall`. Risco real
+neste projeto: a sessão de 05/09/2026 (abaixo) rodou migrations contra
+produção com essas variáveis exportadas à mão. Medido um jeito mais
+preciso: `npm run postinstall` marca `process.env.npm_lifecycle_event`
+como `"postinstall"`; `npx prisma generate` chamado direto marca `"npx"` —
+nunca `"postinstall"`. Trocado o guard para `if (npm_lifecycle_event !==
+"postinstall") loadEnvFile()` — só o disparo automático do `npm
+install`/`npm ci` pula o arquivo; qualquer comando manual (`npx prisma
+migrate deploy` incluído) continua exigindo `.env`, do jeito que sempre
+exigiu.
+
+**Segundo passe, também: o comentário do `ci.yml` (linhas 101-103) que o
+primeiro passe citou como documentação ficou desatualizado pela própria
+correção** — dizia que falta de `.env` quebra "qualquer subcomando do
+Prisma", e isso deixou de ser verdade para o `generate` do `postinstall`
+(que o `npm ci` da linha de cima agora dispara sozinho). Corrigido para
+explicar a exceção, junto do motivo.
+
+Corrigido, ao todo: `postinstall: prisma generate` em `package.json`, o
+guard por `npm_lifecycle_event` em `prisma.config.ts`, e o comentário do
+`ci.yml` atualizado.
+
+**Achado do `/revisar`, fora do código, nos dois passes: `recovery-codes
+vercel freti.txt`, não rastreado, na raiz do repositório — códigos de
+recuperação da conta Vercel, em texto puro.** Rigor total (`CLAUDE.md`
+§4) — e o segundo passe mediu que nada no `.gitleaks.toml` cobriria esse
+formato mesmo que entrasse num commit. Conferido que nunca entrou em
+nenhum (`git log --all --full-history` para o nome do arquivo, e por
+"recovery"/"vercel" em todo nome já commitado no histórico inteiro —
+nenhum resultado): não há buraco do gitleaks para investigar aqui, porque
+nunca chegou a ser testado contra ele. Fica como pendência do fundador —
+mover para o gerenciador de senhas e apagar o arquivo; exclusão de arquivo
+não é ação deste agente.
+
+**Achado do `/revisar`, lacuna: `.gitignore` ganhou uma linha `.vercel`
+solta e redundante** — `.vercel/` já existia, com barra, na seção
+"Hospedagem" (linha 67), de antes desta sessão. Sobra do próprio
+`vercel link` anexando ao final do arquivo sem checar o que já existia.
+Removida.
+
+**Achado do `/revisar`, lacuna, segundo passe: nenhum registro de quem
+decidiu publicar primeiro no endereço temporário da Vercel, nem até
+quando isso vale.** O roteiro (05/09/2026, abaixo) sempre falou do domínio
+final (`app.fretigate.com`); o endereço provisório
+(`https://fretigate.vercel.app`) entrou nesta sessão como recomendação
+deste agente, em resposta a uma pergunta do fundador sobre depender ou não
+do DNS do Cloudflare para publicar — aceita por ele, mas nunca escrita como
+decisão. Registrando agora: publica-se com o endereço temporário porque o
+DNS do subdomínio ainda não existe; `NEXT_PUBLIC_APP_URL` e o webhook da
+Kiwify (ambos apontando pra ele) trocam para o domínio final assim que o
+DNS estiver pronto — com nova publicação, porque `NEXT_PUBLIC_APP_URL` é
+variável `NEXT_PUBLIC_`, embutida no build.
+
+**Achado do `/revisar`, lacuna, segundo passe, sem resposta ainda: o
+webhook da Kiwify já foi criado (leva 2, acima), a publicação ainda não
+aconteceu — se o checkout já estiver comprável pelo público agora, uma
+compra nesta janela não deixa rastro nenhum do lado do FretiGate** (a
+Kiwify reentrega "até 5 vezes" e desiste, `CLAUDE.md` §14). Pergunta para o
+fundador, sem suposição: o produto na Kiwify já está com o checkout
+público, ou ainda não? Se já estiver, considerar suspendê-lo até a
+publicação confirmar o endereço real.
+
+**Verificação: local.** `npx prisma generate`, `npx tsc --noEmit`,
+`npm run lint` e `npm run build` limpos, contra o código já com as duas
+correções do segundo passe. Os cenários do achado do `postinstall` foram
+medidos à parte (arquivos revertidos depois de cada teste, nunca
+commitados nesse estado). `npm test` (suíte completa, contra o banco de
+desenvolvimento): **37 arquivos, 738 testes passando, 8 pulados** (os
+pulados de sempre, Chromium não roda no Windows, `CLAUDE.md` §14) — a
+mudança em `prisma.config.ts` não quebrou nada. Esteira e publicação na
+Vercel: ainda não disparadas — dependem deste commit.
+
+Próximo: decidir com o fundador a pergunta do checkout da Kiwify em
+aberto acima, e só então commitar e publicar (dispara esteira e deploy da
+Vercel juntos, pelo mesmo push). Depois, confirmar o
+domínio real `https://fretigate.vercel.app` contra `NEXT_PUBLIC_APP_URL` —
+corrigir e publicar de novo se divergir —, testar login pelo endereço
+temporário, e gerar um relatório de teste para confirmar o
+`outputFileTracingIncludes` (Chromium + fontes) contra a Vercel de
+verdade. Só depois: Passo 3 (trocar o endereço do webhook na Kiwify para
+o domínio final) e Passo 4 (compra real). Ainda **não** a Tarefa 2 do
+item 13.
+
+---
+
 ## 05/09/2026 — Supabase de produção criado e configurado; passo 0 da Kiwify resolvido sem suporte
 
 Sessão longa, três partes: montar e executar o roteiro do Supabase de
@@ -125,12 +271,23 @@ registrada no próprio `CLAUDE.md`, junto daquela entrada.
 do fundador, sem ver o diff linha a linha — ele julgou pelos achados
 relatados.
 
-Próximo: commitar esta correção. Depois, fora do código: gerar
-`BETTER_AUTH_SECRET` novo (só produção), configurar `NEXT_PUBLIC_APP_URL`
-como `https://app.fretigate.com` (falta o DNS do subdomínio), pegar
-`KIWIFY_WEBHOOK_TOKEN` no painel, configurar as variáveis na Vercel e
-publicar. A compra real (que resolve as duas lacunas acima) só depois de
-publicado. Ainda **não** a Tarefa 2 do item 13.
+Próximo: **publicação, não a Tarefa 2 do item 13.** O roteiro que falta,
+nesta ordem — o Passo 1 (Supabase de produção: organização, projeto,
+migrations, senha nos papéis, seed) já fechou nesta mesma sessão, acima:
+
+2. Variáveis de ambiente de produção na Vercel — `BETTER_AUTH_SECRET` novo
+   (só produção), `NEXT_PUBLIC_APP_URL` como `https://app.fretigate.com`
+   (falta o DNS do subdomínio), `KIWIFY_WEBHOOK_TOKEN` do painel, e as
+   demais da tabela do `CLAUDE.md` §5 — e publicar.
+3. Trocar o endereço do webhook na Kiwify para o domínio de produção.
+4. Uma compra real — confirma o fluxo inteiro e resolve as duas lacunas que
+   seguem sem atalho: a fórmula de `assinaturaValida` contra
+   querystring/cabeçalhos de verdade, e se `Commissions.charge_amount` do
+   plano anual manda o total ou a parcela (`CLAUDE.md` §14).
+
+A Tarefa 2 do item 13 só faz sentido depois — construir a tela de
+assinatura em cima de um caminho de entrada não provado é construir no
+escuro.
 
 ---
 

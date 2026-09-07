@@ -98,9 +98,19 @@ jobs:
 
       - run: npm ci
 
-      # `prisma.config.ts` chama process.loadEnvFile() no topo do módulo, e
-      # isso roda para qualquer subcomando do Prisma — generate incluído. Sem
-      # o arquivo, o passo seguinte já quebra com ENOENT.
+      # `prisma.config.ts` chama process.loadEnvFile() no topo do módulo para
+      # qualquer subcomando do Prisma disparado manualmente — os passos
+      # abaixo (`guarda-de-banco.ts`, `npx prisma generate`) incluídos. Sem
+      # o arquivo, eles quebram com ENOENT, e é por isso que este passo tem
+      # que vir antes deles.
+      #
+      # Exceção, desde que `package.json` ganhou `postinstall: prisma
+      # generate`: o `npm ci` logo acima já dispara esse script sozinho,
+      # antes deste `.env` existir. `prisma.config.ts` reconhece esse caso
+      # pelo `npm_lifecycle_event` (só vale "postinstall" quando é o próprio
+      # npm chamando) e pula o carregamento — por isso o `npm ci` não quebra
+      # aqui, mesmo sem arquivo nenhum. `generate` não precisa de conexão
+      # real, só do schema.
       #
       # Delimitador do heredoc ENTRE ASPAS (`<<'EOF'`, não `<<EOF`) de
       # propósito: sem isso, se alguma senha tivesse `$` ou crase, o shell
