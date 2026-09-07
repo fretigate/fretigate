@@ -1497,13 +1497,19 @@ vez de ao lado cancelado.
 15. Importação de fretes — *depois do lançamento* *(depende da decisão de modelo)*
 16. Novidades — *depois do lançamento*
 17. Afiliados — *depois do lançamento*
+18. PWA: instalável, com convite de instalação — decisão do fundador,
+    07/09/2026 (`docs/planos/pwa-instalavel-e-convite-de-instalacao.md`),
+    construído depois do item 13 e antes de ligar qualquer anúncio pago
 
 Nada de 5 em diante começa antes de 1 a 4 funcionar de verdade.
 
 ### O que é MVP, decidido em 09/08/2026
 
 **São 10 itens a construir** — o item 1 já fechou, então sobram **2, 3, 4, 5, 6,
-7, 8, 10, 11 e 13**.
+7, 8, 10, 11 e 13**. **O item 18 entrou depois** (07/09/2026), também MVP —
+ver `docs/planos/pwa-instalavel-e-convite-de-instalacao.md` para o porquê e o
+que fica de fora dele (funcionar sem internet de verdade não é MVP, só a
+instalação e o convite).
 
 **Despesas (item 11) entra**, e o motivo fica escrito: é o item mais barato da
 ordem de construção — lista, formulário e filtros, sem integração e sem decisão

@@ -219,6 +219,15 @@ agrupamento, ou qualquer outra resposta) quando for revisitar esta tela, não
 corrigido agora por não ser decisão de quem constrói (`CLAUDE.md` §2, item
 5).
 
+**A pílula "Município reconhecido" nunca foi documentada em
+`docs/componentes.md`, nem para o Destino (que já existia antes desta
+tarefa) nem agora para a Origem.** Achado do `/auditar-tela` (07/09/2026):
+a linha "Lançar frete" em "Onde cada tela usa o quê"
+(`docs/componentes.md`, linha ~460) não menciona esse bloco — lacuna
+pré-existente, que esta tarefa apenas estendeu ao segundo campo. Fica para
+o Design confirmar que o tratamento já construído é o esperado e escrever
+a linha que falta; não é decisão de quem constrói.
+
 ## Teste novo
 
 Hoje só existe teste para a resolução em si (`resolverMunicipio`) e para a

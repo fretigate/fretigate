@@ -478,9 +478,14 @@ escuro).
 ## Família FretiNews — comunicação da plataforma
 
 Três tons. **Escopo fechado:** usados exclusivamente quando o FretiGate
-fala com o usuário — o cartão FretiNews na dashboard, a lista de Novidades e
-o detalhe da mensagem. **Nunca** em dado do usuário, **nunca** em ação do
-produto, **nunca** em estado de cobrança ou de frete.
+fala com o usuário — o cartão FretiNews na dashboard, a lista de Novidades,
+o detalhe da mensagem, e o cartão de convite de instalação (item 18,
+decisão do fundador, 07/09/2026, `docs/planos/
+pwa-instalavel-e-convite-de-instalacao.md`: o convite também é a
+plataforma falando com o usuário, não dado dele nem confirmação de uma
+ação sua — primeiro uso real da superfície, antes mesmo de Novidades
+existir). **Nunca** em dado do usuário, **nunca** em ação do produto,
+**nunca** em estado de cobrança ou de frete.
 
 | Cor | Uso | Contraste sobre `#EDEBFA` |
 |---|---|---|

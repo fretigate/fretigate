@@ -163,7 +163,7 @@ pior que seguir; aqui, o fechamento silencioso seria pior que insistir.
 
 ## 08 — Família FretiNews
 
-A terceira superfície do produto. **Superfície clara = dado do usuário · superfície escura = mensagem do sistema · lilás = comunicação da plataforma.** Escopo fechado: cartão FretiNews na dashboard, lista de Novidades e detalhe da mensagem. Nunca em dado, ação, cobrança ou frete.
+A terceira superfície do produto. **Superfície clara = dado do usuário · superfície escura = mensagem do sistema · lilás = comunicação da plataforma.** Escopo fechado: cartão FretiNews na dashboard, lista de Novidades, detalhe da mensagem, e o cartão de convite de instalação (item 18, decisão do fundador, 07/09/2026, `docs/planos/pwa-instalavel-e-convite-de-instalacao.md`) — o convite é a plataforma falando com o usuário, não dado dele nem confirmação de uma ação sua, o mesmo critério que já definia o escopo. Nunca em dado, ação, cobrança ou frete.
 
 **Medidas**
 

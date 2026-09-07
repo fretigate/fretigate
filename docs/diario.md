@@ -6,6 +6,64 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 07/09/2026 — Plano do PWA: instalável, com convite de instalação (item 18, novo)
+
+Continuação direta da entrada anterior (mesmo dia) — o cronômetro dos 30
+segundos, no celular, é o portão de saída da correção da Origem e fecha
+com o fundador, fora desta sessão.
+
+Pendência antiga (nunca virou item numerado) que o fundador trouxe para
+planejar. **Busca por "PWA"/"instalável"/"manifest"/"offline" em todo
+`docs/*.md`, `CLAUDE.md` e no histórico inteiro do git não achou o texto
+que a registraria** — não bloqueou o plano (a premissa já é compatível com
+o que está decidido no `CLAUDE.md` §5/§12), mas fica registrado que a
+busca voltou vazia.
+
+Plano em `docs/planos/pwa-instalavel-e-convite-de-instalacao.md`, com
+pesquisa técnica feita antes de escrever (não da memória): critérios de
+instalabilidade do Chrome (service worker deixou de ser exigido só para o
+prompt, desde as versões 108/112), o fato de o iOS nunca disparar
+`beforeinstallprompt` (instalação sempre manual, via Compartilhar), o
+tamanho e o propósito de cada ícone exigido (192/512 "any", 512 "maskable"
+com 80% de margem central, 180 apple-touch-icon), e a convenção
+`app/manifest.ts` do Next.js.
+
+**Três decisões do fundador, registradas no plano com a razão:**
+
+1. **Offline: Caminho A** (instalável, sem funcionar sem internet de
+   verdade) — o Caminho B trocaria a arquitetura do produto inteiro, e o
+   caso real conhecido (o Pedro lançando frete depois, no escritório) era
+   atrito, não falta de cobertura. Gatilho de saída registrado: se
+   aparecer uso real sem cobertura nenhuma, o B volta à mesa com dado.
+2. **Convite usa a família FretiNews** — decisão, não mais pergunta: o
+   convite é a plataforma falando com o usuário, o mesmo critério que já
+   define a superfície lilás. `docs/componentes.md` 08 e `docs/estilo.md`
+   § Família FretiNews **já atualizados** neste commit, estendendo o
+   escopo fechado (antes só "cartão FretiNews, Novidades, detalhe da
+   mensagem") — isto vai ao Design como aviso, não como pergunta.
+3. **Item 18 confirmado**, MVP, depois do item 13 e antes de qualquer
+   anúncio pago — já incluído em `docs/especificacao.md` §9.
+
+Dispensa do convite em `localStorage` (não atravessa aparelho — aceito e
+desejado, contextos de instalação diferentes). Ícones: pedido ao Design o
+símbolo isolado (hoje só existe dentro de uma folha de exploração
+composta, `referencia/Design/Manual de Marca/...(2).png`); se demorar, a
+Tarefa 1 constrói com o recorte dessa folha, registrado como provisório.
+
+**O que foi pedido ao Design**, para constar (`CLAUDE.md` §13): (1) o
+símbolo "FG" isolado, em arquivo próprio, para gerar os ícones do PWA; (2)
+aviso — não pergunta — de que o escopo da família FretiNews passou a
+incluir o cartão de convite de instalação.
+
+Verificação: nenhuma — só planejamento e atualização de documento, sem
+código.
+
+Próximo: Tarefa 1 do item 18 (manifesto, ícones, meta tags), depois Tarefa
+2 (cartão de convite) — plano aprovado e commitado antes de construir,
+como manda o `CLAUDE.md` §2.
+
+---
+
 ## 07/09/2026 — Corrige a desambiguação de município ausente na Origem (Tarefas 1 e 2)
 
 Tarefa própria, achada testando a publicação (entrada anterior, abaixo). Plano
