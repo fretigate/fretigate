@@ -21,6 +21,29 @@ const azeretMono = Azeret_Mono({
 export const metadata: Metadata = {
   title: "FretiGate",
   description: "Gestão de fretes para transportadoras.",
+  // Ícones provisórios — ver o comentário em `src/app/manifest.ts`.
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/icones/apple-touch-icon.png",
+  },
+  // `capable: true` é o que tira a barra de endereço no iOS quando o app
+  // está instalado (`display: "standalone"` do manifesto só faz isso no
+  // Android) — sem esta tag, o app abre dentro do Safari normal mesmo
+  // depois de "Adicionar à Tela de Início". Nesta versão do Next.js,
+  // `appleWebApp.capable` só gera a tag padrão `mobile-web-app-capable`
+  // (confirmado lendo `node_modules/next/dist/lib/metadata/metadata.js`) —
+  // o Safari só passou a aceitar essa tag genérica a partir do iOS 17.4;
+  // em versões anteriores, quem decide é só a tag com prefixo `apple-`, que
+  // esta versão do Next não emite mais sozinha. `other` abaixo adiciona ela
+  // à mão, para não depender da versão do iOS de quem instalar.
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "FretiGate",
+    statusBarStyle: "default",
+  },
 };
 
 // O app é usado no celular, no pátio. `maximumScale` fica livre de propósito:

@@ -70,6 +70,17 @@ resto deste plano, mas bloqueia gerar os arquivos finais de ícone.
 
 **Caminho A — Instalável, exige conexão para usar (mas abre mesmo sem sinal, e avisa).**
 
+> **Corrigido na construção (07/09/2026) — ver "Pendência — cache do app
+> shell e tela de sem conexão", mais abaixo.** Este quadro descreve a
+> decisão como ficou no dia em que foi tomada. Na prática, "abre mesmo sem
+> sinal" e "service worker pequeno" (linhas abaixo) esbarraram em duas
+> coisas que só apareceram ao construir: cachear a tela de verdade exigiria
+> guardar dado de sessão no navegador, e a tela alternativa (um aviso
+> estático) seria, ela mesma, uma tela nova — o que a própria lista de "sem
+> mudança na arquitetura" logo abaixo já dizia que Caminho A não teria.
+> **A Tarefa 1 construída não tem service worker nenhum**; o texto abaixo
+> fica como registro da decisão original, não como descrição do que existe.
+
 - O que entra: o manifesto, os ícones, as meta tags — e nada mais na forma
   como o produto guarda dado. Toda leitura e escrita continua exatamente
   como hoje: Server Action falando direto com o Postgres, a cada toque.
@@ -186,13 +197,18 @@ pergunta.
 (convenção do Next.js), os arquivos de ícone em `public/` (192, 512,
 512-maskable, 180 apple-touch-icon, favicon), e o campo `appleWebApp` em
 `metadata` (`src/app/layout.tsx`) para o comportamento de janela própria
-no iOS. Um service worker mínimo, só para cache do app shell (Caminho A) —
-zero lógica de sincronismo. Sem tocar em nenhuma tela existente. **Se o
-símbolo isolado do Design não tiver chegado quando esta tarefa for
-construída**, os ícones nascem do recorte da folha de exploração (ver "O
-que precisa chegar ao Design") — provisório, registrado em comentário no
-código e neste plano, trocado sem aviso quando o arquivo definitivo
-chegar.
+no iOS. Sem tocar em nenhuma tela existente. **Se o símbolo isolado do
+Design não tiver chegado quando esta tarefa for construída**, os ícones
+nascem do recorte da folha de exploração (ver "O que precisa chegar ao
+Design") — provisório, registrado em comentário no código e neste plano,
+trocado sem aviso quando o arquivo definitivo chegar.
+
+**Corrigido na construção (07/09/2026), achado do `/revisar`: esta tarefa
+NÃO inclui o service worker.** A frase original acima previa "um service
+worker mínimo, só para cache do app shell". Na construção, isso virou duas
+coisas ao mesmo tempo — nenhuma delas cabia numa tarefa de "custo baixo" —
+e as duas foram cortadas por decisão do fundador. Ver "Pendência — cache do
+app shell e tela de sem conexão" abaixo.
 
 **Tarefa 2 — O cartão de convite.** Componente novo
 (`CartaoConviteDeInstalacao`, ou nome equivalente), usando os tokens já
@@ -204,6 +220,37 @@ Android/iOS, guarda a dispensa, mostra o botão (Android) ou a instrução
 *(Se a Decisão 1 for o Caminho B — offline de verdade —, este plano para
 aqui: a arquitetura de dado local vira investigação própria, não uma
 Tarefa 3 deste documento.)*
+
+## Pendência — cache do app shell e tela de sem conexão
+
+**Cortada da Tarefa 1 na construção (07/09/2026), decisão do fundador,
+achado do `/revisar`.** A frase original da Tarefa 1 ("um service worker
+mínimo, só para cache do app shell... a tela abre mesmo sem sinal") juntava
+duas coisas que não cabem em "custo baixo":
+
+1. **Cachear a tela de verdade esbarra em dado de sessão.** Toda tela do
+   produto é renderizada no servidor a partir da sessão (`empresa_id`) —
+   guardar essa resposta em cache no navegador arriscaria mostrar, num
+   aparelho compartilhado, tela de uma empresa depois que outra pessoa loga
+   com outra conta. Mesma classe de risco que o isolamento entre empresas
+   (`CLAUDE.md` §3) existe para evitar, só que na camada do navegador em vez
+   do banco — não é caso de "corrige e segue", é decisão de arquitetura.
+2. **A alternativa construída na sessão — uma tela estática "Sem conexão"
+   fora do pipeline do Next.js** — não tem essa exposição (é pública, sem
+   dado nenhum), mas é uma tela nova, com cor, tipografia e botão próprios,
+   e nenhum dos três foi decidido: nem por Design, nem pelo fundador. Fora
+   do inventário de `docs/componentes.md`, fora da lista fechada de telas
+   sem barra de navegação do `CLAUDE.md` §8, com fonte que nem carregaria
+   de verdade offline (Archivo vem do Google Fonts).
+
+**Se um dia isso valer a pena — plano próprio**, com Design definindo a tela
+de sem conexão (cor, texto, botão, dentro do inventário) e uma decisão
+explícita sobre até onde cachear sem tocar em dado de sessão (por exemplo:
+só a tela de `/entrar`, pública, como pouso mínimo — não a tela real que a
+pessoa queria abrir). Até lá, o produto não tem service worker: nem
+manifesto nem os dois sistemas exigem um para a instalação funcionar (ver
+"O que 'instalável' exige de verdade", acima) — só ficou faltando "abrir
+mesmo sem sinal", que nunca foi MVP (`docs/especificacao.md` §9, item 18).
 
 ## O que precisa chegar ao Design
 
@@ -233,6 +280,12 @@ extensão do escopo fechado da família FretiNews (`docs/componentes.md` 08,
 `docs/estilo.md` § Família FretiNews) para incluir o convite de
 instalação, decidida na Decisão 2 acima. Os dois documentos já foram
 atualizados no mesmo commit deste plano.
+
+**Aconteceu: o símbolo isolado não chegou a tempo da Tarefa 1 (07/09/2026).**
+Os quatro arquivos em `public/icones/` e `public/favicon.ico` nasceram do
+recorte do selo circular verde descrito acima — provisório, registrado em
+comentário em `src/app/manifest.ts`. Troca sem aviso quando o Design
+entregar o arquivo definitivo.
 
 ## Onde entra na ordem de construção — confirmado
 

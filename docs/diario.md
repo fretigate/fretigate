@@ -6,6 +6,82 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 08/09/2026 — Item 18, Tarefa 1: Manifesto, ícones e meta tags do PWA
+
+Continuação do plano aprovado e commitado em `4771ddf`
+(`docs/planos/pwa-instalavel-e-convite-de-instalacao.md`).
+
+**Construído:** `src/app/manifest.ts` (convenção do Next.js — nome, ícones,
+`display: "standalone"`, cor de tema `#faf8f4`), ícones provisórios em
+`public/icones/` (192, 512, 512-maskable, apple-touch-icon 180) e
+`public/favicon.ico` (16+32, ICO com PNG embutido, escrito à mão — sem
+biblioteca no projeto para isso), e `metadata.icons`/`appleWebApp`/`other`
+em `src/app/layout.tsx` para o comportamento de janela própria no iOS.
+
+**Ícones provisórios, como o plano previa.** O símbolo isolado do Design não
+chegou a tempo — os quatro nasceram do recorte do selo circular verde no
+rodapé da folha de exploração (`referencia/Design/Manual de Marca/...`),
+com máscara **circular geométrica**, não por cor: a primeira tentativa
+(chroma-key contra o fundo bege) quase apagou o "FG" branco do símbolo,
+porque o branco da marca é próximo demais do bege do papel de exploração.
+O maskable ocupa 80% do quadro (por construção, não medido depois), fundo
+preenchido em `#1B6B3A` — comparado byte a byte com o verde do próprio
+selo, é a mesma cor.
+
+**Achado próprio, fora do que o plano previa: nesta versão do Next.js,
+`appleWebApp.capable` só gera a tag `mobile-web-app-capable`, não
+`apple-mobile-web-app-capable`** — confirmado lendo
+`node_modules/next/dist/lib/metadata/metadata.js`. Sem a tag com prefixo
+`apple-`, iOS anterior a 17.4 continuaria abrindo o app dentro do Safari
+mesmo instalado — o defeito que o fundador pediu para confirmar que não
+existia. Corrigido com `metadata.other`, adicionando a tag à mão.
+
+**Dois passes do `/revisar`, o primeiro com achado grande.** Construí um
+service worker com uma tela "Sem conexão" inteira (cor, tipografia, botão
+próprios) quando a Tarefa 1 pedia só manifesto/ícones/meta tags. O
+fundador cortou os dois (`public/sw.js`, `public/offline.html`,
+`src/components/RegistradorDeServiceWorker.tsx`): cachear a tela de
+verdade esbarraria em dado de sessão (mesma classe de risco do isolamento
+entre empresas, só que no navegador em vez do banco — bom raciocínio, mas
+decisão de trazer, não de resolver sozinho), e a tela alternativa era
+decisão de arquitetura e de Design tomada sem processo. Virou pendência em
+`docs/planos/pwa-instalavel-e-convite-de-instalacao.md`, "Pendência —
+cache do app shell e tela de sem conexão".
+
+O segundo passe achou o plano corrigido contradizendo texto mais antigo
+dele mesmo (a Decisão 1 ainda descrevia "abre mesmo sem sinal") e uma
+lacuna no registro do ícone provisório — os dois corrigidos no mesmo
+passe, sem abrir um terceiro (`CLAUDE.md` §2, categoria "corrige no
+passe, sem abrir outro").
+
+**Decisão do fundador: `description` do manifesto e da página divergem de
+propósito, não é inconsistência.** O manifesto (`src/app/manifest.ts`) fala
+com quem já é cliente — "empresas". A página (`src/app/layout.tsx`,
+`<meta name="description">`, não tocada nesta tarefa) fala com quem ainda
+não é — "transportadoras" continua certo ali: busca e prévia de link, para
+quem se identifica pelo ramo antes de virar cliente. Registrado em
+`docs/especificacao.md`, Vocabulário, "A fronteira é o público, não o
+arquivo de código" — para não ser "alinhado" por engano depois.
+
+**Verificação: local.** `npx tsc --noEmit`, `npm run lint` e `npm run
+build` limpos. Testado no navegador (`next dev` e `next start`):
+`/manifest.webmanifest` resolve com os três ícones certos (arquivos
+distintos para "any" e "maskable", confirmado por hash), tags
+`apple-mobile-web-app-capable`/`mobile-web-app-capable`/
+`apple-touch-icon`/`manifest` presentes no `<head>` de `/entrar`, dimensão
+dos quatro PNGs conferida por `sharp` (192×192, 512×512, 512×512, 180×180).
+**Não verificado: instalação num Android/iPhone de verdade** — o próprio
+plano pede aparelho real para isso ("Teste novo"), não navegador; fica
+pendente, para o fundador.
+
+**Esteira do commit desta entrada: disparada, ainda rodando, sem
+confirmação.**
+
+Próximo: Tarefa 2 do item 18 — o cartão de convite de instalação, usando a
+família FretiNews.
+
+---
+
 ## 07/09/2026 — Plano do PWA: instalável, com convite de instalação (item 18, novo)
 
 Continuação direta da entrada anterior (mesmo dia) — o cronômetro dos 30

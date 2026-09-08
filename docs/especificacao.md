@@ -30,6 +30,21 @@ continua sendo frete, cliente, caminhão, motorista e relatório. "Empresa" entr
 nessa lista, "transportadora" sai dela — e nenhuma das duas vira "organização",
 "conta" ou "entidade".
 
+**A fronteira é o público, não o arquivo de código.** Decisão do fundador,
+07/09/2026, item 18 Tarefa 1: o manifesto do PWA (`src/app/manifest.ts`,
+campo `description`) diz "empresas", enquanto a página (`src/app/layout.tsx`,
+`<meta name="description">`) diz "transportadoras" — e as duas ficam assim
+de propósito, não é inconsistência para "alinhar" depois. O diálogo de
+instalação e as informações do app (manifesto) só aparecem para quem **já
+é cliente** — chamá-lo de "transportadora", na terceira pessoa, soa como o
+produto não reconhecendo quem já entrou. A descrição da página aparece em
+busca e em prévia de link — para quem **ainda não conhece** o produto, e
+ali "transportadora" é como essa pessoa se identifica antes de virar
+cliente, a mesma palavra que ela busca. Mesmo critério de sempre: dentro
+fala com quem está dentro, marketing fala com quem está fora — só que o
+"dentro" de um PWA instalado inclui o que o sistema operacional mostra
+sobre o app, não só as telas que o Next.js renderiza.
+
 ---
 
 ## 1. Quem usa
