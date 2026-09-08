@@ -205,6 +205,30 @@ a escala de espaçamento, não é valor novo) nem um rótulo diferenciando as
 duas fileiras têm confirmação do Design — fica registrado até a próxima
 resposta.
 
+**Mesma lacuna, quinto caso: o cartão de convite de instalação** (item 18,
+Tarefa 2, `CartaoConviteDeInstalacao.tsx`). Primeiro uso real da família
+FretiNews — a cor está inteira nesta folha (§ Família FretiNews, abaixo), mas
+três coisas do cartão em si nunca foram desenhadas, porque ele nunca existiu
+antes:
+
+- **Raio.** Reaproveita `18px` (`rounded-campo`), o precedente mais próximo
+  (o mesmo cartão informativo que `LinhaDePendencia`, vizinho dele na própria
+  dashboard) — mesmo critério de sempre: reaproveitar, não inventar.
+- **Tipografia.** Rótulo "FRETINEWS" (`text-eyebrow`/700, mesma classe do
+  eyebrow de seção já usado na dashboard), título (`text-nome-recolhida`/700)
+  e texto de apoio (`text-apoio`/500) — o mesmo par que `LinhaDePendencia` já
+  usa para título e apoio, com um rótulo a mais em cima. Nenhum papel
+  tipográfico próprio para "cartão FretiNews" existe nesta folha nem em
+  `docs/componentes.md` 08, que só define as três cores.
+- **Espaço reservado ao ×.** `pr-56` no contêiner do cartão, para o texto não
+  passar por baixo do botão de dispensar. Não é um valor solto: decompõe em
+  `48px` (alvo de toque mínimo, `CLAUDE.md` §8 — não é desta escala) mais
+  `8px` (respiro, "entre chips/pílulas" nesta escala). Achado do `/revisar`
+  na construção: `56` sozinho não está na escala acima, e forçá-lo lá sem
+  justificar a soma seria pior que registrar a conta.
+
+Registrado para o Design decidir, mesma categoria dos casos acima.
+
 **Sombra** — só existe em um lugar: o aviso do sistema.
 `box-shadow: 0 14px 34px rgba(20,26,23,.30), 0 3px 10px rgba(20,26,23,.16)`.
 Nenhum outro elemento tem sombra.

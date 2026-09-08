@@ -180,14 +180,36 @@ pergunta.
 - Só quando: (a) o app **não está instalado** (checagem acima) e (b) a
   pessoa **não dispensou antes** — guardado em `localStorage` do
   aparelho. **Decisão do fundador: `localStorage`, confirmado** — "é
-  preferência de interface, não regra de negócio." Consequência
-  explícita, aceita e desejada por ele: a dispensa **não atravessa
-  aparelhos** — quem dispensar no celular volta a ver o convite no
-  computador, porque são contextos de instalação diferentes.
+  preferência de interface, não regra de negócio."
+- **Só em Android e iPhone — nunca em computador.** Corrigido na construção
+  (08/09/2026), achado do `/revisar`: a primeira redação desta decisão dizia
+  que a dispensa "não atravessa aparelhos" e dava como exemplo "quem
+  dispensar no celular volta a ver o convite no computador" — frase escrita
+  sem pensar que desktop **não é construído no MVP** (`CLAUDE.md` §12, "O
+  desktop está sendo desenhado, mas não é construído no MVP"). Oferecer
+  instalação para uma versão de tela que o produto ainda nem tem não faz
+  sentido — o convite é construído (`CartaoConviteDeInstalacao.tsx`) para
+  aparecer só quando o identificador do aparelho bate com Android ou iPhone;
+  em qualquer outro caso (computador incluído), o cartão nunca renderiza,
+  prompt nativo nenhum ou não. A frase estava errada, não o código — decisão
+  do fundador ao revisar este achado. A consequência que continua valendo é
+  só a original, sem o exemplo errado: a dispensa é por aparelho, guardada em
+  `localStorage`, e não se propaga entre Android e iPhone do mesmo dono.
 - No Android, o cartão tem um botão que dispara o prompt nativo guardado.
+  **Cancelar o diálogo nativo não é dispensar** — decisão do fundador,
+  achado do `/revisar`: se a pessoa recusar, o cartão continua aparecendo
+  (o mesmo evento guardado serve para um novo toque); só o `×` marca a
+  dispensa permanente. Quem decide que a instalação aconteceu de verdade é o
+  evento `appinstalled`, não a resposta do diálogo.
 - No iPhone, o cartão mostra a instrução (ícone de Compartilhar → "Adicionar
   à Tela de Início") — sem botão que finge instalar, porque não existe
-  esse gatilho no iOS.
+  esse gatilho no iOS. **Mostrada para qualquer navegador com identificação
+  de iPhone/iPad, não só Safari** — decisão do fundador, achado do
+  `/revisar`: Chrome e Firefox no iOS usam o mesmo motor do Safari por
+  imposição da Apple, e o mesmo "Adicionar à Tela de Início" existe no menu
+  de Compartilhar deles também. Restringir a Safari deixaria sem convite
+  quem usa os outros — custo maior que uma instrução que raramente não se
+  aplica.
 - Um `×` discreto dispensa para sempre (naquele aparelho), mesmo padrão do
   FretiNews.
 

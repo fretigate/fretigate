@@ -20,6 +20,7 @@ import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { formatarMesAbreviado } from "@/lib/utils/periodo";
 import { iniciais } from "@/lib/utils/iniciais";
 import { PilulaSobreEscuro } from "@/components/ui/PilulaSobreEscuro";
+import { CartaoConviteDeInstalacao } from "@/components/ui/CartaoConviteDeInstalacao";
 import { BotaoReenviarEmail } from "./BotaoReenviarEmail";
 
 /**
@@ -194,6 +195,8 @@ export default async function Pagina() {
       ) : null}
 
       <BarrasDoGrafico meses={meses} />
+
+      <CartaoConviteDeInstalacao />
     </main>
   );
 }

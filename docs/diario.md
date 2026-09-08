@@ -6,6 +6,89 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 08/09/2026 — Item 18, Tarefa 2: O cartão de convite de instalação
+
+Continuação do plano aprovado em `4771ddf`
+(`docs/planos/pwa-instalavel-e-convite-de-instalacao.md`), Decisão 2.
+
+**Construído:** `CartaoConviteDeInstalacao.tsx` (`src/components/ui`), na
+dashboard, depois das barras do gráfico — o lugar que a tabela do
+`docs/componentes.md` reservava para o cartão FretiNews. Só aparece com (a)
+o app não instalado — `display-mode: standalone`, `navigator.standalone` e
+`appinstalled` (instalar durante a própria aba) — e (b) sem dispensa
+gravada em `localStorage`, por aparelho. Android mostra um botão (variante
+04, `PilulaEmLinha`) que dispara o `beforeinstallprompt` guardado; iPhone
+mostra só a instrução do menu de Compartilhar, sem botão. O `beforeinstall-
+prompt` é capturado fora do React, num módulo só (`instalacao-pwa.ts`),
+montado desde o layout raiz (`CapturaPromptDeInstalacao.tsx`) — o evento
+dispara uma vez por carregamento de página, e só existiria no cartão seria
+perdê-lo sempre que o login acontecesse em `/entrar`, antes da dashboard
+montar.
+
+**`useSyncExternalStore`, não `useEffect`.** O lint `react-hooks/set-state-
+in-effect` recusa `setState` direto no corpo de um efeito — mesmo padrão já
+usado em `useMontadoNoCliente` (`src/lib/utils/montado.ts`). As leituras de
+`window` (aparelho instalado, dispensa) são derivadas durante a
+renderização, guardadas por essa checagem de montagem.
+
+**`/auditar-tela` achou uma divergência, corrigida antes do `/revisar`:** o
+botão Android recriava as classes da variante 04 na mão em vez de
+reaproveitar `PilulaEmLinha.tsx`, já existente — "componente existe uma
+vez" (`CLAUDE.md` §6).
+
+**`/revisar`, quatro divergências e seis lacunas — decisões do fundador:**
+
+- Inventário do `docs/componentes.md` (linha da Dashboard) dizia que o
+  cartão FretiNews era só superfície tocável, sem botão — o plano já tinha
+  decidido que o Android tem botão, e o documento não tinha sido
+  atualizado. **Corrigido** — linha reescrita.
+- `pr-56` (respiro reservado ao ×) não está na escala de espaçamento.
+  **Registrado como lacuna**, com a conta explícita (48px de alvo de
+  toque + 8px de respiro), em vez de forçar um valor sem decompor.
+- O plano previa o convite reaparecendo "no computador" depois de
+  dispensado no celular — mas desktop não é construído no MVP (`CLAUDE.md`
+  §12). **A frase do plano estava errada, não o código** — corrigida no
+  próprio plano; o cartão nunca aparece fora de Android/iPhone.
+- `CapturaPromptDeInstalacao.tsx` estava direto em `/src/components`, fora
+  de `/ui` ou de pasta de domínio. **Corrigido** — movido para `/ui`.
+- Cancelar o diálogo nativo do Android limpava o prompt guardado, e o
+  cartão inteiro sumia — **decisão do fundador: cancelar não é dispensar**.
+  Reescrito para reaproveitar o mesmo evento (padrão documentado da própria
+  API) num novo toque; só o `×` dispensa de vez. Quem decide que instalou
+  de verdade continua sendo `appinstalled`, não a resposta do diálogo.
+- A instrução do iPhone só citava Safari no texto do plano, mas o código
+  já mostrava para qualquer UA de iPhone/iPad — **decisão do fundador:
+  mantém para todos**, porque Chrome/Firefox no iOS usam o motor do
+  Safari por imposição da Apple e têm o mesmo "Adicionar à Tela de
+  Início" no menu de Compartilhar. Plano corrigido para registrar isso.
+- Tipografia do cartão (sem papel documentado, só cor) e os ícones do × e
+  do Compartilhar (desenho próprio, sem arquivo em `docs/icones/`) ficam
+  como lacuna, mesma categoria das já registradas.
+
+**Verificação: local, no navegador (Chrome desktop, emulando Android e
+iPhone).** `beforeinstallprompt`/`appinstalled` simulados via
+`dispatchEvent` (o navegador de desenvolvimento não os dispara de
+verdade). Confirmado: cartão aparece só com o sinal certo de plataforma;
+some ao dispensar (e a dispensa sobrevive a recarregar a página); some ao
+"instalar" (`appinstalled`); **continua na tela ao cancelar**, e um
+segundo toque reaproveita o mesmo evento sem erro; instrução do iPhone
+mostra o ícone e o texto certos. `npx tsc --noEmit`, `npm run lint` e
+`npm run build` limpos. **Não verificado: aparelho de verdade** — mesmo
+precedente do "Teste novo" do plano; fica pendente para o fundador,
+Android e iPhone físicos.
+
+**Esteira do commit desta entrada: disparada, ainda rodando, sem
+confirmação.**
+
+Próximo: item 18 fecha aqui — Tarefa 1 e Tarefa 2 eram as duas do plano
+(a Tarefa 3, offline de verdade, só entraria se a Decisão 1 tivesse sido o
+Caminho B, e não foi). Depois do item 18, falta só ligar o anúncio pago —
+mas antes disso, as pendências com prazo já registradas no `CLAUDE.md` §14
+que dizem "antes de ligar anúncio" (trava de 2GB de storage, teste de
+entrega do e-mail de ativação, medição da fórmula do webhook da Kiwify).
+
+---
+
 ## 08/09/2026 — Item 18, Tarefa 1: Manifesto, ícones e meta tags do PWA
 
 Continuação do plano aprovado e commitado em `4771ddf`

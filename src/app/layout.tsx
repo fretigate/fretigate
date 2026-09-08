@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo, Azeret_Mono } from "next/font/google";
 import "./globals.css";
+import { CapturaPromptDeInstalacao } from "@/components/ui/CapturaPromptDeInstalacao";
 
 // docs/estilo.md § Tipografia: Archivo variável (wdth 75..125, wght 400..800)
 // em toda a interface. O eixo `wdth` é usado pelo número-herói e pelos
@@ -60,7 +61,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="pt-BR"
       className={`${archivo.variable} ${azeretMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <CapturaPromptDeInstalacao />
+        {children}
+      </body>
     </html>
   );
 }
