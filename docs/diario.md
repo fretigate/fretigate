@@ -6,6 +6,48 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 08/09/2026 — Corrige o `/onde-paramos`: pendência que some do "Próximo" sem ser fechada
+
+Achado pelo fundador, não por rodar o comando: a Tarefa 2 do item 13 (as
+telas de assinatura dentro do produto) nunca foi construída — só a Tarefa 1
+(`docs/planos/item-13-assinatura.md`, "Tarefa 1 — construída", 03/09/2026)
+—, e o `/onde-paramos` desta mesma sessão não tinha apontado essa pendência
+ao responder sobre o item 18.
+
+**O que aconteceu, medido nas entradas deste diário:** as três entradas de
+publicação de 07/09/2026 repetiam, cada uma, "ainda não a Tarefa 2 do item
+13". A entrada seguinte do mesmo dia ("Corrige a desambiguação de município
+ausente na Origem") foi a primeira a não repetir o aviso — sem fechar a
+pendência, só parou de mencioná-la. A entrada depois dela (plano do item
+18) tratou isso como resolvido: "Item 18 confirmado, MVP, **depois do item
+13**" — dando o item 13 como concluído por suposição, sem checar se as
+Tarefas dele tinham marca de "construída" (mesma classe de erro já
+catalogada em `CLAUDE.md` §2, "explicação plausível não é explicação
+verificada", agora sobre o estado de um item da ordem de construção, não
+sobre uma citação).
+
+**Não é o mesmo furo do commit `a28263f` (20/08/2026).** Lá, o "Próximo"
+certo ainda existia no diário, só estava velho demais para a busca padrão
+alcançar — resolvido subindo a busca até achar o fechamento. Aqui o
+"Próximo" nunca voltou a mencionar a pendência: ela não ficou pendente na
+lista, desapareceu do texto, e uma entrada seguinte declarou o item
+concluído sem verificar.
+
+**Corrigido:** `.claude/commands/onde-paramos.md` ganhou uma verificação
+nova — sempre que o "Próximo" encontrado tratar um item numerado como
+concluído, fechado ou "para trás" na ordem ("depois do item N", "item N
+fecha"), o comando manda abrir o plano de N em `docs/planos/` e conferir
+que **toda** Tarefa listada nele tem seção própria de fechamento, não só a
+primeira.
+
+Verificação: nenhuma — só documento, sem código.
+
+Próximo: Tarefa 2 do item 13 — as quatro telas de assinatura (Planos,
+Minha assinatura, Limite do gratuito, Assinatura vencida). Plano antes de
+código, como manda o `CLAUDE.md` §2.
+
+---
+
 ## 08/09/2026 — Item 18, Tarefa 2: O cartão de convite de instalação
 
 Continuação do plano aprovado em `4771ddf`

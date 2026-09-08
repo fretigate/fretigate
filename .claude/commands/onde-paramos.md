@@ -35,6 +35,36 @@ Responda **onde o trabalho parou**. Não comece nada.
    "Próximo" próprio — a leitura parou no topo e reportou o item seguinte da
    ordem de construção como se fosse o próximo passo, por cima de uma
    pendência ainda aberta.
+
+   **Segunda vez, formato diferente do mesmo defeito — registrado em
+   08/09/2026.** A Tarefa 2 do item 13 (as telas de assinatura dentro do
+   produto — Planos, Minha assinatura, Limite do gratuito, Assinatura
+   vencida) nunca foi construída — só a Tarefa 1 (`docs/planos/
+   item-13-assinatura.md` só tem uma seção "Tarefa 1 — construída",
+   nenhuma para as Tarefas 2 e 3). As entradas de publicação de 07/09/2026
+   repetiam, cada uma, "ainda não a Tarefa 2 do item 13" — até a entrada
+   seguinte do mesmo dia ("Corrige a desambiguação...") parar de repetir o
+   aviso, sem nunca fechar a pendência. A entrada depois dela (plano do
+   item 18, mesmo dia) tratou isso como se já estivesse resolvido: "Item 18
+   confirmado, MVP, depois do item 13" — tratando o item 13 como concluído
+   por suposição, não por verificação.
+
+   **Não é o mesmo furo de 20/08 — é o caso que a correção daquele dia não
+   cobria.** Lá, o "Próximo" certo ainda existia no arquivo, só velho demais
+   para a busca padrão alcançar; a regra acima (subir até achar o
+   fechamento) resolve isso. Aqui o "Próximo" **nunca voltou a mencionar a
+   pendência** — ela não ficou pendente na lista, ela desapareceu do texto,
+   e uma entrada seguinte declarou o item concluído sem checar (`CLAUDE.md`
+   §2, "explicação plausível não é explicação verificada", mesma classe de
+   erro, agora sobre o estado de um item da ordem de construção).
+
+   **Verificação obrigatória, sempre que o "Próximo" encontrado tratar um
+   item numerado como concluído, fechado ou "para trás" na ordem** (frases
+   como "depois do item N", "item N fecha", "próximo é o item N+1"): abrir
+   o plano de N em `docs/planos/` e conferir que **toda** Tarefa listada
+   nele tem seção própria de fechamento ("Tarefa X — construída" ou
+   equivalente) — não só a primeira. Tarefa sem essa marca é tarefa não
+   feita, mesmo que nenhuma entrada recente do diário fale dela.
 2. A ordem de construção do item em andamento — a lista de tarefas restantes, no
    fim da entrada mais antiga do diário.
 3. `docs/especificacao.md` §9 — a ordem de construção do produto, para saber em
