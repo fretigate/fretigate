@@ -6,8 +6,18 @@ import ts from "typescript";
 /**
  * Prova estrutural do envelope (`docs/planos/auditoria-3-mecanismo-de-sessao.md`,
  * §6): toda ação de servidor (arquivo com `"use server"` na primeira linha)
- * só exporta coisa envolvida por `comoUsuario`/`comoDono` — ou está na lista
- * de exceções, conferida por igualdade exata nos dois sentidos.
+ * só exporta coisa envolvida por `comoUsuario`/`comoDono`/`comoUsuarioLeitura`
+ * — ou está na lista de exceções, conferida por igualdade exata nos dois
+ * sentidos.
+ *
+ * `comoUsuarioLeitura` (item 13, Tarefa 2, o portão de escrita) conta como
+ * envelope aqui — a prova de que ELE é a exceção certa, e não uma ação sem
+ * envelope nenhum, é outro teste, com outra pergunta: `tests/
+ * bloqueio-de-escrita.test.ts` confere por igualdade exata QUAIS ações usam
+ * `comoUsuarioLeitura`. Este arquivo só precisa saber que é um dos envelopes
+ * válidos, para não classificar `buscarMunicipiosAction` e as outras duas
+ * como "sem-envelope" e pedir uma entrada nova em `EXCECOES` — que teria o
+ * motivo errado (elas TÊM sessão, só não passam pelo portão de escrita).
  *
  * Não há lista de ARQUIVO à mão: a varredura acha sozinha qualquer arquivo
  * com a diretiva, em qualquer lugar de `src/`. Só a lista de EXPORTAÇÃO é
@@ -32,7 +42,7 @@ const EXCECOES: Record<string, string> = {
     "cria a empresa e o usuário dono a partir de um pagamento aprovado, por token; sessão não existe nesse momento — mesmo motivo de criarConta/aceitarConviteAction (item 13, Tarefa 1)",
 };
 
-type Classificacao = "comoUsuario" | "comoDono" | "sem-envelope";
+type Classificacao = "comoUsuario" | "comoDono" | "comoUsuarioLeitura" | "sem-envelope";
 
 function arquivosTs(dir: string): string[] {
   const resultado: string[] = [];
@@ -56,10 +66,14 @@ function ehArquivoUseServer(fonte: ts.SourceFile): boolean {
   );
 }
 
-function nomeDoEnvelope(expressao: ts.Expression): "comoUsuario" | "comoDono" | null {
+function nomeDoEnvelope(
+  expressao: ts.Expression,
+): "comoUsuario" | "comoDono" | "comoUsuarioLeitura" | null {
   if (!ts.isCallExpression(expressao) || !ts.isIdentifier(expressao.expression)) return null;
   const nome = expressao.expression.text;
-  return nome === "comoUsuario" || nome === "comoDono" ? nome : null;
+  return nome === "comoUsuario" || nome === "comoDono" || nome === "comoUsuarioLeitura"
+    ? nome
+    : null;
 }
 
 /**

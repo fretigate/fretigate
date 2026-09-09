@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { comoUsuario } from "@/lib/auth/acao";
+import { comoUsuario, comoUsuarioLeitura } from "@/lib/auth/acao";
 import { criarCliente } from "@/lib/servicos/clientes";
 import { criarCaminhao } from "@/lib/servicos/caminhoes";
 import { criarMotorista } from "@/lib/servicos/motoristas";
@@ -298,8 +298,14 @@ export const criarMotoristaRapidoAction = comoUsuario(async (
   }
 });
 
-/** "Última vez neste trecho" — nunca preenche sozinho, só informa. */
-export const buscarSugestaoDeValorAction = comoUsuario(async (
+/**
+ * "Última vez neste trecho" — nunca preenche sozinho, só informa.
+ *
+ * `comoUsuarioLeitura`, não `comoUsuario` — nunca grava (item 13, Tarefa 2,
+ * uma das três exceções nomeadas do portão de escrita, `tests/
+ * bloqueio-de-escrita.test.ts`).
+ */
+export const buscarSugestaoDeValorAction = comoUsuarioLeitura(async (
   sessao,
   clienteId: string,
   destinoTexto: string,
@@ -308,8 +314,13 @@ export const buscarSugestaoDeValorAction = comoUsuario(async (
   return buscarUltimoValorDoTrecho(sessao.empresaId, clienteId, destinoTexto);
 });
 
-/** Chips de destino — recarrega ao trocar de cliente. */
-export const listarDestinosDoClienteAction = comoUsuario(async (
+/**
+ * Chips de destino — recarrega ao trocar de cliente.
+ *
+ * `comoUsuarioLeitura` pelo mesmo motivo de `buscarSugestaoDeValorAction`,
+ * acima.
+ */
+export const listarDestinosDoClienteAction = comoUsuarioLeitura(async (
   sessao,
   clienteId: string,
 ): Promise<string[]> => {
@@ -325,8 +336,11 @@ export const listarDestinosDoClienteAction = comoUsuario(async (
  * campo tiver um valor com 2+ letras — mas só a partir da primeira edição,
  * nunca no valor que o campo já tinha ao montar (guarda em
  * `useSugestaoDeMunicipio`).
+ *
+ * `comoUsuarioLeitura` pelo mesmo motivo de `buscarSugestaoDeValorAction`,
+ * acima.
  */
-export const buscarMunicipiosAction = comoUsuario(async (
+export const buscarMunicipiosAction = comoUsuarioLeitura(async (
   sessao,
   termo: string,
 ): Promise<Municipio[]> => {

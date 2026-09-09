@@ -671,3 +671,76 @@ falhar alto é o certo.
   ficaram registrados em `docs/especificacao.md` e `CLAUDE.md` §14, mas o
   lugar natural que outras mensagens desse tipo têm (uma tela que a pessoa
   está olhando) não existe aqui.
+
+## Tarefa 2 — construída (09/09/2026)
+
+O portão de escrita, conforme `docs/planos/item-13-tarefa-2-portao-de-escrita.md`.
+`comoUsuario`/`comoDono` (`src/lib/auth/acao.ts`) passaram a checar
+`status_assinatura` (`buscarStatusAssinatura`, nova, em `src/lib/servicos/
+empresas.ts`) e bloquear — `redirect("/assinatura-vencida")` — quando
+`vencida`/`encerrada`; `inadimplente` continua liberado. `comoUsuarioLeitura`
+nasceu como o envelope irmão, sem o portão, e embrulha as três exceções
+nomeadas (`buscarSugestaoDeValorAction`, `listarDestinosDoClienteAction`,
+`buscarMunicipiosAction`, todas em `fretes/acoes.ts`). Nenhuma outra ação
+mudou — o padrão inverteu por conta própria, sem precisar tocar as ações que
+já usavam `comoUsuario`/`comoDono`.
+
+Teste novo, `tests/bloqueio-de-escrita.test.ts`: contraste (ativa passa,
+vencida bloqueia) para `comoUsuario` e `comoDono`, os quatro estados,
+`comoUsuarioLeitura` nunca bloqueando, as três exceções reais funcionando sob
+`vencida`, `gerarRelatorioAction` (escrita real) bloqueada, e a lista de
+exceções por igualdade exata nos dois sentidos — a mesma varredura de
+`tests/protecao-de-acoes.test.ts`, agora reconhecendo `comoUsuarioLeitura`
+como envelope válido. 22 verificações contadas. `tests/protecao-de-acoes.test.ts`
+ajustado (mesmo motivo). Suíte local inteira: 755 testes verdes, 8 pulados
+(Chromium, esperado no Windows — `CLAUDE.md` §14).
+
+**Achado do `/revisar`, corrigido no mesmo passe (categoria "contradição
+entre documento e código" — `CLAUDE.md` §2):** o comentário de
+`buscarStatusAssinatura` afirmava que `comoUsuario`/`comoDono` cobrem "toda
+ação de escrita do produto" — falso ao pé da letra, porque as duas rotas de
+API que gravam arquivo (`api/fretes/[id]/comprovante`, `api/conta/logo`)
+ficam fora do envelope por desenho (`CLAUDE.md` §9, lacuna já conhecida, não
+fechada por esta tarefa). Reescrito para nomear a lacuna em vez de afirmar
+cobertura que não existe.
+
+**Segundo achado, mesma categoria:** a varredura de `tests/
+bloqueio-de-escrita.test.ts` que confere a lista de exceções olhava só
+`src/app`, mas `comoUsuarioLeitura` é aceito como envelope válido em todo
+`src/` por `tests/protecao-de-acoes.test.ts` — e já existe arquivo `"use
+server"` fora de `src/app` (`src/lib/servicos/cadastro.ts`). Uma ação
+`comoUsuarioLeitura` criada ali passaria despercebida pelos dois testes:
+aprovada por um (é um envelope reconhecido) e invisível para o outro (a
+varredura não alcançava a pasta). Corrigido para varrer `src/` inteiro,
+mesmo escopo de `protecao-de-acoes.test.ts`.
+
+**Terceiro achado — categoria "rigor total" (dinheiro), corrigido no mesmo
+passe por decisão do fundador:** nenhuma das quatro ações sem sessão
+(`EXCECOES` de `tests/protecao-de-acoes.test.ts`) passa pelo portão, por
+desenho — mas `aceitarConviteAction` deixava alguém aceitar convite para uma
+empresa `vencida` sem barreira nenhuma: a pessoa criava conta e senha para
+uma conta que não conseguia fazer nada, sem saber por quê (o portão de
+escrita é do dono, não dela). Decisão do fundador, 09/09/2026: `aceitarConvite`
+(`src/lib/servicos/usuarios.ts`) passou a recusar quando `status_assinatura`
+é `vencida`, com mensagem própria ("A assinatura desta empresa está com
+pendência — fale com quem te convidou"), **sem consumir o convite** — ele
+continua `pendente`, e o mesmo link volta a funcionar quando o dono
+regularizar. `inadimplente` não bloqueia, mesma regra do portão.
+**`encerrada` fica de fora, decisão explícita do fundador de adiar** — junto
+da transição `vencida` → `encerrada` (Tarefa 3, ainda não construída). Dois
+testes novos em `tests/usuarios.test.ts` (contraste vencida/inadimplente),
+21 verificações contadas (era 17).
+
+**Achado do `/revisar`, registrado como lacuna — não corrigido:** o
+`redirect("/assinatura-vencida")` aponta para uma rota que só nasce na
+Tarefa 3; até lá, um bloqueio de escrita em produção (alcançável desde já
+pelo webhook da Kiwify) cai em 404. Já era o comportamento esperado pelo
+plano ("a tela nasce na Tarefa 3, não antes") — a Tarefa 3 é a próxima da
+ordem exatamente para fechar essa janela.
+
+**Segunda lacuna registrada, não corrigida:** leitura (`comoUsuarioLeitura`
+e todo Server Component) continua aberta em `encerrada`, não só em
+`vencida` — nenhum documento define o que `encerrada` deveria fechar além
+da escrita. Mesmo limite que o plano já nomeava como fora do escopo desta
+tarefa ("o mecanismo que avança `vencida` → `encerrada` depois de 90 dias
+... segue de fora daqui também").

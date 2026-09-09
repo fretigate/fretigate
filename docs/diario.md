@@ -6,6 +6,67 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 09/09/2026 — Tarefa 2 do item 13: o portão de escrita
+
+Plano já aprovado e commitado (`343bd8b`) — construção nesta sessão.
+
+`comoUsuario`/`comoDono` (`src/lib/auth/acao.ts`) inverteram o padrão: agora
+bloqueiam por padrão — `redirect("/assinatura-vencida")` — quando
+`status_assinatura` é `vencida`/`encerrada`, falha fechada, mesma forma do
+`db()`. `inadimplente` continua liberado (a Kiwify ainda tenta cobrar).
+`comoUsuarioLeitura` nasceu como o envelope irmão, sem o portão, para as
+três exceções nomeadas em `fretes/acoes.ts` que são leitura disfarçada de
+escrita (`buscarSugestaoDeValorAction`, `listarDestinosDoClienteAction`,
+`buscarMunicipiosAction`). `buscarStatusAssinatura`, nova, em
+`src/lib/servicos/empresas.ts`.
+
+Teste novo, `tests/bloqueio-de-escrita.test.ts` (22 verificações): contraste
+ativa/vencida para os dois envelopes de escrita, os quatro estados,
+`comoUsuarioLeitura` nunca bloqueando, as três exceções reais sob `vencida`,
+`gerarRelatorioAction` (escrita real) bloqueada, e a lista de exceções por
+igualdade exata, nos dois sentidos. `tests/protecao-de-acoes.test.ts`
+ajustado para reconhecer o novo envelope.
+
+**Três achados do `/revisar`, corrigidos no mesmo passe:**
+1. Comentário de `buscarStatusAssinatura` afirmava cobertura total
+   ("toda ação de escrita do produto"); falso — as rotas de API que
+   gravam arquivo (comprovante, logo) ficam fora do envelope, lacuna já
+   conhecida (`CLAUDE.md` §9). Reescrito para nomear a lacuna.
+2. A varredura da lista de exceções olhava só `src/app`; `comoUsuarioLeitura`
+   é aceito em todo `src/` por `protecao-de-acoes.test.ts`, e já existe
+   `"use server"` fora de `src/app` (`cadastro.ts`) — uma ação criada ali
+   passaria despercebida pelos dois testes. Corrigido para varrer `src/`
+   inteiro.
+3. **Decisão do fundador:** `aceitarConviteAction` deixava alguém aceitar
+   convite para empresa `vencida` sem barreira — criava conta que não
+   conseguia fazer nada, sem saber por quê. `aceitarConvite`
+   (`src/lib/servicos/usuarios.ts`) passou a recusar sob `vencida`, com
+   mensagem própria, **sem consumir o convite** (continua `pendente` — o
+   link volta a funcionar quando o dono regularizar). `inadimplente` não
+   bloqueia. `encerrada` fica de fora, decisão explícita do fundador de
+   adiar para a Tarefa 3, junto da transição `vencida` → `encerrada`. Dois
+   testes novos em `tests/usuarios.test.ts` (21 verificações, era 17).
+
+**Duas lacunas registradas, não corrigidas — ambas já previstas pelo plano
+como fora do escopo desta tarefa:** `/assinatura-vencida` (o destino do
+redirect) só nasce na Tarefa 3 — até lá, um bloqueio real (já alcançável em
+produção pelo webhook da Kiwify) cai em 404; e leitura continua aberta em
+`encerrada`, não só em `vencida` — nenhum documento define o que `encerrada`
+deveria fechar além da escrita.
+
+Detalhado em `docs/planos/item-13-assinatura.md`, seção "Tarefa 2 —
+construída".
+
+Verificação: local, `npx vitest run` — 755 testes verdes, 8 pulados
+(Chromium, esperado no Windows). Esteira: disparada com este commit, ainda
+rodando, sem confirmação.
+
+Próximo: Tarefa 3 do item 13 — as quatro telas de assinatura (Planos, Minha
+assinatura, Limite do gratuito, Assinatura vencida). Plano já aprovado e
+commitado (`343bd8b`, `docs/planos/item-13-tarefa-3-telas-de-assinatura.md`).
+
+---
+
 ## 09/09/2026 — Planos das Tarefas 2 e 3 do item 13: o portão de escrita e as quatro telas de assinatura
 
 Continuação direta da entrada anterior (`40130b7`) — o fundador cobrou a

@@ -41,6 +41,30 @@ export function buscarEmpresa(empresaId: string) {
 }
 
 /**
+ * Só a coluna `status_assinatura` — não a empresa inteira, porque
+ * `comoUsuario`/`comoDono` (`src/lib/auth/acao.ts`) chamam isto em toda
+ * Server Action de escrita embrulhada por um dos dois (item 13, Tarefa 2, o
+ * portão de escrita). **Não alcança rota de API** — `api/fretes/[id]/
+ * comprovante` e `api/conta/logo` gravam sem passar por este portão, é
+ * lacuna já conhecida do envelope (`CLAUDE.md` §9, "a mesma lacuna existe,
+ * de verdade, para rota de API"), não fechada por esta tarefa.
+ *
+ * `findUniqueOrThrow`, não `findUnique`: quem chama sempre tem uma sessão
+ * válida, e uma sessão válida implica uma `Empresa` que existe — o `§7`
+ * só permite apagar `Empresa` sem `Usuario` nenhum vinculado
+ * (`reverter_cadastro_incompleto`), nunca uma com sessão ativa.
+ */
+export async function buscarStatusAssinatura(
+  empresaId: string,
+): Promise<"ativa" | "inadimplente" | "vencida" | "encerrada"> {
+  const empresa = await db(empresaId).empresa.findUniqueOrThrow({
+    where: { id: empresaId },
+    select: { status_assinatura: true },
+  });
+  return empresa.status_assinatura;
+}
+
+/**
  * "Falta a chave Pix da sua empresa" (`docs/componentes.md` §12) — grava a
  * chave ao confirmar a folha. Texto livre, sem validação de formato: chave
  * Pix pode ser CPF, CNPJ, e-mail, telefone ou aleatória — recusar uma válida

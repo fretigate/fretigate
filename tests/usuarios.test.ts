@@ -31,7 +31,7 @@ const empresasParaLimpar: string[] = [];
 const usuariosParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 17;
+const CONFERENCIAS_ESPERADAS = 21;
 
 async function criarEmpresaDeTeste(sufixo: string): Promise<string> {
   const id = randomUUID();
@@ -39,6 +39,28 @@ async function criarEmpresaDeTeste(sufixo: string): Promise<string> {
     `INSERT INTO "empresa" (id, nome_fantasia, termos_aceitos_em, termos_versao)
      VALUES ($1, $2, now(), 'teste')`,
     [id, `Usuarios Teste ${marca} ${sufixo}`],
+  );
+  empresasParaLimpar.push(id);
+  return id;
+}
+
+/**
+ * Igual a `criarEmpresaDeTeste`, com `status_assinatura` explícito — só para
+ * os dois casos novos de `aceitarConvite` contra assinatura (item 13,
+ * Tarefa 2). `empresa_plano_coerente` (migration
+ * `20260806213650_planos_status_e_cnpj_unico`) exige `plano = 'pago'` com
+ * `periodicidade` preenchida para qualquer `status_assinatura` diferente de
+ * `ativa`.
+ */
+async function criarEmpresaComStatusAssinatura(
+  sufixo: string,
+  status: "ativa" | "inadimplente" | "vencida" | "encerrada",
+): Promise<string> {
+  const id = randomUUID();
+  await raiz.query(
+    `INSERT INTO "empresa" (id, nome_fantasia, termos_aceitos_em, termos_versao, plano, periodicidade, status_assinatura)
+     VALUES ($1, $2, now(), 'teste', 'pago', 'mensal', $3)`,
+    [id, `Usuarios Teste ${marca} ${sufixo}`, status],
   );
   empresasParaLimpar.push(id);
   return id;
@@ -342,6 +364,55 @@ describe("4. aceitarConvite — o único caminho que acha uma linha de domínio 
     await expect(
       aceitarConvite(token, { email: emailJaExiste, senha: "senha-de-teste-123" }),
     ).rejects.toThrow("Já existe uma conta com esse e-mail.");
+    conferencias++;
+  });
+
+  /**
+   * Item 13, Tarefa 2, achado do `/revisar`, decisão do fundador,
+   * 09/09/2026: aceitar convite numa empresa `vencida` deixava a pessoa
+   * criar conta e senha para uma conta que não serve — ela não consegue
+   * fazer nada, e o portão de escrita é do dono, não dela. A recusa
+   * acontece ANTES de qualquer gravação: o convite continua `pendente`,
+   * não `aceito` — quando o dono regularizar, o mesmo link volta a
+   * funcionar, sem convite novo.
+   */
+  it("recusa aceitar quando a assinatura da empresa está vencida — o convite continua pendente, não é consumido", async () => {
+    const empresaId = await criarEmpresaComStatusAssinatura("o", "vencida");
+    const convite = await convidarUsuario(empresaId, { telefone: "85988886666", nome: "Empresa Vencida" });
+    const token = await tokenDoConvite(convite.id);
+
+    await expect(
+      aceitarConvite(token, { email: `vencida-${marca}@teste.invalido`, senha: "senha-de-teste-123" }),
+    ).rejects.toThrow("A assinatura desta empresa está com pendência — fale com quem te convidou.");
+    conferencias++;
+
+    const { rows } = await raiz.query<{ status: string; aceito_em: Date | null }>(
+      `SELECT status, aceito_em FROM "convite" WHERE id = $1`,
+      [convite.id],
+    );
+    expect(rows[0]!.status).toBe("pendente");
+    conferencias++;
+    expect(rows[0]!.aceito_em).toBeNull();
+    conferencias++;
+  });
+
+  /**
+   * O contraste: `inadimplente` não bloqueia, mesma regra de
+   * `comoUsuario`/`comoDono` (`src/lib/auth/acao.ts`) — a Kiwify ainda está
+   * tentando cobrar, e cortar acesso aqui tiraria a pessoa bem quando a
+   * empresa ainda vai pagar.
+   */
+  it("inadimplente NÃO bloqueia aceitar convite — só vencida", async () => {
+    const empresaId = await criarEmpresaComStatusAssinatura("p", "inadimplente");
+    const convite = await convidarUsuario(empresaId, { telefone: "85988885555", nome: "Empresa Inadimplente" });
+    const token = await tokenDoConvite(convite.id);
+
+    const resultado = await aceitarConvite(token, {
+      email: `inadimplente-${marca}@teste.invalido`,
+      senha: "senha-de-teste-123",
+    });
+    usuariosParaLimpar.push(resultado.usuarioId);
+    expect(resultado.empresaId).toBe(empresaId);
     conferencias++;
   });
 });

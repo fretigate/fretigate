@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, localizarConvitePorToken } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { criarUsuario } from "@/lib/servicos/criar-usuario-dono";
+import { buscarStatusAssinatura } from "@/lib/servicos/empresas";
 
 /**
  * Usuário e Convite (item 10, Tarefa 1 — `docs/planos/
@@ -218,6 +219,26 @@ export type ResultadoAceitarConvite = { usuarioId: string; empresaId: string; em
  * cobrindo as duas conexões — `convite` é gravado por `db(empresaId)`,
  * `usuario` pelo Better Auth), mesma classe de estado parcial já aceita em
  * `gerarRelatorio` (`docs/planos/item-7-relatorio.md`), não resolvido agora.
+ *
+ * **Recusa quando a empresa está com a assinatura `vencida`** (item 13,
+ * Tarefa 2, achado do `/revisar`, decisão do fundador, 09/09/2026): sem
+ * esta checagem, a pessoa aceitava, criava conta e senha, entrava — e não
+ * conseguia fazer nada, sem saber por quê e sem poder resolver sozinha (o
+ * portão de escrita é do dono). **O convite NUNCA é consumido por esta
+ * recusa** — continua `pendente`, porque nada acima desta checagem grava
+ * nada; quando o dono regularizar o pagamento, o mesmo link volta a
+ * funcionar, sem precisar convidar de novo (o convite já não expira por
+ * desenho, comentário acima). `inadimplente` não bloqueia, mesma regra de
+ * `comoUsuario`/`comoDono` (`src/lib/auth/acao.ts`): a Kiwify ainda está
+ * tentando cobrar.
+ *
+ * **`encerrada` NÃO é tratada aqui — decisão explícita do fundador de
+ * adiar.** A empresa "acabou" nesse estado, e se o convite deveria ser
+ * recusado com texto próprio ou se `encerrada` já implica outra coisa
+ * (a empresa arquivada? o usuário nunca chega a existir?) é pergunta que
+ * fica para a Tarefa 3 do item 13, junto da transição `vencida` →
+ * `encerrada` que ainda não existe. Não decidir agora não é esquecimento —
+ * é a mesma regra do `CLAUDE.md` §2: não inventar decisão de produto.
  */
 export async function aceitarConvite(
   token: string,
@@ -226,6 +247,11 @@ export async function aceitarConvite(
   const convite = await localizarConvitePorToken(token);
   if (!convite) throw new Error("Convite inválido.");
   if (convite.status !== "pendente") throw new Error("Este convite já foi usado ou cancelado.");
+
+  const statusAssinatura = await buscarStatusAssinatura(convite.empresa_id);
+  if (statusAssinatura === "vencida") {
+    throw new Error("A assinatura desta empresa está com pendência — fale com quem te convidou.");
+  }
 
   const emailValidado = z.email().safeParse(dados.email.trim().toLowerCase());
   if (!emailValidado.success) throw new Error("E-mail inválido.");
