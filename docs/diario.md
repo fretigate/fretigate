@@ -6,6 +6,61 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 09/09/2026 — Planos das Tarefas 2 e 3 do item 13: o portão de escrita e as quatro telas de assinatura
+
+Continuação direta da entrada anterior (`40130b7`) — o fundador cobrou a
+pendência que o `/onde-paramos` corrigido ainda não tinha apontado: a
+Tarefa 2 original do item 13 (as quatro telas de assinatura) nunca foi
+construída, só planejada de leve pela Tarefa 1.
+
+**Achado ao planejar as telas, conferindo a cobertura dos quatro estados de
+`StatusAssinatura`:** nenhuma Tarefa do plano original construía o
+mecanismo que `CLAUDE.md` §10 promete ("assinatura vencida bloqueia
+escrita"). Decisão do fundador: vira Tarefa própria, **antes** das telas —
+"se o portão não existir, a tela de Assinatura vencida explica algo que
+não acontece, e não dá pra testar de verdade." Renumeração:
+antiga Tarefa 2 (telas) → Tarefa 3; antiga Tarefa 3 (limites do gratuito) →
+Tarefa 4; nova Tarefa 2 é o portão.
+
+**Dois planos commitados nesta entrada**, depois de várias rodadas de
+decisão do fundador:
+
+- `docs/planos/item-13-tarefa-2-portao-de-escrita.md` — `comoUsuario`/
+  `comoDono` passam a bloquear escrita por padrão sob `vencida`/`encerrada`
+  (Opção A, falha fechada — a mesma forma do `db()` e do RLS), com
+  `comoUsuarioLeitura` como exceção nomeada, conferida por igualdade exata,
+  para as três ações que só leem hoje. `gerarRelatorioAction` é escrita,
+  bloqueada. Conferido, a pedido do fundador: ver um relatório **já
+  gerado** é Server Component, nunca passa pelo envelope — continua
+  acessível sob `vencida`, junto de toda leitura do produto e do checkout/
+  webhook da Kiwify (externos, também fora do envelope). Bloqueio
+  implementado como `redirect("/assinatura-vencida")` — aspereza conhecida
+  e aceita (some a tela de quem dispara a ação de dentro de uma folha, como
+  o cadastro rápido em Lançar frete), registrada como candidato a melhoria,
+  não urgente: "assinatura vencida não é caminho comum."
+- `docs/planos/item-13-tarefa-3-telas-de-assinatura.md` — Planos, Minha
+  assinatura, Limite do gratuito, Assinatura vencida. Decisões do
+  fundador: Minha assinatura mostra só plano/estado/valor (nada que o
+  produto não tenha, nunca invenção); acesso é só do dono nas três
+  primeiras, com Limite do gratuito e Assinatura vencida também
+  acessíveis ao operador, conteúdo diferente por papel (sem o caminho de
+  pagar); "Baixar meus dados"/"Baixar meus relatórios" (divergência entre
+  `docs/componentes.md` e `docs/navegacao.md`, achada nesta sessão) não
+  vira botão em nenhuma leitura — o caminho é o e-mail de contato, já
+  prometido nos Termos, pendência com prazo legal do `CLAUDE.md` §14.
+
+**Duas coisas ficaram com o fundador, fora desta sessão:** os dois links de
+checkout reais da Kiwify (Mensal, Anual) e a confirmação de existir área de
+assinante única para "gerenciar cobrança" (recibo, cancelamento) — sem
+isso, a Tarefa 3 não tem para onde apontar três dos seus botões.
+
+Verificação: nenhuma — só planejamento e documento, sem código.
+
+Próximo: Tarefa 2 do item 13 — o portão de escrita. Plano já aprovado e
+commitado nesta entrada; construção começa na próxima sessão.
+
+---
+
 ## 08/09/2026 — Corrige o `/onde-paramos`: pendência que some do "Próximo" sem ser fechada
 
 Achado pelo fundador, não por rodar o comando: a Tarefa 2 do item 13 (as

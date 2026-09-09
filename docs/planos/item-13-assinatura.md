@@ -195,7 +195,8 @@ model PagamentoPendente {
   periodicidade PeriodicidadePlano // mensal | anual — mapeado do produto/
                                     // oferta configurado na Kiwify (dois
                                     // produtos, um por periodicidade;
-                                    // configuração da Tarefa 2, não desta).
+                                    // configuração da Tarefa 3 (renumerada
+                                    // em 08/09/2026), não desta.
   valor_centavos Int
 
   status StatusPagamentoPendente @default(pendente) // pendente | aceito | estornado
@@ -409,7 +410,27 @@ comando `scripts/pagamentos-pendentes.mts` (caso 1), reaproveitamento de
 `tests/usuarios.test.ts` (contraste de isolamento, os quatro casos,
 deduplicação de webhook reentregue, reivindicação concorrente).
 
-**Tarefa 2 — Telas dentro do produto: Planos, Minha assinatura, Limite do
+**Renumerado em 08/09/2026, ao planejar a Tarefa 2** (achado pelo fundador:
+`docs/diario.md`, "Corrige o `/onde-paramos`", commit `40130b7` —
+`/onde-paramos` tinha perdido a pendência da Tarefa 2 original entre 07 e
+08/09). Conferindo a cobertura dos quatro estados de `StatusAssinatura`
+para planejar as telas, apareceu um mecanismo que nenhuma das duas Tarefas
+originais construía: o portão que bloqueia escrita sob assinatura
+`vencida` (`CLAUDE.md` §10). Decisão do fundador: vira Tarefa própria,
+**antes** das telas — "a tela de Assinatura vencida existe pra explicar
+por que a pessoa não consegue escrever; se o portão não existir, ela
+explica algo que não acontece, e não dá pra testar de verdade." A antiga
+Tarefa 2 (telas) virou Tarefa 3; a antiga Tarefa 3 (limites do gratuito)
+virou Tarefa 4.
+
+**Tarefa 2 — O portão de escrita para assinatura vencida.** Mecanismo
+novo, não desenhado em nenhuma tela: `comoUsuario`/`comoDono`
+(`src/lib/auth/acao.ts`) passam a bloquear escrita por padrão quando
+`status_assinatura` é `vencida`/`encerrada`, com um envelope irmão,
+`comoUsuarioLeitura`, como exceção nomeada para as poucas ações que só
+leem. Detalhado em `docs/planos/item-13-tarefa-2-portao-de-escrita.md`.
+
+**Tarefa 3 — Telas dentro do produto: Planos, Minha assinatura, Limite do
 gratuito, Assinatura vencida.** Design já tem as quatro desenhadas
 (`docs/navegacao.md`, linhas 64-67), preço corrigido para R$ 197/R$ 1.164
 (acima) — sem bloqueio de decisão de produto agora. **Os dois planos já
@@ -417,7 +438,9 @@ estão configurados na Kiwify** (Mensal R$ 197, Anual R$ 1.164 em até 12x) —
 falta confirmar o valor real de `Subscription.plan.frequency` que cada um
 manda no webhook (nenhuma fonte documentou o valor para o plano anual,
 só `"monthly"` no exemplo oficial), para preencher o mapa de periodicidade
-com dado medido, não suposto.
+com dado medido, não suposto. Detalhada em `docs/planos/
+item-13-tarefa-3-telas-de-assinatura.md`; depende da Tarefa 2 (acima)
+estar pronta.
 
 **Atualização, 05/09/2026: confirmado — `"monthly"` (Mensal) e
 `"annually"` (Anual)**, lido direto da API de produtos da Kiwify
@@ -427,11 +450,13 @@ com dado medido, não suposto.
 webhook de uma compra de verdade carrega esse mesmo valor no mesmo campo —
 ver `docs/planos/corrige-webhook-kiwify.md`.
 
-**Tarefa 3 — Limite do plano gratuito.** Bloquear o segundo caminhão
+**Tarefa 4 — Limite do plano gratuito.** Bloquear o segundo caminhão
 (`CLAUDE.md` §10), o segundo usuário, a sexta importação — cada limite já
 está na tabela do §10, falta o ponto de bloqueio em cada fluxo e a tela
-"Limite do gratuito" (Tarefa 2) como saída. Não detalhada aqui — depende
-da Tarefa 2 estar pronta (é para lá que o limite manda a pessoa).
+"Limite do gratuito" (Tarefa 3) como saída. Não detalhada aqui — depende
+da Tarefa 3 estar pronta (é para lá que o limite manda a pessoa). O limite
+de importação fica sem gatilho até o item 15 (Importação de fretes)
+nascer — ver `docs/planos/item-13-tarefa-3-telas-de-assinatura.md`.
 
 ## Decisões fechadas, 03/09/2026 — não reabrir por analogia
 
@@ -602,7 +627,8 @@ falhar alto é o certo.
 
 - **Formato do payload e os três defeitos que ele revelou — CORRIGIDOS.**
   Tarefa própria, `docs/planos/corrige-webhook-kiwify.md` (03/09/2026,
-  entrada correspondente em `docs/diario.md`) — não ficou para a Tarefa 2.
+  entrada correspondente em `docs/diario.md`) — não ficou para a Tarefa 3
+  (renumerada em 08/09/2026).
   `route.ts` e a nova peça `src/lib/servicos/verificacao-kiwify.ts` usam o
   formato real (`Customer.full_name/email/CPF`, `Product.product_id`,
   `Commissions.charge_amount`, `webhook_event_type`, `subscription_id`,
