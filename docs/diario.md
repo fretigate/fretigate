@@ -6,6 +6,39 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 10/09/2026 — Telefone e e-mail do cadastro também viram contato da Empresa
+
+Fundador viu o campo E-MAIL vazio na tela Conta da empresa e perguntou se era
+bug ou campo diferente. Era campo diferente (`Empresa.email`, contato
+comercial, distinto do login `Usuario.email`) — mas `criarEmpresaEDono`
+copiava só `telefone` do formulário de cadastro para a Empresa, nunca
+`email`, sem nenhuma decisão escrita explicando a assimetria. Fundador
+decidiu copiar os dois. Detalhes, decisão completa e as duas lacunas
+registradas (empresas antigas sem retropreenchimento; nenhuma tela avisa que
+o e-mail vira contato comercial) em `docs/planos/
+copia-telefone-e-email-do-cadastro.md` — **plano escrito depois da
+construção, não antes**, mesmo buraco de processo já visto duas vezes nesta
+sessão (`docs/planos/correcao-pool-esteira-vermelha.md`, `docs/planos/
+teste-de-contraste-varredura-de-segredo.md`).
+
+`/revisar` rodou dois passes: o primeiro achou três citações imprecisas
+(seção errada ou inexistente sustentando uma frase verdadeira) e uma lacuna
+de documentação de produto, todas corrigidas; o segundo não achou
+divergência nenhuma, só as duas lacunas de produto (registradas no plano,
+decisão do fundador para as duas) mais a ausência do próprio plano (fechada
+por este commit).
+
+Nenhuma migration — os dois campos já existiam no schema, opcionais, desde
+antes. Testes: `tests/cadastro.test.ts` ganhou um teste chamando
+`criarEmpresaEDono` de verdade (não a réplica de baixo nível do resto do
+arquivo); `tests/pagamentos.test.ts` passou a mandar e-mail em caixa mista
+para provar que a normalização sobrevive nos dois campos. `npx vitest run
+tests/cadastro.test.ts tests/pagamentos.test.ts` local — 25/25.
+
+Próximo: aguardando o fundador decidir se este commit fecha a sessão.
+
+---
+
 ## 10/09/2026 — Duas correções no CLAUDE.md: §5 "Ambientes" e a pendência do `outputFileTracingIncludes`
 
 Achado ao responder `/onde-paramos`, a pedido do fundador — pediu para

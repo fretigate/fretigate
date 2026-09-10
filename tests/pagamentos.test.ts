@@ -206,9 +206,13 @@ describe("3. ativarAssinatura — a conta nasce paga, ligada ao pagamento", () =
       nomeComprador: "Dono Vindo Da Kiwify",
     });
 
+    // Caixa mista de propósito: prova que a normalização (minúsculo) vale
+    // também para o e-mail de contato da Empresa, não só para o login —
+    // os dois vêm do mesmo `email` normalizado em `ativarAssinatura`.
+    const emailDigitado = `Ativada-${marca}@TESTE.invalido`;
     const ativado = await ativarAssinatura(resultado.token, {
       nomeEmpresa: `Empresa Ativada ${marca}`,
-      email: `ativada-${marca}@teste.invalido`,
+      email: emailDigitado,
       senha: "senha-de-teste-123",
     });
     if ("erro" in ativado) throw new Error("esperado sucesso: " + ativado.erro);
@@ -216,7 +220,7 @@ describe("3. ativarAssinatura — a conta nasce paga, ligada ao pagamento", () =
     empresasParaLimpar.push(ativado.empresaId);
 
     const { rows: empresas } = await raiz.query(
-      `SELECT nome_fantasia, plano, periodicidade, status_assinatura, gateway_assinante_id
+      `SELECT nome_fantasia, plano, periodicidade, status_assinatura, gateway_assinante_id, telefone, email
          FROM "empresa" WHERE id = $1`,
       [ativado.empresaId],
     );
@@ -225,6 +229,13 @@ describe("3. ativarAssinatura — a conta nasce paga, ligada ao pagamento", () =
     expect(empresas[0]!.periodicidade).toBe("anual");
     expect(empresas[0]!.status_assinatura).toBe("ativa");
     expect(empresas[0]!.gateway_assinante_id).toBe(`assinante-${marca}-ativar-sucesso`);
+    // Fluxo B não pergunta telefone (src/lib/servicos/pagamentos.ts,
+    // `telefone: null` na chamada de `criarEmpresaEDono`) — continua nulo.
+    expect(empresas[0]!.telefone).toBeNull();
+    // O e-mail de contato da Empresa nasce igual ao de login — quem entra
+    // pagando também sai com este campo preenchido, não só quem se cadastra
+    // de graça — e já normalizado, igual ao do Usuário abaixo.
+    expect(empresas[0]!.email).toBe(emailDigitado.toLowerCase());
 
     const { rows: usuarios } = await raiz.query(
       `SELECT nome, papel FROM "usuario" WHERE id = $1`,

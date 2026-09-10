@@ -1984,6 +1984,24 @@ Não invente resposta. Pergunte.
   `null` aqui não significa "nunca entrou", significa "ninguém registrou".
   **Gatilho para entrar:** o dia em que o rastreamento de acesso existir de
   verdade.
+- **`Empresa.email`/`Empresa.telefone` nascem copiados do cadastro só a
+  partir de 10/09/2026 — empresas criadas antes continuam com `email`
+  nulo, sem retropreenchimento.** Decisão do fundador
+  (`docs/planos/copia-telefone-e-email-do-cadastro.md`): não vale a pena um
+  `UPDATE` retroativo — o único registro no ar antes desta data é a conta
+  de teste do próprio fundador, sem dado de cliente real para migrar.
+  **Gatilho para entrar:** aparecer uma conta real criada antes de
+  10/09/2026 com `email` nulo — aí o caso se resolve individualmente, não
+  por regra geral.
+- **Nenhuma tela avisa que o e-mail digitado no cadastro/na ativação de
+  assinatura vira o contato comercial impresso no cabeçalho do relatório.**
+  Lacuna registrada em 10/09/2026
+  (`docs/planos/copia-telefone-e-email-do-cadastro.md`), decisão do
+  fundador de não resolver agora — copy de campo é do Design, que já tem
+  lista acumulada. O motivo a não perder: quem cadastra um e-mail pessoal
+  achando que é só login vê esse endereço virar contato comercial, exposto
+  no PDF que chega ao cliente do cliente (`docs/especificacao.md` §4.4),
+  sem ter sido avisado.
 - ~~Provedor de e-mail transacional~~ · ~~domínio próprio autenticado~~ —
   **RESOLVIDOS em 06/08/2026.** Resend, domínio `fretigate.com` com envio por
   `envio.fretigate.com` verificado. Ver §5 e §11. Continua valendo o motivo:

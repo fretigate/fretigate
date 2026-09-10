@@ -47,6 +47,26 @@ export type DadosCriarEmpresaEDono = {
   statusAssinatura: "ativa" | "inadimplente" | "vencida" | "encerrada";
   /** Kiwify `subscription_id` — nulo no gratuito. */
   gatewayAssinanteId: string | null;
+  /**
+   * Duplo uso, os dois de propósito: vira o e-mail de login do Usuário dono
+   * (abaixo) **e** o `Empresa.email` — o e-mail de contato que aparece no
+   * cabeçalho do relatório (`docs/especificacao.md` §4.4, "Cabeçalho: ...
+   * telefone e e-mail"). Junto de `telefone`, acima: os dois campos de
+   * contato de quem cria a conta nascem copiados para a Empresa (corrigido
+   * em 10/09/2026 — antes só `telefone` era copiado, `email` não).
+   * `docs/especificacao.md`, seção "Cadastro", já dizia que o telefone "é o
+   * contato para o cliente falar com a empresa, não é login" — mas essa
+   * frase nunca foi espelhada para o e-mail, deixando a mesma pergunta
+   * (o que este campo vira, dentro da Empresa) sem resposta escrita para o
+   * segundo campo do mesmo formulário.
+   * Motivo (decisão do fundador, 10/09/2026): no caso comum, quem cria a
+   * conta é o dono da transportadora, e o contato dele é o contato dela —
+   * nascer preenchido erra a favor de menos campo vazio no primeiro uso. A
+   * pessoa corrige em Conta da empresa se um dia forem diferentes (segundo
+   * sócio, telefone comercial próprio etc.). Os dois caminhos de entrada
+   * (`cadastro.ts`, `pagamentos.ts`) já normalizam para minúsculo antes de
+   * chegar aqui — esta função grava como recebe, sem normalizar de novo.
+   */
   email: string;
   nomeDono: string;
   senha: string;
@@ -80,6 +100,7 @@ export async function criarEmpresaEDono(
           id: dados.empresaId,
           nome_fantasia: dados.nomeEmpresa,
           telefone: dados.telefone,
+          email: dados.email,
           origem_declarada: dados.origemDeclarada,
           termos_aceitos_em: new Date(),
           termos_versao: VERSAO_TERMOS_PUBLICADA,
@@ -93,8 +114,8 @@ export async function criarEmpresaEDono(
     });
   } catch (erroEmpresa) {
     // Nunca o objeto de erro cru: o `create` do Prisma pode ecoar de volta os
-    // dados enviados (nome_fantasia, telefone) na mensagem de validação —
-    // só nome do erro e o id gerado, nunca dado pessoal (§4).
+    // dados enviados (nome_fantasia, telefone, email) na mensagem de
+    // validação — só nome do erro e o id gerado, nunca dado pessoal (§4).
     console.error(
       "[criarEmpresaEDono] falha ao criar empresa",
       dados.empresaId,

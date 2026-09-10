@@ -563,6 +563,19 @@ o porquê está em §6, em `Usuario`.
 O rótulo é **NOME DA EMPRESA**, não "Nome da transportadora" — ver o
 Vocabulário, no topo deste documento.
 
+**`SEU TELEFONE` e `E-MAIL` também viram, respectivamente, `Empresa.telefone`
+e `Empresa.email`** — os campos de contato editáveis em Conta da empresa
+(§4.9) e usados no cabeçalho do relatório (§4.4). Decisão do fundador,
+10/09/2026 (`src/lib/servicos/criar-empresa-e-dono.ts`): no caso comum, quem
+cria a conta é o dono da transportadora, e o contato dele é o contato dela —
+nascer preenchido erra a favor de menos campo vazio no primeiro uso, não de
+um valor final e correto. A pessoa corrige em Conta da empresa se um dia
+forem diferentes (segundo sócio, telefone comercial próprio etc.). Vale para
+os dois caminhos de entrada — cadastro comum e a conta que nasce de um
+pagamento (item 13) —, exceto o telefone no Fluxo B: a tela de ativação de
+assinatura não pergunta telefone, então `Empresa.telefone` nasce nulo nesse
+caminho.
+
 ### E-mail transacional
 
 O produto manda e-mail em três momentos: **recuperação de senha**,

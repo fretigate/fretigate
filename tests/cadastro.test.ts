@@ -7,6 +7,7 @@ import {
   TIPOS_DE_OPERACAO_INICIAIS,
   criarTiposDeOperacaoIniciais,
 } from "@/lib/servicos/tipos-de-operacao";
+import { criarEmpresaEDono } from "@/lib/servicos/criar-empresa-e-dono";
 
 /**
  * O cadastro (tarefa 8, com a tarefa 2 do item 2 somando os tipos de
@@ -33,7 +34,7 @@ const empresasParaLimpar: string[] = [];
 const usuariosParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 18;
+const CONFERENCIAS_ESPERADAS = 19;
 
 /**
  * Mesmo mecanismo que `src/lib/servicos/cadastro.ts` usa: Empresa e os quatro
@@ -162,6 +163,42 @@ describe("1. cadastro normal — Empresa e Usuário corretamente vinculados", ()
       providerId: "credential",
       tem_hash: true,
     });
+    conferencias++;
+  });
+
+  it("`criarEmpresaEDono` copia telefone E e-mail do formulário para a Empresa — não só um dos dois", async () => {
+    // Regressão visada: até 09/09/2026 só `telefone` era copiado para a
+    // Empresa; `email` ficava nulo, sem nenhuma decisão escrita distinguindo
+    // os dois campos do mesmo formulário. Corrigido em 10/09/2026
+    // (`src/lib/servicos/criar-empresa-e-dono.ts`) — este teste chama a
+    // função de verdade, não uma réplica, para travar se algum dia um dos
+    // dois campos parar de ser copiado sem ninguém perceber.
+    const empresaId = uuidv7();
+    const telefone = "85999998888";
+    const email = `contato-${marca}@teste.invalido`;
+
+    const resultado = await criarEmpresaEDono({
+      empresaId,
+      nomeEmpresa: "Empresa Contato Do Cadastro",
+      telefone,
+      origemDeclarada: "Alguém me indicou",
+      plano: "gratuito",
+      periodicidade: null,
+      statusAssinatura: "ativa",
+      gatewayAssinanteId: null,
+      email,
+      nomeDono: "Dono Do Contato",
+      senha: "senha-de-teste-123",
+    });
+    if ("erro" in resultado) throw new Error("esperado sucesso: " + resultado.erro);
+    usuariosParaLimpar.push(resultado.usuarioId);
+    empresasParaLimpar.push(empresaId);
+
+    const { rows } = await raiz.query(
+      `SELECT telefone, email FROM "empresa" WHERE id = $1`,
+      [empresaId],
+    );
+    expect(rows[0]).toMatchObject({ telefone, email });
     conferencias++;
   });
 });
