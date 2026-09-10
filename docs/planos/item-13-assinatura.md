@@ -744,3 +744,84 @@ e todo Server Component) continua aberta em `encerrada`, não só em
 da escrita. Mesmo limite que o plano já nomeava como fora do escopo desta
 tarefa ("o mecanismo que avança `vencida` → `encerrada` depois de 90 dias
 ... segue de fora daqui também").
+
+## Tarefa 3 — construída parcialmente (09/09/2026): Assinatura vencida e Limite do gratuito
+
+Das quatro telas de `docs/planos/item-13-tarefa-3-telas-de-assinatura.md`,
+**duas** entraram nesta sessão — as que não dependem de link nenhum da
+Kiwify. **Planos e Minha assinatura continuam de fora**: os dois primeiros
+precisam das URLs de checkout (Mensal/Anual) e do formato do link da área
+de assinante da Kiwify, que o fundador ainda estava confirmando. Fecha a
+janela de 404 que o portão de escrita (Tarefa 2) já podia alcançar em
+produção.
+
+**`/assinatura-vencida`** (`src/app/(app)/assinatura-vencida/page.tsx`) —
+só `exigirSessao()` (dono e operador chegam, leitura segue liberada sob
+`vencida`). Mostra o estado num bloco `bg-vencido-fundo` (mesmo tom de
+"Vencido", `docs/estilo.md`), e o conteúdo varia por `sessao.papel`:
+
+- **Dono:** o estado + o caminho de exportação pelo e-mail de contato
+  (`EMAIL_RESPOSTA`, mesmo padrão já usado em `cadastro.ts`/`pagamento.ts`
+  para o único canal de contato exposto fora de sessão).
+- **Operador:** o estado + "fale com o dono".
+
+**Sem "Renovar assinatura" e sem "Baixar meus dados" nesta construção —
+decisão do fundador.** Os dois dependiam de um link (área de assinante da
+Kiwify / mecanismo de exportação) que ainda não existe; um botão sem
+destino é o que `CLAUDE.md` §8 proíbe, e aqui seria pior (pessoa com a
+assinatura vencida tocando em algo que não responde). Nascem quando o
+link/mecanismo existir — "Baixar meus dados" já era essa decisão, feita no
+plano original; "Renovar assinatura" ganhou o mesmo tratamento agora, por
+analogia direta, não por decisão nova.
+
+**`/limite-do-gratuito`** (`src/app/(app)/limite-do-gratuito/page.tsx`) —
+genérica por `tipo` (`CAMINHAO`/`USUARIO`, `zod`, `notFound()` para
+qualquer outro valor), acesso dual (`exigirSessao()`, conteúdo por
+`sessao.papel`, mesmo padrão de Assinatura vencida). Dono vê **Ver os
+planos** (→ `/planos`) + **Depois**; operador vê "fale com o dono" +
+**Depois**, sem o caminho de assinar.
+
+**`voltar`, não um `href` fixo — decisão de construção, não do plano.** A
+Tarefa 4 (ainda não construída) é quem vai saber de onde a pessoa veio
+quando esbarrar no limite; esta tela nasce sem chamador nenhum. A seta de
+voltar e o botão **Depois** recebem o destino por query string
+(`?voltar=/caminhoes/novo`), validado como caminho relativo (recusa
+`http(s)://` e `//`, que escapariam do produto — mesma preocupação de
+open redirect, nunca documentada antes porque nenhuma tela deste produto
+tinha "voltar" dinâmico) — mesma técnica de `hrefVoltar` em
+`relatorio/[id]/page.tsx`. Sem o parâmetro, ou com um valor inválido,
+volta para `/`.
+
+**"Ver os planos" aponta para uma rota que ainda não existe** — `/planos`
+nasce só quando a Tarefa 3 continuar, com as URLs de checkout. Aceito pelo
+fundador nesta sessão ("leva para Planos, que é rota interna"): janela
+curta, sem cliente pagante hoje, fechada assim que Planos for construída.
+
+**Textos de corpo (estado da vencida, "1 caminhão"/"1 usuário" no
+gratuito, "fale com o dono" nos dois) são propostos, a confirmar** — mesma
+situação já registrada no plano original ("Perguntas ainda em aberto",
+item 3), ainda sem resposta explícita do fundador nem do Design.
+
+**Nenhuma das duas telas confere o estado que anuncia — lacuna aceita, do
+próprio desenho, não corrigida agora.** `/assinatura-vencida` mostra "sua
+assinatura venceu" para qualquer sessão, mesmo de empresa `ativa`;
+`/limite-do-gratuito` mostra "você já tem 1 caminhão/usuário" sem olhar
+plano nem contagem de verdade. As duas são telas de **destino**: quem
+decide quando mandar a pessoa pra cá é quem já verificou o estado antes de
+navegar — o portão de escrita (Tarefa 2, para vencida) e a Tarefa 4, ainda
+por construir (para o limite). Nenhuma tela deste par se protege sozinha
+contra alguém navegar direto pra cá fora do estado real; registrado aqui
+porque o `/revisar` apontou a ausência, e nenhum documento anterior tinha
+dito isso em palavras.
+
+**Nenhum teste novo** — as duas telas são leitura pura (`exigirSessao()` +
+texto estático), sem serviço novo para testar; `CLAUDE.md` §14 já registra
+que telas/navegação não têm suíte própria no produto.
+
+Verificado no navegador (dev local): as duas telas, nos dois papéis (dono
+e operador criados e removidos só para o teste), o `notFound()` de `tipo`
+inválido, e o `voltar` validado (relativo aceito, absoluto recusado).
+`npx tsc --noEmit`, `npx eslint` nos dois arquivos e
+`tests/protecao-de-acoes.test.ts`/`tests/bloqueio-de-escrita.test.ts`
+(não tocados por esta tarefa, rodados para confirmar que nada quebrou):
+local, todos verdes.

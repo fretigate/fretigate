@@ -59,6 +59,17 @@ o `/revisar` apontou que o documento estava dizendo duas coisas ao mesmo
 tempo — e a saída certa era tornar a frase precisa, não abrir exceção para
 ela (`CLAUDE.md` §2).
 
+**Lacuna aberta — `#F6E6DD`/`#8A5237` como bloco de aviso, não só pastilha
+(item 13, Tarefa 3 parcial, 09/09/2026, achado do `/revisar`).** A tela
+Assinatura vencida (`src/app/(app)/assinatura-vencida/page.tsx`) usa o
+mesmo par de cores da linha 38/39 acima como fundo de um bloco de corpo
+inteiro (`rounded-campo`, `px-16 py-16`) explicando o estado — não a
+pastilha pequena que a tabela documenta (dashboard e Cobranças). É o
+precedente mais próximo (mesmo significado: "vencido"), reaproveitado por
+analogia — igual ao padrão já usado para as demais lacunas desta folha
+(altura de miniatura, barra de gráfico); fica registrado até o Design
+formalizar um bloco de aviso próprio, se for o caso.
+
 ---
 
 ## Tipografia

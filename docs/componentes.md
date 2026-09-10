@@ -502,7 +502,7 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Planos | principal **Assinar o anual** · secundária **Assinar o mensal** · o anual mostra parcelamento e economia |
 | Minha assinatura | secundárias **Trocar de plano** + **Ver recibos** · texto destrutiva **Cancelar assinatura** |
 | Limite do gratuito | principal **Ver os planos** · texto neutra **Depois** · nada do que já existe é bloqueado |
-| Assinatura vencida | principal **Renovar assinatura** · secundária **Baixar meus dados** · leitura e exportação seguem funcionando |
+| Assinatura vencida | corpo explicando o estado · dono vê o caminho de exportação pelo e-mail de contato, operador vê "fale com o dono" · leitura e exportação seguem funcionando. **Sem principal "Renovar assinatura" nem secundária "Baixar meus dados" por enquanto** — decisão do fundador, item 13 Tarefa 3 parcial (09/09/2026): os dois dependem de um link/mecanismo que ainda não existe (área de assinante da Kiwify / exportação de dados); nascem quando existir |
 | Primeiro acesso | **duas secundárias em pé de igualdade**: **Trazer os fretes que já fiz** + **Começar do zero** — nenhuma é destaque da outra, então nenhuma é a principal |
 | Guia de progresso (dashboard) | até três linhas tocáveis, cada uma sumindo ao ser cumprida; o bloco inteiro desaparece ao completar |
 

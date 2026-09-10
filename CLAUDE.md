@@ -1694,24 +1694,43 @@ Não invente resposta. Pergunte.
 - **CONFERIR ANTES DE PUBLICAR — variáveis de ambiente na Vercel.** Achado na
   tarefa 9 (08/08/2026): nada verifica, hoje, que as onze variáveis da tabela
   em "Ambientes" (§5, oito linhas desde o item 13, Tarefa 1) estão
-  configuradas na Vercel antes da primeira publicação. E o jeito como isso falha importa:
-  `src/lib/auth/index.ts`, `src/lib/email/index.ts` (mecanismo de envio,
-  antes em `src/lib/auth/email.ts` — mudou de casa no item 13, Tarefa 1),
+  configuradas na Vercel antes da primeira publicação. `src/lib/auth/index.ts`,
+  `src/lib/email/index.ts` (mecanismo de envio, antes em
+  `src/lib/auth/email.ts` — mudou de casa no item 13, Tarefa 1),
   `src/lib/servicos/comprovantes.ts`, (desde o item 10, Tarefa 4)
   `src/lib/utils/convite.ts` e (desde o item 13, Tarefa 1)
   `src/lib/utils/pagamento.ts`/`src/app/api/webhooks/kiwify/route.ts`
-  lançam erro **no carregamento do módulo**, mas nenhuma rota que os importa
-  é avaliada durante `next build` (são rota de API e Server Actions, não
-  página estática) — então a publicação **termina com sucesso** mesmo
-  faltando uma variável, e o erro só aparece no **primeiro pedido real** que
-  tocar login, sessão, comprovante, convite, ou o primeiro webhook que a
-  Kiwify entregar. Sem conferência manual antes de publicar, isso apareceria
-  com cliente pagante já usando o produto — no caso do webhook, com dinheiro
-  já recebido e ninguém sabendo. **`convite.ts` é o primeiro destes também
-  importado por componente de cliente** (`ListaUsuarios.tsx`,
-  `FormularioConvite.tsx`) — faltando a variável, o primeiro sintoma pode
-  ser o próprio navegador quebrando ao carregar o pacote, antes mesmo de um
-  pedido ao servidor.
+  lançam erro **no carregamento do módulo**.
+
+  **O parágrafo original errava sobre COMO isso falha — corrigido em
+  09/09/2026 (item 13, Tarefa 3 parcial), medido, não suposto.** A versão
+  anterior afirmava que "nenhuma rota que os importa é avaliada durante
+  `next build`... a publicação termina com sucesso... o erro só aparece no
+  primeiro pedido real". Testado de verdade: `next build` (Next.js 16,
+  Turbopack) tem uma fase própria, "Collecting page data", que **avalia o
+  módulo de toda rota dinâmica durante o build** — não só das estáticas.
+  Com `EMAIL_RESPOSTA` removida do `.env` e `next build` rodado localmente,
+  **o build quebrou**, em `/clientes/[id]/editar`, `/caminhoes/novo` e
+  `/api/auth/[...all]` — nenhuma delas é rota que o parágrafo original
+  citava, porque qualquer página que chama `exigirSessao()`/`exigirDono()`
+  importa, por dentro, a cadeia até `src/lib/auth/index.ts`.
+
+  **O que isso muda, na prática: o risco não é sintoma silencioso em
+  produção — é a publicação nunca sair do ar.** Antes do primeiro cliente
+  (hoje), falta de variável dá build vermelho na Vercel, visível no próprio
+  painel — não um deploy quebrado no ar sem ninguém notar. Depois do
+  primeiro cliente, um build que falha não substitui a versão anterior (a
+  Vercel não promove build quebrado) — o pior caso vira "nenhuma mudança
+  nova vai ao ar até a variável ser corrigida", não "recurso quebrado em
+  produção, com cliente já usando". **A conferência antes de publicar
+  continua necessária** — só o motivo mudou: não é para evitar sintoma
+  silencioso, é para não perder o tempo de descobrir, só pelo log de build,
+  que faltou uma variável já conhecida.
+
+  **`convite.ts` é o primeiro destes também importado por componente de
+  cliente** (`ListaUsuarios.tsx`, `FormularioConvite.tsx`) — faltando a
+  variável, o primeiro sintoma pode ser o próprio navegador quebrando ao
+  carregar o pacote, antes mesmo de um pedido ao servidor.
 
   **O sintoma exato, se `NEXT_PUBLIC_APP_URL` estiver errado ou faltando**
   (achado do fundador, 12/08/2026, testando login pelo celular): **login

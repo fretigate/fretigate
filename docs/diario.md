@@ -6,6 +6,86 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 09/09/2026 — Tarefa 3 do item 13, parcial: Assinatura vencida e Limite do gratuito
+
+Enquanto o fundador confirmava os links de checkout e a área de assinante
+na Kiwify, adiantamos as duas das quatro telas da Tarefa 3 que não
+dependem deles — pedido explícito do fundador. Detalhado em
+`docs/planos/item-13-assinatura.md`, seção "Tarefa 3 — construída
+parcialmente".
+
+`/assinatura-vencida` fecha o 404 que o portão de escrita (Tarefa 2) já
+podia alcançar em produção: mostra o estado (bloco `bg-vencido-fundo`),
+com conteúdo por papel — dono vê o caminho de exportação por e-mail,
+operador vê "fale com o dono". Sem "Renovar assinatura" nem "Baixar meus
+dados": os dois dependem de link que ainda não existe, e um botão sem
+destino é o que `CLAUDE.md` §8 proíbe.
+
+`/limite-do-gratuito?tipo=` (`CAMINHAO`/`USUARIO`) nasce genérica para a
+Tarefa 4 (ainda não construída) só precisar chamá-la — recebe `voltar` por
+query string, validado como caminho relativo, para saber pra onde
+retornar sem depender de um chamador que ainda não existe. Dono vê "Ver os
+planos" (→ `/planos`, que ainda não existe — janela aceita pelo fundador,
+fecha quando a Tarefa 3 continuar); operador vê "fale com o dono".
+
+Textos de corpo são propostos, ainda sem confirmação do fundador/Design
+(mesma pendência já registrada no plano original).
+
+**Quatro achados do `/revisar`, corrigidos no mesmo passe:**
+1. `voltarSeguro` deixava passar um disfarce de open redirect por barra
+   invertida (`/\evil.com`, que o navegador normaliza para `//evil.com`) —
+   normaliza `\` para `/` antes de validar.
+2. `docs/componentes.md` linha 505 continuava descrevendo Assinatura
+   vencida com "Renovar assinatura"/"Baixar meus dados" — corrigida para o
+   que a tela tem hoje, com a nota de por que os dois faltam.
+3. `docs/navegacao.md` linhas 66-67 tinham rótulo antigo ("Continuar com
+   um caminhão") e ações que a tela não tem ("Atualizar o cartão", "Baixar
+   meus relatórios") — corrigidas.
+4. Citação imprecisa: eu tinha dito que `voltar` usa "a mesma técnica" de
+   `hrefVoltar` em `relatorio/[id]/page.tsx` — lá o valor vem do banco,
+   nunca de entrada de quem usa, e não existe validação nenhuma pra
+   reaproveitar. Corrigido para dizer que é validação nova.
+
+**Uma divergência levada ao fundador, mantida por decisão dele:** "Ver os
+planos" aponta pra `/planos`, que ainda não existe — o revisor apontou que
+isso contradiz a mesma regra citada para não construir "Renovar
+assinatura". Fundador confirmou manter (janela curta, sem cliente hoje).
+
+**Duas lacunas registradas, não corrigidas:** nenhuma das duas telas
+confere o estado que anuncia (são telas de destino — quem manda a pessoa
+pra cá é quem já verificou); o bloco `bg-vencido-fundo` em Assinatura
+vencida reaproveita a cor da pastilha "Vencido" fora do contexto que
+`docs/estilo.md` documenta — registrado lá como lacuna aberta.
+
+**Achado fora do escopo desta tarefa, medido antes de trazer:** o
+`CLAUDE.md` §14 afirma que variável de ambiente faltando nunca quebra a
+publicação, só o primeiro pedido real — testei rodando `next build` de
+verdade, com `EMAIL_RESPOSTA` ausente, e a publicação **quebra**, no
+próprio build. Testei também sem as telas novas desta tarefa (movidas pra
+fora da árvore, `.env` restaurado depois): o build já quebrava do mesmo
+jeito antes desta tarefa, por `/clientes/[id]/editar`, `/caminhoes/novo` e
+a rota do Better Auth. O texto do §14 está desatualizado, mas não é algo
+que esta tarefa causou — fica pra decisão própria do fundador sobre
+corrigir o `CLAUDE.md` agora ou depois.
+
+Nenhum teste novo — as duas telas são leitura pura, sem serviço novo.
+Verificado no navegador local, nos dois papéis (conta de teste criada e
+removida do banco de desenvolvimento só para a verificação), incluindo o
+`notFound()` de `tipo` inválido, a recusa de `voltar` absoluto e barra
+invertida (depois da correção), e o `next build` de verdade citado acima.
+`npx tsc --noEmit`, `npx eslint` e as suítes que tocam os envelopes de
+sessão: local, todos verdes.
+
+Verificação: local. Esteira: disparada com este commit, ainda rodando,
+sem confirmação.
+
+Próximo: continuar a Tarefa 3 do item 13 — Planos (as duas URLs de
+checkout, Mensal/Anual) e Minha assinatura ("gerenciar cobrança") — assim
+que o fundador trouxer os links da Kiwify. Plano já aprovado e commitado
+(`343bd8b`, `docs/planos/item-13-tarefa-3-telas-de-assinatura.md`).
+
+---
+
 ## 09/09/2026 — Tarefa 2 do item 13: o portão de escrita
 
 Plano já aprovado e commitado (`343bd8b`) — construção nesta sessão.
