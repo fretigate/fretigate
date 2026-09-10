@@ -6,6 +6,52 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 10/09/2026 — Duas correções no CLAUDE.md: §5 "Ambientes" e a pendência do `outputFileTracingIncludes`
+
+Achado ao responder `/onde-paramos`, a pedido do fundador — pediu para
+conferir se o §14 tinha mais algum item com o mesmo erro medido na entrada
+anterior (variável de ambiente: "passa no build, falha só no primeiro
+pedido").
+
+**Primeiro achado: a correção de 09/09 só tinha alcançado a cópia dentro do
+§14, não a frase original.** O texto "a publicação termina com sucesso... o
+erro só aparece no primeiro pedido real" nasceu no §5 "Ambientes" — a cópia
+dentro do §14 foi corrigida ontem, mas o §5 continuava com a versão
+desmentida, contradizendo o próprio §14 duas mil linhas depois. Corrigido
+para bater com a medição de 09/09/2026 (o build quebra de verdade, não só em
+produção).
+
+**Segundo achado, mesma classe, no item `outputFileTracingIncludes` (PDF do
+relatório, §14).** A justificativa do item ("Server Action não é avaliada no
+build") usava a mesma suposição que a correção de ontem tinha acabado de
+derrubar. A conclusão do item continuava certa mesmo assim — só que por outro
+motivo (é empacotamento do deploy que falta o binário/fontes na função, não
+erro de carregamento de módulo) — corrigida a razão sem mudar a conclusão.
+
+**O item também virou RESOLVIDO, não mais pendência.** O fundador lembrou que
+o teste "Gerar relatório", da lista de quatro testes da publicação de
+07/09/2026 (entrada "Produto no ar", acima), já gerou o PDF de verdade em
+produção — a confirmação que faltava desde que o item foi escrito
+(28/08/2026). Marcado resolvido, com a prova citada.
+
+**Links de checkout da Kiwify recebidos, para a Tarefa 3 do item 13:**
+mensal `https://pay.kiwify.com.br/xHd3Ef5`, anual
+`https://pay.kiwify.com.br/CC4c1vO`. Falta só confirmar se existe área do
+assinante na Kiwify — se existir, resolve o link de "gerenciar cobrança" da
+tela Minha assinatura. Fundador vai checar.
+
+Nenhum código mudou — só `CLAUDE.md`. Sem teste novo.
+
+Verificação: leitura cruzada do documento (`Grep` pelas frases corrigidas,
+conferindo que não sobrou duplicata) — não é verificação de código, é de
+texto.
+
+Próximo: continuar a Tarefa 3 do item 13 — Planos (com os dois links acima) e
+Minha assinatura, assim que o fundador confirmar a área do assinante da
+Kiwify.
+
+---
+
 ## 09/09/2026 — Tarefa 3 do item 13, parcial: Assinatura vencida e Limite do gratuito
 
 Enquanto o fundador confirmava os links de checkout e a área de assinante

@@ -796,13 +796,21 @@ erro — é a defesa querida. Foi assim que a esteira encontrou a falta de
 `RESEND_API_KEY` (08/08/2026): o teste nem manda e-mail, só carrega o módulo, e
 mesmo assim a falta apareceu, porque é isso que a checagem faz.
 
-**Isso NÃO garante que a publicação na Vercel para com uma variável faltando.**
-`src/app/api/auth/[...all]/route.ts` é rota de API, e o resto de quem importa
-`@/lib/auth` (`servicos/`, `acoes.ts`) é Server Action — nenhum dos dois é
-avaliado durante `next build`, só quando um pedido de verdade chega. O mais
-provável: a publicação **termina com sucesso**, e o erro só aparece no
-**primeiro pedido real** que tocar login ou sessão — o que, na prática, é quase
-todo pedido, mas é falha **no ar**, não falha **ao publicar**. Ver a pendência
+**Falta de variável quebra a publicação na Vercel — corrigido em 10/09/2026,
+medido, não suposto.** Este parágrafo dizia o oposto até aqui: que
+`src/app/api/auth/[...all]/route.ts` e o resto de quem importa `@/lib/auth`
+não eram avaliados durante `next build`, e que a publicação terminava com
+sucesso, com o erro só aparecendo no primeiro pedido real. Testado de verdade
+em 09/09/2026 (`CLAUDE.md` §14, "variáveis de ambiente na Vercel"): `next
+build` (Next.js 16, Turbopack) tem uma fase própria, "Collecting page data",
+que avalia o módulo de toda rota dinâmica durante o build — não só das
+estáticas. Com `EMAIL_RESPOSTA` ausente, o build **quebrou de verdade**, em
+`/clientes/[id]/editar`, `/caminhoes/novo` e `/api/auth/[...all]`. Isso muda o
+risco, não o cuidado: antes do primeiro cliente, falta de variável dá build
+vermelho, visível no painel da Vercel — não um deploy quebrado no ar sem
+ninguém notar; depois do primeiro cliente, o pior caso é "nenhuma mudança
+nova vai ao ar até corrigir", não "recurso quebrado em produção". A
+conferência antes de publicar continua necessária — ver a pendência
 "CONFERIR ANTES DE PUBLICAR" no §14.
 
 | Variável | Minha máquina (`.env`) | Esteira (CI) | Publicação (Vercel) |
@@ -1789,50 +1797,56 @@ Não invente resposta. Pergunte.
   do `package.json`) o pacote resolve para a versão que lança sempre, em vez
   do no-op que o bundler do Next.js ativa. Rodar via `npm run
   medir:municipios -- --empresa=<id>` evita o problema por construção.
-- **CONFERIR ANTES DE PUBLICAR — `outputFileTracingIncludes` para a rota que
-  gera o PDF do relatório.** Achado do `/revisar` na Tarefa 2 do item 7
-  (28/08/2026), registrado como requisito explícito para quem construir a
-  Tarefa 3 (`src/lib/documentos/gerador.ts`, comentário de `gerarDocumento`):
-  o binário do Chromium (`node_modules/@sparticuz/chromium/bin/chromium.br`)
-  **e** os três arquivos de fonte auto-hospedados
-  (`src/lib/documentos/fontes/*.woff2`) só embarcam na função da Vercel se
-  `next.config.ts` declarar `outputFileTracingIncludes` para o caminho da
-  rota (Server Action ou API) que primeiro importar `gerarDocumento`. Não foi
-  feito na Tarefa 2 porque a chave da configuração é esse caminho, e nenhuma
-  rota chama a função ainda (Tarefa 2 é isolada de propósito) — escrever a
-  chave apontando para um caminho que não existe seria texto que parece
-  proteger e não protege (`CLAUDE.md` §3).
+- ~~CONFERIR ANTES DE PUBLICAR — `outputFileTracingIncludes` para a rota que
+  gera o PDF do relatório~~ — **RESOLVIDO em 07/09/2026.** Achado do
+  `/revisar` na Tarefa 2 do item 7 (28/08/2026), registrado como requisito
+  explícito para quem construir a Tarefa 3 (`src/lib/documentos/gerador.ts`,
+  comentário de `gerarDocumento`): o binário do Chromium
+  (`node_modules/@sparticuz/chromium/bin/chromium.br`) **e** os três
+  arquivos de fonte auto-hospedados (`src/lib/documentos/fontes/*.woff2`) só
+  embarcam na função da Vercel se `next.config.ts` declarar
+  `outputFileTracingIncludes` para o caminho da rota (Server Action ou API)
+  que primeiro importar `gerarDocumento`. Não foi feito na Tarefa 2 porque a
+  chave da configuração é esse caminho, e nenhuma rota chamava a função
+  ainda (Tarefa 2 é isolada de propósito) — escrever a chave apontando para
+  um caminho que não existe seria texto que parece proteger e não protege
+  (`CLAUDE.md` §3).
 
-  **Se esquecer:** mesmo padrão dos outros itens desta lista — `next build`
-  **termina com sucesso**, porque Server Action não é avaliada no build. O
-  erro só aparece no primeiro pedido real que gerar um relatório, com
-  cliente pagante já tentando usar a função.
+  **Por que isto não vira erro de build, mesmo com a rota avaliada durante o
+  `next build` — corrigido em 10/09/2026.** A versão anterior deste
+  parágrafo dizia "Server Action não é avaliada no build", a mesma suposição
+  que a pendência de variáveis de ambiente (acima, "Ambientes") já provou
+  errada, medido em 09/09/2026: Server Action **é** avaliada (o módulo é
+  importado) durante o "Collecting page data" do `next build`. A conclusão
+  deste item continuava certa mesmo assim, só que por outro motivo:
+  `outputFileTracingIncludes` não é um erro de código que o carregamento do
+  módulo dispara — `gerarDocumento` só chama o Chromium dentro de
+  `abrirNavegador()`, em tempo de execução, nunca no carregamento do módulo
+  (conferido em `src/lib/documentos/gerador.ts`). É um problema de
+  empacotamento do deploy: sem a chave, o binário e as fontes não vão dentro
+  da função publicada, e isso só aparece quando a função tenta abrir o
+  Chromium de verdade.
 
-  **Requisito irmão, mesma rota, achado do segundo `/revisar` da mesma
-  tarefa: rate limit.** `CLAUDE.md` §4 exige "rate limit em... toda rota que
-  gere custo (importação com IA, geração de PDF, cálculo de distância)" — a
-  rota que chamar `gerarDocumento` abre um Chromium inteiro por chamada
-  (`docs/planos/item-7-relatorio.md`, "A medição": ≈2,9s frio), custo real
-  por pedido. Decisão do fundador, 28/08/2026: registra como requisito da
-  rota, junto do `outputFileTracingIncludes` acima — os dois só fazem
-  sentido quando o caminho da rota existir.
-
-  **A Tarefa 3 nasceu dividida em dois commits** (decisão do fundador,
-  28/08/2026, `docs/planos/item-7-relatorio.md`: "a geração num, a tela
-  noutro"). O primeiro construiu `gerarRelatorio` (`src/lib/servicos/
-  relatorios.ts`) — ainda nenhuma rota chamava a função, então a pendência
-  continuava igual à de cima.
-
-  **Os dois requisitos foram aplicados no segundo commit (29/08/2026)** — a
-  tela de montagem (`/relatorio`) e a Server Action (`gerarRelatorioAction`,
-  `src/app/(app)/relatorio/acoes.ts`) existem agora: `next.config.ts` ganhou
-  `outputFileTracingIncludes` para `/relatorio`, e a ação confere
+  **Requisito irmão, aplicado junto — rate limit** (`CLAUDE.md` §4, "toda
+  rota que gere custo... geração de PDF"), achado do segundo `/revisar` da
+  mesma tarefa, 28/08/2026: a rota que chamar `gerarDocumento` abre um
+  Chromium inteiro por chamada (`docs/planos/item-7-relatorio.md`, "A
+  medição": ≈2,9s frio), custo real por pedido. Os dois requisitos foram
+  aplicados juntos no segundo commit da Tarefa 3 (29/08/2026): `next.
+  config.ts` ganhou `outputFileTracingIncludes` para `/relatorio`, e
+  `gerarRelatorioAction` (`src/app/(app)/relatorio/acoes.ts`) confere
   `travaDeGerarRelatorio` (`src/lib/servicos/trava-de-relatorio.ts`, 10 por 5
-  minutos — `docs/especificacao.md` § "Trava de tentativas") antes de gerar.
-  **O que ainda falta é só a confirmação em produção de verdade** — o
-  binário e as fontes embarcando na função publicada na Vercel; local e
-  esteira não passam por essa etapa (o gerador de PDF nem roda no Windows,
-  ver abaixo), então continua sem confirmação até o primeiro deploy real.
+  minutos) antes de gerar.
+
+  **Confirmado em produção real, não só suposto.** O teste "Gerar
+  relatório", da lista de quatro testes no endereço real (`docs/diario.md`,
+  07/09/2026, "Produto no ar"), gerou o PDF de verdade — Chromium e fontes
+  auto-hospedadas publicados certos, "Baixar PDF"/"Compartilhar no
+  WhatsApp"/"Imprimir" disponíveis, confirmando que `pdf_url` gravou. Local
+  e esteira nunca passam por essa etapa (o gerador de PDF nem roda no
+  Windows, ver abaixo) — só a publicação de verdade provava isto, e já
+  provou.
+
 - **CONFERIR ANTES DE PUBLICAR — a fórmula da assinatura do webhook da
   Kiwify nunca foi medida contra uma entrega real.** Achado do `/revisar`
   na correção do webhook (item 13, `docs/planos/
