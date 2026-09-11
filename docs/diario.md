@@ -6,6 +6,145 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 11/09/2026 — Vermelho do `c2fb07d` diagnosticado, rerun disparado, e a investigação da lentidão sistêmica reabre sem causa achada
+
+`/onde-paramos` desta sessão achou o commit mais recente (`c2fb07d`, "Copia
+telefone e e-mail...") com a esteira vermelha, sem diagnóstico no diário —
+bloqueio.
+
+**O que falhou.** `tests/titulos.test.ts` > "7. históricos dos perfis" >
+"frete cancelado continua na lista e no histórico":
+`PrismaClientKnownRequestError: Transaction API error: Unable to start a
+transaction in the given time`, dentro de `listarServicosDoCliente`
+(`src/lib/servicos/titulos.ts:1121`, um `Promise.all` de 3 consultas). A
+segunda falha ("cobertura > rodou todas as verificações previstas", 91 de
+92) é o mecanismo do §3 item 4 funcionando: a exceção pulou um
+`conferencias++`, e o contador acusou — não é um defeito à parte.
+
+**Não são os testes novos do commit.** `git show c2fb07d --stat` não toca
+`titulos.test.ts` nem `src/lib/servicos/titulos.ts`. Os dois testes novos
+(`cadastro.test.ts`, `pagamentos.test.ts`) passaram, e os dois limpam o que
+criam — a nova asserção em `cadastro.test.ts` empurra `usuarioId`/`empresaId`
+para `usuariosParaLimpar`/`empresasParaLimpar` antes de terminar, e o
+`afterAll` do arquivo já apaga os dois arrays; a mudança em
+`pagamentos.test.ts` só soma campos a uma linha de limpeza que já existia.
+
+**Classificação: instabilidade conhecida, mesma classe "pool esgotado"**
+já vista em `efc26cd` (02/09, `tests/servicos.test.ts`, mesma mensagem,
+mesma cascata na cobertura — 57 de 58, `docs/diario.md` então) e localmente
+em 18-20/08 e 27/08 (`titulos.test.ts`, teste de estorno). Não é o quinto
+formato do catálogo (aquele é `Test timed out em Nms`, sem erro de driver
+por baixo — este tem `PrismaClientKnownRequestError` explícito).
+
+**Rerun disparado:** `gh run rerun 34443862666 --failed`, 11/09/2026 — ainda
+`in_progress` ao escrever esta entrada, sem confirmação. Conta contra a
+proporção do `CLAUDE.md` §2 (não recalculei a proporção histórica completa
+nesta entrada, só registro o ponto).
+
+**Investigação da lentidão sistêmica, reaberta a pedido do fundador — três
+razões dele: a tendência parecia monotônica com a suíte crescendo; o
+sintoma atravessou um limite (antes só timeout puro em teste pesado, agora
+estoura transação de uma consulta comum, qualquer teste pode cair); e
+pouco código falta para o lançamento, então esteira intermitente sai caro
+agora.**
+
+**Medição pedida antes de mexer — quantos testes e quanto tempo hoje contra
+29/08 (`1ce8ac8`, a referência do quinto formato), e se a lentidão é
+uniforme ou concentrada:**
+
+| Execução | Arquivos | Testes | Duração do `npm test` |
+|---|---|---|---|
+| 29/08 `1ce8ac8` (falhou) | 30 | 600 | 2643,41s (44,1min) |
+| 02/09 `efc26cd`, 1ª tentativa (falhou) | 35 | 712 | 2659,83s (44,3min) |
+| 03/09 `408b866` (sucesso) | 36 | 731 | 2000,95s (33,4min) |
+| 03/09 `efc26cd`, rerun (sucesso) | 35 | 712 | 2355,60s (39,3min) |
+| 10/09 `c2fb07d` (falhou) | 38 | 764 | 2858,07s (47,6min) |
+
+**O quadro completo não sustenta "tendência monotônica".** Os "33 → 39 →
+47,6" citados são reais, mas são três pontos de uma série mais ruidosa: os
+dois pontos imediatamente anteriores (29/08 e 02/09) já rodavam a 44,1 e
+44,3min — tão altos quanto o de hoje. A oscilação (33 a 47,6min, mesma
+semana, às vezes no mesmo dia) é maior do que qualquer trajetória limpa de
+alta.
+
+**Por arquivo, a medição aponta o oposto de "tudo fica mais lento".**
+Comparando os 28 arquivos presentes nas duas pontas (29/08 e hoje), nenhum
+ficou mensuravelmente mais lento — a maioria ficou igual ou mais rápida,
+com a mesma quantidade de testes ou mais: `relatorios.test.ts` 454,4s→424,4s
+(46 testes nos dois), `regressao-resolucao-municipios.test.ts` 33,0s→30,0s,
+`caminhoes.test.ts` 27,0s→24,9s, `clientes.test.ts` 34,5s→31,5s. O aumento
+de ~215s no total vem quase todo de **arquivos que não existiam em 29/08**
+(`dashboard.test.ts` sozinho leva 198,7s hoje) — não de arquivo antigo
+ficando lento.
+
+**Três hipóteses "de dentro" descartadas por medição, não por leitura —
+duas já estavam no catálogo, uma cai agora:**
+1. (29/08, já catalogada) teste 12b fazendo mais idas ao banco do que a
+   leitura contava — descartada por medição em 01/09.
+2. (30-31/08, já catalogada) conexão `raiz` aberta por arquivo inteiro em
+   vez de por bloco — descartada por duas evidências em 31/08 e 01/09.
+3. **(nova, cai agora): "mais arquivos rodando ao mesmo tempo, disputando o
+   mesmo pool, conforme a suíte cresce".** `vitest.config.mts:38` já tem
+   `fileParallelism: false`, de propósito (comentário no próprio arquivo:
+   dois arquivos em paralelo disputariam as mesmas linhas). Só um arquivo
+   por vez toca o banco — a contenção não pode vir de arquivos concorrendo
+   entre si.
+
+**O que a medição NÃO explica — fica em aberto, sem correção aplicada.**
+Por que a mesma mensagem de contenção de pool aparece, cada vez, num teste
+comum sem relação com o anterior, com o total do run oscilando sem padrão
+claro. As hipóteses restantes são "de fora", como o fundador pediu para
+olhar, e nenhuma delas foi medida ainda:
+
+- **O pooler de transação do Supabase do projeto de teste** — suspeita já
+  registrada em 18-19/08, nunca confirmada nem descartada.
+- **`runs-on: ubuntu-latest` (`.github/workflows/ci.yml:31`) não é fixado a
+  uma imagem** — diferente de `node-version: 24`, fixo de propósito
+  (comentário no próprio arquivo). A imagem do runner pode mudar sem
+  nenhum commit deste repositório. Achado novo desta investigação, nunca
+  registrado antes.
+- **Mudança do lado do Supabase** (rede, região, versão do pooler) — não
+  visível daqui.
+
+As duas primeiras são checáveis sem credencial nova. A terceira exigiria
+acesso ao painel/log do projeto de **teste** (`qutzsvrkaqvpluqxbhmp`) — esta
+sessão só tem o de **desenvolvimento** conectado (`ysldmzvszjxdgcbtaurh`,
+`CLAUDE.md` §5), e o fundador já decidiu, em 01/09, que trazer a credencial
+do banco de teste para investigação manual não vale o risco de vazamento
+novo.
+
+**Decisão do fundador, mesma sessão: não instrumenta a esteira agora.** A
+medição acima já derruba a premissa que motivou reabrir a investigação — não
+é tendência de alta (os pontos anteriores já rodavam a ~44min) e, por
+arquivo, nada ficou mais lento (quase tudo ficou igual ou mais rápido). Se o
+banco ou a máquina estivessem degradando, o esperado era o oposto: arquivo
+antigo, mesmo trabalho, mais lento — e é exatamente o que não aconteceu.
+Instrumentar a esteira mediria contenção de pool numa suíte que não está
+piorando, pagando um passo a mais em **toda** execução contra uma hipótese
+que a própria medição já enfraqueceu. Investigação fecha aqui, sem
+instrumentação, sem mudança em `ci.yml`.
+
+**O que fica registrado, não como pendência, mas como fato medido:** a suíte
+leva quarenta e poucos minutos, com oscilação grande (33 a 47,6min) — isso é
+caro, mas é o tamanho dela (764 testes, todos contra banco real, um arquivo
+por vez de propósito, `vitest.config.mts:38`), não uma degradação. A falha de
+hoje continua sendo a classe já catalogada ("pool esgotado"): um `Promise.all`
+de três conexões estourando num momento de pressão pontual — não um sintoma
+de piora.
+
+**O achado do `runs-on: ubuntu-latest` fica registrado, não investigado.**
+Decisão do fundador: se a imagem do runner tivesse mudado, o efeito esperado
+seria um degrau (um antes/depois nítido), não a oscilação medida aqui —
+não é o que os cinco pontos mostram. Gatilho para investigar de verdade: a
+falha **voltar a acontecer com frequência**, aí com dado novo (mais pontos,
+talvez já mostrando o degrau ou outro padrão) em vez de uma medição isolada.
+
+Próximo: Tarefa 3 do item 13 — Planos (com os links de checkout já
+recebidos) e Minha assinatura, assim que o fundador confirmar a área do
+assinante da Kiwify.
+
+---
+
 ## 10/09/2026 — Telefone e e-mail do cadastro também viram contato da Empresa
 
 Fundador viu o campo E-MAIL vazio na tela Conta da empresa e perguntou se era
