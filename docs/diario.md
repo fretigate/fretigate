@@ -6,6 +6,22 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 12/09/2026 — Plano aprovado: fundir Configurações dentro de Conta da empresa
+
+Fundador notou que "Configurações" e "Conta da empresa" se pareciam demais,
+sem critério que explicasse a divisão. Opção A aprovada (fundir as duas,
+um formulário só). Plano em
+`docs/planos/fusao-configuracoes-e-conta-da-empresa.md` — inclui a resposta
+à pergunta do fundador sobre salvar só metade da tela (resolvida tirando o
+segundo botão, não avisando sobre ele) e o pedido ao Design sobre o layout
+exato do resultado (ainda sem resposta).
+
+Próximo: construir — apagar `/configuracoes`, unificar o formulário e a
+ação de servidor dentro de `/conta`, mover "Usuários" para item próprio em
+Mais.
+
+---
+
 ## 12/09/2026 — Números da instrumentação medidos em produção, aviso de "Salvar" corrigido, plano do Financeiro aprovado
 
 Três pedidos do fundador, nesta ordem, fecham a pendência da entrada
