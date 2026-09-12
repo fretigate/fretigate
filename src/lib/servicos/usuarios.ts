@@ -106,11 +106,18 @@ export function listarConvitesPendentes(empresaId: string) {
 /**
  * A credencial de aceite — não reaproveita o código de 24 caracteres do
  * Better Auth (vive em `verification`, tabela da biblioteca, sem porta de
- * saída para `Convite`). `base64url`: sem `+`/`/`/`=`, seguro dentro de uma
- * URL sem escapar nada.
+ * saída para `Convite`). `hex`, não `base64url` — achado do fundador,
+ * 12/09/2026: `base64url` inclui `-`/`_`, e o WhatsApp usa `_texto_` para
+ * itálico — um `_` no meio do token cortava a detecção de link bem antes do
+ * fim da URL, deixando o resto (com o token) como texto solto, sem ninguém
+ * perceber (o link às vezes saía inteiro, às vezes não, dependendo de o
+ * token sorteado ter ou não `_`). `hex` mantém os mesmos 256 bits de
+ * entropia dos mesmos 32 bytes aleatórios — só a representação em texto
+ * muda, nunca a quantidade de bytes sorteados —, com alfabeto só `0-9a-f`,
+ * imune a qualquer marcador de formatação do WhatsApp.
  */
 function gerarTokenDeConvite(): string {
-  return randomBytes(32).toString("base64url");
+  return randomBytes(32).toString("hex");
 }
 
 export type DadosConvite = { telefone: string; nome: string };

@@ -27,11 +27,15 @@ import { criarEmpresaEDono } from "./criar-empresa-e-dono";
 
 /**
  * A credencial de reivindicação — mesmo formato de `gerarTokenDeConvite`
- * (`usuarios.ts`): 32 bytes aleatórios, `base64url` (sem `+`/`/`/`=`,
- * seguro dentro de uma URL sem escapar nada).
+ * (`usuarios.ts`): 32 bytes aleatórios, `hex`, não `base64url`. Este link
+ * viaja por e-mail (`CLAUDE.md` §11), não por WhatsApp, então o defeito do
+ * convite (achado do fundador, 12/09/2026 — `_` do `base64url` cortando a
+ * detecção de link do WhatsApp) não se manifestou aqui até hoje. Mas é o
+ * mesmo gerador, o mesmo risco se algum dia esse link for colado numa
+ * conversa — trocado junto, mesmo motivo, mesmos 256 bits de entropia.
  */
 function gerarTokenDePagamento(): string {
-  return randomBytes(32).toString("base64url");
+  return randomBytes(32).toString("hex");
 }
 
 export type DadosPagamentoAprovado = {
