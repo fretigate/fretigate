@@ -6,6 +6,72 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 12/09/2026 — Move a função para São Paulo (gru1): causa da lentidão no uso real confirmada por medição
+
+Investigação a pedido do fundador (queixa: "clico numa ação e demoro alguns
+segundos"). Três frentes medidas, não supostas:
+
+1. **Região.** `X-Vercel-Id` da produção mostrava `gru1::iad1` — a função
+   rodava em Virgínia (padrão da Vercel para todo projeto novo; `vercel.json`
+   não tinha `regions`), enquanto o banco (Supabase) fica em São Paulo.
+2. **Frio × quente.** Uma rota sem sessão (`/api/auth/get-session`, não toca
+   banco) media ~2,6s no primeiro pedido e ~0,97s nos seguintes já
+   aquecida — mesmo quente, quase 1s só pela distância da viagem.
+3. **Idas ao banco por ação**, contadas no código (agente `Explore`, sem
+   suposição): Dashboard até 25 chamadas (quase todas em paralelo, um só
+   `Promise.all`), Lista de Fretes até 6, Salvar frete 9 a 10 —
+   **quase todas sequenciais**. Sequencial soma o custo da distância a cada
+   chamada; paralelo paga uma vez só.
+
+**Causa: distância entre função (EUA) e banco (São Paulo), amplificada por
+chamadas sequenciais em ações como salvar frete.**
+
+**Verificado antes de mover:**
+- Plano Hobby permite região única, qualquer uma — `gru1` está disponível
+  (`vercel api /v2/teams/team_rIrDqeQGlzPQ7kdzPRoxADfO`, tabela de limites
+  da documentação da Vercel).
+- **Achado à parte, fora do escopo desta tarefa:** a conta está no plano
+  **Hobby** (confirmado pela API acima), que pelas diretrizes de uso justo
+  da própria Vercel é restrito a uso pessoal/não-comercial — o FretiGate
+  cobra assinatura. Não bloqueia a mudança de região; fica registrado como
+  risco a decidir (upgrade para Pro), não corrigido nesta tarefa.
+- Kiwify (o webhook entra pela rede da Vercel, que roteia globalmente antes
+  de chegar à função) e Resend (chamado de dentro da função, é saída) não
+  dependem da região da função — confirmado pela documentação da Vercel,
+  sem precisar de teste à parte.
+
+**Mudança: `vercel.json` ganhou `"regions": ["gru1"]`** — uma linha.
+Publicado por `vercel --prod` direto da CLI antes de commitar (mesmo
+caminho do dia 07/09, testar configuração antes do commit), para medir o
+efeito real antes de gravar.
+
+**Confirmado depois de publicar:** mesma rota, mesmo teste. `X-Vercel-Id`
+agora `gru1::gru1` — função e banco na mesma região. Tempo quente caiu de
+~0,97s para ~0,36-0,43s (queda de ~60%). Frio continua custando parecido
+(~2,05s no primeiro pedido) — esperado: é outro fenômeno (inicialização do
+processo), não distância de rede.
+
+**Dois achados de consulta repetida, registrados, não corrigidos ainda —
+decisão do fundador de medir as ações autenticadas com a região certa
+antes de mexer, porque a distância certa pode fazer o custo nem aparecer:**
+- `criarServico` busca o tipo de operação ativo **duas vezes**: uma em
+  `buscarTipoOperacaoAtivo` (`src/app/(app)/fretes/acoes.ts:143`), outra em
+  `buscarTipoOperacao` (`src/lib/servicos/servicos.ts:140`), validando o
+  mesmo id já resolvido pela primeira.
+- A Dashboard soma o faturamento do mês atual **três vezes**
+  (`src/lib/servicos/dashboard.ts:34`, chamada em `resumoDoMes:61`, de novo
+  em `resumoDeLucroDoMes:102`, e de novo dentro do laço de
+  `faturamentoPorMes:296`) e o do mês anterior **duas vezes**
+  (`resumoDoMes:62` e de novo em `faturamentoPorMes`).
+
+Próximo: fundador mede as três ações autenticadas (dashboard, lista de
+fretes, salvar frete) já com a região corrigida — os números vão medir o
+estado novo, não o antigo. Depois disso, decidir se os dois achados de
+consulta repetida acima (e o plano Hobby em uso comercial) viram tarefa
+própria.
+
+---
+
 ## 11/09/2026 — Vermelho do `c2fb07d` diagnosticado, rerun disparado, e a investigação da lentidão sistêmica reabre sem causa achada
 
 `/onde-paramos` desta sessão achou o commit mais recente (`c2fb07d`, "Copia
