@@ -1677,6 +1677,20 @@ Não invente resposta. Pergunte.
   até existirem, são cumpridas à mão, por quem responder o e-mail de
   contato. A exportação é a mais urgente de lembrar: diferente das outras
   três, tem prazo legal de resposta ao titular sob a LGPD.
+- **INFRAÇÃO JÁ EM CURSO, NÃO SÓ PRAZO — a conta da Vercel está no plano
+  Hobby, que a própria Vercel restringe a uso pessoal/não-comercial, e o
+  FretiGate cobra assinatura desde que foi ao ar.** Achado em 12/09/2026,
+  investigando lentidão real (`vercel api /v2/teams/team_rIrDqeQGlzPQ7kdzPRoxADfO`
+  → `"plan": "hobby"`). Decisão do fundador, mesmo dia: **fazer o upgrade
+  para o plano Pro (US$ 20/mês) antes das outras pendências desta lista**,
+  não só "antes de ligar anúncio" como as demais — porque, diferente delas,
+  esta não é um requisito para o futuro: é uma infração ao termo de uso que
+  já existe hoje, com clientes pagantes reais. O risco é o produto ser
+  suspenso pela Vercel no meio de uma campanha, não só ficar sem um recurso.
+  **A execução do upgrade precisa ser feita pelo próprio fundador** — exige
+  inserir cartão de pagamento na Vercel, e isso está fora do que o Claude
+  Code pode fazer por conta própria, mesmo autorizado (Configurações →
+  Billing → Upgrade, no painel da Vercel).
 - **PRAZO — `origem_cadastro` (atribuição de origem por primeiro toque).**
   O cadastro (tarefa 8) grava só `origem_declarada` (a resposta da pergunta
   tocável); `origem_cadastro` fica nulo, porque capturar UTM/referrer é um
