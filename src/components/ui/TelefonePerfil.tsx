@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AvisoDoSistema } from "./AvisoDoSistema";
 import { FolhaDeTelefone } from "./FolhaDeTelefone";
 import { linkWhatsapp, normalizarTelefone, type ResultadoSalvarTelefone } from "@/lib/utils/telefone";
+import { abrirLinkExterno } from "@/lib/utils/link-externo";
 
 /**
  * A célula de valor da linha Telefone no Perfil do Cliente e no Perfil do
@@ -45,11 +46,17 @@ export function TelefonePerfil({ nome, telefone, salvar }: Props) {
   // "Alvo de toque mínimo 48px"; medido no DOM: sem isto, o alvo tinha só
   // 21.6px, a altura da linha de texto).
   if (normalizado.ok) {
+    const link = linkWhatsapp(normalizado.digitos);
     return (
+      // `href` fica para clique direito/toque longo — o `onClick` decide a
+      // janela certa (`abrirLinkExterno`), mesmo motivo de
+      // `AcaoOrdemDeServico.tsx`.
       <a
-        href={linkWhatsapp(normalizado.digitos)}
-        target="_blank"
-        rel="noopener noreferrer"
+        href={link}
+        onClick={(e) => {
+          e.preventDefault();
+          abrirLinkExterno(link);
+        }}
         className="-my-14 min-w-0 flex-1 py-14 text-campo font-semibold leading-[1.35] text-tinta [overflow-wrap:anywhere]"
       >
         {valorAtual}

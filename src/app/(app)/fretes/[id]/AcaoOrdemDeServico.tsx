@@ -7,6 +7,7 @@ import { AvisoDoSistema } from "@/components/ui/AvisoDoSistema";
 import { PilulaSobreEscuro } from "@/components/ui/PilulaSobreEscuro";
 import { FolhaDeTelefone } from "@/components/ui/FolhaDeTelefone";
 import { linkWhatsapp, normalizarTelefone } from "@/lib/utils/telefone";
+import { abrirLinkExterno } from "@/lib/utils/link-externo";
 import { marcarOrdemEnviadaAction } from "../acoes";
 import { salvarTelefoneMotoristaAction } from "@/app/(app)/motoristas/acoes";
 
@@ -158,12 +159,13 @@ export function AcaoOrdemDeServico({ servicoId, motorista, mensagem }: Props) {
               setAvisoSemTelefoneVisivel(true);
             }}
             onSalvar={async (novoTelefone) => {
-              // ORDEM É REGRA, NÃO DETALHE: `window.open` tem que rodar
+              // ORDEM É REGRA, NÃO DETALHE: `abrirLinkExterno` tem que rodar
               // ANTES do primeiro `await` desta função — nunca mova o
               // `await salvarTelefoneMotoristaAction` para cima disto.
               // Achado do segundo `/revisar` (Tarefa 2 do item 5,
               // 23-24/08/2026): navegador de celular (o único aparelho onde
               // este item existe, `CLAUDE.md` §1) bloqueia `window.open`
+              // (o caminho de navegador comum, dentro de `abrirLinkExterno`)
               // chamado depois de um `await`, porque a pausa assíncrona
               // quebra a cadeia de gesto confiável do toque original — o
               // navegador do computador nunca reproduz isso, então um teste
@@ -174,7 +176,7 @@ export function AcaoOrdemDeServico({ servicoId, motorista, mensagem }: Props) {
               // depende do salvar.
               const digitado = normalizarTelefone(novoTelefone);
               if (digitado.ok) {
-                window.open(linkWhatsapp(digitado.digitos, mensagem), "_blank", "noopener,noreferrer");
+                abrirLinkExterno(linkWhatsapp(digitado.digitos, mensagem));
                 setTocado(true);
               }
               const resultado = await salvarTelefoneMotoristaAction(motorista.id, novoTelefone);
@@ -193,14 +195,22 @@ export function AcaoOrdemDeServico({ servicoId, motorista, mensagem }: Props) {
     );
   }
 
+  const link = linkWhatsapp(normalizado.digitos, mensagem);
+
   return (
     <>
+      {/* `href` fica para o clique direito/toque longo abrirem em nova aba —
+          o `onClick` intercepta o clique normal e decide a janela certa
+          (`abrirLinkExterno`), em vez de deixar `target="_blank"` sempre
+          forçar uma segunda janela que o app instalado não tem onde abrir. */}
       <Botao
         variante="principal"
-        href={linkWhatsapp(normalizado.digitos, mensagem)}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={() => setTocado(true)}
+        href={link}
+        onClick={(e) => {
+          e.preventDefault();
+          abrirLinkExterno(link);
+          setTocado(true);
+        }}
       >
         Enviar ordem no WhatsApp
       </Botao>

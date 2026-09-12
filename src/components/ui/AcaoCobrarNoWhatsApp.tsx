@@ -10,6 +10,7 @@ import { PilulaSobreEscuro } from "./PilulaSobreEscuro";
 import { FolhaDeTelefone } from "./FolhaDeTelefone";
 import { FolhaDePix } from "./FolhaDePix";
 import { linkWhatsapp, normalizarTelefone } from "@/lib/utils/telefone";
+import { abrirLinkExterno } from "@/lib/utils/link-externo";
 import { montarMensagemCobranca, type DadosMensagemCobranca } from "@/lib/servicos/mensagens";
 import { useMontadoNoCliente } from "@/lib/utils/montado";
 
@@ -38,10 +39,11 @@ import { useMontadoNoCliente } from "@/lib/utils/montado";
  * não reaparecer instantaneamente como "com Pix" antes do refresh completar,
  * o mesmo tipo de atraso que o resto do produto já aceita nesse padrão.
  *
- * **`window.open` antes do primeiro `await`, sempre** — mesma regra de
+ * **`abrirLinkExterno` antes do primeiro `await`, sempre** — mesma regra de
  * `AcaoOrdemDeServico.tsx` (achado do `/revisar` na Tarefa 2 do item 5): o
  * navegador de celular quebra a cadeia de gesto confiável do toque original
- * se `window.open` roda depois de uma pausa assíncrona.
+ * se `window.open` (o caminho de navegador comum, dentro de
+ * `abrirLinkExterno`) roda depois de uma pausa assíncrona.
  *
  * **As folhas e os avisos (todos `fixed`, `FolhaInferior.tsx`) vão para
  * `document.body` via `createPortal`, nunca ficam onde o JSX os escreve.**
@@ -207,7 +209,7 @@ export function AcaoCobrarNoWhatsApp({
       setFolhaPixAberta(true);
       return;
     }
-    window.open(linkWhatsapp(normalizado.digitos, mensagemCom(chavePixEmpresa)), "_blank", "noopener,noreferrer");
+    abrirLinkExterno(linkWhatsapp(normalizado.digitos, mensagemCom(chavePixEmpresa)));
     setTocado(true);
   }
 
@@ -224,16 +226,13 @@ export function AcaoCobrarNoWhatsApp({
             setAvisoSemTelefoneVisivel(true);
           }}
           onSalvar={async (novoTelefone) => {
-            // ORDEM É REGRA: `window.open` (quando já dá para seguir direto)
-            // roda antes do `await` — mesmo motivo de `AcaoOrdemDeServico.tsx`.
+            // ORDEM É REGRA: `abrirLinkExterno` (quando já dá para seguir
+            // direto) roda antes do `await` — mesmo motivo de
+            // `AcaoOrdemDeServico.tsx`.
             const digitado = normalizarTelefone(novoTelefone);
             const seguirDireto = digitado.ok && chavePixEmpresa !== null;
             if (digitado.ok && seguirDireto) {
-              window.open(
-                linkWhatsapp(digitado.digitos, mensagemCom(chavePixEmpresa)),
-                "_blank",
-                "noopener,noreferrer",
-              );
+              abrirLinkExterno(linkWhatsapp(digitado.digitos, mensagemCom(chavePixEmpresa)));
               setTocado(true);
             }
             const resultado = await salvarTelefoneCliente(cliente.id, novoTelefone);
@@ -258,18 +257,14 @@ export function AcaoCobrarNoWhatsApp({
             // Exceção do §12: "Agora não" (e fechar de qualquer jeito) não
             // cancela a ação — a mensagem segue sem o bloco do Pix.
             if (normalizado.ok) {
-              window.open(linkWhatsapp(normalizado.digitos, mensagemCom(null)), "_blank", "noopener,noreferrer");
+              abrirLinkExterno(linkWhatsapp(normalizado.digitos, mensagemCom(null)));
               setTocado(true);
             }
             setFolhaPixAberta(false);
           }}
           onSalvar={async (chavePixDigitada) => {
             if (normalizado.ok) {
-              window.open(
-                linkWhatsapp(normalizado.digitos, mensagemCom(chavePixDigitada)),
-                "_blank",
-                "noopener,noreferrer",
-              );
+              abrirLinkExterno(linkWhatsapp(normalizado.digitos, mensagemCom(chavePixDigitada)));
               setTocado(true);
             }
             const resultado = await salvarChavePix(chavePixDigitada);

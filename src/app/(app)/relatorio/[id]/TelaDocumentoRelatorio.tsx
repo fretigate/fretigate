@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { CabecalhoDeDetalhe } from "@/components/ui/CabecalhoDeDetalhe";
 import { Botao } from "@/components/ui/Botao";
 import { AvisoDoSistema } from "@/components/ui/AvisoDoSistema";
+import { abrirLinkExterno } from "@/lib/utils/link-externo";
 
 /**
  * Documento A4 (item 7, Tarefa 3, segundo commit) —
@@ -78,7 +79,7 @@ export function TelaDocumentoRelatorio({ clienteNome, numero, corpoHtml, urlPdf,
 
   function imprimir() {
     if (!urlPdf) return;
-    window.open(urlPdf, "_blank", "noopener,noreferrer");
+    abrirLinkExterno(urlPdf);
   }
 
   async function compartilhar() {

@@ -7,6 +7,7 @@ import { PilulaEmLinha } from "@/components/ui/PilulaEmLinha";
 import { AvisoDoSistema } from "@/components/ui/AvisoDoSistema";
 import { iniciaisPessoa } from "@/lib/utils/iniciais";
 import { linkWhatsapp, normalizarTelefone } from "@/lib/utils/telefone";
+import { abrirLinkExterno, prepararJanelaExterna } from "@/lib/utils/link-externo";
 import { linkDeAceiteDoConvite } from "@/lib/utils/convite";
 import { montarMensagemConvite } from "@/lib/servicos/mensagens";
 import { cancelarConviteAction, reenviarConviteAction } from "./acoes";
@@ -49,7 +50,7 @@ type Usuario = { id: string; nome: string; email: string; papel: "dono" | "opera
 type Convite = { id: string; nome: string; telefone: string; token: string };
 
 function abrirPreviaDoConvite(token: string) {
-  window.open(linkDeAceiteDoConvite(token), "_blank", "noopener,noreferrer");
+  abrirLinkExterno(linkDeAceiteDoConvite(token));
 }
 
 const ROTULO_PAPEL: Record<Usuario["papel"], string> = { dono: "Dono", operador: "Operador" };
@@ -72,14 +73,16 @@ export function ListaUsuarios({
     if (reenviando) return;
     setReenviando(convite.id);
 
-    // ORDEM É REGRA — a aba abre antes do `await`, dentro da cadeia de gesto
-    // do toque (mesmo mecanismo de `FormularioConvite.tsx`).
-    const janela = window.open("", "_blank", "noopener,noreferrer");
+    // ORDEM É REGRA — a janela se prepara antes do `await`, dentro da cadeia
+    // de gesto do toque (mesmo mecanismo de `FormularioConvite.tsx`). Em
+    // standalone, `prepararJanelaExterna` não abre nada agora — só guarda a
+    // intenção de navegar quando o link estiver pronto (`link-externo.ts`).
+    const janela = prepararJanelaExterna();
 
     try {
       const resultado = await reenviarConviteAction(convite.id);
       if (!resultado.ok) {
-        janela?.close();
+        janela?.fechar();
         setAviso(resultado.erro);
         return;
       }
@@ -93,7 +96,7 @@ export function ListaUsuarios({
 
       const normalizado = normalizarTelefone(resultado.convite.telefone);
       if (!normalizado.ok || !janela) {
-        janela?.close();
+        janela?.fechar();
         // O link antigo já não serve mais para quem o recebeu — precisa
         // dizer isso, não só que "algo deu errado" (pedido do fundador).
         setAviso(
@@ -107,9 +110,9 @@ export function ListaUsuarios({
         nomeEmpresa: empresaNome,
         link: linkDeAceiteDoConvite(resultado.convite.token),
       });
-      janela.location.href = linkWhatsapp(normalizado.digitos, mensagem);
+      janela.redirecionarPara(linkWhatsapp(normalizado.digitos, mensagem));
     } catch {
-      janela?.close();
+      janela?.fechar();
       setAviso("Não deu para reenviar agora.");
     } finally {
       setReenviando(null);

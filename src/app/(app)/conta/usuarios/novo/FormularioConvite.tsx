@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Botao } from "@/components/ui/Botao";
 import { CampoTexto } from "@/components/ui/CampoTexto";
 import { linkWhatsapp, normalizarTelefone } from "@/lib/utils/telefone";
+import { prepararJanelaExterna } from "@/lib/utils/link-externo";
 import { linkDeAceiteDoConvite } from "@/lib/utils/convite";
 import { montarMensagemConvite } from "@/lib/servicos/mensagens";
 import { criarConviteAction } from "../acoes";
@@ -18,26 +19,35 @@ import { criarConviteAction } from "../acoes";
  * (`/aceitar-convite?token=...`) só existe depois que o servidor cria o
  * `Convite` e gera o token — diferente de Cobrar no WhatsApp/Enviar ordem,
  * onde a mensagem inteira já está pronta antes do toque, e por isso
- * `window.open` roda sempre antes do primeiro `await`. Aqui não dá: o dado
- * que falta só existe DEPOIS do `await`. A saída, sem abrir mão do toque
- * único nem do gerador de token continuar no servidor (`crypto.randomBytes`,
- * `gerarTokenDeConvite` em `usuarios.ts` — gerar no cliente enfraqueceria a
- * garantia de token imprevisível): abrir uma aba em branco **antes** do
- * `await` (ainda dentro da cadeia de gesto do toque), esperar o convite ser
- * criado, montar o link de verdade, e só então apontar a aba já aberta para
- * lá (`janela.location.href = ...`).
+ * `abrirLinkExterno` roda sempre antes do primeiro `await`. Aqui não dá: o
+ * dado que falta só existe DEPOIS do `await`. A saída, sem abrir mão do
+ * toque único nem do gerador de token continuar no servidor
+ * (`crypto.randomBytes`, `gerarTokenDeConvite` em `usuarios.ts` — gerar no
+ * cliente enfraqueceria a garantia de token imprevisível):
+ * `prepararJanelaExterna()` (`src/lib/utils/link-externo.ts`) — em
+ * navegador comum, abre uma aba em branco **antes** do `await` (ainda
+ * dentro da cadeia de gesto do toque) e a redireciona depois; em standalone
+ * não abre nada agora, só guarda a intenção e navega a própria janela
+ * quando o link estiver pronto — mesmo raciocínio de
+ * `AcaoOrdemDeServico.tsx`/`AcaoCobrarNoWhatsApp.tsx` (achado do fundador,
+ * app instalado no iPhone, 12/09/2026): uma aba `_blank` aberta agora e
+ * redirecionada depois ainda faz o WebKit abrir o Safari de verdade para
+ * hospedá-la, o mesmo defeito por outro caminho.
  *
  * **Testado com emulação de celular no Browser pane; o fundador confirma no
- * aparelho dele antes de considerar o mecanismo fechado** — foi exatamente
- * `window.open` depois de um `await` que já causou um defeito real de
- * navegador de celular (`AcaoOrdemDeServico.tsx`, achado do `/revisar` na
- * Tarefa 2 do item 5), e emulação de desktop não reproduz o bloqueio de
- * verdade (`CLAUDE.md` §1: "quem mede é ele, no aparelho dele").
+ * aparelho dele antes de considerar o mecanismo fechado** — o caminho de
+ * navegador comum já tinha um defeito real de navegador de celular
+ * corrigido antes (`AcaoOrdemDeServico.tsx`, achado do `/revisar` na Tarefa
+ * 2 do item 5), e emulação de desktop não reproduz nem aquele bloqueio nem
+ * o de standalone no iOS de verdade (`CLAUDE.md` §1: "quem mede é ele, no
+ * aparelho dele"). **Não declarado corrigido** para o caso standalone até
+ * essa confirmação.
  *
  * Se o navegador ainda assim bloquear a aba (`janela === null` — pode
- * acontecer mesmo com a técnica, em navegador configurado para bloquear
- * tudo), o convite já foi criado e continua acessível pela lista, em "Ver o
- * que ela recebe" — nunca se perde, só a abertura automática falha.
+ * acontecer mesmo com a técnica, em navegador comum configurado para
+ * bloquear tudo; nunca acontece em standalone, que não abre aba nenhuma), o
+ * convite já foi criado e continua acessível pela lista, em "Ver o que ela
+ * recebe" — nunca se perde, só a abertura automática falha.
  */
 export function FormularioConvite({ empresaNome }: { empresaNome: string }) {
   const router = useRouter();
@@ -69,14 +79,15 @@ export function FormularioConvite({ empresaNome }: { empresaNome: string }) {
 
     setCriando(true);
 
-    // ORDEM É REGRA, NÃO DETALHE — a aba abre aqui, antes do `await` logo
-    // abaixo, dentro da mesma cadeia de gesto do toque que chamou `enviar`.
-    const janela = window.open("", "_blank", "noopener,noreferrer");
+    // ORDEM É REGRA, NÃO DETALHE — a janela se prepara aqui, antes do
+    // `await` logo abaixo, dentro da mesma cadeia de gesto do toque que
+    // chamou `enviar`.
+    const janela = prepararJanelaExterna();
 
     try {
       const resultado = await criarConviteAction({ nome: nomeLimpo, telefone: telefone.trim() });
       if (!resultado.ok) {
-        janela?.close();
+        janela?.fechar();
         setErroGeral(resultado.erro);
         setCriando(false);
         return;
@@ -88,12 +99,12 @@ export function FormularioConvite({ empresaNome }: { empresaNome: string }) {
           nomeEmpresa: empresaNome,
           link: linkDeAceiteDoConvite(resultado.convite.token),
         });
-        janela.location.href = linkWhatsapp(normalizado.digitos, mensagem);
+        janela.redirecionarPara(linkWhatsapp(normalizado.digitos, mensagem));
       }
 
       router.push("/conta/usuarios");
     } catch {
-      janela?.close();
+      janela?.fechar();
       setErroGeral("Não deu para criar o convite agora.");
       setCriando(false);
     }
