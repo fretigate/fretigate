@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { deslocarMes, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { medir } from "@/lib/utils/medir-tempo";
 
 /**
  * Dashboard (item 8) — montagem, não fundação: quase todo número aqui já é
@@ -29,17 +30,19 @@ function limitesDoMes(primeiroDiaDoMes: string) {
  * adaptado para janela de mês fechada (`[gte, lt)`) em vez de `Periodo`
  * arbitrário.
  */
-async function somaDoMes(empresaId: string, primeiroDiaDoMes: string) {
+async function somaDoMes(empresaId: string, primeiroDiaDoMes: string, rotulo: string) {
   const { inicio, fimExclusivo } = limitesDoMes(primeiroDiaDoMes);
-  const agregado = await db(empresaId).servico.aggregate({
-    where: {
-      arquivado_em: null,
-      status_operacional: { not: "cancelado" },
-      data_servico: { gte: inicio, lt: fimExclusivo },
-    },
-    _sum: { valor: true },
-    _count: true,
-  });
+  const agregado = await medir(`dashboard.somaDoMes[${rotulo}]`, () =>
+    db(empresaId).servico.aggregate({
+      where: {
+        arquivado_em: null,
+        status_operacional: { not: "cancelado" },
+        data_servico: { gte: inicio, lt: fimExclusivo },
+      },
+      _sum: { valor: true },
+      _count: true,
+    }),
+  );
   return { faturamentoCentavos: agregado._sum.valor ?? 0, qtdFretes: agregado._count };
 }
 
@@ -58,8 +61,8 @@ export async function resumoDoMes(empresaId: string, hoje: string): Promise<Resu
   const primeiroDiaDoMesAnterior = deslocarMes(primeiroDiaDoMesAtual, -1);
 
   const [atual, anterior] = await Promise.all([
-    somaDoMes(empresaId, primeiroDiaDoMesAtual),
-    somaDoMes(empresaId, primeiroDiaDoMesAnterior),
+    somaDoMes(empresaId, primeiroDiaDoMesAtual, "resumoDoMes-atual"),
+    somaDoMes(empresaId, primeiroDiaDoMesAnterior, "resumoDoMes-anterior"),
   ]);
 
   return {
@@ -99,12 +102,16 @@ export async function resumoDeLucroDoMes(empresaId: string, hoje: string): Promi
   const { inicio, fimExclusivo } = limitesDoMes(primeiroDiaDoMesAtual);
 
   const [faturamento, despesas] = await Promise.all([
-    somaDoMes(empresaId, primeiroDiaDoMesAtual),
-    db(empresaId).despesa.aggregate({
-      where: { arquivado_em: null, data: { gte: inicio, lt: fimExclusivo } },
-      _sum: { valor: true },
-      _count: true,
-    }),
+    // Mesmo mês, mesma soma de `resumoDoMes` — achado a medir: candidato a
+    // consulta repetida (`CLAUDE.md`, achado do fundador, 12/09/2026).
+    somaDoMes(empresaId, primeiroDiaDoMesAtual, "resumoDeLucroDoMes-atual"),
+    medir("dashboard.despesasDoMes", () =>
+      db(empresaId).despesa.aggregate({
+        where: { arquivado_em: null, data: { gte: inicio, lt: fimExclusivo } },
+        _sum: { valor: true },
+        _count: true,
+      }),
+    ),
   ]);
 
   const despesasCentavos = despesas._sum.valor ?? 0;
@@ -148,12 +155,14 @@ export async function resumoDeRodagemDoMes(empresaId: string, hoje: string): Pro
   };
 
   const [comKm, fretesNoMes] = await Promise.all([
-    db(empresaId).servico.aggregate({
-      where: { ...baseWhere, km: { gt: 0 } },
-      _sum: { valor: true, km: true },
-      _count: true,
-    }),
-    db(empresaId).servico.count({ where: baseWhere }),
+    medir("dashboard.rodagem.comKm", () =>
+      db(empresaId).servico.aggregate({
+        where: { ...baseWhere, km: { gt: 0 } },
+        _sum: { valor: true, km: true },
+        _count: true,
+      }),
+    ),
+    medir("dashboard.rodagem.fretesNoMes", () => db(empresaId).servico.count({ where: baseWhere })),
   ]);
 
   const kmMesMetros = comKm._sum.km ?? 0;
@@ -173,12 +182,16 @@ export type ContagemEmAndamento = { total: number; semOrdemEnviada: number };
 /** "Fretes em andamento (indicando quantos sem ordem enviada)" — `docs/especificacao.md` §4.6. */
 export async function contarFretesEmAndamento(empresaId: string): Promise<ContagemEmAndamento> {
   const [total, semOrdemEnviada] = await Promise.all([
-    db(empresaId).servico.count({
-      where: { arquivado_em: null, status_operacional: "em_andamento" },
-    }),
-    db(empresaId).servico.count({
-      where: { arquivado_em: null, status_operacional: "em_andamento", ordem_enviada_em: null },
-    }),
+    medir("dashboard.emAndamento.total", () =>
+      db(empresaId).servico.count({
+        where: { arquivado_em: null, status_operacional: "em_andamento" },
+      }),
+    ),
+    medir("dashboard.emAndamento.semOrdemEnviada", () =>
+      db(empresaId).servico.count({
+        where: { arquivado_em: null, status_operacional: "em_andamento", ordem_enviada_em: null },
+      }),
+    ),
   ]);
   return { total, semOrdemEnviada };
 }
@@ -201,15 +214,17 @@ export async function contarFretesEmAndamento(empresaId: string): Promise<Contag
  */
 export async function contarCobrancasVencidasAgrupadas(empresaId: string, hoje: string): Promise<number> {
   const inicioDeHoje = instanteDoDiaEmFortaleza(hoje);
-  const vencidas = await db(empresaId).tituloReceber.findMany({
-    where: {
-      arquivado_em: null,
-      status: "aberto",
-      servico: { arquivado_em: null },
-      vencimento: { lt: inicioDeHoje },
-    },
-    select: { relatorio_id: true },
-  });
+  const vencidas = await medir("dashboard.vencidasAgrupadas", () =>
+    db(empresaId).tituloReceber.findMany({
+      where: {
+        arquivado_em: null,
+        status: "aberto",
+        servico: { arquivado_em: null },
+        vencimento: { lt: inicioDeHoje },
+      },
+      select: { relatorio_id: true },
+    }),
+  );
 
   const semRelatorio = vencidas.filter((t) => !t.relatorio_id).length;
   const relatoriosDistintos = new Set(
@@ -246,21 +261,23 @@ export async function sugerirRelatorio(
   const primeiroDiaDoMesAtual = `${hoje.slice(0, 7)}-01`;
   const inicioDoMesAtual = instanteDoDiaEmFortaleza(primeiroDiaDoMesAtual);
 
-  const fretes = await db(empresaId).servico.findMany({
-    where: {
-      arquivado_em: null,
-      // **Diverge de propósito de `contarFretesAFaturar`**, que não filtra
-      // `status_operacional`: aqui o número alimenta uma sugestão de
-      // relatório — dinheiro — e um frete cancelado "não vai acontecer"
-      // (`CLAUDE.md` §7, "nunca entra em nenhuma soma derivada"). Sugerir
-      // relatório por causa de um frete cancelado sugeriria cobrar dinheiro
-      // que ninguém vai receber.
-      status_operacional: { not: "cancelado" },
-      data_servico: { lt: inicioDoMesAtual },
-      titulos_receber: { none: { arquivado_em: null, status: { not: "cancelado" } } },
-    },
-    select: { cliente_id: true },
-  });
+  const fretes = await medir("dashboard.sugerirRelatorio", () =>
+    db(empresaId).servico.findMany({
+      where: {
+        arquivado_em: null,
+        // **Diverge de propósito de `contarFretesAFaturar`**, que não filtra
+        // `status_operacional`: aqui o número alimenta uma sugestão de
+        // relatório — dinheiro — e um frete cancelado "não vai acontecer"
+        // (`CLAUDE.md` §7, "nunca entra em nenhuma soma derivada"). Sugerir
+        // relatório por causa de um frete cancelado sugeriria cobrar dinheiro
+        // que ninguém vai receber.
+        status_operacional: { not: "cancelado" },
+        data_servico: { lt: inicioDoMesAtual },
+        titulos_receber: { none: { arquivado_em: null, status: { not: "cancelado" } } },
+      },
+      select: { cliente_id: true },
+    }),
+  );
 
   const contagemPorCliente = new Map<string, number>();
   for (const f of fretes) {
@@ -293,6 +310,13 @@ export async function faturamentoPorMes(
     deslocarMes(primeiroDiaDoMesAtual, -(meses - 1 - i)),
   );
 
-  const somas = await Promise.all(janelas.map((mes) => somaDoMes(empresaId, mes)));
+  const somas = await Promise.all(
+    janelas.map((mes, i) =>
+      // O último elemento (`i === meses - 1`) é o mês corrente — mesmo mês
+      // já somado em `resumoDoMes-atual` e `resumoDeLucroDoMes-atual` acima.
+      // Rótulo marca isso para a medição separar o custo da redundância.
+      somaDoMes(empresaId, mes, i === meses - 1 ? "faturamentoPorMes-atual(3a-vez)" : `faturamentoPorMes[${mes}]`),
+    ),
+  );
   return janelas.map((mes, i) => ({ mes: mes.slice(0, 7), faturamentoCentavos: somas[i].faturamentoCentavos }));
 }

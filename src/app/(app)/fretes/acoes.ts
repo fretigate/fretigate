@@ -140,6 +140,7 @@ export const criarServicoAction = comoUsuario(async (
   const lido = lerFormulario(formData);
   if ("erro" in lido) return lido.erro;
 
+  const inicioTotal = performance.now();
   const tipoAtivo = await buscarTipoOperacaoAtivo(sessao.empresaId);
   if (!tipoAtivo) return { erroGeral: "Nenhum tipo de operação ativo. Fale com o suporte." };
 
@@ -151,6 +152,8 @@ export const criarServicoAction = comoUsuario(async (
     });
   } catch (erro) {
     return erroDoServico(erro);
+  } finally {
+    console.log(`[medir] servico.criarServicoAction.total ${Math.round(performance.now() - inicioTotal)}ms`);
   }
 
   // `?criado=` diz à tela Fretes para mostrar o aviso "Frete salvo"

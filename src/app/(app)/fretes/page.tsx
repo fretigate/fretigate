@@ -7,6 +7,7 @@ import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { normalizarParaBusca } from "@/lib/utils/texto";
 import { formatarRota } from "@/lib/utils/rota";
 import { resolverLimiteDaLista, resolverPeriodoDaUrl, rotuloDoPeriodo } from "@/lib/utils/periodo";
+import { medir } from "@/lib/utils/medir-tempo";
 import type { SituacaoFinanceira } from "@/lib/servicos/titulos";
 import { AvisoFreteSalvo } from "./AvisoFreteSalvo";
 import { ListaFretes, type FreteParaLista } from "./ListaFretes";
@@ -76,10 +77,12 @@ export default async function Pagina({
   // menos que o teto, o teto não cortou nada (a empresa só tem isso mesmo).
   // Achado do segundo /revisar — o total contextual (`ListaFretes`) não pode
   // somar só os 50 mais recentes e mostrar como se fosse o total de verdade.
-  const servicos = await listarServicosComSituacao(sessao.empresaId, {
-    periodo: periodo ?? undefined,
-    limite,
-  });
+  const servicos = await medir("fretes.listarServicosComSituacao.total", () =>
+    listarServicosComSituacao(sessao.empresaId, {
+      periodo: periodo ?? undefined,
+      limite,
+    }),
+  );
 
   // `clienteInicial` entra no lote mesmo que nenhum frete carregado seja
   // dele — é o que permite resolver o nome dele para o chip mesmo com zero
@@ -92,11 +95,13 @@ export default async function Pagina({
     ...new Set(servicos.flatMap((s) => (s.motorista_id ? [s.motorista_id] : []))),
   ];
 
-  const [clientes, caminhoes, motoristas] = await Promise.all([
-    buscarClientesPorIds(sessao.empresaId, idsClientes),
-    buscarCaminhoesPorIds(sessao.empresaId, idsCaminhoes),
-    buscarMotoristasPorIds(sessao.empresaId, idsMotoristas),
-  ]);
+  const [clientes, caminhoes, motoristas] = await medir("fretes.relacionados.total", () =>
+    Promise.all([
+      medir("fretes.clientesPorIds", () => buscarClientesPorIds(sessao.empresaId, idsClientes)),
+      medir("fretes.caminhoesPorIds", () => buscarCaminhoesPorIds(sessao.empresaId, idsCaminhoes)),
+      medir("fretes.motoristasPorIds", () => buscarMotoristasPorIds(sessao.empresaId, idsMotoristas)),
+    ]),
+  );
 
   const nomeDoCliente = new Map(clientes.map((c) => [c.id, c.nome]));
   const nomeClienteInicial = clienteInicial ? nomeDoCliente.get(clienteInicial) : undefined;

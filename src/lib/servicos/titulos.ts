@@ -12,6 +12,7 @@ import {
 } from "@/lib/servicos/servicos";
 import { deslocarDias, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
+import { medir } from "@/lib/utils/medir-tempo";
 
 /**
  * TituloReceber: criar (via "Já recebi") e buscar por serviço — tudo por
@@ -291,11 +292,13 @@ export async function totalRecebidoPorTitulo(
   tituloIds: string[],
 ): Promise<Map<string, number>> {
   if (tituloIds.length === 0) return new Map();
-  const somas = await db(empresaId).recebimento.groupBy({
-    by: ["titulo_id"],
-    where: { titulo_id: { in: tituloIds }, arquivado_em: null },
-    _sum: { valor: true },
-  });
+  const somas = await medir("titulos.totalRecebidoPorTitulo", () =>
+    db(empresaId).recebimento.groupBy({
+      by: ["titulo_id"],
+      where: { titulo_id: { in: tituloIds }, arquivado_em: null },
+      _sum: { valor: true },
+    }),
+  );
   return new Map(somas.map((s) => [s.titulo_id, s._sum.valor ?? 0]));
 }
 
@@ -833,10 +836,12 @@ async function comSituacaoEmLote<T extends { id: string }>(
 ): Promise<(T & { situacao_financeira: SituacaoFinanceira; tituloAberto: TituloAbertoResumo | null })[]> {
   if (servicos.length === 0) return [];
 
-  const titulos = await db(empresaId).tituloReceber.findMany({
-    where: { servico_id: { in: servicos.map((s) => s.id) } },
-    select: { ...CAMPOS_PARA_SITUACAO, valor: true },
-  });
+  const titulos = await medir("titulos.comSituacaoEmLote", () =>
+    db(empresaId).tituloReceber.findMany({
+      where: { servico_id: { in: servicos.map((s) => s.id) } },
+      select: { ...CAMPOS_PARA_SITUACAO, valor: true },
+    }),
+  );
   const totalPorTitulo = await totalRecebidoPorTitulo(
     empresaId,
     titulos.map((t) => t.id),
@@ -899,17 +904,19 @@ export async function listarServicosComSituacao(
   empresaId: string,
   filtros?: { periodo?: Periodo; limite?: number },
 ) {
-  const servicos = await db(empresaId).servico.findMany({
-    where: {
-      arquivado_em: null,
-      ...(filtros?.periodo
-        ? { data_servico: { gte: filtros.periodo.inicio, lte: filtros.periodo.fim } }
-        : {}),
-    },
-    select: CAMPOS_SERVICO,
-    orderBy: [{ data_servico: "desc" }, { criado_em: "desc" }],
-    take: filtros?.limite,
-  });
+  const servicos = await medir("titulos.listarServicosComSituacao.servicos", () =>
+    db(empresaId).servico.findMany({
+      where: {
+        arquivado_em: null,
+        ...(filtros?.periodo
+          ? { data_servico: { gte: filtros.periodo.inicio, lte: filtros.periodo.fim } }
+          : {}),
+      },
+      select: CAMPOS_SERVICO,
+      orderBy: [{ data_servico: "desc" }, { criado_em: "desc" }],
+      take: filtros?.limite,
+    }),
+  );
   return comSituacaoEmLote(empresaId, servicos);
 }
 

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { normalizarParaBusca } from "@/lib/utils/texto";
+import { medir } from "@/lib/utils/medir-tempo";
 
 /**
  * Município: busca enquanto se digita, e a porta única por onde texto vira
@@ -154,6 +155,8 @@ export type ResolucaoDeMunicipio =
 export async function resolverMunicipio(
   empresaId: string,
   texto: string,
+  /** Rótulo só para o diagnóstico temporário de medição (`medir-tempo.ts`) — distingue origem de destino no log. */
+  rotulo = "resolverMunicipio",
 ): Promise<ResolucaoDeMunicipio> {
   const normalizado = normalizarParaBusca(texto);
   if (normalizado.length < MINIMO_DE_LETRAS) return { situacao: "nao_encontrado" };
@@ -161,17 +164,19 @@ export async function resolverMunicipio(
   const { nome, uf } = separarUf(normalizado);
   if (nome.length < MINIMO_DE_LETRAS) return { situacao: "nao_encontrado" };
 
-  const encontrados = await db(empresaId).municipio.findMany({
-    where: {
-      nome_normalizado: nome,
-      ...(uf ? { uf } : {}),
-      arquivado_em: null,
-    },
-    select: CAMPOS,
-    // Dois bastam para saber que é ambíguo. Pedir todos seria trazer cinco
-    // linhas para descartar quatro.
-    take: 2,
-  });
+  const encontrados = await medir(`servico.${rotulo}`, () =>
+    db(empresaId).municipio.findMany({
+      where: {
+        nome_normalizado: nome,
+        ...(uf ? { uf } : {}),
+        arquivado_em: null,
+      },
+      select: CAMPOS,
+      // Dois bastam para saber que é ambíguo. Pedir todos seria trazer cinco
+      // linhas para descartar quatro.
+      take: 2,
+    }),
+  );
 
   if (encontrados.length === 1) {
     return { situacao: "resolvido", municipio: encontrados[0] };

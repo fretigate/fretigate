@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { medir } from "@/lib/utils/medir-tempo";
 import type { Periodo } from "@/lib/servicos/servicos";
 import { totalRecebidoPorTitulo } from "@/lib/servicos/titulos";
 import { deslocarMes, diaEmFortaleza, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
@@ -76,24 +77,34 @@ export async function resumoDeCobrancas(empresaId: string, hoje: string) {
 
   const [totalAbertas, recebidoAbertas, totalVencidas, recebidoVencidas, recebidoNoMes] =
     await Promise.all([
-      db(empresaId).tituloReceber.aggregate({ where: whereAbertas, _sum: { valor: true } }),
-      db(empresaId).recebimento.aggregate({
-        where: { arquivado_em: null, titulo: whereAbertas },
-        _sum: { valor: true },
-      }),
-      db(empresaId).tituloReceber.aggregate({ where: whereVencidas, _sum: { valor: true } }),
-      db(empresaId).recebimento.aggregate({
-        where: { arquivado_em: null, titulo: whereVencidas },
-        _sum: { valor: true },
-      }),
-      db(empresaId).recebimento.aggregate({
-        where: {
-          arquivado_em: null,
-          data: { gte: inicioDoMes, lt: inicioDoMesSeguinte },
-          titulo: { arquivado_em: null, status: { not: "cancelado" } },
-        },
-        _sum: { valor: true },
-      }),
+      medir("cobrancas.resumo.totalAbertas", () =>
+        db(empresaId).tituloReceber.aggregate({ where: whereAbertas, _sum: { valor: true } }),
+      ),
+      medir("cobrancas.resumo.recebidoAbertas", () =>
+        db(empresaId).recebimento.aggregate({
+          where: { arquivado_em: null, titulo: whereAbertas },
+          _sum: { valor: true },
+        }),
+      ),
+      medir("cobrancas.resumo.totalVencidas", () =>
+        db(empresaId).tituloReceber.aggregate({ where: whereVencidas, _sum: { valor: true } }),
+      ),
+      medir("cobrancas.resumo.recebidoVencidas", () =>
+        db(empresaId).recebimento.aggregate({
+          where: { arquivado_em: null, titulo: whereVencidas },
+          _sum: { valor: true },
+        }),
+      ),
+      medir("cobrancas.resumo.recebidoNoMes", () =>
+        db(empresaId).recebimento.aggregate({
+          where: {
+            arquivado_em: null,
+            data: { gte: inicioDoMes, lt: inicioDoMesSeguinte },
+            titulo: { arquivado_em: null, status: { not: "cancelado" } },
+          },
+          _sum: { valor: true },
+        }),
+      ),
     ]);
 
   return {
@@ -393,10 +404,12 @@ export function referenciaDoServico(
  * mesma.
  */
 export function contarFretesAFaturar(empresaId: string) {
-  return db(empresaId).servico.count({
-    where: {
-      arquivado_em: null,
-      titulos_receber: { none: { arquivado_em: null, status: { not: "cancelado" } } },
-    },
-  });
+  return medir("cobrancas.fretesAFaturar", () =>
+    db(empresaId).servico.count({
+      where: {
+        arquivado_em: null,
+        titulos_receber: { none: { arquivado_em: null, status: { not: "cancelado" } } },
+      },
+    }),
+  );
 }

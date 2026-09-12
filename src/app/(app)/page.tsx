@@ -15,6 +15,7 @@ import {
 } from "@/lib/servicos/dashboard";
 import { contarFretesAFaturar, resumoDeCobrancas } from "@/lib/servicos/cobrancas";
 import { buscarCliente } from "@/lib/servicos/clientes";
+import { medir } from "@/lib/utils/medir-tempo";
 import { deslocarDias, deslocarMes, diaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { formatarMesAbreviado } from "@/lib/utils/periodo";
@@ -50,30 +51,38 @@ export default async function Pagina() {
   const hoje = diaEmFortaleza(new Date());
 
   const [empresa, usuario, resumoMes, lucro, rodagem, cobrancas, fretesAFaturar, emAndamento, vencidasAgrupadas, sugestao, meses] =
-    await Promise.all([
-      db(sessao.empresaId).empresa.findUnique({
-        where: { id: sessao.empresaId },
-        select: { nome_fantasia: true },
-      }),
-      db(sessao.empresaId).usuario.findUnique({
-        where: { id: sessao.usuarioId },
-        select: { email_verificado: true },
-      }),
-      resumoDoMes(sessao.empresaId, hoje),
-      resumoDeLucroDoMes(sessao.empresaId, hoje),
-      resumoDeRodagemDoMes(sessao.empresaId, hoje),
-      resumoDeCobrancas(sessao.empresaId, hoje),
-      contarFretesAFaturar(sessao.empresaId),
-      contarFretesEmAndamento(sessao.empresaId),
-      contarCobrancasVencidasAgrupadas(sessao.empresaId, hoje),
-      sugerirRelatorio(sessao.empresaId, hoje),
-      faturamentoPorMes(sessao.empresaId, hoje),
-    ]);
+    await medir("dashboard.total", () =>
+      Promise.all([
+        medir("dashboard.empresa", () =>
+          db(sessao.empresaId).empresa.findUnique({
+            where: { id: sessao.empresaId },
+            select: { nome_fantasia: true },
+          }),
+        ),
+        medir("dashboard.usuario", () =>
+          db(sessao.empresaId).usuario.findUnique({
+            where: { id: sessao.usuarioId },
+            select: { email_verificado: true },
+          }),
+        ),
+        resumoDoMes(sessao.empresaId, hoje),
+        resumoDeLucroDoMes(sessao.empresaId, hoje),
+        resumoDeRodagemDoMes(sessao.empresaId, hoje),
+        resumoDeCobrancas(sessao.empresaId, hoje),
+        contarFretesAFaturar(sessao.empresaId),
+        contarFretesEmAndamento(sessao.empresaId),
+        contarCobrancasVencidasAgrupadas(sessao.empresaId, hoje),
+        sugerirRelatorio(sessao.empresaId, hoje),
+        faturamentoPorMes(sessao.empresaId, hoje),
+      ]),
+    );
 
   // Uma consulta a mais só quando existe sugestão — mesmo padrão de
   // `contarFretesAFaturar` em `cobrancas/page.tsx` (custo só quando o
   // resultado precisa dele).
-  const clienteSugerido = sugestao ? await buscarCliente(sessao.empresaId, sugestao.clienteId) : null;
+  const clienteSugerido = sugestao
+    ? await medir("dashboard.clienteSugerido", () => buscarCliente(sessao.empresaId, sugestao.clienteId))
+    : null;
 
   const nomeEmpresa = empresa?.nome_fantasia ?? "";
 

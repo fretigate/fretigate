@@ -5,13 +5,16 @@ import { buscarCaminhao, listarCaminhoes } from "@/lib/servicos/caminhoes";
 import { buscarMotorista, listarMotoristas } from "@/lib/servicos/motoristas";
 import { buscarTipoOperacao } from "@/lib/servicos/tipos-de-operacao";
 import { resolverMunicipio } from "@/lib/servicos/municipios";
+import { medir } from "@/lib/utils/medir-tempo";
 
 /** Só o suficiente para conferir `criado_por_usuario_id` (ver abaixo). */
 function buscarUsuario(empresaId: string, id: string) {
-  return db(empresaId).usuario.findUnique({
-    where: { id },
-    select: { id: true },
-  });
+  return medir("servico.buscarUsuario", () =>
+    db(empresaId).usuario.findUnique({
+      where: { id },
+      select: { id: true },
+    }),
+  );
 }
 
 /**
@@ -131,7 +134,7 @@ async function normalizarEntrada(
   dados: DadosServico,
   atual?: ServicoAtualParaEdicao,
 ) {
-  const cliente = await buscarCliente(empresaId, dados.cliente_id);
+  const cliente = await medir("servico.buscarCliente", () => buscarCliente(empresaId, dados.cliente_id));
   if (!cliente) throw new Error("Selecione um cliente válido.");
   if (cliente.arquivado_em && dados.cliente_id !== atual?.cliente_id) {
     throw new Error("Selecione um cliente válido.");
@@ -144,7 +147,8 @@ async function normalizarEntrada(
 
   let veiculoId: string | null = null;
   if (dados.veiculo_id?.trim()) {
-    const caminhao = await buscarCaminhao(empresaId, dados.veiculo_id);
+    const veiculoIdEscolhido = dados.veiculo_id;
+    const caminhao = await medir("servico.buscarCaminhao", () => buscarCaminhao(empresaId, veiculoIdEscolhido));
     if (!caminhao) throw new Error("Selecione um caminhão válido.");
     if (caminhao.arquivado_em && dados.veiculo_id !== atual?.veiculo_id) {
       throw new Error("Selecione um caminhão válido.");
@@ -154,7 +158,8 @@ async function normalizarEntrada(
 
   let motoristaId: string | null = null;
   if (dados.motorista_id?.trim()) {
-    const motorista = await buscarMotorista(empresaId, dados.motorista_id);
+    const motoristaIdEscolhido = dados.motorista_id;
+    const motorista = await medir("servico.buscarMotorista", () => buscarMotorista(empresaId, motoristaIdEscolhido));
     if (!motorista) throw new Error("Selecione um motorista válido.");
     if (motorista.arquivado_em && dados.motorista_id !== atual?.motorista_id) {
       throw new Error("Selecione um motorista válido.");
@@ -175,8 +180,8 @@ async function normalizarEntrada(
   const destinoTexto = dados.destino_texto?.trim() || null;
 
   const [origem, destino] = await Promise.all([
-    origemTexto ? resolverMunicipio(empresaId, origemTexto) : null,
-    destinoTexto ? resolverMunicipio(empresaId, destinoTexto) : null,
+    origemTexto ? resolverMunicipio(empresaId, origemTexto, "resolverMunicipio[origem]") : null,
+    destinoTexto ? resolverMunicipio(empresaId, destinoTexto, "resolverMunicipio[destino]") : null,
   ]);
 
   return {
@@ -251,24 +256,26 @@ export async function criarServico(
 
   const entrada = await normalizarEntrada(empresaId, dados);
 
-  return emTransacao(empresaId, async (tx) => {
-    const empresaAtualizada = await tx.empresa.update({
-      where: { id: empresaId },
-      data: { proximo_numero_servico: { increment: 1 } },
-      select: { proximo_numero_servico: true },
-    });
-    const numero = empresaAtualizada.proximo_numero_servico - 1;
+  return medir("servico.emTransacao(numero+create)", () =>
+    emTransacao(empresaId, async (tx) => {
+      const empresaAtualizada = await tx.empresa.update({
+        where: { id: empresaId },
+        data: { proximo_numero_servico: { increment: 1 } },
+        select: { proximo_numero_servico: true },
+      });
+      const numero = empresaAtualizada.proximo_numero_servico - 1;
 
-    return tx.servico.create({
-      data: {
-        ...entrada,
-        numero,
-        empresa_id: empresaId,
-        criado_por_usuario_id: usuarioId,
-      },
-      select: CAMPOS_SERVICO,
-    });
-  });
+      return tx.servico.create({
+        data: {
+          ...entrada,
+          numero,
+          empresa_id: empresaId,
+          criado_por_usuario_id: usuarioId,
+        },
+        select: CAMPOS_SERVICO,
+      });
+    }),
+  );
 }
 
 /**

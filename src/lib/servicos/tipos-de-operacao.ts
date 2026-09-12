@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import type { PrismaClient } from "@/lib/generated/prisma/client";
+import { medir } from "@/lib/utils/medir-tempo";
 
 /**
  * Os quatro tipos com que toda empresa nasce.
@@ -48,10 +49,12 @@ export async function criarTiposDeOperacaoIniciais(
  * na checagem de chave estrangeira (`CLAUDE.md` §3).
  */
 export function buscarTipoOperacao(empresaId: string, id: string) {
-  return db(empresaId).tipoOperacao.findUnique({
-    where: { id },
-    select: { id: true, nome: true, ativo: true, arquivado_em: true },
-  });
+  return medir("servico.tipoOperacao.buscarPorId(2a-vez)", () =>
+    db(empresaId).tipoOperacao.findUnique({
+      where: { id },
+      select: { id: true, nome: true, ativo: true, arquivado_em: true },
+    }),
+  );
 }
 
 /**
@@ -62,9 +65,11 @@ export function buscarTipoOperacao(empresaId: string, id: string) {
  * acima), então nulo aqui é falha de dado, não caso normal a tratar na tela.
  */
 export function buscarTipoOperacaoAtivo(empresaId: string) {
-  return db(empresaId).tipoOperacao.findFirst({
-    where: { ativo: true, arquivado_em: null },
-    select: { id: true, nome: true },
-    orderBy: { ordem: "asc" },
-  });
+  return medir("servico.tipoOperacao.buscarAtivo(1a-vez)", () =>
+    db(empresaId).tipoOperacao.findFirst({
+      where: { ativo: true, arquivado_em: null },
+      select: { id: true, nome: true },
+      orderBy: { ordem: "asc" },
+    }),
+  );
 }
