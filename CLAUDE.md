@@ -2081,6 +2081,23 @@ Não invente resposta. Pergunte.
 - **Trocar a estimativa geodésica por API de rotas** — só quando a imprecisão
   aparecer no uso real. Se acontecer, decidir o fornecedor e medir o custo por
   par novo.
+- **Painel administrativo — registrado em 12/09/2026, para depois do
+  lançamento (`docs/especificacao.md` §9, item 19).** O fundador precisa ver
+  todas as empresas de uma vez — assinaturas, faturamento, MRR, caminhões por
+  empresa, último acesso, plano — para administrar o negócio; não é um ajuste
+  de tela existente, é produto próprio.
+
+  **A pergunta que trava a construção, e precisa ser respondida antes de
+  começar, não durante:** como um painel que enxerga todas as empresas
+  convive com o RLS do §3, que nega por padrão e é a base da arquitetura?
+  Três caminhos possíveis, nenhum escolhido ainda — **usuário/papel especial**
+  dentro do mesmo banco, com política própria de leitura ampla (o mesmo
+  desenho de `fretigate_auth`/`fretigate_convite`, mas esses dois resolvem um
+  problema diferente: leem uma tabela **antes de saber a empresa**, nunca leem
+  **entre** empresas de propósito — não decidir por analogia com eles sem
+  reexaminar); **outra aplicação**, fora do caminho de `db(empresaId)` que o
+  produto usa hoje; ou um **terceiro caminho** ainda não considerado. Não
+  construir nada antes desta decisão — nem o rascunho de uma tela.
 - **Branch protection no GitHub, exigindo o check da esteira passar antes de
   qualquer coisa entrar em `main` — decidido, gatilho é o lançamento do
   MVP, não uma data.** Decisão do fundador, 18/08/2026, junto da criação do

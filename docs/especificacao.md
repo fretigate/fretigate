@@ -1528,6 +1528,13 @@ vez de ao lado cancelado.
 18. PWA: instalável, com convite de instalação — decisão do fundador,
     07/09/2026 (`docs/planos/pwa-instalavel-e-convite-de-instalacao.md`),
     construído depois do item 13 e antes de ligar qualquer anúncio pago
+19. Painel administrativo — visão de **todas as empresas** (assinaturas,
+    faturamento, MRR, caminhões por empresa, último acesso, plano), para o
+    fundador administrar o negócio. **Não é ajuste de tela existente, é
+    produto próprio.** Atravessa o isolamento por `empresa_id` (`CLAUDE.md`
+    §3), que é a base da arquitetura — não construir antes de decidir como
+    isso convive com o RLS. Pergunta em aberto registrada em `CLAUDE.md`
+    §14. Registrado em 12/09/2026, para depois do lançamento.
 
 Nada de 5 em diante começa antes de 1 a 4 funcionar de verdade.
 
@@ -1690,8 +1697,8 @@ Três exigências para quando os itens 5 e 6 chegarem:
    validação nos dois formulários, não construída na Tarefa 1 (que só
    resolveu o gatilho da folha). Registrado aqui para não decidir de novo.
 
-**Ficam para depois do lançamento:** 12, 14, 15, 16, 17, e a tela de edição de
-modelo do item 9.
+**Ficam para depois do lançamento:** 12, 14, 15, 16, 17, 19, e a tela de edição
+de modelo do item 9.
 
 ### Por que o item 12 pode esperar sem perder nada
 
