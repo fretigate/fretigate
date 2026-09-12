@@ -8,6 +8,7 @@ import { formatarNumeroRelatorio } from "@/lib/servicos/relatorios";
 import { diaEmFortaleza, formatarDataPorExtenso } from "@/lib/utils/data-fortaleza";
 import { formatarDocumento } from "@/lib/utils/documento";
 import { iniciais } from "@/lib/utils/iniciais";
+import { AvisoSalvo } from "@/components/ui/AvisoSalvo";
 import { BotaoVoltar } from "@/components/ui/BotaoVoltar";
 import { ItemMenu } from "@/components/ui/ItemMenu";
 import { sairDaConta } from "../acoes";
@@ -56,7 +57,11 @@ import { UploadLogo } from "./UploadLogo";
  */
 const ESCALA_PREVIA = 0.4;
 
-export default async function Pagina() {
+export default async function Pagina({
+  searchParams,
+}: {
+  searchParams: Promise<{ salvo?: string }>;
+}) {
   let sessao;
   try {
     sessao = await exigirDono();
@@ -65,6 +70,7 @@ export default async function Pagina() {
     throw erro;
   }
 
+  const { salvo } = await searchParams;
   const [empresa, urlLogo] = await Promise.all([
     buscarEmpresa(sessao.empresaId),
     gerarUrlLogo(sessao.empresaId),
@@ -159,6 +165,13 @@ export default async function Pagina() {
       <form action={sairDaConta}>
         <BotaoSairDaConta />
       </form>
+
+      {/* Lacuna registrada, decisão do fundador (12/09/2026): esta tela pode
+          mostrar dois `AvisoDoSistema` ao mesmo tempo — este e o erro de
+          upload da logo (`UploadLogo.tsx`), os dois `fixed` na mesma âncora
+          — se o upload falhar bem perto de "Salvar dados" ser tocado. Caso
+          raro, sem tratamento por enquanto. */}
+      {salvo ? <AvisoSalvo mensagem="Dados salvos" path="/conta" /> : null}
     </main>
   );
 }

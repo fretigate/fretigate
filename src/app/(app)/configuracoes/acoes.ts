@@ -79,5 +79,5 @@ export const atualizarConfiguracoesAction = comoDono(async (
     return { erroGeral: mensagem };
   }
 
-  redirect("/configuracoes");
+  redirect("/configuracoes?salvo=1");
 });

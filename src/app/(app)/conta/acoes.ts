@@ -70,5 +70,5 @@ export const atualizarContaDaEmpresaAction = comoDono(async (
     return { erroGeral: mensagem };
   }
 
-  redirect("/conta");
+  redirect("/conta?salvo=1");
 });

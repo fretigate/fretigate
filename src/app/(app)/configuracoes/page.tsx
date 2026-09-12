@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { exigirDono, SemPermissao } from "@/lib/auth/sessao";
 import { buscarEmpresa } from "@/lib/servicos/empresas";
+import { AvisoSalvo } from "@/components/ui/AvisoSalvo";
 import { BotaoVoltar } from "@/components/ui/BotaoVoltar";
 import { FormularioConfiguracoes } from "./FormularioConfiguracoes";
 
@@ -27,7 +28,11 @@ import { FormularioConfiguracoes } from "./FormularioConfiguracoes";
  * em regra financeira da empresa (o prazo que toda cobrança futura herda, a
  * numeração que o relatório usa). `SemPermissao` vira `notFound()`.
  */
-export default async function Pagina() {
+export default async function Pagina({
+  searchParams,
+}: {
+  searchParams: Promise<{ salvo?: string }>;
+}) {
   let sessao;
   try {
     sessao = await exigirDono();
@@ -36,6 +41,7 @@ export default async function Pagina() {
     throw erro;
   }
 
+  const { salvo } = await searchParams;
   const empresa = await buscarEmpresa(sessao.empresaId);
   if (!empresa) notFound();
 
@@ -61,6 +67,8 @@ export default async function Pagina() {
           proximoNumeroRelatorio: empresa.proximo_numero_relatorio,
         }}
       />
+
+      {salvo ? <AvisoSalvo mensagem="Configurações salvas" path="/configuracoes" /> : null}
     </main>
   );
 }

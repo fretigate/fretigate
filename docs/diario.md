@@ -6,6 +6,67 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 12/09/2026 — Números da instrumentação medidos em produção, aviso de "Salvar" corrigido, plano do Financeiro aprovado
+
+Três pedidos do fundador, nesta ordem, fecham a pendência da entrada
+anterior ("fundador mede as três ações autenticadas").
+
+**1. Números da instrumentação (`vercel logs`, produção, ~13 min de
+tráfego real).** A consulta mais barata do sistema (`dashboard.empresa`,
+busca o nome por chave primária) já leva ~100ms — não é peso de consulta,
+é custo de conexão em si. O achado de "soma do mês repetida"
+(entrada anterior) se confirma: as duas chamadas de `somaDoMes` do mês
+atual medidas somam sozinhas mais de 390ms numa única abertura da
+dashboard. Não foi possível isolar quantas vezes cada consulta roda por
+visita — o log da Vercel, sob o volume atual, não dá uma contagem
+confiável por request (sem `requestId` populado nas linhas).
+
+**2. Aviso de "Salvar" sem retorno visível — corrigido em Configurações e
+Conta da empresa.** As duas telas redirecionavam para si mesmas em caso de
+sucesso, sem nenhum sinal — mesma classe já corrigida em "Marcar como
+finalizado" (`BotaoMarcarFinalizado.tsx`) e "Frete salvo"
+(`AvisoFreteSalvo.tsx`). Componente novo, `AvisoSalvo.tsx`
+(`src/components/ui`), repete o mecanismo já provado de `AvisoFreteSalvo`
+(estado local `visivel` + `router.replace`), por pedido do fundador — não
+o caminho mais simples que a primeira versão usava. `?salvo=1` na URL de
+redirecionamento decide se o aviso aparece.
+
+O `/revisar` não achou divergência no código (achou três, todas no plano
+do item 3, corrigidas no mesmo passe — ver abaixo). Duas lacunas ficaram
+registradas, não corrigidas: os textos "Configurações salvas"/"Dados
+salvos" são provisórios, sem entrada em `docs/componentes.md` (fundador
+confirmou que servem, por enquanto); e Conta da empresa pode mostrar dois
+`AvisoDoSistema` ao mesmo tempo (este e o erro de upload da logo) — caso
+raro, sem tratamento.
+
+**Não foi possível verificar visualmente nesta sessão** — o ambiente de
+preview local teve um processo estranho ao projeto ocupando a porta 3000
+(sem relação com o código mudado). O fundador testa em produção depois da
+publicação.
+
+**3. Plano do Financeiro aprovado — Opção A (hub com duas entradas).**
+Pedido do fundador (Cobranças e Despesas virarem "Financeiro" na barra)
+que tinha sido feito antes desta sessão e nunca virou plano — quase se
+perdeu, mesmo problema que motivou a regra do `CLAUDE.md` §2 sobre plano
+que só vive na conversa. Plano escrito, revisado (`/revisar` achou seis
+divergências de fato — números errados sobre telas existentes, citação
+errada do §13 sobre quem é dono de `docs/componentes.md`/`navegacao.md`,
+e uma decisão já registrada contra a Opção C que a primeira versão não
+tinha visto — todas corrigidas no mesmo passe) e aprovado pelo fundador:
+`docs/planos/financeiro-unifica-cobrancas-e-despesas.md`. Decisão: hub
+reaproveitando `ItemMenu` (mesmo padrão da tela Mais), sem tocar nas duas
+telas existentes; a linha "Despesas" sai de Mais; os três números de
+Cobranças continuam só de cobrança, hub nasce sem resumo próprio. **A
+construção ainda não começou** — este plano só registra a decisão.
+
+Próximo: construir o Financeiro (tela-hub, renomear a posição da barra,
+tirar a linha "Despesas" de Mais) quando entrar na ordem — ainda sem
+tarefa aberta. Os dois achados de consulta repetida e o risco do plano
+Hobby em uso comercial (`docs/diario.md`, entrada anterior) continuam sem
+decisão sobre virarem tarefa própria.
+
+---
+
 ## 12/09/2026 — Move a função para São Paulo (gru1): causa da lentidão no uso real confirmada por medição
 
 Investigação a pedido do fundador (queixa: "clico numa ação e demoro alguns
