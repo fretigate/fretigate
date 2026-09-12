@@ -7,14 +7,24 @@ import { AvisoDoSistema } from "./AvisoDoSistema";
 /**
  * Aviso "salvo" genérico — para telas cujo formulário de servidor redireciona
  * para si mesma em caso de sucesso (`?salvo=1`) e por isso não tinha nenhum
- * retorno visível: Configurações e Conta da empresa, achado do fundador
- * (12/09/2026), mesma classe já corrigida em "Marcar como finalizado"
- * (`BotaoMarcarFinalizado.tsx`) e em "Frete salvo" (`AvisoFreteSalvo.tsx`).
+ * retorno visível: achado do fundador (12/09/2026), mesma classe já corrigida
+ * em "Marcar como finalizado" (`BotaoMarcarFinalizado.tsx`) e em "Frete
+ * salvo" (`AvisoFreteSalvo.tsx`).
  *
  * Diferente de `AvisoFreteSalvo`, que tem botões e regra própria do domínio
  * de frete — este é só o par "mostra aviso, limpa a URL", sem nada
- * específico de tela. As duas telas que usam isto hoje bastam para não ser
- * especulação (`CLAUDE.md` §6).
+ * específico de tela.
+ *
+ * **Hoje tem um chamador só** (`conta/page.tsx`) — a fusão de Configurações
+ * dentro de Conta (12/09/2026, `docs/planos/
+ * fusao-configuracoes-e-conta-da-empresa.md`) tirou o segundo. Decisão do
+ * fundador ao manter o componente: outras telas de formulário devem
+ * precisar do mesmo aviso em breve — a unificação de Cobranças e Despesas em
+ * "Financeiro" (`docs/planos/financeiro-unifica-cobrancas-e-despesas.md`) é
+ * a próxima candidata —, e desmontar agora para remontar depois é trabalho
+ * refeito, não simplificação. Se o segundo chamador não aparecer em alguns
+ * meses, aí sim é candidato a voltar para dentro de `conta/page.tsx`
+ * (`CLAUDE.md` §6, sem camada sem dois casos de uso reais).
  *
  * **Estado local `visivel`, não só `router.replace`** — decisão do
  * fundador, 12/09/2026: repete o mecanismo já provado de `AvisoFreteSalvo`

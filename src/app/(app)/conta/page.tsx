@@ -19,18 +19,19 @@ import { UploadLogo } from "./UploadLogo";
 /**
  * Conta da empresa (item 10, Tarefa 2 — `docs/planos/
  * item-10-configuracoes-conta-e-usuarios.md`). `docs/componentes.md` linha
- * 486: principal **Salvar dados** · linhas para Usuários, Minha assinatura
- * e Termos · prévia do cabeçalho do relatório · texto destrutiva **Sair da
- * conta**.
+ * 486: principal **Salvar dados** · Minha assinatura e Termos · prévia do
+ * cabeçalho do relatório · texto destrutiva **Sair da conta**.
  *
- * **"Usuários" ganhou destino na Tarefa 4** (`/conta/usuarios`) — mesmo
- * critério já usado em `mais/page.tsx` ("nasce só com as linhas que têm
- * destino; cada item seguinte acrescenta a sua"), aplicado ao contrário
- * agora que a tela existe. **"Minha assinatura" continua de fora**, sem
- * destino até o item 13: linkar para uma rota que ainda não existe seria o
- * mesmo 404 que `CLAUDE.md` §8 já proíbe (o precedente exato: a pastilha
- * Lucro da dashboard só apontou para `/despesas` depois de a página nascer,
- * item 8).
+ * **Fundida com a antiga tela "Configurações" em 12/09/2026** (`docs/planos/
+ * fusao-configuracoes-e-conta-da-empresa.md`) — pátio, prazo padrão de
+ * vencimento e numeração do relatório passam a viver aqui dentro, no segundo
+ * bloco de `FormularioContaDaEmpresa`. **"Usuários" saiu daqui e virou item
+ * próprio na seção AJUSTES de `mais/page.tsx`** — mesma rota
+ * (`/conta/usuarios`), só muda de onde se chega até ela. **"Minha
+ * assinatura" continua de fora**, sem destino até o item 13: linkar para uma
+ * rota que ainda não existe seria o mesmo 404 que `CLAUDE.md` §8 já proíbe
+ * (o precedente exato: a pastilha Lucro da dashboard só apontou para
+ * `/despesas` depois de a página nascer, item 8).
  *
  * **Página inteira exige o dono** (`exigirDono()`, não só as ações) —
  * decisão 1 do plano: um operador que chegasse aqui por URL direta veria
@@ -130,6 +131,9 @@ export default async function Pagina({
           telefone: empresa.telefone,
           email: empresa.email,
           chave_pix: empresa.chave_pix,
+          patio_endereco: empresa.patio_endereco,
+          prazo_padrao_dias: empresa.prazo_padrao_dias,
+          proximo_numero_relatorio: empresa.proximo_numero_relatorio,
         }}
       />
 
@@ -151,13 +155,9 @@ export default async function Pagina({
           (`(auth)/termos/page.tsx`) — achado do segundo `/revisar`, a
           primeira versão usava um terceiro texto (`docs/componentes.md:486`
           diz só "Termos"), violando "uma ação, um nome" (`CLAUDE.md` §8). */}
-      {/* Ícone provisório, desenhado inline — mesma situação já registrada
-          para "Termos" logo abaixo: não existe arquivo em `docs/icones/`
-          para "Usuários" ainda. */}
-      <ItemMenu href="/conta/usuarios" nome="Usuários">
-        <path d="M8.4 10.8a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2ZM3 20.4c0-3.315 2.686-5.4 5.4-5.4s5.4 2.085 5.4 5.4M16.2 10.2a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM15.6 15c2.4.24 4.8 1.86 4.8 5.4" />
-      </ItemMenu>
-
+      {/* "Usuários" saiu daqui em 12/09/2026 (fusão com Configurações) — vira
+          item próprio na seção AJUSTES de `mais/page.tsx`, mesmo ícone
+          provisório reaproveitado de lá. */}
       <ItemMenu href="/termos" nome="Termos e privacidade">
         <path d="M6.06 8.4h11.88M6.06 12h11.88M6.06 15.6h7.56M6.9 4.8h10.2a2.1 2.1 0 0 1 2.1 2.1v10.2a2.1 2.1 0 0 1 -2.1 2.1H6.9a2.1 2.1 0 0 1 -2.1 -2.1V6.9a2.1 2.1 0 0 1 2.1 -2.1Z" />
       </ItemMenu>

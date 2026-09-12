@@ -464,16 +464,20 @@ valor e data obrigatórios.
 
 Entrada por "Mais" e pelo card de Lucro quando ele estiver no estado de convite.
 
-### 4.9 Configurações, conta e usuários
+### 4.9 Conta da empresa e usuários
 
-**Configurações:** endereço padrão do pátio, prazo padrão de vencimento —
-construídos no item 10, Tarefa 3 (01/09/2026) — e acesso aos **dois modelos
-de mensagem** (cobrança e ordem de serviço), quando essas telas de edição
-existirem (item 9 é MVP parcial, `docs/especificacao.md` §9).
+**Fundida em 12/09/2026** (`docs/planos/fusao-configuracoes-e-conta-da-empresa.md`):
+a tela "Configurações" deixou de existir em separado — pátio, prazo padrão
+de vencimento e a numeração do relatório passaram a viver dentro de "Conta
+da empresa". Não há mais duas telas nem dois botões de salvar.
 
 **Conta da empresa:** logo, razão social, CNPJ, endereço, telefone, e-mail e
-chave Pix, com prévia do cabeçalho do relatório. Sem logo, círculo com as
-**iniciais das duas primeiras palavras** do nome. Nunca ícone genérico.
+chave Pix (bloco Identidade); endereço padrão do pátio e prazo padrão de
+vencimento (bloco Operação, antes em Configurações) — e acesso aos **dois
+modelos de mensagem** (cobrança e ordem de serviço), quando essas telas de
+edição existirem (item 9 é MVP parcial, `docs/especificacao.md` §9). Prévia
+do cabeçalho do relatório. Sem logo, círculo com as **iniciais das duas
+primeiras palavras** do nome. Nunca ícone genérico.
 
 **"Dados bancários" saiu desta lista em 31/08/2026** (planejamento do item
 10) — a versão anterior listava "chave Pix e dados bancários" como se fossem
@@ -482,7 +486,9 @@ cobrança e, quando existir, o rodapé do A4); `dados_bancarios` não tem
 nenhum. Fica registrado como lacuna em `CLAUDE.md` §14 — entra quando existir
 quem leia, provavelmente o mesmo rodapé do relatório.
 
-**Usuários**, dentro de Conta: lista com nome, e-mail e papel.
+**Usuários** — item próprio em Mais desde a fusão de 12/09/2026 (antes vivia
+dentro de Conta; a rota é a mesma, `/conta/usuarios`, só mudou de onde se
+chega): lista com nome, e-mail e papel.
 Convite por WhatsApp, com envio manual. Convite pendente com reenviar
 e cancelar. Remover acesso é ação destrutiva, **só visível para o dono**, e não
 apaga histórico.
@@ -495,8 +501,8 @@ um campo sempre nulo afirmaria um dado que o sistema não tem. Entra na lista
 quando o rastreamento existir de verdade — lacuna em `CLAUDE.md` §14.
 
 **Papéis:** Dono e Operador têm o mesmo acesso a fretes, clientes, cobranças,
-relatórios e cadastros. Só o dono acessa Configurações, Conta da empresa,
-assinatura, forma de pagamento e gestão de usuários — decisão do fundador,
+relatórios e cadastros. Só o dono acessa Conta da empresa, assinatura, forma
+de pagamento e gestão de usuários — decisão do fundador,
 planejamento do item 10, 31/08/2026: essas telas mudam a chave Pix que
 recebe dinheiro, o CNPJ do documento fiscal e o prazo que define quando toda
 cobrança vence — identidade e regra financeira da empresa, não cadastro do

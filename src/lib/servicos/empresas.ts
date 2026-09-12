@@ -1,13 +1,14 @@
 import { cnpj as validadorCnpj } from "cpf-cnpj-validator";
-import { db } from "@/lib/db";
-import { Prisma } from "@/lib/generated/prisma/client";
+import { db, emTransacao } from "@/lib/db";
+import { Prisma, type PrismaClient } from "@/lib/generated/prisma/client";
 import { normalizarDocumento } from "@/lib/utils/documento";
 import { resolverMunicipio } from "@/lib/servicos/municipios";
 
 /**
- * Empresa: leitura completa e as duas telas do item 10 (Conta da empresa,
- * Configurações) — tudo por `db(empresaId)`, a única porta de acesso a
- * dados (`CLAUDE.md` §3).
+ * Empresa: leitura completa e a tela "Conta da empresa" (item 10; fundida com
+ * a antiga "Configurações" em 12/09/2026 — `docs/planos/
+ * fusao-configuracoes-e-conta-da-empresa.md`) — tudo por `db(empresaId)`, a
+ * única porta de acesso a dados (`CLAUDE.md` §3).
  *
  * `salvarChavePix` (item 6, Tarefa 5, primeiro escritor de `Empresa` fora do
  * cadastro) continua existindo — é o atalho pontual que `salvarChavePixAction`
@@ -16,6 +17,26 @@ import { resolverMunicipio } from "@/lib/servicos/municipios";
  * (`atualizarContaDaEmpresa`, abaixo) e o atalho escrevem no mesmo campo, com
  * portas diferentes para motivos diferentes.
  */
+
+/**
+ * O mesmo shape que `db(empresaId)` e o `tx` de `emTransacao` devolvem — só
+ * os modelos, sem os métodos de transação (`$transaction`, etc.), que nem um
+ * nem outro deveriam reabrir por dentro. `atualizarContaDaEmpresa` e
+ * `atualizarConfiguracoes` recebem esse cliente como parâmetro (em vez de
+ * chamar `db(empresaId)` direto) para poderem gravar dentro da MESMA
+ * transação quando `atualizarContaEConfiguracoes` (abaixo) as chama juntas —
+ * "salvou só metade" não pode acontecer nem no banco, só na tela (achado do
+ * fundador, 12/09/2026, ao aprovar a fusão das duas telas).
+ *
+ * O valor padrão (`= db(empresaId)`) precisa de `as unknown as ClienteEmpresa`
+ * — `db()` devolve um cliente estendido (`$extends`), com o mesmo formato em
+ * tempo de execução (`.empresa.update`, `.empresa.findUnique`, etc.), mas o
+ * TypeScript instancia o genérico da extensão de um jeito que não bate,
+ * campo a campo, com o tipo simples que `emTransacao` usa para o `tx`. É
+ * fricção de tipo do Prisma, não incompatibilidade real — as duas chamadas já
+ * usam exatamente os mesmos métodos, com os mesmos argumentos, hoje.
+ */
+type ClienteEmpresa = Omit<PrismaClient, `$${string}`>;
 
 const CAMPOS = {
   id: true,
@@ -35,7 +56,7 @@ const CAMPOS = {
   proximo_numero_relatorio: true,
 } as const;
 
-/** Leitura completa — Conta da empresa e Configurações (item 10, Tarefa 1). */
+/** Leitura completa — Conta da empresa, incluindo o bloco Operação (item 10, Tarefa 1). */
 export function buscarEmpresa(empresaId: string) {
   return db(empresaId).empresa.findUnique({ where: { id: empresaId }, select: CAMPOS });
 }
@@ -130,9 +151,13 @@ function ehCnpjDuplicado(erro: unknown): boolean {
  * Nunca o erro do banco." Mesmo padrão de `criarCliente`/`editarCliente`
  * (`clientes.ts`) para `documento` duplicado.
  */
-export async function atualizarContaDaEmpresa(empresaId: string, dados: DadosContaDaEmpresa) {
+export async function atualizarContaDaEmpresa(
+  empresaId: string,
+  dados: DadosContaDaEmpresa,
+  cliente: ClienteEmpresa = db(empresaId) as unknown as ClienteEmpresa,
+) {
   try {
-    return await db(empresaId).empresa.update({
+    return await cliente.empresa.update({
       where: { id: empresaId },
       data: {
         ...(dados.razaoSocial !== undefined && { razao_social: dados.razaoSocial?.trim() || null }),
@@ -162,8 +187,10 @@ const PRAZO_MINIMO_DIAS = 0;
 const PRAZO_MAXIMO_DIAS = 90;
 
 /**
- * A tela "Configurações" (item 10, Tarefa 3) — pátio, prazo padrão de
- * vencimento e a numeração do relatório.
+ * O bloco Operação da tela Conta da empresa (item 10, Tarefa 3; fundido
+ * dentro de Conta em 12/09/2026 — antes vivia numa tela própria,
+ * "Configurações") — pátio, prazo padrão de vencimento e a numeração do
+ * relatório.
  *
  * **A numeração só aumenta** (decisão do fundador, 31/08/2026 —
  * `docs/planos/item-10-configuracoes-conta-e-usuarios.md`, decisão 5):
@@ -192,7 +219,11 @@ const PRAZO_MAXIMO_DIAS = 90;
  * município — nunca bloqueia o salvar, mesma regra do frete
  * (`resolverMunicipio`, `docs/especificacao.md` §6).
  */
-export async function atualizarConfiguracoes(empresaId: string, dados: DadosConfiguracoes) {
+export async function atualizarConfiguracoes(
+  empresaId: string,
+  dados: DadosConfiguracoes,
+  cliente: ClienteEmpresa = db(empresaId) as unknown as ClienteEmpresa,
+) {
   if (dados.prazoPadraoDias !== undefined) {
     if (
       !Number.isInteger(dados.prazoPadraoDias) ||
@@ -206,12 +237,12 @@ export async function atualizarConfiguracoes(empresaId: string, dados: DadosConf
   }
 
   if (dados.proximoNumeroRelatorio !== undefined) {
-    const resultado = await db(empresaId).empresa.updateMany({
+    const resultado = await cliente.empresa.updateMany({
       where: { id: empresaId, proximo_numero_relatorio: { lte: dados.proximoNumeroRelatorio } },
       data: { proximo_numero_relatorio: dados.proximoNumeroRelatorio },
     });
     if (resultado.count === 0) {
-      const atual = await db(empresaId).empresa.findUnique({
+      const atual = await cliente.empresa.findUnique({
         where: { id: empresaId },
         select: { proximo_numero_relatorio: true },
       });
@@ -225,7 +256,7 @@ export async function atualizarConfiguracoes(empresaId: string, dados: DadosConf
   const patioEndereco = dados.patioEndereco !== undefined ? dados.patioEndereco?.trim() || null : undefined;
   const patioMunicipio =
     patioEndereco !== undefined && patioEndereco !== null
-      ? await resolverMunicipio(empresaId, patioEndereco)
+      ? await resolverMunicipio(empresaId, patioEndereco, "resolverMunicipio", cliente)
       : null;
 
   // `proximo_numero_relatorio` NÃO entra aqui — já foi gravado, com o piso
@@ -233,7 +264,7 @@ export async function atualizarConfiguracoes(empresaId: string, dados: DadosConf
   // (achado do segundo `/revisar`, 31/08/2026) desfazia a própria proteção:
   // um `criarRelatorio` incrementando o contador entre as duas escritas teria
   // o incremento sobrescrito por este valor já ultrapassado.
-  return db(empresaId).empresa.update({
+  return cliente.empresa.update({
     where: { id: empresaId },
     data: {
       ...(patioEndereco !== undefined && { patio_endereco: patioEndereco }),
@@ -244,5 +275,24 @@ export async function atualizarConfiguracoes(empresaId: string, dados: DadosConf
       ...(dados.prazoPadraoDias !== undefined && { prazo_padrao_dias: dados.prazoPadraoDias }),
     },
     select: CAMPOS,
+  });
+}
+
+/**
+ * "Salvar dados" da tela fundida Conta da empresa (item 10; fusão de
+ * 12/09/2026) — chama as duas funções acima dentro da MESMA transação, para
+ * que um erro numa não deixe a outra gravada sozinha. Cada uma continua
+ * validando exatamente o que já validava; só o cliente de banco passado a
+ * elas muda, de `db(empresaId)` (uma transação por chamada) para o `tx` de
+ * `emTransacao` (uma transação para as duas juntas).
+ */
+export async function atualizarContaEConfiguracoes(
+  empresaId: string,
+  dadosConta: DadosContaDaEmpresa,
+  dadosConfiguracoes: DadosConfiguracoes,
+) {
+  return emTransacao(empresaId, async (tx) => {
+    await atualizarContaDaEmpresa(empresaId, dadosConta, tx);
+    return atualizarConfiguracoes(empresaId, dadosConfiguracoes, tx);
   });
 }

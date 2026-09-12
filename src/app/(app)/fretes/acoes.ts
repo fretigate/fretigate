@@ -584,11 +584,15 @@ const schemaSalvarChavePix = z.object({ chavePix: z.string().trim().min(1) });
  * acesso comum a Dono e Operador (`docs/especificacao.md` §4.9: os dois têm
  * "o mesmo acesso a... cobranças"); a lista de restrições a Dono no mesmo
  * parágrafo (assinatura, forma de pagamento, gestão de usuários) não nomeia
- * chave Pix. Quando a tela de Configurações (item 9) nascer e passar a
- * editar `chave_pix` por ali também, esta decisão precisa ser revisitada —
- * não herdada por analogia — porque aquela tela mexe em "Conta da empresa"
- * como um todo, campo diferente do gatilho único de cobrança que motivou
- * esta escolha.
+ * chave Pix. **Nota de 12/09/2026, achado do `/revisar`: "tela de
+ * Configurações" (parágrafo original) não existe mais com esse nome — foi
+ * fundida dentro de "Conta da empresa"** (`docs/planos/
+ * fusao-configuracoes-e-conta-da-empresa.md`), que já edita `chave_pix` hoje
+ * (`FormularioContaDaEmpresa.tsx`). O raciocínio original continua de pé —
+ * esta ação usa `comoUsuario` porque nasce do gatilho único de cobrança, não
+ * da edição completa de "Conta da empresa" (que já é `comoDono`) —, só o
+ * nome da tela mudou. Quem mexer nesta decisão de novo revisita pelo
+ * raciocínio, não pelo nome da tela citado aqui.
  */
 export const salvarChavePixAction = comoUsuario(async (
   sessao,

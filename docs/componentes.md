@@ -218,7 +218,7 @@ Vale nas três telas que têm o padrão: `telDe()` no detalhe do frete, `campoDe
 |---|---|---|
 | Validade do link de recuperação | **2 horas** | Recuperação enviada · Link expirado. O usuário pode não abrir o e-mail na hora |
 | Senha mínima | 6 caracteres | Redefinir senha · Criar conta · Aceitar convite · Ativar assinatura (item 13, 03/09/2026) |
-| Prazo padrão de vencimento | 15 dias | Configurações · perfil do cliente (herdado) |
+| Prazo padrão de vencimento | 15 dias | Conta da empresa (bloco Operação, desde a fusão de 12/09/2026) · perfil do cliente (herdado) |
 
 ## Barra de navegação: exceção fora de sessão
 
@@ -275,7 +275,7 @@ Uma família só: traçado, sem preenchimento, cantos arredondados — desenhado
 | `barra-fretes.svg` | Item "Fretes" da barra · linha "Caminhões" em Mais | 21×19px | 1.8px |
 | `barra-novo.svg` | Item central (+) da barra | 24–26px | 2.8px |
 | `barra-cobrancas.svg` | Item "Cobranças" da barra · linha "Relatório do cliente" em Mais | 20×19px | 1.8px |
-| `barra-mais.svg` | Item "Mais" da barra · linha "Configurações" em Mais | 20×19px | 1.8px |
+| `barra-mais.svg` | Item "Mais" da barra. **Não usa mais na linha "Configurações" em Mais** — essa linha deixou de existir na fusão de 12/09/2026 (`docs/planos/fusao-configuracoes-e-conta-da-empresa.md`); o ícone segue só no item da barra | 20×19px | 1.8px |
 | `clientes.svg` | Linha "Clientes" em Mais | 20×20px | 1.8px |
 | `motoristas.svg` | Linha "Motoristas" em Mais | 20×20px | 1.8px |
 | `importar.svg` | Linha "Importar fretes" em Mais | 20×20px | 1.8px |
@@ -480,15 +480,14 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Importar — entrada | duas secundárias em pé de igualdade: **Colar as mensagens** + **Mandar foto do caderno** · nenhuma é destaque da outra |
 | Importar — revisão | principal **Importar os 9**, dizendo quantas linhas seguem sem valor · linha desmarcável, campo de valor editável na hora |
 | Importar — nada reconhecido | secundárias **Tentar de novo** + **Lançar na mão** · orientação do que tentar |
-| Configurações | principal **Salvar configurações** · campos de OPERAÇÃO (endereço do pátio, prazo padrão de vencimento, próximo número do relatório) — decisão do fundador, item 10 Tarefa 3, 01/09/2026: a linha anterior ("sem principal · linhas de OPERAÇÃO e MENSAGENS abrem os dois modelos") descrevia a tela de quando Configurações era só os dois modelos de mensagem, que ficaram fora do MVP; campo editável pede ação explícita para gravar, mesma regra de todo formulário do produto, e o rótulo nomeia o objeto — mesmo critério de "Salvar cliente"/"Salvar dados"/"Salvar frete" (achado do `/revisar`: um "Salvar" sozinho quebraria o padrão numa tela só). **Sem seção MENSAGENS ainda** — Modelo de cobrança/Modelo de ordem de serviço não têm tela de edição construída (item 9, MVP parcial) |
 | Modelo de cobrança | principal **Salvar modelo** · chips de variável {cliente} {valor} {vencimento} {rota} {empresa} · prévia abaixo do campo |
 | Modelo de ordem de serviço | principal **Salvar modelo** · chips {motorista} {cliente} {carga} {origem} {destino} {data} — **sem {valor}**, o motorista não vê o preço |
-| Conta da empresa | principal **Salvar dados** · linhas para Usuários, Minha assinatura e Termos · prévia do cabeçalho do relatório · texto destrutiva **Sair da conta**. **Usuários (`/conta/usuarios`) ganhou destino no item 10, Tarefa 4 (01/09/2026)** — só Minha assinatura segue sem link, à espera do item 13. Mesmo critério de "nasce só com as linhas que têm destino" já usado em Mais |
+| Conta da empresa | principal **Salvar dados** — desde a fusão com a antiga tela "Configurações" em 12/09/2026 (`docs/planos/fusao-configuracoes-e-conta-da-empresa.md`), este botão cobre também o que antes era "Salvar configurações": onde eram duas telas com dois botões, virou uma tela com um botão só — decisão do fundador ao aprovar a fusão, dois botões independentes deixavam salvar metade sem perceber. Linhas para Minha assinatura e Termos · prévia do cabeçalho do relatório · texto destrutiva **Sair da conta**. **"Usuários" saiu daqui na mesma fusão** — virou item próprio em Mais. Minha assinatura segue sem link, à espera do item 13. **O layout do conteúdo que veio de Configurações (agrupamento visual, cabeçalhos de bloco) ainda não tem confirmação do Design** — pedido feito, ver o plano acima |
 | Usuários — lista | sem principal · pílula de cabeçalho **+ Convidar** · pílulas em linha **Reenviar** e **Ver o que ela recebe** · texto destrutiva **Cancelar** no convite pendente |
 | Usuários — convite | principal **Mandar convite no WhatsApp** · prévia da mensagem |
 | Usuários — detalhe | texto destrutiva **Remover acesso**, visível só para o dono; o acesso do dono não é removível |
 | Aceitar convite | principal **Entrar na conta** · texto neutra **Não conheço essa empresa** · sem barra de navegação: quem abre ainda não está dentro do app |
-| Mais | sem principal · cartão de identidade tocável (item 10, Tarefa 2: só para o dono — leva a Conta da empresa, que exige dono; operador vê o mesmo cartão sem link) · pílula em linha **Assinar e liberar a frota** no plano gratuito · texto destrutiva **Sair da conta** |
+| Mais | sem principal · cartão de identidade tocável (item 10, Tarefa 2: só para o dono — leva a Conta da empresa, que exige dono; operador vê o mesmo cartão sem link) · pílula em linha **Assinar e liberar a frota** no plano gratuito · texto destrutiva **Sair da conta**. Seção AJUSTES (só dono): **Conta da empresa** e **Usuários** — "Configurações" saiu daqui na fusão de 12/09/2026, "Usuários" entrou no lugar (antes vivia só dentro de Conta) |
 | Novidades — lista | sem principal · linha não lida em lilás com ponto; lida volta ao claro |
 | Novidades — detalhe | no máximo **uma** ação por mensagem, como principal |
 | Entrar | **marca no topo** (provisória, pendente do Design — a lacuna e o que falta ele definir estão em `docs/estilo.md`) · campos **E-MAIL** e **SENHA** (com **revelar**, decisão do fundador em 12/08/2026 — mesma variante de Redefinir senha) · principal **Entrar**, com estado carregando · secundária **Criar conta** · texto neutra **Esqueci a senha**. Login é e-mail e senha; o app **nunca** envia mensagem sozinho, então não existe código por WhatsApp aqui |

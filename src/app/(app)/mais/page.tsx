@@ -41,11 +41,16 @@ import { BotaoSairDaConta } from "../BotaoSairDaConta";
  * "Conta"; achado do `/revisar`, mesma regra já citada acima para
  * "Relatório do cliente"), visível só para o dono (decisão 1 do plano: as
  * telas de Ajustes mexem em identidade e regra financeira da empresa). Um
- * operador nunca vê a seção — não é só esconder o link, é que `/conta` e
- * `/configuracoes` recusam quem não é dono (`exigirDono()`), então mostrar a
- * linha pra quem não pode entrar seria a mesma falha que `CLAUDE.md` §8 já
- * proíbe. **"Configurações" entrou junto da Tarefa 3 do item 10
- * (01/09/2026)** — `/configuracoes`, mesma proteção de `exigirDono()`.
+ * operador nunca vê a seção — não é só esconder o link, é que `/conta`
+ * recusa quem não é dono (`exigirDono()`), então mostrar a linha pra quem
+ * não pode entrar seria a mesma falha que `CLAUDE.md` §8 já proíbe.
+ *
+ * **"Configurações" entrou junto da Tarefa 3 do item 10 (01/09/2026) e saiu
+ * em 12/09/2026**, fundida dentro de "Conta da empresa" (`docs/planos/
+ * fusao-configuracoes-e-conta-da-empresa.md`) — nunca mais existiu como rota
+ * própria depois disso. **"Usuários" entrou no lugar dela** na mesma fusão —
+ * antes vivia só dentro de Conta; virou item próprio aqui porque não
+ * dependia de estar aninhado, só de onde alguém tinha colocado o link.
  *
  * **O cartão de identidade (nome da empresa, no topo) também virou tocável
  * para o dono nesta tarefa** — `docs/componentes.md` linha 491 ("Mais |
@@ -164,16 +169,21 @@ export default async function Pagina() {
           <span className="px-4 pb-2 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
             Ajustes
           </span>
-          {/* `docs/icones/barra-mais.svg` — já previsto para esta linha desde
-              09/08 (`docs/componentes.md` linha 278: "Item 'Mais' da barra ·
-              linha 'Configurações' em Mais"). */}
-          <ItemMenu href="/configuracoes" nome="Configurações">
-            <path d="M6.06 8.4h11.88M6.06 12h11.88M6.06 15.6h7.56" />
-          </ItemMenu>
-          {/* `docs/icones/conta.svg` — `docs/componentes.md` linha 282. */}
+          {/* `docs/icones/conta.svg` — `docs/componentes.md` linha 282.
+              "Configurações" saiu daqui em 12/09/2026, fundida dentro de
+              "Conta da empresa" (`docs/planos/
+              fusao-configuracoes-e-conta-da-empresa.md`) — não existe mais
+              rota `/configuracoes`. */}
           <ItemMenu href="/conta" nome="Conta da empresa">
             <path d="M5.34 10.2 12 5.34 18.66 10.2v8.1a0.36 0.36 0 0 1 -0.36 0.36H5.7a0.36 0.36 0 0 1 -0.36 -0.36V10.2Z" />
             <path d="M9.84 18.66v-4.68h4.32v4.68" />
+          </ItemMenu>
+          {/* Ícone provisório, desenhado inline — reaproveitado de
+              `conta/page.tsx`, onde "Usuários" vivia antes da fusão de
+              12/09/2026. Não existe arquivo em `docs/icones/` para
+              "Usuários" ainda. */}
+          <ItemMenu href="/conta/usuarios" nome="Usuários">
+            <path d="M8.4 10.8a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2ZM3 20.4c0-3.315 2.686-5.4 5.4-5.4s5.4 2.085 5.4 5.4M16.2 10.2a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM15.6 15c2.4.24 4.8 1.86 4.8 5.4" />
           </ItemMenu>
         </div>
       ) : null}

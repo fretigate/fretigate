@@ -2,7 +2,12 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { cnpj } from "cpf-cnpj-validator";
-import { buscarEmpresa, atualizarContaDaEmpresa, atualizarConfiguracoes } from "@/lib/servicos/empresas";
+import {
+  buscarEmpresa,
+  atualizarContaDaEmpresa,
+  atualizarConfiguracoes,
+  atualizarContaEConfiguracoes,
+} from "@/lib/servicos/empresas";
 
 /**
  * Empresa (item 10, Tarefa 1): leitura completa, Conta da empresa (CNPJ
@@ -22,7 +27,7 @@ const empresasParaLimpar: string[] = [];
 const FORTALEZA = 2304400;
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 20;
+const CONFERENCIAS_ESPERADAS = 22;
 
 async function criarEmpresaDeTeste(sufixo: string): Promise<string> {
   const id = randomUUID();
@@ -270,6 +275,44 @@ describe("3. atualizarConfiguracoes", () => {
     // final é sempre o maior dos aceitos — nunca um lido antes de ser
     // sobrescrito por um valor menor.
     expect(final?.proximo_numero_relatorio).toBe(Math.max(...aceitos));
+    conferencias++;
+  });
+});
+
+describe("4. atualizarContaEConfiguracoes", () => {
+  it("grava identidade e operação juntas, numa chamada só", async () => {
+    const empresaId = await criarEmpresaDeTeste("r");
+    const empresa = await atualizarContaEConfiguracoes(
+      empresaId,
+      { razaoSocial: "Fundida LTDA" },
+      { patioEndereco: "Fortaleza", prazoPadraoDias: 45 },
+    );
+    expect(empresa.razao_social).toBe("Fundida LTDA");
+    expect(empresa.patio_endereco).toBe("Fortaleza");
+    expect(empresa.prazo_padrao_dias).toBe(45);
+    conferencias++;
+  });
+
+  it("contraste — erro só na operação não deixa a identidade gravada sozinha", async () => {
+    // Prova a garantia que motivou a fusão (achado do fundador, 12/09/2026,
+    // ao aprovar a tela única): "salvou só metade" não pode acontecer nem no
+    // banco. Sem a transação, `atualizarContaDaEmpresa` teria sido chamada e
+    // confirmada ANTES de `atualizarConfiguracoes` estourar — a razão social
+    // ficaria gravada mesmo com a chamada inteira tendo "falhado" do ponto
+    // de vista de quem chamou. Mesmo raciocínio do §3 (contraste): sem este
+    // teste, não dá para saber se `emTransacao` está mesmo envolvendo as
+    // duas chamadas ou só a segunda.
+    const empresaId = await criarEmpresaDeTeste("s");
+    await expect(
+      atualizarContaEConfiguracoes(
+        empresaId,
+        { razaoSocial: "Não Deveria Gravar" },
+        { prazoPadraoDias: 91 },
+      ),
+    ).rejects.toThrow("entre 0 e 90 dias");
+
+    const empresa = await buscarEmpresa(empresaId);
+    expect(empresa?.razao_social).toBeNull();
     conferencias++;
   });
 });

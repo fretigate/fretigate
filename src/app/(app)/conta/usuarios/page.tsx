@@ -10,14 +10,17 @@ import { ListaUsuarios } from "./ListaUsuarios";
 
 /**
  * Usuários — lista (item 10, Tarefa 4 — `docs/planos/
- * item-10-configuracoes-conta-e-usuarios.md`, "Tarefa 4"). Chega de "Conta
- * da empresa"; `docs/componentes.md`: "sem principal · pílula de cabeçalho
- * + Convidar · pílulas em linha Reenviar e Ver o que ela recebe · texto
- * destrutiva Cancelar no convite pendente".
+ * item-10-configuracoes-conta-e-usuarios.md`, "Tarefa 4"). Chegava de "Conta
+ * da empresa" até 12/09/2026; desde a fusão com Configurações (`docs/planos/
+ * fusao-configuracoes-e-conta-da-empresa.md`) é item próprio na seção
+ * AJUSTES de Mais — a rota não mudou, só de onde se chega até ela.
+ * `docs/componentes.md`: "sem principal · pílula de cabeçalho + Convidar ·
+ * pílulas em linha Reenviar e Ver o que ela recebe · texto destrutiva
+ * Cancelar no convite pendente".
  *
  * **Página inteira exige o dono** (`exigirDono()`) — mesma decisão 1 do
- * plano já aplicada em `/conta` e `/configuracoes`: quem chegasse aqui por
- * URL direta veria nome, e-mail e papel de toda a equipe.
+ * plano já aplicada em `/conta`: quem chegasse aqui por URL direta veria
+ * nome, e-mail e papel de toda a equipe.
  *
  * **Badge da empresa no topo** (`docs/componentes.md`, "Iniciais da
  * empresa": "56px em Conta e no convite... coexistem na tela de Usuários,

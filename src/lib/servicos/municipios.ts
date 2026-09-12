@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { PrismaClient } from "@/lib/generated/prisma/client";
 import { normalizarParaBusca } from "@/lib/utils/texto";
 import { medir } from "@/lib/utils/medir-tempo";
 
@@ -157,6 +158,19 @@ export async function resolverMunicipio(
   texto: string,
   /** Rótulo só para o diagnóstico temporário de medição (`medir-tempo.ts`) — distingue origem de destino no log. */
   rotulo = "resolverMunicipio",
+  /**
+   * O cliente a usar — `db(empresaId)` por padrão. Passar o `tx` de um
+   * `emTransacao` em andamento evita abrir uma SEGUNDA conexão do pool
+   * enquanto a primeira está presa numa transação interativa — achado do
+   * `/revisar`, 12/09/2026: `atualizarConfiguracoes` chama esta função de
+   * dentro de `atualizarContaEConfiguracoes` (`empresas.ts`), e sem isso
+   * cada "Salvar dados" seguraria duas conexões ao mesmo tempo, a mesma
+   * classe "pool esgotado" já catalogada em `CLAUDE.md` §2.
+   */
+  cliente: Omit<PrismaClient, `$${string}`> = db(empresaId) as unknown as Omit<
+    PrismaClient,
+    `$${string}`
+  >,
 ): Promise<ResolucaoDeMunicipio> {
   const normalizado = normalizarParaBusca(texto);
   if (normalizado.length < MINIMO_DE_LETRAS) return { situacao: "nao_encontrado" };
@@ -165,7 +179,7 @@ export async function resolverMunicipio(
   if (nome.length < MINIMO_DE_LETRAS) return { situacao: "nao_encontrado" };
 
   const encontrados = await medir(`servico.${rotulo}`, () =>
-    db(empresaId).municipio.findMany({
+    cliente.municipio.findMany({
       where: {
         nome_normalizado: nome,
         ...(uf ? { uf } : {}),
