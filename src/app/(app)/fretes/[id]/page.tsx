@@ -318,9 +318,17 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           <Botao variante="secundaria" href={`/fretes/${id}/editar`}>
             Editar frete
           </Botao>
-          <form>
-            <BotaoArquivarFrete id={id} />
-          </form>
+          {/* Some quando já arquivado — achado do fundador, 12/09/2026:
+              arquivar de novo não muda nada (`arquivarServico` só atualiza o
+              mesmo timestamp), então o botão continuar visível prometia uma
+              ação que já aconteceu. Mesma regra já aplicada nesta tela para
+              `podeFaturar`/`podeVerRelatorio`: "botão cuja ação de fundo não
+              existe não entra, nem desabilitado" (`CLAUDE.md` §8). */}
+          {!servico.arquivado_em ? (
+            <form>
+              <BotaoArquivarFrete id={id} />
+            </form>
+          ) : null}
         </div>
       </div>
     </main>

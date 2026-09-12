@@ -1535,6 +1535,15 @@ vez de ao lado cancelado.
     §3), que é a base da arquitetura — não construir antes de decidir como
     isso convive com o RLS. Pergunta em aberto registrada em `CLAUDE.md`
     §14. Registrado em 12/09/2026, para depois do lançamento.
+20. Ver arquivados — uma forma de enxergar o que já foi arquivado (frete,
+    cliente, caminhão e motorista; o mesmo mecanismo para os quatro, não um
+    por entidade). Hoje um registro arquivado some de toda lista e de todo
+    histórico (`CLAUDE.md` §7) e só continua acessível por link direto — sem
+    tela nenhuma que ofereça esse link de volta. **Não é urgente**: arquivar
+    é ação rara (não é o fluxo comum de nenhuma tela), e o dado nunca é
+    perdido — `arquivado_em` preenchido, nunca `DELETE` (`CLAUDE.md` §7).
+    Registrado em 12/09/2026, achado ao investigar "onde vejo um frete
+    arquivado depois", para depois do lançamento.
 
 Nada de 5 em diante começa antes de 1 a 4 funcionar de verdade.
 
@@ -1697,8 +1706,8 @@ Três exigências para quando os itens 5 e 6 chegarem:
    validação nos dois formulários, não construída na Tarefa 1 (que só
    resolveu o gatilho da folha). Registrado aqui para não decidir de novo.
 
-**Ficam para depois do lançamento:** 12, 14, 15, 16, 17, 19, e a tela de edição
-de modelo do item 9.
+**Ficam para depois do lançamento:** 12, 14, 15, 16, 17, 19, 20, e a tela de
+edição de modelo do item 9.
 
 ### Por que o item 12 pode esperar sem perder nada
 
