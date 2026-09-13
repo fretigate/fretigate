@@ -6,6 +6,27 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 12/09/2026 — Plano aprovado: por que dashboard.total nunca fecha
+
+Puxando os números da instrumentação em produção (`docs/diario.md`, entrada
+"Números da instrumentação medidos em produção..."), o fundador notou que
+`dashboard.total` — a medição que embrulha a maior parte das consultas da
+dashboard — nunca aparece nos logs, enquanto as consultas de dentro aparecem
+todas. Três hipóteses do fundador (tempo limite da função, pedido
+cancelado, código nunca chega lá) mais uma somada nesta investigação (a
+última linha de uma rajada de log se perde no coletor da Vercel) — nenhuma
+decidida ainda, porque não existe hoje como agrupar as linhas `[medir]` de
+um mesmo carregamento.
+
+Plano aprovado em `docs/planos/investiga-dashboard-total-nao-fecha.md`:
+três pontos de medição novos (identificador por pedido em toda linha
+`[medir]`, marcador logo após o `Promise.all` resolver, cruzamento com a
+duração real da invocação no painel da Vercel).
+
+Próximo: construir a instrumentação.
+
+---
+
 ## 12/09/2026 — Plano aprovado: fundir Configurações dentro de Conta da empresa
 
 Fundador notou que "Configurações" e "Conta da empresa" se pareciam demais,
