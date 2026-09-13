@@ -30,18 +30,21 @@ function limitesDoMes(primeiroDiaDoMes: string) {
  * adaptado para janela de mês fechada (`[gte, lt)`) em vez de `Periodo`
  * arbitrário.
  */
-async function somaDoMes(empresaId: string, primeiroDiaDoMes: string, rotulo: string) {
+async function somaDoMes(empresaId: string, primeiroDiaDoMes: string, rotulo: string, idPedido?: string) {
   const { inicio, fimExclusivo } = limitesDoMes(primeiroDiaDoMes);
-  const agregado = await medir(`dashboard.somaDoMes[${rotulo}]`, () =>
-    db(empresaId).servico.aggregate({
-      where: {
-        arquivado_em: null,
-        status_operacional: { not: "cancelado" },
-        data_servico: { gte: inicio, lt: fimExclusivo },
-      },
-      _sum: { valor: true },
-      _count: true,
-    }),
+  const agregado = await medir(
+    `dashboard.somaDoMes[${rotulo}]`,
+    () =>
+      db(empresaId).servico.aggregate({
+        where: {
+          arquivado_em: null,
+          status_operacional: { not: "cancelado" },
+          data_servico: { gte: inicio, lt: fimExclusivo },
+        },
+        _sum: { valor: true },
+        _count: true,
+      }),
+    idPedido,
   );
   return { faturamentoCentavos: agregado._sum.valor ?? 0, qtdFretes: agregado._count };
 }
@@ -56,13 +59,13 @@ export type ResumoDoMes = {
 };
 
 /** Faturamento do cartão escuro: mês corrente, comparação com o mês anterior, quantidade e média. */
-export async function resumoDoMes(empresaId: string, hoje: string): Promise<ResumoDoMes> {
+export async function resumoDoMes(empresaId: string, hoje: string, idPedido?: string): Promise<ResumoDoMes> {
   const primeiroDiaDoMesAtual = `${hoje.slice(0, 7)}-01`;
   const primeiroDiaDoMesAnterior = deslocarMes(primeiroDiaDoMesAtual, -1);
 
   const [atual, anterior] = await Promise.all([
-    somaDoMes(empresaId, primeiroDiaDoMesAtual, "resumoDoMes-atual"),
-    somaDoMes(empresaId, primeiroDiaDoMesAnterior, "resumoDoMes-anterior"),
+    somaDoMes(empresaId, primeiroDiaDoMesAtual, "resumoDoMes-atual", idPedido),
+    somaDoMes(empresaId, primeiroDiaDoMesAnterior, "resumoDoMes-anterior", idPedido),
   ]);
 
   return {
@@ -97,20 +100,23 @@ export type ResumoDeLucro = {
  * lançadas no mês (`arquivado_em: null`, mesma janela `[gte, lt)` de
  * `limitesDoMes`).
  */
-export async function resumoDeLucroDoMes(empresaId: string, hoje: string): Promise<ResumoDeLucro> {
+export async function resumoDeLucroDoMes(empresaId: string, hoje: string, idPedido?: string): Promise<ResumoDeLucro> {
   const primeiroDiaDoMesAtual = `${hoje.slice(0, 7)}-01`;
   const { inicio, fimExclusivo } = limitesDoMes(primeiroDiaDoMesAtual);
 
   const [faturamento, despesas] = await Promise.all([
     // Mesmo mês, mesma soma de `resumoDoMes` — achado a medir: candidato a
     // consulta repetida (`CLAUDE.md`, achado do fundador, 12/09/2026).
-    somaDoMes(empresaId, primeiroDiaDoMesAtual, "resumoDeLucroDoMes-atual"),
-    medir("dashboard.despesasDoMes", () =>
-      db(empresaId).despesa.aggregate({
-        where: { arquivado_em: null, data: { gte: inicio, lt: fimExclusivo } },
-        _sum: { valor: true },
-        _count: true,
-      }),
+    somaDoMes(empresaId, primeiroDiaDoMesAtual, "resumoDeLucroDoMes-atual", idPedido),
+    medir(
+      "dashboard.despesasDoMes",
+      () =>
+        db(empresaId).despesa.aggregate({
+          where: { arquivado_em: null, data: { gte: inicio, lt: fimExclusivo } },
+          _sum: { valor: true },
+          _count: true,
+        }),
+      idPedido,
     ),
   ]);
 
@@ -145,7 +151,11 @@ export type ResumoDeRodagem = {
  * manual; o item 12 é só o cálculo automático, não um pré-requisito para o
  * campo existir. Convite só quando a cobertura é zero.
  */
-export async function resumoDeRodagemDoMes(empresaId: string, hoje: string): Promise<ResumoDeRodagem> {
+export async function resumoDeRodagemDoMes(
+  empresaId: string,
+  hoje: string,
+  idPedido?: string,
+): Promise<ResumoDeRodagem> {
   const primeiroDiaDoMes = `${hoje.slice(0, 7)}-01`;
   const { inicio, fimExclusivo } = limitesDoMes(primeiroDiaDoMes);
   const baseWhere = {
@@ -155,14 +165,21 @@ export async function resumoDeRodagemDoMes(empresaId: string, hoje: string): Pro
   };
 
   const [comKm, fretesNoMes] = await Promise.all([
-    medir("dashboard.rodagem.comKm", () =>
-      db(empresaId).servico.aggregate({
-        where: { ...baseWhere, km: { gt: 0 } },
-        _sum: { valor: true, km: true },
-        _count: true,
-      }),
+    medir(
+      "dashboard.rodagem.comKm",
+      () =>
+        db(empresaId).servico.aggregate({
+          where: { ...baseWhere, km: { gt: 0 } },
+          _sum: { valor: true, km: true },
+          _count: true,
+        }),
+      idPedido,
     ),
-    medir("dashboard.rodagem.fretesNoMes", () => db(empresaId).servico.count({ where: baseWhere })),
+    medir(
+      "dashboard.rodagem.fretesNoMes",
+      () => db(empresaId).servico.count({ where: baseWhere }),
+      idPedido,
+    ),
   ]);
 
   const kmMesMetros = comKm._sum.km ?? 0;
@@ -180,17 +197,26 @@ export async function resumoDeRodagemDoMes(empresaId: string, hoje: string): Pro
 export type ContagemEmAndamento = { total: number; semOrdemEnviada: number };
 
 /** "Fretes em andamento (indicando quantos sem ordem enviada)" — `docs/especificacao.md` §4.6. */
-export async function contarFretesEmAndamento(empresaId: string): Promise<ContagemEmAndamento> {
+export async function contarFretesEmAndamento(
+  empresaId: string,
+  idPedido?: string,
+): Promise<ContagemEmAndamento> {
   const [total, semOrdemEnviada] = await Promise.all([
-    medir("dashboard.emAndamento.total", () =>
-      db(empresaId).servico.count({
-        where: { arquivado_em: null, status_operacional: "em_andamento" },
-      }),
+    medir(
+      "dashboard.emAndamento.total",
+      () =>
+        db(empresaId).servico.count({
+          where: { arquivado_em: null, status_operacional: "em_andamento" },
+        }),
+      idPedido,
     ),
-    medir("dashboard.emAndamento.semOrdemEnviada", () =>
-      db(empresaId).servico.count({
-        where: { arquivado_em: null, status_operacional: "em_andamento", ordem_enviada_em: null },
-      }),
+    medir(
+      "dashboard.emAndamento.semOrdemEnviada",
+      () =>
+        db(empresaId).servico.count({
+          where: { arquivado_em: null, status_operacional: "em_andamento", ordem_enviada_em: null },
+        }),
+      idPedido,
     ),
   ]);
   return { total, semOrdemEnviada };
@@ -212,18 +238,25 @@ export async function contarFretesEmAndamento(empresaId: string): Promise<Contag
  * mudar depois, este contador precisa mudar junto**, não é uma segunda
  * verdade.
  */
-export async function contarCobrancasVencidasAgrupadas(empresaId: string, hoje: string): Promise<number> {
+export async function contarCobrancasVencidasAgrupadas(
+  empresaId: string,
+  hoje: string,
+  idPedido?: string,
+): Promise<number> {
   const inicioDeHoje = instanteDoDiaEmFortaleza(hoje);
-  const vencidas = await medir("dashboard.vencidasAgrupadas", () =>
-    db(empresaId).tituloReceber.findMany({
-      where: {
-        arquivado_em: null,
-        status: "aberto",
-        servico: { arquivado_em: null },
-        vencimento: { lt: inicioDeHoje },
-      },
-      select: { relatorio_id: true },
-    }),
+  const vencidas = await medir(
+    "dashboard.vencidasAgrupadas",
+    () =>
+      db(empresaId).tituloReceber.findMany({
+        where: {
+          arquivado_em: null,
+          status: "aberto",
+          servico: { arquivado_em: null },
+          vencimento: { lt: inicioDeHoje },
+        },
+        select: { relatorio_id: true },
+      }),
+    idPedido,
   );
 
   const semRelatorio = vencidas.filter((t) => !t.relatorio_id).length;
@@ -256,27 +289,31 @@ export type SugestaoDeRelatorio = { clienteId: string; quantidade: number };
 export async function sugerirRelatorio(
   empresaId: string,
   hoje: string,
+  idPedido?: string,
 ): Promise<SugestaoDeRelatorio | null> {
   const LIMIAR = 3;
   const primeiroDiaDoMesAtual = `${hoje.slice(0, 7)}-01`;
   const inicioDoMesAtual = instanteDoDiaEmFortaleza(primeiroDiaDoMesAtual);
 
-  const fretes = await medir("dashboard.sugerirRelatorio", () =>
-    db(empresaId).servico.findMany({
-      where: {
-        arquivado_em: null,
-        // **Diverge de propósito de `contarFretesAFaturar`**, que não filtra
-        // `status_operacional`: aqui o número alimenta uma sugestão de
-        // relatório — dinheiro — e um frete cancelado "não vai acontecer"
-        // (`CLAUDE.md` §7, "nunca entra em nenhuma soma derivada"). Sugerir
-        // relatório por causa de um frete cancelado sugeriria cobrar dinheiro
-        // que ninguém vai receber.
-        status_operacional: { not: "cancelado" },
-        data_servico: { lt: inicioDoMesAtual },
-        titulos_receber: { none: { arquivado_em: null, status: { not: "cancelado" } } },
-      },
-      select: { cliente_id: true },
-    }),
+  const fretes = await medir(
+    "dashboard.sugerirRelatorio",
+    () =>
+      db(empresaId).servico.findMany({
+        where: {
+          arquivado_em: null,
+          // **Diverge de propósito de `contarFretesAFaturar`**, que não filtra
+          // `status_operacional`: aqui o número alimenta uma sugestão de
+          // relatório — dinheiro — e um frete cancelado "não vai acontecer"
+          // (`CLAUDE.md` §7, "nunca entra em nenhuma soma derivada"). Sugerir
+          // relatório por causa de um frete cancelado sugeriria cobrar dinheiro
+          // que ninguém vai receber.
+          status_operacional: { not: "cancelado" },
+          data_servico: { lt: inicioDoMesAtual },
+          titulos_receber: { none: { arquivado_em: null, status: { not: "cancelado" } } },
+        },
+        select: { cliente_id: true },
+      }),
+    idPedido,
   );
 
   const contagemPorCliente = new Map<string, number>();
@@ -304,6 +341,7 @@ export async function faturamentoPorMes(
   empresaId: string,
   hoje: string,
   meses = 6,
+  idPedido?: string,
 ): Promise<FaturamentoDoMes[]> {
   const primeiroDiaDoMesAtual = `${hoje.slice(0, 7)}-01`;
   const janelas = Array.from({ length: meses }, (_, i) =>
@@ -315,7 +353,12 @@ export async function faturamentoPorMes(
       // O último elemento (`i === meses - 1`) é o mês corrente — mesmo mês
       // já somado em `resumoDoMes-atual` e `resumoDeLucroDoMes-atual` acima.
       // Rótulo marca isso para a medição separar o custo da redundância.
-      somaDoMes(empresaId, mes, i === meses - 1 ? "faturamentoPorMes-atual(3a-vez)" : `faturamentoPorMes[${mes}]`),
+      somaDoMes(
+        empresaId,
+        mes,
+        i === meses - 1 ? "faturamentoPorMes-atual(3a-vez)" : `faturamentoPorMes[${mes}]`,
+        idPedido,
+      ),
     ),
   );
   return janelas.map((mes, i) => ({ mes: mes.slice(0, 7), faturamentoCentavos: somas[i].faturamentoCentavos }));

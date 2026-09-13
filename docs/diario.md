@@ -6,6 +6,26 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 12/09/2026 — Instrumentação construída: idPedido na dashboard
+
+Construção do plano aprovado na entrada "Plano aprovado: por que
+dashboard.total nunca fecha", abaixo
+(`docs/planos/investiga-dashboard-total-nao-fecha.md`). Todo `[medir]` da
+dashboard (`page.tsx`, `dashboard.ts`, `cobrancas.ts`) ganhou um
+identificador por carregamento (`randomUUID().slice(0, 8)`), e `page.tsx`
+ganhou um marcador (`console.log`) logo depois do `Promise.all` resolver —
+os dois preparam a próxima leitura dos logs, que ainda não aconteceu.
+`CLAUDE.md` §14 registra o gatilho de remoção desta instrumentação (quando
+a investigação fechar), achado do `/revisar`.
+
+Suíte local dos dois arquivos de serviço tocados (`dashboard`, `cobrancas`
+— 60 testes) rodou verde. `npx tsc --noEmit` sem erro.
+
+Próximo: publicar, esperar tráfego real, puxar os logs de novo e responder
+as quatro hipóteses do plano com o que a instrumentação revelar.
+
+---
+
 ## 12/09/2026 — Convite no WhatsApp diagnosticado, correção adiada
 
 Achado do fundador ao testar o convite no WhatsApp do iPhone com o app

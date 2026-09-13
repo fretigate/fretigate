@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Fragment } from "react";
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { exigirSessao } from "@/lib/auth/sessao";
 import { db } from "@/lib/db";
@@ -50,38 +51,60 @@ export default async function Pagina() {
   const sessao = await exigirSessao();
   const hoje = diaEmFortaleza(new Date());
 
+  // Diagnóstico temporário — investigação de `dashboard.total` nunca
+  // aparecer nos logs de produção (`docs/planos/
+  // investiga-dashboard-total-nao-fecha.md`). Marca todas as linhas
+  // `[medir]` deste carregamento com o mesmo id, para dar para agrupar
+  // depois; o log logo após o `Promise.all` localiza se a falta é antes ou
+  // depois dele resolver.
+  const idPedido = randomUUID().slice(0, 8);
+
   const [empresa, usuario, resumoMes, lucro, rodagem, cobrancas, fretesAFaturar, emAndamento, vencidasAgrupadas, sugestao, meses] =
-    await medir("dashboard.total", () =>
-      Promise.all([
-        medir("dashboard.empresa", () =>
-          db(sessao.empresaId).empresa.findUnique({
-            where: { id: sessao.empresaId },
-            select: { nome_fantasia: true },
-          }),
-        ),
-        medir("dashboard.usuario", () =>
-          db(sessao.empresaId).usuario.findUnique({
-            where: { id: sessao.usuarioId },
-            select: { email_verificado: true },
-          }),
-        ),
-        resumoDoMes(sessao.empresaId, hoje),
-        resumoDeLucroDoMes(sessao.empresaId, hoje),
-        resumoDeRodagemDoMes(sessao.empresaId, hoje),
-        resumoDeCobrancas(sessao.empresaId, hoje),
-        contarFretesAFaturar(sessao.empresaId),
-        contarFretesEmAndamento(sessao.empresaId),
-        contarCobrancasVencidasAgrupadas(sessao.empresaId, hoje),
-        sugerirRelatorio(sessao.empresaId, hoje),
-        faturamentoPorMes(sessao.empresaId, hoje),
-      ]),
+    await medir(
+      "dashboard.total",
+      () =>
+        Promise.all([
+          medir(
+            "dashboard.empresa",
+            () =>
+              db(sessao.empresaId).empresa.findUnique({
+                where: { id: sessao.empresaId },
+                select: { nome_fantasia: true },
+              }),
+            idPedido,
+          ),
+          medir(
+            "dashboard.usuario",
+            () =>
+              db(sessao.empresaId).usuario.findUnique({
+                where: { id: sessao.usuarioId },
+                select: { email_verificado: true },
+              }),
+            idPedido,
+          ),
+          resumoDoMes(sessao.empresaId, hoje, idPedido),
+          resumoDeLucroDoMes(sessao.empresaId, hoje, idPedido),
+          resumoDeRodagemDoMes(sessao.empresaId, hoje, idPedido),
+          resumoDeCobrancas(sessao.empresaId, hoje, idPedido),
+          contarFretesAFaturar(sessao.empresaId, idPedido),
+          contarFretesEmAndamento(sessao.empresaId, idPedido),
+          contarCobrancasVencidasAgrupadas(sessao.empresaId, hoje, idPedido),
+          sugerirRelatorio(sessao.empresaId, hoje, idPedido),
+          faturamentoPorMes(sessao.empresaId, hoje, 6, idPedido),
+        ]),
+      idPedido,
     );
+  console.log(`[dashboard] promise.all resolvido id=${idPedido}`);
 
   // Uma consulta a mais só quando existe sugestão — mesmo padrão de
   // `contarFretesAFaturar` em `cobrancas/page.tsx` (custo só quando o
   // resultado precisa dele).
   const clienteSugerido = sugestao
-    ? await medir("dashboard.clienteSugerido", () => buscarCliente(sessao.empresaId, sugestao.clienteId))
+    ? await medir(
+        "dashboard.clienteSugerido",
+        () => buscarCliente(sessao.empresaId, sugestao.clienteId),
+        idPedido,
+      )
     : null;
 
   const nomeEmpresa = empresa?.nome_fantasia ?? "";

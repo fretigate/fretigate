@@ -53,7 +53,7 @@ import type { SituacaoCobranca } from "@/lib/servicos/cobrancas-situacao";
  * título dela está aberto ou vencido — só a relação `titulo` no `where`
  * resolve isso, e Prisma agrega uma coisa por vez.
  */
-export async function resumoDeCobrancas(empresaId: string, hoje: string) {
+export async function resumoDeCobrancas(empresaId: string, hoje: string, idPedido?: string) {
   const inicioDeHoje = instanteDoDiaEmFortaleza(hoje);
   const primeiroDiaDoMes = `${hoje.slice(0, 7)}-01`;
   const inicioDoMes = instanteDoDiaEmFortaleza(primeiroDiaDoMes);
@@ -77,33 +77,46 @@ export async function resumoDeCobrancas(empresaId: string, hoje: string) {
 
   const [totalAbertas, recebidoAbertas, totalVencidas, recebidoVencidas, recebidoNoMes] =
     await Promise.all([
-      medir("cobrancas.resumo.totalAbertas", () =>
-        db(empresaId).tituloReceber.aggregate({ where: whereAbertas, _sum: { valor: true } }),
+      medir(
+        "cobrancas.resumo.totalAbertas",
+        () => db(empresaId).tituloReceber.aggregate({ where: whereAbertas, _sum: { valor: true } }),
+        idPedido,
       ),
-      medir("cobrancas.resumo.recebidoAbertas", () =>
-        db(empresaId).recebimento.aggregate({
-          where: { arquivado_em: null, titulo: whereAbertas },
-          _sum: { valor: true },
-        }),
+      medir(
+        "cobrancas.resumo.recebidoAbertas",
+        () =>
+          db(empresaId).recebimento.aggregate({
+            where: { arquivado_em: null, titulo: whereAbertas },
+            _sum: { valor: true },
+          }),
+        idPedido,
       ),
-      medir("cobrancas.resumo.totalVencidas", () =>
-        db(empresaId).tituloReceber.aggregate({ where: whereVencidas, _sum: { valor: true } }),
+      medir(
+        "cobrancas.resumo.totalVencidas",
+        () => db(empresaId).tituloReceber.aggregate({ where: whereVencidas, _sum: { valor: true } }),
+        idPedido,
       ),
-      medir("cobrancas.resumo.recebidoVencidas", () =>
-        db(empresaId).recebimento.aggregate({
-          where: { arquivado_em: null, titulo: whereVencidas },
-          _sum: { valor: true },
-        }),
+      medir(
+        "cobrancas.resumo.recebidoVencidas",
+        () =>
+          db(empresaId).recebimento.aggregate({
+            where: { arquivado_em: null, titulo: whereVencidas },
+            _sum: { valor: true },
+          }),
+        idPedido,
       ),
-      medir("cobrancas.resumo.recebidoNoMes", () =>
-        db(empresaId).recebimento.aggregate({
-          where: {
-            arquivado_em: null,
-            data: { gte: inicioDoMes, lt: inicioDoMesSeguinte },
-            titulo: { arquivado_em: null, status: { not: "cancelado" } },
-          },
-          _sum: { valor: true },
-        }),
+      medir(
+        "cobrancas.resumo.recebidoNoMes",
+        () =>
+          db(empresaId).recebimento.aggregate({
+            where: {
+              arquivado_em: null,
+              data: { gte: inicioDoMes, lt: inicioDoMesSeguinte },
+              titulo: { arquivado_em: null, status: { not: "cancelado" } },
+            },
+            _sum: { valor: true },
+          }),
+        idPedido,
       ),
     ]);
 
@@ -403,13 +416,16 @@ export function referenciaDoServico(
  * um contra o outro — não a leitura de que as duas consultas "parecem" a
  * mesma.
  */
-export function contarFretesAFaturar(empresaId: string) {
-  return medir("cobrancas.fretesAFaturar", () =>
-    db(empresaId).servico.count({
-      where: {
-        arquivado_em: null,
-        titulos_receber: { none: { arquivado_em: null, status: { not: "cancelado" } } },
-      },
-    }),
+export function contarFretesAFaturar(empresaId: string, idPedido?: string) {
+  return medir(
+    "cobrancas.fretesAFaturar",
+    () =>
+      db(empresaId).servico.count({
+        where: {
+          arquivado_em: null,
+          titulos_receber: { none: { arquivado_em: null, status: { not: "cancelado" } } },
+        },
+      }),
+    idPedido,
   );
 }

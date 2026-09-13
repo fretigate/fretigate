@@ -2098,6 +2098,25 @@ Não invente resposta. Pergunte.
   reexaminar); **outra aplicação**, fora do caminho de `db(empresaId)` que o
   produto usa hoje; ou um **terceiro caminho** ainda não considerado. Não
   construir nada antes desta decisão — nem o rascunho de uma tela.
+- **Instrumentação de diagnóstico da dashboard (`idPedido` + o marcador
+  logo após o `Promise.all`) é temporária, não parte permanente do produto —
+  sem gatilho de remoção até este achado do `/revisar`, 12/09/2026.** Todo
+  `[medir]` da dashboard (`page.tsx`, `dashboard.ts`, `cobrancas.ts`) ganhou
+  um identificador por carregamento (`randomUUID().slice(0, 8)`), e
+  `page.tsx` ganhou uma linha extra (`console.log("[dashboard] promise.all
+  resolvido id=...")`, logo após o `Promise.all` resolver) — as duas juntas
+  permitem agrupar as linhas de uma mesma rajada e responder as quatro
+  hipóteses de `docs/planos/investiga-dashboard-total-nao-fecha.md` (tempo
+  limite, pedido cancelado, código nunca chega lá, ou corte da última linha
+  pelo coletor da Vercel). **Gatilho para remover as duas:** quando a
+  investigação de `dashboard.total` fechar (mesmo gatilho do item do
+  convite, abaixo) — não antes, porque são a mesma instrumentação que vai
+  responder a pergunta; não depois por inércia, porque log por pedido,
+  deixado para sempre, é custo contínuo (mais uma linha por `[medir]`, mais
+  a linha extra do marcador) sem função depois que a pergunta for
+  respondida. Quem fechar a investigação decide então: remover as duas, ou
+  promovê-las a mecanismo permanente se a resposta mostrar que vale a pena —
+  decisão nova, não herdada desta.
 - **Convite por WhatsApp não entrega direto no app instalado do iPhone —
   diagnosticado em 12/09/2026, correção adiada de propósito.** Achado do
   fundador: convidar do app instalado abriu uma página do

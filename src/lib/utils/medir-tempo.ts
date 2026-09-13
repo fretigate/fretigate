@@ -13,13 +13,21 @@
  *
  * Só rótulo e milissegundos no log — nunca dado de cliente ou de empresa
  * (`CLAUDE.md` §4, "log nunca contém dado pessoal").
+ *
+ * **`idPedido`, acrescentado em 12/09/2026** — investigação de
+ * `dashboard.total` nunca aparecer nos logs de produção
+ * (`docs/planos/investiga-dashboard-total-nao-fecha.md`): sem um jeito de
+ * agrupar as linhas de UM carregamento só, não dava para distinguir "o
+ * pedido falhou" de "a última linha da rajada se perdeu no coletor de log".
+ * Opcional — quem já chama `medir` sem isso continua igual, formatado sem
+ * o sufixo `id=...`.
  */
-export async function medir<T>(rotulo: string, fn: () => Promise<T>): Promise<T> {
+export async function medir<T>(rotulo: string, fn: () => Promise<T>, idPedido?: string): Promise<T> {
   const inicio = performance.now();
   try {
     return await fn();
   } finally {
     const duracaoMs = Math.round(performance.now() - inicio);
-    console.log(`[medir] ${rotulo} ${duracaoMs}ms`);
+    console.log(`[medir] ${rotulo} ${duracaoMs}ms${idPedido ? ` id=${idPedido}` : ""}`);
   }
 }
