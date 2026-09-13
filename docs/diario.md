@@ -6,6 +6,59 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 12/09/2026 — Duas consultas repetidas removidas (tipo de operação e soma do mês)
+
+Construção do plano da entrada seguinte
+(`docs/planos/remove-consultas-repetidas-tipo-operacao-e-soma-do-mes.md`).
+
+**Tipo de operação.** `DadosServico.tipo_operacao_id` virou opcional;
+`fretes/acoes.ts` deixou de buscar o tipo ativo antes de chamar o serviço.
+**Redesenhado no meio da construção, achado do `/revisar`:** a primeira
+versão aceitava do chamador um valor "já validado" — e como o único
+chamador real construía os dois lados da comparação a partir do mesmo
+objeto pré-buscado, a checagem virava tautologia e a validação de verdade
+nunca rodava no caminho que a produção usa (rigor total — isolamento entre
+empresas, `CLAUDE.md` §3). Corrigido com o desenho final: quando o id vem
+ausente, o próprio serviço resolve e valida o tipo ativo numa consulta só,
+nunca pulando a checagem. Quatro testes novos (`tests/servicos.test.ts`,
+"2d.") cobrem exatamente o caminho que ficou sem teste — criar/editar sem
+informar o tipo, sem tipo ativo nenhum, e id de outra empresa continuando
+recusado.
+
+**Soma do mês.** `page.tsx` calcula a soma do mês corrente uma vez
+(`iniciarSomaDoMesAtual`) e passa para as três funções que a repetiam.
+Mesmo achado do `/revisar`, mesma categoria: a primeira versão passava um
+`Promise<SomaDoMes>` cru, sem nada ligando o valor a uma empresa ou mês —
+corrigido com um envelope (`SomaDoMesAtual`) e uma conferência
+(`somaMesAtualValida`) que todo consumidor roda antes de reaproveitar; sem
+bater empresa e mês, cada função calcula a própria soma. Três testes novos
+(`tests/dashboard.test.ts`, "1c.") provam as duas pontas: reaproveita
+quando bate, ignora e recalcula quando não bate (empresa errada, mês
+errado) — nenhum dos dois cenários tinha cobertura antes.
+
+Números de produção citados no plano (`resumoDoMes-atual`: 102–469ms, 4
+amostras; `resumoDeLucroDoMes-atual`: 418ms, 1 amostra) vêm da mesma
+puxada de `vercel logs` desta sessão, janela 2026-09-12T08:53–10:26 UTC
+(~1h32min de tráfego real, 2000 linhas brutas, 50 únicas após remover
+duplicata por `id`).
+
+`docs/planos/investiga-dashboard-total-nao-fecha.md` (Tarefa 1, já
+commitado) tinha uma contagem de linhas de log ("24 filhos") que esta
+tarefa invalidou — corrigida para 22, com a conta refeita por extenso, na
+mesma tarefa que causou a mudança (`CLAUDE.md` §2: quem cria o estado novo
+relê o texto que descreve o estado antigo).
+
+**Suíte local completa rodou verde**: 38 arquivos, 764 testes passando, 8
+pulados (Chromium não roda no Windows, comportamento esperado e já
+documentado), zero falhas — contra o banco de **desenvolvimento**, não o
+de teste da esteira (`CLAUDE.md` §2, "suíte verde local e esteira verde
+não são a mesma afirmação"). `npx tsc --noEmit` sem erro.
+
+Próximo: publicar. Depois de publicado, retomar a investigação de
+`dashboard.total` quando houver tráfego real para puxar de novo.
+
+---
+
 ## 12/09/2026 — Plano aprovado: remove duas consultas repetidas (tipo de operação e soma do mês)
 
 Na mesma sessão da investigação de `dashboard.total`, dois achados já

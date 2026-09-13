@@ -3,7 +3,7 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 import { buscarCliente, listarClientes } from "@/lib/servicos/clientes";
 import { buscarCaminhao, listarCaminhoes } from "@/lib/servicos/caminhoes";
 import { buscarMotorista, listarMotoristas } from "@/lib/servicos/motoristas";
-import { buscarTipoOperacao } from "@/lib/servicos/tipos-de-operacao";
+import { buscarTipoOperacao, buscarTipoOperacaoAtivo } from "@/lib/servicos/tipos-de-operacao";
 import { resolverMunicipio } from "@/lib/servicos/municipios";
 import { medir } from "@/lib/utils/medir-tempo";
 
@@ -24,7 +24,21 @@ function buscarUsuario(empresaId: string, id: string) {
  */
 
 export type DadosServico = {
-  tipo_operacao_id: string;
+  /**
+   * Opcional desde 12/09/2026 — `tipo_operacao_id` nunca é escolha do
+   * usuário (comentário original, abaixo): quando o chamador não informa,
+   * `normalizarEntrada` resolve **e** valida o tipo ativo numa única
+   * consulta (`buscarTipoOperacaoAtivo`), em vez de o chamador buscar o
+   * ativo para descobrir o id e o serviço buscar de novo para validar o
+   * mesmo id — duas idas ao banco provando o mesmo fato. Achado do
+   * fundador, número de produção, 12/09/2026 —
+   * `docs/planos/remove-consultas-repetidas-tipo-operacao-e-soma-do-mes.md`.
+   * Informar um id explícito continua funcionando exatamente como antes
+   * (busca por esse id, valida contra a empresa) — é o caminho que os
+   * testes de segurança (`tests/servicos.test.ts`, tipo de outra empresa /
+   * inativo) continuam exercitando sem mudança nenhuma.
+   */
+  tipo_operacao_id?: string;
   cliente_id: string;
   veiculo_id?: string | null;
   motorista_id?: string | null;
@@ -140,9 +154,25 @@ async function normalizarEntrada(
     throw new Error("Selecione um cliente válido.");
   }
 
-  const tipoOperacao = await buscarTipoOperacao(empresaId, dados.tipo_operacao_id);
-  if (!tipoOperacao || tipoOperacao.arquivado_em || !tipoOperacao.ativo) {
-    throw new Error("Selecione um tipo de operação válido.");
+  // **Uma consulta só, sempre** — achado do fundador, número de produção,
+  // 12/09/2026 (`docs/planos/
+  // remove-consultas-repetidas-tipo-operacao-e-soma-do-mes.md`): antes, o
+  // chamador buscava o tipo ativo para saber qual id mandar, e esta função
+  // buscava de novo pelo mesmo id só para confirmar o que a primeira busca
+  // já tinha provado por construção. Agora só existe UMA busca, e ela
+  // continua sendo a que valida contra a empresa — nunca confia num valor
+  // que o chamador diz já ter conferido.
+  let tipoOperacaoId: string;
+  if (dados.tipo_operacao_id) {
+    const tipoOperacao = await buscarTipoOperacao(empresaId, dados.tipo_operacao_id);
+    if (!tipoOperacao || tipoOperacao.arquivado_em || !tipoOperacao.ativo) {
+      throw new Error("Selecione um tipo de operação válido.");
+    }
+    tipoOperacaoId = tipoOperacao.id;
+  } else {
+    const tipoAtivo = await buscarTipoOperacaoAtivo(empresaId);
+    if (!tipoAtivo) throw new Error("Nenhum tipo de operação ativo. Fale com o suporte.");
+    tipoOperacaoId = tipoAtivo.id;
   }
 
   let veiculoId: string | null = null;
@@ -185,7 +215,7 @@ async function normalizarEntrada(
   ]);
 
   return {
-    tipo_operacao_id: tipoOperacao.id,
+    tipo_operacao_id: tipoOperacaoId,
     cliente_id: cliente.id,
     veiculo_id: veiculoId,
     motorista_id: motoristaId,

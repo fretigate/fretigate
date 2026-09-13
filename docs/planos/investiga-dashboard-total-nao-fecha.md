@@ -7,9 +7,9 @@ medir a seguir.
 
 ## O sintoma
 
-`src/app/(app)/page.tsx:62-96` embrulha a maior parte das consultas da
+`src/app/(app)/page.tsx:86-120` embrulha a maior parte das consultas da
 dashboard num `medir("dashboard.total", () => Promise.all([...]))` — a
-exceção é `dashboard.clienteSugerido` (`page.tsx:102-108`), que só roda
+exceção é `dashboard.clienteSugerido` (`page.tsx:126-132`), que só roda
 **depois**, condicionada ao resultado de `sugerirRelatorio`: não dá para
 buscar o nome do cliente sugerido antes de saber quem foi sugerido, então
 essa consulta nunca poderia estar dentro do mesmo `Promise.all`. As
@@ -79,11 +79,24 @@ distinguir as três hipóteses do fundador.
 **O que falta, e por isso nenhuma das quatro está decidida:** não existe
 hoje nenhum jeito de agrupar as linhas `[medir]` de um mesmo carregamento da
 dashboard. Cada linha sai solta — sem `requestId` nem qualquer marca em
-comum —, então não dá para responder "este pedido teve os 24 filhos do
-`Promise.all` e não teve o pai" nem "este pedido não teve nem os filhos" (o
-que apontaria para a página nunca ter sido aberta de verdade, ou ter sido
-cortada antes até de
-começar).
+comum —, então não dá para responder "este pedido teve os 22 filhos do
+grupo e não teve o pai" nem "este pedido não teve nem os filhos" (o que
+apontaria para a página nunca ter sido aberta de verdade, ou ter sido
+cortada antes até de começar).
+
+**O "22" acima é derivado do código de hoje, não fixo — reconferir se
+`page.tsx`/`dashboard.ts` mudarem de novo.** Contagem, depois do conserto
+de "Fora deste plano" (abaixo): `dashboard.empresa` (1) + `dashboard.usuario`
+(1) + `resumoDoMes` (1, só o mês anterior — o atual é reaproveitado) +
+`resumoDeLucroDoMes` (1, só despesas) + `resumoDeRodagemDoMes` (2) +
+`resumoDeCobrancas` (5) + `contarFretesAFaturar` (1) +
+`contarFretesEmAndamento` (2) + `contarCobrancasVencidasAgrupadas` (1) +
+`sugerirRelatorio` (1) + `faturamentoPorMes` (5, só os cinco meses que não
+são o atual) = 21 linhas disparadas de dentro do `Promise.all`, mais a
+linha compartilhada `dashboard.somaDoMes[mesAtual]` (disparada por
+`iniciarSomaDoMesAtual`, fora do `Promise.all` mas no mesmo grupo — ver
+seção abaixo, "`dashboard.total` continua envolvendo todas as consultas")
+= 22.
 
 ## O que precisa ser acrescentado
 

@@ -49,7 +49,7 @@ export async function criarTiposDeOperacaoIniciais(
  * na checagem de chave estrangeira (`CLAUDE.md` §3).
  */
 export function buscarTipoOperacao(empresaId: string, id: string) {
-  return medir("servico.tipoOperacao.buscarPorId(2a-vez)", () =>
+  return medir("servico.tipoOperacao.buscarPorId", () =>
     db(empresaId).tipoOperacao.findUnique({
       where: { id },
       select: { id: true, nome: true, ativo: true, arquivado_em: true },
@@ -63,9 +63,16 @@ export function buscarTipoOperacao(empresaId: string, id: string) {
  * MVP entrega só a experiência de transportadora de carga"). Toda empresa
  * nasce com exatamente um `TipoOperacao` ativo (`TIPOS_DE_OPERACAO_INICIAIS`
  * acima), então nulo aqui é falha de dado, não caso normal a tratar na tela.
+ *
+ * Chamada de dentro de `normalizarEntrada` (`src/lib/servicos/servicos.ts`)
+ * quando `dados.tipo_operacao_id` não vem preenchido — desde 12/09/2026 é a
+ * única busca de tipo de operação no caminho de criar/editar frete, não uma
+ * "primeira de duas" (o rótulo já teve `(1a-vez)`; removido junto com
+ * `(2a-vez)` de `buscarTipoOperacao`, achado do `/revisar`: os dois nomes só
+ * faziam sentido enquanto as duas buscas rodavam sempre juntas).
  */
 export function buscarTipoOperacaoAtivo(empresaId: string) {
-  return medir("servico.tipoOperacao.buscarAtivo(1a-vez)", () =>
+  return medir("servico.tipoOperacao.buscarAtivo", () =>
     db(empresaId).tipoOperacao.findFirst({
       where: { ativo: true, arquivado_em: null },
       select: { id: true, nome: true },

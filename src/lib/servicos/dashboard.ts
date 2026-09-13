@@ -23,14 +23,37 @@ function limitesDoMes(primeiroDiaDoMes: string) {
   };
 }
 
+export type SomaDoMes = { faturamentoCentavos: number; qtdFretes: number };
+
 /**
  * Soma de `Servico.valor` num mês — **somar é diferente de cobrar**
  * (`CLAUDE.md` §9, decidido no item 7): `em_andamento` entra, `cancelado`
  * nunca. Mesmo filtro-base de `resumoDoCaminhao`/`resumoDoMotorista`,
  * adaptado para janela de mês fechada (`[gte, lt)`) em vez de `Periodo`
  * arbitrário.
+ *
+ * **Três chamadores no código, desde 12/09/2026** — confirmado por leitura,
+ * não por contagem de execuções: o log da Vercel não dá uma contagem
+ * confiável por pedido (`docs/diario.md`, entrada de instrumentação).
+ * `resumoDoMes`, `resumoDeLucroDoMes` e `faturamentoPorMes` (abaixo) cada
+ * uma chamava esta função para o **mesmo** mês corrente — `page.tsx` agora
+ * chama `iniciarSomaDoMesAtual` (abaixo) uma vez só, e as três reaproveitam
+ * o resultado quando é da mesma empresa e do mesmo mês
+ * (`somaMesAtualValida`). Fora desse caso — chamador diferente, empresa ou
+ * mês diferentes —, esta função continua rodando normalmente. Produção
+ * mediu o **custo** de duas das três chamadas isoladamente
+ * (`resumoDoMes-atual`: 102–469ms, 4 amostras; `resumoDeLucroDoMes-atual`:
+ * 418ms, 1 amostra) — a terceira (`faturamentoPorMes`) roda a mesma consulta
+ * com os mesmos parâmetros e não foi observada na janela de log puxada, mas
+ * não há razão para custar diferente. Ver
+ * `docs/planos/remove-consultas-repetidas-tipo-operacao-e-soma-do-mes.md`.
  */
-async function somaDoMes(empresaId: string, primeiroDiaDoMes: string, rotulo: string, idPedido?: string) {
+async function somaDoMes(
+  empresaId: string,
+  primeiroDiaDoMes: string,
+  rotulo: string,
+  idPedido?: string,
+): Promise<SomaDoMes> {
   const { inicio, fimExclusivo } = limitesDoMes(primeiroDiaDoMes);
   const agregado = await medir(
     `dashboard.somaDoMes[${rotulo}]`,
@@ -49,6 +72,46 @@ async function somaDoMes(empresaId: string, primeiroDiaDoMes: string, rotulo: st
   return { faturamentoCentavos: agregado._sum.valor ?? 0, qtdFretes: agregado._count };
 }
 
+/**
+ * Um `somaDoMes` já em andamento, marcado com a empresa e o mês a que
+ * pertence — `resumoDoMes`/`resumoDeLucroDoMes`/`faturamentoPorMes` só
+ * reaproveitam quando os dois batem (`somaMesAtualValida`, abaixo). Um
+ * `Promise<SomaDoMes>` sozinho, sem essa marca, não provaria nada — dinheiro
+ * (`CLAUDE.md` §3: "impossível esquecer" a conferência) não pode depender de
+ * o chamador ter calculado a coisa certa; achado do `/revisar`, 12/09/2026.
+ */
+export type SomaDoMesAtual = {
+  empresaId: string;
+  primeiroDiaDoMes: string;
+  promessa: Promise<SomaDoMes>;
+};
+
+/** `page.tsx` chama uma vez, no topo, e passa o resultado para as três funções que precisam do mês corrente. */
+export function iniciarSomaDoMesAtual(
+  empresaId: string,
+  primeiroDiaDoMes: string,
+  idPedido?: string,
+): SomaDoMesAtual {
+  return {
+    empresaId,
+    primeiroDiaDoMes,
+    promessa: somaDoMes(empresaId, primeiroDiaDoMes, "mesAtual", idPedido),
+  };
+}
+
+/** Só reaproveita quando é da mesma empresa e do mesmo mês — qualquer outro caso, cada função calcula a própria soma, do jeito de sempre. */
+function somaMesAtualValida(
+  candidato: SomaDoMesAtual | undefined,
+  empresaId: string,
+  primeiroDiaDoMes: string,
+): candidato is SomaDoMesAtual {
+  return (
+    candidato !== undefined &&
+    candidato.empresaId === empresaId &&
+    candidato.primeiroDiaDoMes === primeiroDiaDoMes
+  );
+}
+
 export type ResumoDoMes = {
   faturamentoCentavos: number;
   qtdFretes: number;
@@ -58,13 +121,30 @@ export type ResumoDoMes = {
   variacaoPercentual: number | null;
 };
 
-/** Faturamento do cartão escuro: mês corrente, comparação com o mês anterior, quantidade e média. */
-export async function resumoDoMes(empresaId: string, hoje: string, idPedido?: string): Promise<ResumoDoMes> {
+/**
+ * Faturamento do cartão escuro: mês corrente, comparação com o mês
+ * anterior, quantidade e média.
+ *
+ * `somaMesAtualJaCalculada` (opcional, desde 12/09/2026) — quando o
+ * chamador já somou o mês corrente para a mesma empresa
+ * (`iniciarSomaDoMesAtual`, `page.tsx`), pula a própria soma; caso
+ * contrário — ausente, ou de outra empresa/mês — calcula sozinha como
+ * antes. Nunca confia sem conferir (`somaMesAtualValida`): dinheiro não
+ * reaproveita valor de procedência não verificada.
+ */
+export async function resumoDoMes(
+  empresaId: string,
+  hoje: string,
+  idPedido?: string,
+  somaMesAtualJaCalculada?: SomaDoMesAtual,
+): Promise<ResumoDoMes> {
   const primeiroDiaDoMesAtual = `${hoje.slice(0, 7)}-01`;
   const primeiroDiaDoMesAnterior = deslocarMes(primeiroDiaDoMesAtual, -1);
 
   const [atual, anterior] = await Promise.all([
-    somaDoMes(empresaId, primeiroDiaDoMesAtual, "resumoDoMes-atual", idPedido),
+    somaMesAtualValida(somaMesAtualJaCalculada, empresaId, primeiroDiaDoMesAtual)
+      ? somaMesAtualJaCalculada.promessa
+      : somaDoMes(empresaId, primeiroDiaDoMesAtual, "resumoDoMes-atual", idPedido),
     somaDoMes(empresaId, primeiroDiaDoMesAnterior, "resumoDoMes-anterior", idPedido),
   ]);
 
@@ -99,15 +179,24 @@ export type ResumoDeLucro = {
  * soma-base de `resumoDoMes`, "somar é diferente de cobrar") menos despesas
  * lançadas no mês (`arquivado_em: null`, mesma janela `[gte, lt)` de
  * `limitesDoMes`).
+ *
+ * `somaMesAtualJaCalculada` (opcional) — mesmo mecanismo de `resumoDoMes`,
+ * acima: pula a soma própria só quando é da mesma empresa e do mesmo mês
+ * (`somaMesAtualValida`); qualquer outro caso, calcula a própria.
  */
-export async function resumoDeLucroDoMes(empresaId: string, hoje: string, idPedido?: string): Promise<ResumoDeLucro> {
+export async function resumoDeLucroDoMes(
+  empresaId: string,
+  hoje: string,
+  idPedido?: string,
+  somaMesAtualJaCalculada?: SomaDoMesAtual,
+): Promise<ResumoDeLucro> {
   const primeiroDiaDoMesAtual = `${hoje.slice(0, 7)}-01`;
   const { inicio, fimExclusivo } = limitesDoMes(primeiroDiaDoMesAtual);
 
   const [faturamento, despesas] = await Promise.all([
-    // Mesmo mês, mesma soma de `resumoDoMes` — achado a medir: candidato a
-    // consulta repetida (`CLAUDE.md`, achado do fundador, 12/09/2026).
-    somaDoMes(empresaId, primeiroDiaDoMesAtual, "resumoDeLucroDoMes-atual", idPedido),
+    somaMesAtualValida(somaMesAtualJaCalculada, empresaId, primeiroDiaDoMesAtual)
+      ? somaMesAtualJaCalculada.promessa
+      : somaDoMes(empresaId, primeiroDiaDoMesAtual, "resumoDeLucroDoMes-atual", idPedido),
     medir(
       "dashboard.despesasDoMes",
       () =>
@@ -336,12 +425,20 @@ export type FaturamentoDoMes = { mes: string; faturamentoCentavos: number };
  * Barras dos últimos `meses` (padrão 6, incluindo o atual) — mesmo
  * filtro-base de `resumoDoMes`. Ordem cronológica, mais antigo primeiro,
  * para o gráfico desenhar da esquerda pra direita.
+ *
+ * `somaMesAtualJaCalculada` (opcional) — o último elemento do array é
+ * sempre o mês corrente, o mesmo que `resumoDoMes`/`resumoDeLucroDoMes` já
+ * somam; quando é da mesma empresa e do mesmo mês (`somaMesAtualValida`),
+ * esse elemento reaproveita em vez de somar de novo (era o rótulo
+ * `(3a-vez)`, removido junto — não soma mais nada, então deixou de ser a
+ * terceira).
  */
 export async function faturamentoPorMes(
   empresaId: string,
   hoje: string,
   meses = 6,
   idPedido?: string,
+  somaMesAtualJaCalculada?: SomaDoMesAtual,
 ): Promise<FaturamentoDoMes[]> {
   const primeiroDiaDoMesAtual = `${hoje.slice(0, 7)}-01`;
   const janelas = Array.from({ length: meses }, (_, i) =>
@@ -349,17 +446,13 @@ export async function faturamentoPorMes(
   );
 
   const somas = await Promise.all(
-    janelas.map((mes, i) =>
-      // O último elemento (`i === meses - 1`) é o mês corrente — mesmo mês
-      // já somado em `resumoDoMes-atual` e `resumoDeLucroDoMes-atual` acima.
-      // Rótulo marca isso para a medição separar o custo da redundância.
-      somaDoMes(
-        empresaId,
-        mes,
-        i === meses - 1 ? "faturamentoPorMes-atual(3a-vez)" : `faturamentoPorMes[${mes}]`,
-        idPedido,
-      ),
-    ),
+    janelas.map((mes, i) => {
+      const ehMesAtual = i === meses - 1;
+      if (ehMesAtual && somaMesAtualValida(somaMesAtualJaCalculada, empresaId, mes)) {
+        return somaMesAtualJaCalculada.promessa;
+      }
+      return somaDoMes(empresaId, mes, ehMesAtual ? "faturamentoPorMes-atual" : `faturamentoPorMes[${mes}]`, idPedido);
+    }),
   );
   return janelas.map((mes, i) => ({ mes: mes.slice(0, 7), faturamentoCentavos: somas[i].faturamentoCentavos }));
 }

@@ -11,6 +11,7 @@ import {
   resumoDeLucroDoMes,
   resumoDeRodagemDoMes,
   resumoDoMes,
+  iniciarSomaDoMesAtual,
   sugerirRelatorio,
   type FaturamentoDoMes,
 } from "@/lib/servicos/dashboard";
@@ -59,6 +60,29 @@ export default async function Pagina() {
   // depois dele resolver.
   const idPedido = randomUUID().slice(0, 8);
 
+  // O mês corrente é somado uma vez só e reaproveitado por `resumoDoMes`,
+  // `resumoDeLucroDoMes` e `faturamentoPorMes` — as três somavam o mesmo
+  // mês, mesma empresa, mesmo filtro, de novo cada uma (achado do fundador,
+  // número de produção, 12/09/2026 — `docs/planos/
+  // remove-consultas-repetidas-tipo-operacao-e-soma-do-mes.md`).
+  //
+  // `iniciarSomaDoMesAtual` dispara a consulta assim que é chamada — antes
+  // de `medir("dashboard.total", ...)` começar a contar, então o relógio de
+  // `dashboard.total` começa uma fração de segundo depois desta consulta já
+  // ter partido. Isso não deixa nada sem esperar: `dashboard.total` só
+  // termina depois que `resumoDoMes`/`resumoDeLucroDoMes`/
+  // `faturamentoPorMes` terminarem, e as três esperam por esta soma por
+  // dentro — a espera está coberta, só o instante de partida da consulta
+  // não é exatamente o mesmo. `somaMesAtual.promessa` carrega o mesmo
+  // `idPedido` das outras, então a linha `[medir]
+  // dashboard.somaDoMes[mesAtual]` entra no mesmo grupo na hora de
+  // investigar `dashboard.total` (`docs/planos/
+  // investiga-dashboard-total-nao-fecha.md`) — vale saber, ao ler os logs
+  // agrupados por id, que esta linha tende a aparecer um pouco antes das
+  // demais da mesma rajada, não que ela esteja fora dela.
+  const primeiroDiaDoMesAtual = `${hoje.slice(0, 7)}-01`;
+  const somaMesAtual = iniciarSomaDoMesAtual(sessao.empresaId, primeiroDiaDoMesAtual, idPedido);
+
   const [empresa, usuario, resumoMes, lucro, rodagem, cobrancas, fretesAFaturar, emAndamento, vencidasAgrupadas, sugestao, meses] =
     await medir(
       "dashboard.total",
@@ -82,15 +106,15 @@ export default async function Pagina() {
               }),
             idPedido,
           ),
-          resumoDoMes(sessao.empresaId, hoje, idPedido),
-          resumoDeLucroDoMes(sessao.empresaId, hoje, idPedido),
+          resumoDoMes(sessao.empresaId, hoje, idPedido, somaMesAtual),
+          resumoDeLucroDoMes(sessao.empresaId, hoje, idPedido, somaMesAtual),
           resumoDeRodagemDoMes(sessao.empresaId, hoje, idPedido),
           resumoDeCobrancas(sessao.empresaId, hoje, idPedido),
           contarFretesAFaturar(sessao.empresaId, idPedido),
           contarFretesEmAndamento(sessao.empresaId, idPedido),
           contarCobrancasVencidasAgrupadas(sessao.empresaId, hoje, idPedido),
           sugerirRelatorio(sessao.empresaId, hoje, idPedido),
-          faturamentoPorMes(sessao.empresaId, hoje, 6, idPedido),
+          faturamentoPorMes(sessao.empresaId, hoje, 6, idPedido, somaMesAtual),
         ]),
       idPedido,
     );

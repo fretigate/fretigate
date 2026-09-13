@@ -44,7 +44,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 58;
+const CONFERENCIAS_ESPERADAS = 62;
 
 /** Uma janela de 2 dias em volta de agora — cobre `data_servico: new Date()` de `dadosMinimos`. */
 function periodoAmplo(): Periodo {
@@ -295,6 +295,51 @@ describe("2b. arquivado é recusado em referência NOVA — decisão do fundador
     );
     await expect(
       criarServico(e.empresaId, e.usuarioId, dadosMinimos(e, { tipo_operacao_id: tipoInativoId })),
+    ).rejects.toThrow("Selecione um tipo de operação válido.");
+    conferencias++;
+  });
+});
+
+describe("2d. tipo_operacao_id omitido — resolvido sozinho pelo serviço (12/09/2026)", () => {
+  // Achado do `/revisar`: o caminho que `fretes/acoes.ts` chama de verdade
+  // em produção (sem `tipo_operacao_id`, deixando `criarServico` resolver o
+  // ativo por conta própria) não tinha teste nenhum — só o caminho com id
+  // explícito, que a produção deixou de usar, estava coberto.
+  it("cria sem informar tipo_operacao_id — resolve o ativo da própria empresa", async () => {
+    const e = await criarEmpresaDeTeste("j1");
+    const { tipo_operacao_id: _ignorado, ...semTipo } = dadosMinimos(e);
+    const s = await criarServico(e.empresaId, e.usuarioId, semTipo);
+    expect(s.tipo_operacao_id).toBe(e.tipoOperacaoId);
+    conferencias++;
+  });
+
+  it("edita sem informar tipo_operacao_id — resolve o ativo da própria empresa", async () => {
+    const e = await criarEmpresaDeTeste("j2");
+    const criado = await criarServico(e.empresaId, e.usuarioId, dadosMinimos(e));
+    const { tipo_operacao_id: _ignorado, ...semTipo } = dadosMinimos(e, { valor: 999 });
+    const editado = await editarServico(e.empresaId, criado.id, semTipo);
+    expect(editado.tipo_operacao_id).toBe(e.tipoOperacaoId);
+    expect(editado.valor).toBe(999);
+    conferencias++;
+  });
+
+  it("recusa quando não informado e a empresa não tem tipo ativo nenhum", async () => {
+    const e = await criarEmpresaDeTeste("j3");
+    await raiz.query(`UPDATE "tipo_operacao" SET ativo = false WHERE empresa_id = $1`, [
+      e.empresaId,
+    ]);
+    const { tipo_operacao_id: _ignorado, ...semTipo } = dadosMinimos(e);
+    await expect(criarServico(e.empresaId, e.usuarioId, semTipo)).rejects.toThrow(
+      "Nenhum tipo de operação ativo.",
+    );
+    conferencias++;
+  });
+
+  it("id explícito de outra empresa continua recusado mesmo com o novo caminho existindo — a garantia não regrediu", async () => {
+    const a = await criarEmpresaDeTeste("j4");
+    const b = await criarEmpresaDeTeste("j5");
+    await expect(
+      criarServico(a.empresaId, a.usuarioId, dadosMinimos(a, { tipo_operacao_id: b.tipoOperacaoId })),
     ).rejects.toThrow("Selecione um tipo de operação válido.");
     conferencias++;
   });

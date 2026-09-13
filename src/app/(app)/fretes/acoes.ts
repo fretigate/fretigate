@@ -6,7 +6,6 @@ import { comoUsuario, comoUsuarioLeitura } from "@/lib/auth/acao";
 import { criarCliente } from "@/lib/servicos/clientes";
 import { criarCaminhao } from "@/lib/servicos/caminhoes";
 import { criarMotorista } from "@/lib/servicos/motoristas";
-import { buscarTipoOperacaoAtivo } from "@/lib/servicos/tipos-de-operacao";
 import {
   arquivarServico,
   buscarUltimoValorDoTrecho,
@@ -107,7 +106,10 @@ function lerFormulario(formData: FormData): { erro: EstadoServico } | { dados: P
 
   return {
     dados: {
-      tipo_operacao_id: "", // preenchido em criarServicoAction, depois de saber o ativo
+      // `tipo_operacao_id` fica de fora — nunca é escolha do formulário;
+      // `criarServico`/`editarServicoComProtecaoDeTitulo` resolvem o tipo
+      // ativo sozinhos quando o campo não vem preenchido (ver `DadosServico`
+      // em `src/lib/servicos/servicos.ts`).
       cliente_id: dados.clienteId,
       veiculo_id: dados.veiculoId || null,
       motorista_id: dados.motoristaId || null,
@@ -141,15 +143,16 @@ export const criarServicoAction = comoUsuario(async (
   if ("erro" in lido) return lido.erro;
 
   const inicioTotal = performance.now();
-  const tipoAtivo = await buscarTipoOperacaoAtivo(sessao.empresaId);
-  if (!tipoAtivo) return { erroGeral: "Nenhum tipo de operação ativo. Fale com o suporte." };
 
+  // `tipo_operacao_id` fica de fora do payload — `criarServico` resolve o
+  // tipo ativo internamente numa única consulta quando não recebe um id
+  // explícito (achado do fundador, número de produção, 12/09/2026: buscar
+  // aqui só para o serviço buscar de novo e validar o mesmo id era duas
+  // idas ao banco provando o mesmo fato — `docs/planos/
+  // remove-consultas-repetidas-tipo-operacao-e-soma-do-mes.md`).
   let servico: Awaited<ReturnType<typeof criarServico>>;
   try {
-    servico = await criarServico(sessao.empresaId, sessao.usuarioId, {
-      ...lido.dados,
-      tipo_operacao_id: tipoAtivo.id,
-    });
+    servico = await criarServico(sessao.empresaId, sessao.usuarioId, lido.dados);
   } catch (erro) {
     return erroDoServico(erro);
   } finally {
@@ -188,14 +191,8 @@ export const editarServicoAction = comoUsuario(async (
   const lido = lerFormulario(formData);
   if ("erro" in lido) return lido.erro;
 
-  const tipoAtivo = await buscarTipoOperacaoAtivo(sessao.empresaId);
-  if (!tipoAtivo) return { erroGeral: "Nenhum tipo de operação ativo. Fale com o suporte." };
-
   try {
-    await editarServicoComProtecaoDeTitulo(sessao.empresaId, idValidado.data, {
-      ...lido.dados,
-      tipo_operacao_id: tipoAtivo.id,
-    });
+    await editarServicoComProtecaoDeTitulo(sessao.empresaId, idValidado.data, lido.dados);
   } catch (erro) {
     return erroDoServico(erro);
   }

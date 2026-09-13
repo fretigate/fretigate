@@ -5,6 +5,7 @@ import {
   contarCobrancasVencidasAgrupadas,
   contarFretesEmAndamento,
   faturamentoPorMes,
+  iniciarSomaDoMesAtual,
   resumoDeLucroDoMes,
   resumoDeRodagemDoMes,
   resumoDoMes,
@@ -34,7 +35,7 @@ let raiz: Client;
 const empresasParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 23;
+const CONFERENCIAS_ESPERADAS = 26;
 
 type EmpresaDeTeste = {
   empresaId: string;
@@ -297,6 +298,55 @@ describe("1b. resumoDeLucroDoMes — convite pela ausência de lançamento, nunc
     const resumo = await resumoDeLucroDoMes(e.empresaId, hoje);
     expect(resumo.faturamentoCentavos).toBe(0);
     expect(resumo.lucroCentavos).toBeNull();
+    conferencias++;
+  });
+});
+
+describe("1c. somaMesAtualJaCalculada — dinheiro reaproveitado só quando a proveniência bate (12/09/2026)", () => {
+  // Achado do `/revisar`, rigor total (dinheiro, `CLAUDE.md` §3): o envelope
+  // `SomaDoMesAtual` e a conferência `somaMesAtualValida` não tinham teste
+  // nenhum provando que reaproveitam quando devem e recusam quando não
+  // devem — a mesma classe de lacuna que a Tarefa 1 (tipo de operação) já
+  // fechou do outro lado.
+  const hoje = "2026-08-15";
+  const primeiroDiaDoMesAtual = "2026-08-01";
+
+  it("reaproveita a soma compartilhada quando é da mesma empresa e do mesmo mês", async () => {
+    const e = await criarEmpresaDeTeste("soma-1");
+    await criarFrete(e, { valor: 10_000, dataServico: instanteDoDiaEmFortaleza("2026-08-05") });
+
+    // A soma compartilhada dispara a consulta agora — antes do segundo
+    // frete existir. Se `resumoDoMes` reaproveitar de verdade (em vez de
+    // calcular a própria soma, que veria os dois fretes), o resultado é
+    // 10.000, não 30.000 — prova de reaproveitamento, não só de valor certo.
+    const somaCompartilhada = iniciarSomaDoMesAtual(e.empresaId, primeiroDiaDoMesAtual);
+    await criarFrete(e, { valor: 20_000, dataServico: instanteDoDiaEmFortaleza("2026-08-10") });
+
+    const resumo = await resumoDoMes(e.empresaId, hoje, undefined, somaCompartilhada);
+    expect(resumo.faturamentoCentavos).toBe(10_000);
+    conferencias++;
+  });
+
+  it("ignora a soma compartilhada de OUTRA empresa — nunca mistura dinheiro entre empresas", async () => {
+    const a = await criarEmpresaDeTeste("soma-2a");
+    const b = await criarEmpresaDeTeste("soma-2b");
+    await criarFrete(a, { valor: 10_000, dataServico: instanteDoDiaEmFortaleza("2026-08-05") });
+    await criarFrete(b, { valor: 999_999, dataServico: instanteDoDiaEmFortaleza("2026-08-05") });
+
+    const somaDeB = iniciarSomaDoMesAtual(b.empresaId, primeiroDiaDoMesAtual);
+    const resumo = await resumoDoMes(a.empresaId, hoje, undefined, somaDeB);
+    expect(resumo.faturamentoCentavos).toBe(10_000);
+    conferencias++;
+  });
+
+  it("ignora a soma compartilhada de OUTRO mês — calcula o mês certo por conta própria", async () => {
+    const e = await criarEmpresaDeTeste("soma-3");
+    await criarFrete(e, { valor: 10_000, dataServico: instanteDoDiaEmFortaleza("2026-08-05") });
+    await criarFrete(e, { valor: 999_999, dataServico: instanteDoDiaEmFortaleza("2026-07-05") });
+
+    const somaDeJulho = iniciarSomaDoMesAtual(e.empresaId, "2026-07-01");
+    const resumo = await resumoDoMes(e.empresaId, hoje, undefined, somaDeJulho);
+    expect(resumo.faturamentoCentavos).toBe(10_000);
     conferencias++;
   });
 });
