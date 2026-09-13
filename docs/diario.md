@@ -6,6 +6,32 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 12/09/2026 — Convite no WhatsApp diagnosticado, correção adiada
+
+Achado do fundador ao testar o convite no WhatsApp do iPhone com o app
+instalado: em vez de abrir o WhatsApp direto, cai numa página do
+`api.whatsapp.com` (prévia da mensagem, botão "Abrir app"), e voltar da
+conversa deixa o navegador nessa página, não de volta no FretiGate.
+Diagnosticado, correção adiada de propósito — não construída nesta sessão.
+
+**Não é endereço errado** — o convite usa o mesmo `wa.me` de "Enviar
+ordem"/"Cobrar no WhatsApp". A diferença é estrutural: os outros dois já
+têm a mensagem pronta sem servidor, então navegam na mesma execução
+síncrona do toque, do jeito que o iOS aceita entregar direto ao app. O
+convite só sabe o link **depois** que o servidor cria o registro e gera o
+token — o toque original "esfria" durante essa espera, e o iOS entrega a
+página comum do `api.whatsapp.com` em vez do app.
+
+Saída identificada (um segundo toque, depois que o servidor responde) e
+registrada em `CLAUDE.md` §14, não construída — decisão do fundador: o
+defeito é contornável hoje (a pessoa toca "Abrir app") e o desempenho do
+dashboard (entrada seguinte, `dashboard.total`) é prioridade maior. Gatilho
+para voltar: quando a investigação de `dashboard.total` fechar.
+
+Próximo: nada a fazer aqui até o gatilho.
+
+---
+
 ## 12/09/2026 — Plano aprovado: por que dashboard.total nunca fecha
 
 Puxando os números da instrumentação em produção (`docs/diario.md`, entrada

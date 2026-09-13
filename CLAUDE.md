@@ -2098,6 +2098,38 @@ Não invente resposta. Pergunte.
   reexaminar); **outra aplicação**, fora do caminho de `db(empresaId)` que o
   produto usa hoje; ou um **terceiro caminho** ainda não considerado. Não
   construir nada antes desta decisão — nem o rascunho de uma tela.
+- **Convite por WhatsApp não entrega direto no app instalado do iPhone —
+  diagnosticado em 12/09/2026, correção adiada de propósito.** Achado do
+  fundador: convidar do app instalado abriu uma página do
+  `api.whatsapp.com` (com prévia da mensagem e um botão "Abrir app"), não o
+  WhatsApp direto, e voltar da conversa deixou o navegador nessa página, não
+  no FretiGate. **Não é endereço errado** — o convite usa o mesmo `wa.me`
+  que "Enviar ordem" e "Cobrar no WhatsApp" já usam. A diferença é estrutural:
+  os outros dois já têm a mensagem pronta sem servidor, então
+  `abrirLinkExterno`/a navegação para o WhatsApp roda **na mesma execução
+  síncrona do toque** — é assim que o iOS aceita entregar um link `wa.me`
+  direto para o app. O convite só sabe o link **depois** que o servidor cria
+  o registro e gera o token (`criarConviteAction`/`reenviarConviteAction`) —
+  o toque "esfria" durante essa espera, e o iOS trata a navegação como
+  página comum, que é a própria página do `api.whatsapp.com`. Não ficou de
+  fora da correção de `abrirLinkExterno`/`prepararJanelaExterna` por
+  esquecimento — o mecanismo já está lá; ele não resolve porque a premissa
+  dele ("o link já existe antes do primeiro `await`") não vale para o
+  convite.
+
+  **A saída identificada, não construída ainda:** um segundo toque — depois
+  que o servidor responde e o link existe de verdade, mostrar um botão real
+  ("Abrir WhatsApp" ou similar) que a pessoa toca; esse segundo toque nasce
+  já com o link pronto, síncrono, do jeito que o iOS aceita. Custa um toque
+  a mais só neste fluxo (convite novo e reenviar) — os outros continuam de
+  um toque só.
+
+  **Adiado por decisão do fundador, 12/09/2026: o defeito é contornável hoje**
+  (a pessoa consegue tocar "Abrir app" na página que aparece) e a
+  investigação do desempenho do dashboard (`dashboard.total` nunca fecha,
+  ver `docs/planos/investiga-dashboard-total-nao-fecha.md`) é prioridade
+  maior. **Gatilho para voltar:** quando a investigação de desempenho
+  fechar.
 - **Branch protection no GitHub, exigindo o check da esteira passar antes de
   qualquer coisa entrar em `main` — decidido, gatilho é o lançamento do
   MVP, não uma data.** Decisão do fundador, 18/08/2026, junto da criação do
