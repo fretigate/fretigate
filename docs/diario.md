@@ -6,6 +6,28 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 12/09/2026 — Plano aprovado: remove duas consultas repetidas (tipo de operação e soma do mês)
+
+Na mesma sessão da investigação de `dashboard.total`, dois achados já
+tinham causa e conserto decididos, com número de produção confirmando:
+tipo de operação buscado duas vezes ao salvar/editar frete (~30ms) e soma
+do mês corrente somada três vezes na dashboard (~102–469ms por chamada).
+Por não depender da investigação em aberto — "pergunta aberta e conserto
+conhecido não andam no mesmo commit", regra do fundador nesta sessão —
+fica em plano e tarefa próprios, podendo andar em paralelo com a
+investigação.
+
+Plano aprovado em `docs/planos/
+remove-consultas-repetidas-tipo-operacao-e-soma-do-mes.md`: tornar
+`tipo_operacao_id` opcional em `DadosServico`, resolvendo e validando o
+tipo ativo numa única consulta quando omitido; e compartilhar a soma do
+mês corrente entre `resumoDoMes`, `resumoDeLucroDoMes` e
+`faturamentoPorMes`, calculada uma vez em `page.tsx`.
+
+Próximo: construir.
+
+---
+
 ## 12/09/2026 — Instrumentação construída: idPedido na dashboard
 
 Construção do plano aprovado na entrada "Plano aprovado: por que
