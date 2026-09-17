@@ -238,6 +238,35 @@ você escreve.** O padrão é o meu.
   merece a pergunta. O **item 13** (assinatura) liga `inadimplente`,
   `vencida` e `encerrada`, que hoje só existem no schema: todo texto escrito
   supondo empresa sempre ativa entra na mesma varredura.
+- **Terceiro padrão a procurar de propósito: componente de interface
+  copiado em vez de reaproveitado — sempre corrigido do mesmo jeito
+  (extrair um componente único), nunca ajustando a cópia.** `CLAUDE.md`
+  §8 já diz "componente existe uma vez... proibido copiar componente";
+  este item registra que a regra continua sendo descumprida, de novo e de
+  novo, pelo mesmo mecanismo — uma tela nova precisa de algo visualmente
+  parecido com o que já existe em outra tela, e o caminho mais rápido no
+  momento é copiar o JSX em vez de ir até `/src/components/ui` primeiro.
+  Registrado em 17/09/2026, decisão do fundador ao ver a quarta vez que
+  achou o achado marcante o bastante para valer um item de catálogo — a
+  busca no diário para escrever esta entrada encontrou mais casos do que
+  os quatro que motivaram o pedido, listados abaixo por completo, não
+  recortados para bater com o número que deu o gatilho.
+
+  | Componente duplicado | Onde apareceu | Corrigido para |
+  |---|---|---|
+  | Campo de texto | "Prazo de pagamento" (Cliente) remontado à mão em vez de reusar o campo já existente — tarefa 5, 10/08/2026 | Reaproveitar `CampoTexto` |
+  | Linha de dado de perfil | Copiada **pela terceira vez** — Cliente → Caminhão → Motorista — antes de ser pega, tarefa 7, 11/08/2026. "Corrigido nesta tarefa, e não deixado para a próxima, porque foi esta tarefa que criou a terceira cópia — deixar para depois criaria a quarta" | `src/components/ui/LinhaDePerfil.tsx` |
+  | Campo tocável (valor/vencimento) | `FolhaDeFaturamento` e `FolhaDeRecebimento` tinham a mesma classe copiada à mão — item 6, Tarefa 3, 26/08/2026 | `CampoTocavel.tsx` |
+  | Upload de imagem | `AnexarComprovante` e `UploadLogo` nasceram copiados — item 10, Tarefa 2, 31/08/2026 | `useUploadDeImagem.ts` |
+  | Botão "Voltar" | Copiado à mão em Conta da empresa (item 10, Tarefa 2, 31/08/2026) e de novo em Despesas (item 11, 02/09/2026), as duas vezes apesar de o componente já existir | `BotaoVoltar` |
+  | Grade de três números | Financeiro copiou o desenho já usado em Cobranças — 17/09/2026, `docs/planos/financeiro-resumo-com-numeros.md` | `src/components/ui/TresNumeros.tsx` |
+
+  **O que procurar, da próxima vez:** antes de escrever a marcação de uma
+  tela nova, ou de uma tela que precisa de algo parecido com outra já
+  construída, checar `/src/components/ui` primeiro — não confiar em
+  lembrar que "não tem nada parecido lá". E, ao revisar, qualquer JSX que
+  se pareça de perto com outro arquivo (mesma estrutura de `div`s, mesmas
+  classes na mesma ordem) é candidato, mesmo sem ninguém ter apontado.
 - **Explicação plausível não é explicação verificada — e uma explicação
   errada documentada é pior que nenhuma, porque quem ler depois constrói
   raciocínio em cima dela.** Registrado em 29/08/2026: investigando por que
@@ -1639,6 +1668,22 @@ Nunca commitar exportação sem conferir: quatro das cinco tinham problema.
 
 Não invente resposta. Pergunte.
 
+- **A regra do §8 "número incompleto não é exibido" generaliza para
+  qualquer combinação de dinheiro com o mesmo risco, ou fica só nos dois
+  casos hoje nomeados (Lucro, R$/km)?** Achado em 17/09/2026
+  (`docs/planos/financeiro-resumo-com-numeros.md`, achado do `/revisar`
+  na tarefa do resumo do Financeiro): "Sobrou" (recebido − pago, hub
+  Financeiro) tinha o mesmo risco que "Lucro" (faturamento − despesas,
+  dashboard) — uma das duas fontes pode estar em zero por "ninguém
+  lançou ainda", não por "não tem nada". Aplicado o mesmo tratamento
+  (convite, não valor) neste terceiro caso, sem esperar a regra estar
+  escrita com aquele número exato; o fundador concordou com a aplicação.
+  **Fica registrada como pergunta, não como regra nova** — decisão dele,
+  ao aprovar: escrever regra larga a partir de poucos casos é o que já
+  gerou texto impreciso e dúvida antes neste arquivo (§2, "confusão de
+  quem lê é evidência sobre o texto"). Quando aparecer um próximo caso
+  parecido, decidir então se formaliza como princípio geral no §8 ou
+  continua resolvendo um de cada vez.
 - **Citação de linha em comentário envelhece sozinha — trocar por citação de
   seção/nome, não corrigir número por número.** Achado do fundador,
   13/09/2026, ao ver o segundo `/revisar` da construção do Financeiro
