@@ -6,6 +6,44 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 17/09/2026 — Plano aprovado: Financeiro ganha números (revisão da Opção B recusada)
+
+Pedido do fundador: usou o hub "Financeiro" (Opção A, construída em
+13/09/2026 — duas linhas, sem resumo) e achou vazio demais. **Não é a
+Opção B recusada em 12/09/2026** (lista combinada de cobrança e despesa)
+— é resumo em números, em cima da estrutura atual, que continua com as
+duas entradas.
+
+Decisão do fundador: **Proposta 2** — três números (Recebido · Pago ·
+Sobrou, no mês), sempre caixa (dinheiro que já entrou ou saiu de
+verdade), nunca competência — por isso nunca os mesmos de
+Faturamento/Lucro da dashboard, mesmo parecendo por fora. Recusou a
+Proposta 1 (dois números soltos, sem somar) porque "quem abre uma tela
+chamada Financeiro quer saber se sobrou dinheiro"; recusou a Proposta 3
+(só o combinado) pelo risco de leitura mais alto, muito parecido com
+"Lucro" sem nada ao lado para diferenciar.
+
+Extração da consulta de despesas do mês confirmada — "uma fonte só, dois
+chamadores", mesmo princípio aplicado também a "Recebido no mês". As
+duas entradas (Cobranças/Despesas) continuam, sem reabrir a lista
+combinada.
+
+**Rótulos**, pedido do fundador: a distinção a comunicar não é "caixa
+contra competência" (ninguém no produto pensa nesses termos) — é
+"dinheiro que já entrou e saiu de verdade, contra dinheiro do mês que
+ainda pode não ter chegado". Escolhidos, provisórios: "Recebido em
+{mês}" · "Pago em {mês}" · "Sobrou em {mês}".
+
+Pedido ao Design: layout do resumo, os rótulos (livre para substituir,
+mesma distinção), tratamento de "Sobrou" quando negativo, ícones da
+barra/linhas do hub (pedido já em aberto desde 12/09/2026).
+
+Plano em `docs/planos/financeiro-resumo-com-numeros.md`.
+
+Próximo: construir.
+
+---
+
 ## 13/09/2026 — Financeiro construído (Opção A), diagnóstico do teclado no Lançar frete
 
 **Diagnóstico do teclado (pedido antes de mexer, sem correção aplicada).**
