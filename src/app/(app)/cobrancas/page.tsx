@@ -22,9 +22,9 @@ import {
   formatarDiaDaSemanaEData,
   formatarPeriodoDeCobranca,
 } from "@/lib/utils/data-fortaleza";
-import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { formatarRota } from "@/lib/utils/rota";
 import { BotaoVoltar } from "@/components/ui/BotaoVoltar";
+import { TresNumeros, type ItemDeTresNumeros } from "@/components/ui/TresNumeros";
 import {
   resolverLimiteDaLista,
   resolverPeriodoDaUrl,
@@ -192,7 +192,7 @@ export default async function Pagina({
       </div>
 
       <div className="flex flex-col gap-14 px-16">
-        <TresNumeros resumo={resumo} hoje={hoje} />
+        <TresNumeros itens={itensDoResumo(resumo, hoje)} />
 
         <ListaCobrancas
           cobrancas={cobrancas}
@@ -220,73 +220,25 @@ const MESES = [
 
 /**
  * Os três números do topo (`docs/especificacao.md` §4.5): situação atual e
- * mês corrente, **sem responder aos filtros**.
+ * mês corrente, **sem responder aos filtros**. A grade em si (`TresNumeros`,
+ * `/src/components/ui`) é componente reaproveitado — este arquivo só decide
+ * os rótulos, valores e tons.
  *
  * **"Desse, vencido"** é o rótulo do meio, não "Vencido" sozinho: §4.5 exige
  * que o rótulo deixe explícito que vencido é um recorte de a receber — sem
  * isso, quem lê soma os dois e enxerga dívida que não existe. O rótulo é o do
  * protótipo (`referencia/.../TelaCobrancas.dc.html`, "DESSE, VENCIDO").
+ *
+ * A pastilha de fundo `#F6E6DD` com tinta `#B3401A` do "Desse, vencido" é o
+ * que `docs/estilo.md` registra ("Fundo da pastilha 'Vencido' (dashboard e
+ * Cobranças)") e o que o protótipo desenha — os três números ficam em
+ * pastilhas, não soltos.
  */
-function TresNumeros({
-  resumo,
-  hoje,
-}: {
-  resumo: { aReceber: number; vencido: number; recebidoNoMes: number };
-  hoje: string;
-}) {
+function itensDoResumo(resumo: { aReceber: number; vencido: number; recebidoNoMes: number }, hoje: string): ItemDeTresNumeros[] {
   const mes = MESES[Number(hoje.slice(5, 7)) - 1];
-  const numeros = [
-    {
-      rotulo: "A receber",
-      valor: resumo.aReceber,
-      classe: "text-tinta",
-      fundo: "bg-separacao",
-      classeRotulo: "text-tinta-apoio",
-    },
-    {
-      // A pastilha de fundo `#F6E6DD` com tinta `#B3401A` é o que
-      // `docs/estilo.md` registra ("Fundo da pastilha 'Vencido' (dashboard e
-      // Cobranças)") e o que o protótipo desenha — os três números ficam em
-      // pastilhas, não soltos. Corrigido no segundo `/revisar`: a primeira
-      // versão os deixou como texto solto **afirmando** que era o desenho do
-      // protótipo, que mostra o contrário (`CLAUDE.md` §13, sobre afirmação
-      // de medição).
-      rotulo: "Desse, vencido",
-      valor: resumo.vencido,
-      classe: "text-vencido",
-      fundo: "bg-vencido-fundo",
-      classeRotulo: "text-vencido",
-    },
-    {
-      rotulo: `Recebido em ${mes}`,
-      valor: resumo.recebidoNoMes,
-      classe: "text-acao",
-      fundo: "bg-separacao",
-      classeRotulo: "text-tinta-apoio",
-    },
+  return [
+    { rotulo: "A receber", valor: resumo.aReceber, tom: "neutro" },
+    { rotulo: "Desse, vencido", valor: resumo.vencido, tom: "vencido" },
+    { rotulo: `Recebido em ${mes}`, valor: resumo.recebidoNoMes, tom: "acao" },
   ];
-
-  return (
-    <div className="flex gap-7">
-      {numeros.map((numero) => (
-        <div
-          key={numero.rotulo}
-          className={`flex min-w-0 flex-1 flex-col gap-10 rounded-linha px-11 py-13 ${numero.fundo}`}
-        >
-          {/* 9px, não os 11px do rótulo de seção — `docs/estilo.md`,
-              "Conflitos resolvidos" 3 registra esta exceção para estes três
-              rótulos e só para eles. Achado do `/revisar`: a primeira versão
-              juntava o tamanho da regra geral com o rastreio da exceção. */}
-          <span
-            className={`text-eyebrow-topo-cobrancas font-bold uppercase leading-[1.25] tracking-[.09em] ${numero.classeRotulo}`}
-          >
-            {numero.rotulo}
-          </span>
-          <span className={`text-valor-lista font-extrabold leading-[1] tabular-nums ${numero.classe}`}>
-            R$ {formatarCentavos(numero.valor)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
 }

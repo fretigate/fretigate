@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { buscarCaminhao } from "@/lib/servicos/caminhoes";
 import type { Periodo } from "@/lib/servicos/servicos";
+import { deslocarMes, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
+import { medir } from "@/lib/utils/medir-tempo";
 
 /**
  * Despesa: listar, buscar, criar, editar e arquivar — tudo por
@@ -71,6 +73,45 @@ async function normalizarEntrada(empresaId: string, dados: DadosDespesa) {
     descricao: dados.descricao?.trim() || null,
     veiculo_id: veiculoId,
   };
+}
+
+export type DespesasDoMes = { totalCentavos: number; quantidade: number };
+
+/**
+ * Despesas do mês, agregado no banco (`arquivado_em: null`, `data` dentro do
+ * mês de `hoje`) — fonte única para dois chamadores: `resumoDeLucroDoMes`
+ * (`src/lib/servicos/dashboard.ts`, pastilha "Lucro no mês") e
+ * `resumoDoFinanceiro` (`src/lib/servicos/financeiro.ts`, hub Financeiro,
+ * "Pago no mês"). Antes de 17/09/2026
+ * (`docs/planos/financeiro-resumo-com-numeros.md`) esta mesma consulta vivia
+ * só dentro de `resumoDeLucroDoMes` — extraída para o segundo chamador não
+ * duplicar a query.
+ *
+ * `quantidade` sai junto porque `resumoDeLucroDoMes` decide o convite do
+ * Lucro pela **contagem** de despesas lançadas, nunca pela conta
+ * (`CLAUDE.md` §8, "Número incompleto não é exibido").
+ */
+export async function despesasDoMes(
+  empresaId: string,
+  hoje: string,
+  idPedido?: string,
+): Promise<DespesasDoMes> {
+  const primeiroDiaDoMes = `${hoje.slice(0, 7)}-01`;
+  const inicio = instanteDoDiaEmFortaleza(primeiroDiaDoMes);
+  const fimExclusivo = instanteDoDiaEmFortaleza(deslocarMes(primeiroDiaDoMes, 1));
+
+  const agregado = await medir(
+    "despesas.despesasDoMes",
+    () =>
+      db(empresaId).despesa.aggregate({
+        where: { arquivado_em: null, data: { gte: inicio, lt: fimExclusivo } },
+        _sum: { valor: true },
+        _count: true,
+      }),
+    idPedido,
+  );
+
+  return { totalCentavos: agregado._sum.valor ?? 0, quantidade: agregado._count };
 }
 
 /** Mais recente primeiro — mesma ordenação de `listarCaminhoes`. */

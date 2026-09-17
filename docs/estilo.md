@@ -562,8 +562,12 @@ aplicada em todas elas:
    encolhimento por faixa de dígitos para valores muito altos (ver
    Componentes — botões e avisos / Cobranças `5i`).
 3. **Rótulo de seção:** único valor, 11px/700/`.16em`. Mantida a exceção
-   de 9px/`.09em` nos três números do topo de Cobranças (só ali, para caber
-   três rótulos numa grade de 1/3 de tela).
+   de 9px/`.09em` nos três números do topo de Cobranças (só ali é a
+   decisão do Design registrada — para caber três rótulos numa grade de
+   1/3 de tela). **Reaproveitada por construção, não por decisão do
+   Design**, no resumo do hub Financeiro desde 17/09/2026
+   (`docs/planos/financeiro-resumo-com-numeros.md`) — mesma grade de três,
+   provisório até o Design responder ao pedido enviado.
 4. **Etiqueta de situação:** único valor, 10.5px/700/`.1em`, incluindo
    "Parcial" — que mantém o fundo próprio (`#FBF1DF`), só igualou a
    tipografia.

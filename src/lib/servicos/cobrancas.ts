@@ -26,6 +26,41 @@ import type { SituacaoCobranca } from "@/lib/servicos/cobrancas-situacao";
  */
 
 /**
+ * "Recebido no mês" sozinho — soma `Recebimento.valor` com
+ * `Recebimento.data` no mês corrente (item 6, Tarefa 3). Cada recebimento é
+ * uma linha própria na tabela `recebimento` (decisão 6 do plano), então dois
+ * recebimentos parciais em meses diferentes contam cada um no seu próprio
+ * mês.
+ *
+ * Extraída de dentro de `resumoDeCobrancas` em 17/09/2026
+ * (`docs/planos/financeiro-resumo-com-numeros.md`) para o hub Financeiro
+ * chamar sem pagar as outras quatro agregações (A receber e Vencido, que
+ * Financeiro não mostra). Mesma fonte, dois chamadores — mesmo princípio
+ * aplicado a `despesasDoMes` (`src/lib/servicos/despesas.ts`) para o mesmo
+ * pedido.
+ */
+export async function recebidoNoMes(empresaId: string, hoje: string, idPedido?: string): Promise<number> {
+  const primeiroDiaDoMes = `${hoje.slice(0, 7)}-01`;
+  const inicioDoMes = instanteDoDiaEmFortaleza(primeiroDiaDoMes);
+  const inicioDoMesSeguinte = instanteDoDiaEmFortaleza(deslocarMes(primeiroDiaDoMes, 1));
+
+  const recebidoNoMes = await medir(
+    "cobrancas.resumo.recebidoNoMes",
+    () =>
+      db(empresaId).recebimento.aggregate({
+        where: {
+          arquivado_em: null,
+          data: { gte: inicioDoMes, lt: inicioDoMesSeguinte },
+          titulo: { arquivado_em: null, status: { not: "cancelado" } },
+        },
+        _sum: { valor: true },
+      }),
+    idPedido,
+  );
+  return recebidoNoMes._sum.valor ?? 0;
+}
+
+/**
  * Os três números do topo (`docs/especificacao.md` §4.5) — **não respondem
  * aos filtros**: situação atual e mês corrente, sempre. Por isso são
  * agregações próprias, e não uma soma sobre a lista já carregada, que o teto
@@ -34,18 +69,12 @@ import type { SituacaoCobranca } from "@/lib/servicos/cobrancas-situacao";
  * **Somam o SALDO, não o valor cheio** — decisão do fundador, 26/08/2026
  * (plano do item 6, Tarefa 2): "A receber" e "Vencido" contam o que **falta
  * entrar** (valor menos o já recebido), e o pedaço já recebido de um título
- * parcial entra em "Recebido no mês". Nada é contado duas vezes, nada some.
+ * parcial entra em "Recebido no mês" (`recebidoNoMes`, acima). Nada é
+ * contado duas vezes, nada some.
  *
  * **"Vencido é um recorte de A receber"** (§4.5) é o que estas duas somas
  * fazem ao pé da letra: o mesmo conjunto, uma delas com o corte de
  * vencimento. Quem diz isso em palavras é a tela.
- *
- * **"Recebido no mês" soma `Recebimento.valor` com `Recebimento.data` no
- * mês corrente** (item 6, Tarefa 3) — cada recebimento é uma linha própria
- * na tabela `recebimento` (decisão 6 do plano), então dois recebimentos
- * parciais em meses diferentes contam cada um no seu próprio mês. Antes
- * desta tarefa era `valor_recebido`/`data_pagamento` do próprio título, que
- * não suportava mais de um recebimento por título.
  *
  * Cinco agregações, nunca uma consulta por título: o saldo de "A receber" e
  * "Vencido" precisa de duas cada (o total dos títulos e o total já recebido
@@ -55,9 +84,6 @@ import type { SituacaoCobranca } from "@/lib/servicos/cobrancas-situacao";
  */
 export async function resumoDeCobrancas(empresaId: string, hoje: string, idPedido?: string) {
   const inicioDeHoje = instanteDoDiaEmFortaleza(hoje);
-  const primeiroDiaDoMes = `${hoje.slice(0, 7)}-01`;
-  const inicioDoMes = instanteDoDiaEmFortaleza(primeiroDiaDoMes);
-  const inicioDoMesSeguinte = instanteDoDiaEmFortaleza(deslocarMes(primeiroDiaDoMes, 1));
 
   // **`servico: { arquivado_em: null }` entra aqui** — achado do fundador,
   // 26/08/2026: um frete arquivado com título ainda aberto (`arquivarServico`
@@ -75,55 +101,42 @@ export async function resumoDeCobrancas(empresaId: string, hoje: string, idPedid
   };
   const whereVencidas = { ...whereAbertas, vencimento: { lt: inicioDeHoje } };
 
-  const [totalAbertas, recebidoAbertas, totalVencidas, recebidoVencidas, recebidoNoMes] =
-    await Promise.all([
-      medir(
-        "cobrancas.resumo.totalAbertas",
-        () => db(empresaId).tituloReceber.aggregate({ where: whereAbertas, _sum: { valor: true } }),
-        idPedido,
-      ),
-      medir(
-        "cobrancas.resumo.recebidoAbertas",
-        () =>
-          db(empresaId).recebimento.aggregate({
-            where: { arquivado_em: null, titulo: whereAbertas },
-            _sum: { valor: true },
-          }),
-        idPedido,
-      ),
-      medir(
-        "cobrancas.resumo.totalVencidas",
-        () => db(empresaId).tituloReceber.aggregate({ where: whereVencidas, _sum: { valor: true } }),
-        idPedido,
-      ),
-      medir(
-        "cobrancas.resumo.recebidoVencidas",
-        () =>
-          db(empresaId).recebimento.aggregate({
-            where: { arquivado_em: null, titulo: whereVencidas },
-            _sum: { valor: true },
-          }),
-        idPedido,
-      ),
-      medir(
-        "cobrancas.resumo.recebidoNoMes",
-        () =>
-          db(empresaId).recebimento.aggregate({
-            where: {
-              arquivado_em: null,
-              data: { gte: inicioDoMes, lt: inicioDoMesSeguinte },
-              titulo: { arquivado_em: null, status: { not: "cancelado" } },
-            },
-            _sum: { valor: true },
-          }),
-        idPedido,
-      ),
-    ]);
+  const [totalAbertas, recebidoAbertas, totalVencidas, recebidoVencidas, doMes] = await Promise.all([
+    medir(
+      "cobrancas.resumo.totalAbertas",
+      () => db(empresaId).tituloReceber.aggregate({ where: whereAbertas, _sum: { valor: true } }),
+      idPedido,
+    ),
+    medir(
+      "cobrancas.resumo.recebidoAbertas",
+      () =>
+        db(empresaId).recebimento.aggregate({
+          where: { arquivado_em: null, titulo: whereAbertas },
+          _sum: { valor: true },
+        }),
+      idPedido,
+    ),
+    medir(
+      "cobrancas.resumo.totalVencidas",
+      () => db(empresaId).tituloReceber.aggregate({ where: whereVencidas, _sum: { valor: true } }),
+      idPedido,
+    ),
+    medir(
+      "cobrancas.resumo.recebidoVencidas",
+      () =>
+        db(empresaId).recebimento.aggregate({
+          where: { arquivado_em: null, titulo: whereVencidas },
+          _sum: { valor: true },
+        }),
+      idPedido,
+    ),
+    recebidoNoMes(empresaId, hoje, idPedido),
+  ]);
 
   return {
     aReceber: (totalAbertas._sum.valor ?? 0) - (recebidoAbertas._sum.valor ?? 0),
     vencido: (totalVencidas._sum.valor ?? 0) - (recebidoVencidas._sum.valor ?? 0),
-    recebidoNoMes: recebidoNoMes._sum.valor ?? 0,
+    recebidoNoMes: doMes,
   };
 }
 

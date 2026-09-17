@@ -6,6 +6,68 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 17/09/2026 — Financeiro ganha resumo de três números (Recebido · Pago · Sobrou)
+
+Construção do plano aprovado na entrada abaixo.
+
+- `recebidoNoMes` (`cobrancas.ts`) extraída de dentro de
+  `resumoDeCobrancas`; `despesasDoMes` (`despesas.ts`) extraída de dentro
+  de `resumoDeLucroDoMes` (`dashboard.ts`) — mesma fonte, dois chamadores
+  cada, o hub Financeiro sendo o segundo dos dois.
+- `resumoDoFinanceiro` (`financeiro.ts`, novo) soma os dois e calcula
+  "Sobrou" — nunca gravado.
+- `financeiro/page.tsx`: volta a exigir sessão (agora lê `empresaId`),
+  resumo de três pastilhas acima das duas linhas já existentes.
+
+**`/revisar`, um passe: quatro divergências, duas lacunas — todas
+corrigidas ou registradas no mesmo passe** (`CLAUDE.md` §2, item 7 —
+"Sobrou" sem despesa lançada é dinheiro, corrigido de qualquer forma, não
+só por caber em "corrige no passe"). Detalhe de cada achado em
+`docs/planos/financeiro-resumo-com-numeros.md`, seção "Achados do
+`/revisar`".
+
+- Componente copiado (`CLAUDE.md` §8, "Proibido copiar componente") — a
+  primeira versão reescrevia quase igual o `TresNumeros` que já existia
+  em `cobrancas/page.tsx`. Corrigido: extraído para
+  `src/components/ui/TresNumeros.tsx`, único, usado pelas duas telas.
+  **Achado do fundador, ao aprovar**: é a quarta vez que esse padrão
+  aparece — cópia de componente, corrigida por extração — vale registrar
+  como padrão a procurar de propósito, mesmo critério do `CLAUDE.md` §2.
+- "Sobrou" mostrava número real mesmo sem nenhuma despesa lançada no mês —
+  mesma armadilha que o "Lucro" da dashboard já evita (`CLAUDE.md` §8,
+  "Número incompleto não é exibido"). Corrigido: `saldoCentavos` vira
+  `null` nesse caso, a tela mostra convite ("Aparece com despesa
+  lançada.") em vez do valor. Confirmado pelo fundador ao aprovar: era
+  exatamente o risco de leitura que ele queria evitar — com zero despesa,
+  "Sobrou" ficaria igual a "Recebido", e a pessoa leria como se tudo
+  tivesse sobrado.
+- A primeira versão tinha ampliado, por edição direta, a exceção de
+  tipografia do Design (9px, "só ali" nos três números de Cobranças) para
+  descrever como já valendo também no Financeiro — decisão que não é
+  minha para tomar (`CLAUDE.md` §13). Corrigido: o texto volta a registrar
+  a exceção como decisão do Design só para Cobranças, com nota separada
+  de reaproveitamento **provisório** pela construção.
+- O plano não tinha commit próprio nem linha no diário antes da
+  construção começar (`CLAUDE.md` §2, item 1) — corrigido nesta entrega:
+  o commit do plano foi separado, antes deste.
+- Lacuna registrada: as três pastilhas não são tocáveis, e nenhum
+  documento decide se deveriam ser — marcado em `docs/navegacao.md`,
+  mesmo tratamento já dado à pastilha "Rodagem" da dashboard.
+- Lacuna registrada: layout, ordem e rótulos do resumo seguem sem
+  resposta do Design (pedido enviado, ver o plano) — já eram provisórios;
+  o `/revisar` só confirmou que a lacuna está anotada.
+
+`npx tsc --noEmit` e `npm run lint` sem erro. **`npm test` local, suíte
+inteira: 39 arquivos, 770 passando, 8 pulados (Chromium, Windows —
+esperado), zero falhas, 1005,97s** — local, contra o banco de
+desenvolvimento, não a esteira (`CLAUDE.md` §2).
+
+Próximo: retomar a Tarefa 3 do item 13 (as telas "Planos" e "Minha
+assinatura" ainda não construídas), que já era a pendência antes desta
+tarefa.
+
+---
+
 ## 17/09/2026 — Plano aprovado: Financeiro ganha números (revisão da Opção B recusada)
 
 Pedido do fundador: usou o hub "Financeiro" (Opção A, construída em

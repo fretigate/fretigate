@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { despesasDoMes } from "@/lib/servicos/despesas";
 import { deslocarMes, instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { medir } from "@/lib/utils/medir-tempo";
 
@@ -177,8 +178,9 @@ export type ResumoDeLucro = {
 /**
  * Lucro do mês para a pastilha da dashboard (item 11) — faturamento (mesma
  * soma-base de `resumoDoMes`, "somar é diferente de cobrar") menos despesas
- * lançadas no mês (`arquivado_em: null`, mesma janela `[gte, lt)` de
- * `limitesDoMes`).
+ * lançadas no mês (`despesasDoMes`, `src/lib/servicos/despesas.ts` — fonte
+ * única desde 17/09/2026, `docs/planos/financeiro-resumo-com-numeros.md`,
+ * quando o hub Financeiro virou o segundo chamador).
  *
  * `somaMesAtualJaCalculada` (opcional) — mesmo mecanismo de `resumoDoMes`,
  * acima: pula a soma própria só quando é da mesma empresa e do mesmo mês
@@ -191,29 +193,18 @@ export async function resumoDeLucroDoMes(
   somaMesAtualJaCalculada?: SomaDoMesAtual,
 ): Promise<ResumoDeLucro> {
   const primeiroDiaDoMesAtual = `${hoje.slice(0, 7)}-01`;
-  const { inicio, fimExclusivo } = limitesDoMes(primeiroDiaDoMesAtual);
 
   const [faturamento, despesas] = await Promise.all([
     somaMesAtualValida(somaMesAtualJaCalculada, empresaId, primeiroDiaDoMesAtual)
       ? somaMesAtualJaCalculada.promessa
       : somaDoMes(empresaId, primeiroDiaDoMesAtual, "resumoDeLucroDoMes-atual", idPedido),
-    medir(
-      "dashboard.despesasDoMes",
-      () =>
-        db(empresaId).despesa.aggregate({
-          where: { arquivado_em: null, data: { gte: inicio, lt: fimExclusivo } },
-          _sum: { valor: true },
-          _count: true,
-        }),
-      idPedido,
-    ),
+    despesasDoMes(empresaId, hoje, idPedido),
   ]);
 
-  const despesasCentavos = despesas._sum.valor ?? 0;
   return {
-    lucroCentavos: despesas._count > 0 ? faturamento.faturamentoCentavos - despesasCentavos : null,
+    lucroCentavos: despesas.quantidade > 0 ? faturamento.faturamentoCentavos - despesas.totalCentavos : null,
     faturamentoCentavos: faturamento.faturamentoCentavos,
-    despesasCentavos,
+    despesasCentavos: despesas.totalCentavos,
   };
 }
 
