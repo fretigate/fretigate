@@ -12,8 +12,10 @@ import {
 import { TIPOS_VEICULO } from "@/lib/utils/caminhao";
 
 /**
- * Cadastro / edição de caminhão — `docs/navegacao.md` linha 51: "Apelido +
- * placa + tipo (chip) → volta ao perfil · Arquivar em texto no fim".
+ * Cadastro / edição de caminhão — `docs/navegacao.md` linha 64 (Formulário
+ * de caminhão, deslocada em 13/09/2026 pela linha nova do hub Financeiro):
+ * "Apelido + placa + tipo (chip) → volta ao perfil · Arquivar em texto no
+ * fim".
  */
 
 export type EstadoCaminhao = {

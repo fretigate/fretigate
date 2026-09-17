@@ -274,7 +274,7 @@ Uma família só: traçado, sem preenchimento, cantos arredondados — desenhado
 | `barra-inicio.svg` | Item "Início" da barra | 19×19px | 1.8px |
 | `barra-fretes.svg` | Item "Fretes" da barra · linha "Caminhões" em Mais | 21×19px | 1.8px |
 | `barra-novo.svg` | Item central (+) da barra | 24–26px | 2.8px |
-| `barra-cobrancas.svg` | Item "Cobranças" da barra · linha "Relatório do cliente" em Mais | 20×19px | 1.8px |
+| `barra-cobrancas.svg` | Item "Financeiro" da barra (era "Cobranças" até 13/09/2026, `docs/planos/financeiro-unifica-cobrancas-e-despesas.md`) · linha "Relatório do cliente" em Mais · as duas linhas do hub Financeiro (Cobranças, Despesas) | 20×19px | 1.8px |
 | `barra-mais.svg` | Item "Mais" da barra. **Não usa mais na linha "Configurações" em Mais** — essa linha deixou de existir na fusão de 12/09/2026 (`docs/planos/fusao-configuracoes-e-conta-da-empresa.md`); o ícone segue só no item da barra | 20×19px | 1.8px |
 | `clientes.svg` | Linha "Clientes" em Mais | 20×20px | 1.8px |
 | `motoristas.svg` | Linha "Motoristas" em Mais | 20×20px | 1.8px |
@@ -460,6 +460,7 @@ Regra de hierarquia: **uma principal por tela**, sempre a ação que avança o d
 | Lançar frete | principal **Salvar frete** — na edição, **Salvar alterações** (com o valor no próprio botão nos dois casos) · linhas recolhidas abrem folha de busca · teclado numérico próprio sobreposto · aviso do sistema depois de salvar (só na criação), com **Já recebi** / **Ver o frete** · com título ativo, Cliente e o valor ficam travados, sem abrir folha/teclado |
 | Folha de busca | pílula de cabeçalho **+ Novo** / **+ Cadastrar** · texto neutra **Fechar** · chips de escolha |
 | Folha de calendário | chips de atalho **Hoje** · **Ontem** · **Amanhã** · células de dia 48px · duas setas de mês de 44px |
+| Financeiro | sem principal · hub sem resumo próprio (`docs/planos/financeiro-unifica-cobrancas-e-despesas.md`, Opção A) — duas linhas via `ItemMenu`, mesmo padrão de Mais: **Cobranças** e **Despesas**. Conteúdo (título da tela, ordem das linhas, ícones) é inferência da construção (13/09/2026), pendente de confirmação do Design — mesmo tratamento já dado à fusão de Configurações/Conta |
 | Cobranças | sem principal · pílula em linha **Cobrar no WhatsApp** · deslizar revela **Marcar recebido** · aviso do sistema no retorno do WhatsApp, com **Enviei** / **Ainda não** — **exceção na linha agrupada** (item 7, quando 2+ títulos do mesmo relatório viram uma linha só, `docs/especificacao.md` §4.5): **sem** deslizar/Marcar recebido (registrar contra um só dos N títulos receberia uma fração em silêncio); um chevron expande a linha e revela cada título como uma linha normal, com o próprio deslizar; "Cobrar no WhatsApp" continua na linha agrupada e registra em todos os títulos do grupo no mesmo instante |
 | Detalhe da cobrança | principal **Marcar recebido** / **Receber o resto** / desabilitada **Recebido ✓** · secundárias **Cobrar no WhatsApp** + **Ver relatório** · pílula em linha **ver todos os 9** · texto destrutiva **Estornar cobrança** (provisório — some quando o frete está arquivado, mesmo critério de Marcar recebido/Cobrar no WhatsApp), com confirmação (Folha de estorno) |
 | Cobranças vazia | principal **Gerar relatório** · texto neutra **Ver os 4 fretes** |

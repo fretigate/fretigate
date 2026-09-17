@@ -9,12 +9,18 @@ import type { ReactNode } from "react";
  * `docs/estilo.md`. Global e permanente dentro da sessão (o layout que a
  * renderiza é quem garante isso).
  *
- * Fretes e Cobranças apontam para telas provisórias (decisão do fundador,
- * 09/08/2026): a barra é estrutura fixa de cinco posições — ao contrário de
- * uma lista, tirar um item muda a geometria (a folga de rolagem de toda tela
- * é medida a partir do topo do (+)) — e um item desabilitado exigiria um
- * tratamento visual que a folha de estilo não define. O mesmo raciocínio já
- * valia para o (+) abrindo o cadastro de cliente antes de ele existir.
+ * A barra é estrutura fixa de cinco posições — ao contrário de uma lista,
+ * tirar um item muda a geometria (a folga de rolagem de toda tela é medida a
+ * partir do topo do (+)) — e um item desabilitado exigiria um tratamento
+ * visual que a folha de estilo não define. É por isso que Fretes e Cobranças
+ * puderam apontar para telas provisórias sem alterar a barra (decisão do
+ * fundador, 09/08/2026, quando nenhuma das duas existia de verdade ainda) —
+ * e é o mesmo motivo estrutural que, em 13/09/2026, fez esta tarefa criar um
+ * hub ("Financeiro") em vez de remover ou desdobrar uma posição. **As duas
+ * telas citadas em 09/08/2026 não são mais provisórias há muito tempo, e
+ * "Cobranças" nem é mais o rótulo do item** (virou "Financeiro" nesta
+ * mesma data) — o parágrafo ficou preso ao caso que motivou a regra, não à
+ * regra em si (`CLAUDE.md` §2).
  */
 
 const ATIVO = "text-verde-claro";
@@ -83,10 +89,15 @@ export function BarraDeNavegacao() {
         <span className="text-etiqueta font-bold leading-none text-white">Novo</span>
       </Link>
 
+      {/* "Financeiro" desde 13/09/2026 (`docs/planos/
+          financeiro-unifica-cobrancas-e-despesas.md`, Opção A) — antes ia
+          direto para "/cobrancas"; agora abre o hub, que leva para Cobranças
+          e Despesas. Ícone reaproveitado, pergunta ao Design em aberto (ver
+          o comentário de `financeiro/page.tsx`). */}
       <ItemBarra
-        href="/cobrancas"
-        rotulo="Cobranças"
-        ativo={estaAtivo(pathname, "/cobrancas")}
+        href="/financeiro"
+        rotulo="Financeiro"
+        ativo={estaAtivo(pathname, "/financeiro")}
       >
         <path d="M5.16 6.24h13.68v9.18a0.9 0.9 0 0 1 -0.9 0.9H6.06a0.9 0.9 0 0 1 -0.9 -0.9V6.24ZM8.04 9.3h7.92M8.04 12.36h4.5" />
       </ItemBarra>

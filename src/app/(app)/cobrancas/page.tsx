@@ -24,6 +24,7 @@ import {
 } from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { formatarRota } from "@/lib/utils/rota";
+import { BotaoVoltar } from "@/components/ui/BotaoVoltar";
 import {
   resolverLimiteDaLista,
   resolverPeriodoDaUrl,
@@ -48,6 +49,13 @@ import { ListaCobrancas } from "./ListaCobrancas";
  * **A tela abre sem filtro de período** — decisão do fundador, 26/08/2026:
  * abrir no mês esconderia a cobrança vencida em junho, que é justamente a que
  * precisa aparecer. Mesmo motivo já aplicado em "Meus fretes", e pior aqui.
+ *
+ * **Ganhou "Voltar" em 13/09/2026** (`docs/planos/
+ * financeiro-unifica-cobrancas-e-despesas.md`) — até então não precisava:
+ * era destino direto da barra, sem tela anterior. Com o hub "Financeiro" no
+ * lugar da barra, esta virou tela de nível 2, e `docs/componentes.md` linha
+ * 269 exige `voltar.svg` "no topo de toda tela de nível 2" — regra já
+ * escrita, não decisão nova desta tarefa.
  */
 export default async function Pagina({
   searchParams,
@@ -170,9 +178,13 @@ export default async function Pagina({
       className="mx-auto flex min-h-full max-w-[480px] flex-col"
       style={{ paddingBottom: "var(--folga-rolagem)" }}
     >
-      <div className="px-20 pb-14" style={{ paddingTop: "var(--area-segura-topo)" }}>
+      <div
+        className="flex items-center gap-10 px-20 pb-14"
+        style={{ paddingTop: "var(--area-segura-topo)" }}
+      >
+        <BotaoVoltar href="/financeiro" />
         <span
-          className="text-titulo-tela font-bold tracking-[-0.01em] text-tinta-apoio-forte"
+          className="min-w-0 flex-1 text-titulo-tela font-bold tracking-[-0.01em] text-tinta-apoio-forte"
           style={{ fontVariationSettings: "'wdth' 96" }}
         >
           Cobranças

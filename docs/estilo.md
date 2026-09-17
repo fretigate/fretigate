@@ -594,7 +594,7 @@ a proporção nem a espessura visual.
 | `barra-inicio.svg` | Item "Início" da barra de navegação | 19×19px | **1.8px** (unificado) |
 | `barra-fretes.svg` | Item "Fretes" da barra de navegação | 21×19px | **1.8px** (unificado — era 1.7) |
 | `barra-novo.svg` | Item central "+" da barra de navegação | 26×26px | 2.8px — maior, isolado no círculo, sem mudança |
-| `barra-cobrancas.svg` | Item "Cobranças" da barra de navegação | 20×19px | **1.8px** (unificado — era 1.7) |
+| `barra-cobrancas.svg` | Item "Financeiro" da barra de navegação (era "Cobranças" até 13/09/2026, `docs/planos/financeiro-unifica-cobrancas-e-despesas.md`) | 20×19px | **1.8px** (unificado — era 1.7) |
 | `barra-mais.svg` | Item "Mais" da barra de navegação | 20×19px | **1.8px** (unificado) |
 
 ---
@@ -663,9 +663,10 @@ de cada traçado (path/circle recalculados ponto a ponto), sem nenhum
 `transform` no arquivo final, e `stroke-width` já é o valor visual correto
 — o que está escrito é exatamente o que renderiza.
 
-Os quatro ícones da barra de navegação (Início · Fretes · Cobranças · Mais)
-saíam em 1.8 / 1.7 / 1.7 / 1.8 lado a lado no mesmo tamanho — agora todos em
-**1.8px**. O "+" central manteve 2.8px por ser maior e isolado no círculo.
+Os quatro ícones da barra de navegação (Início · Fretes · Cobranças, hoje
+"Financeiro" · Mais) saíam em 1.8 / 1.7 / 1.7 / 1.8 lado a lado no mesmo
+tamanho — agora todos em **1.8px**. O "+" central manteve 2.8px por ser maior
+e isolado no círculo.
 
 **Não existe mais ícone de microfone** — o botão "Ditar" foi removido do
 Lançar frete a pedido, sem substituto. Se voltar, desenhar como 13º arquivo

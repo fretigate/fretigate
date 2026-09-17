@@ -6,7 +6,7 @@ import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { FormularioDespesa } from "../FormularioDespesa";
 
 /**
- * Edição de despesa — `docs/navegacao.md` linha 47: "Linha → edição". Sem
+ * Edição de despesa — `docs/navegacao.md` linha 59: "Linha → edição". Sem
  * perfil intermediário: a linha da lista abre direto no formulário.
  */
 export default async function Pagina({ params }: { params: Promise<{ id: string }> }) {

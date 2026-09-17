@@ -12,8 +12,9 @@ import { deslocarDias } from "@/lib/utils/data-fortaleza";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 
 /**
- * "Despesas" (item 11) — `docs/componentes.md` linha 477: sem principal,
- * pílula de cabeçalho **+ Nova**, chips de Período e Categoria. Total no
+ * "Despesas" (item 11) — `docs/componentes.md` linha 478 ("Despesas —
+ * lista", deslocada em 13/09/2026 pela linha nova "Financeiro"): sem
+ * principal, pílula de cabeçalho **+ Nova**, chips de Período e Categoria. Total no
  * topo (`docs/especificacao.md` §4.8). Mesmo esqueleto de `ListaFretes.tsx`
  * (busca ausente aqui, de propósito: nem `docs/especificacao.md` nem
  * `docs/componentes.md` pedem campo de busca nesta lista).

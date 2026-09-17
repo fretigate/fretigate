@@ -4,7 +4,7 @@ import { exigirSessao } from "@/lib/auth/sessao";
 import { buscarCaminhao } from "@/lib/servicos/caminhoes";
 import { FormularioCaminhao } from "../../FormularioCaminhao";
 
-/** Edição de caminhão — `docs/navegacao.md` linha 51: chega do "Editar" do perfil. */
+/** Edição de caminhão — `docs/navegacao.md` linha 64 (Formulário de caminhão, deslocada em 13/09/2026 pela linha nova do hub Financeiro): chega do "Editar" do perfil. */
 export default async function Pagina({ params }: { params: Promise<{ id: string }> }) {
   const sessao = await exigirSessao();
   const { id } = await params;

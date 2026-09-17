@@ -4,8 +4,10 @@ import { diaEmFortaleza } from "@/lib/utils/data-fortaleza";
 import { FormularioDespesa } from "../FormularioDespesa";
 
 /**
- * Cadastro de despesa — `docs/navegacao.md` linha 47: chega de "Mais" e do
- * card de Lucro da dashboard em estado de convite.
+ * Cadastro de despesa — `docs/navegacao.md` linha 59: chega de "+ Nova" na
+ * lista de Despesas, alcançada por "Financeiro" (era "Mais" até
+ * 13/09/2026, `docs/planos/financeiro-unifica-cobrancas-e-despesas.md`) e
+ * pelo card de Lucro da dashboard em estado de convite.
  */
 export default async function Pagina() {
   const sessao = await exigirSessao();

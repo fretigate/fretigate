@@ -6,6 +6,192 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 13/09/2026 — Financeiro construído (Opção A), diagnóstico do teclado no Lançar frete
+
+**Diagnóstico do teclado (pedido antes de mexer, sem correção aplicada).**
+Confirmado: tocar "Salvar frete" com o teclado numérico aberto salva com o
+valor digitado até aquele toque — o botão nunca é desabilitado nem escondido
+enquanto `tecladoAberto`, e o hidden input `valorCentavos` reflete o estado a
+cada tecla, sem "commit" separado que só "Pronto" faça
+(`TelaLancarFrete.tsx`, `TecladoNumerico.tsx`). "Pronto" deixou de ser
+necessário para a visibilidade do valor (resolvida desde 12–13/08/2026, valor
+mostrado dentro do próprio teclado), mas continua sendo o único jeito de
+fechar o teclado sem submeter — necessário para quem digita o valor (topo do
+formulário) e ainda precisa preencher Carga/Km/Cliente/Caminhão/Motorista
+(mais abaixo) antes de salvar, já que o teclado cobre essa parte da tela
+enquanto aberto e nada além de "Pronto" (ou abrir outra folha) fecha ele.
+Decisão de o que fazer fica com o fundador — nada alterado.
+
+**Financeiro construído — Opção A do plano já aprovado
+(`docs/planos/financeiro-unifica-cobrancas-e-despesas.md`).** Confirmado
+antes de começar: a fusão de Configurações/Conta (12/09/2026) só tocou a
+seção AJUSTES de Mais — a seção FERRAMENTAS, onde "Despesas" vive, ficou
+intacta, então nada que o plano supunha tinha mudado.
+
+- `financeiro/page.tsx` novo — hub sem resumo próprio, duas linhas
+  (`ItemMenu`, mesmo componente de Mais) para `/cobrancas` e `/despesas`,
+  ícone reaproveitado (`barra-cobrancas.svg`).
+- `BarraDeNavegacao.tsx`: item que ia para `/cobrancas` como "Cobranças"
+  passou a ir para `/financeiro` como "Financeiro".
+- `mais/page.tsx`: linha "Despesas" saiu da seção FERRAMENTAS (resposta do
+  fundador à pergunta 2 do plano — "sai").
+- **Rotas de Cobranças e Despesas não mudaram** — decisão tomada ao
+  construir, não estava fechada no plano (a resposta à pergunta 1 tinha
+  especulado `/financeiro/cobrancas`, mas isso contradiz a própria definição
+  da Opção A, "nenhuma tela existente é tocada", e o precedente que "Mais"
+  já estabelece: suas telas-filhas nunca vivem aninhadas sob `/mais`).
+- "Voltar" de Despesas mudou de `/mais` para `/financeiro` — consequência
+  direta de sair de Mais, sem isso ficaria apontando pra um lugar sem
+  caminho de volta até aqui. Cobranças não ganhou "Voltar" (nunca teve; seria
+  tocar em tela que o plano definiu como intocada) — registrado como
+  observação, não pendência.
+- Achado ao atualizar `docs/navegacao.md`: inserir a linha nova de Cobranças
+  deslocou em +1 todas as linhas abaixo dela no arquivo. Três comentários que
+  citavam a linha do "Formulário de caminhão" pela posição antiga (51)
+  foram corrigidos para a nova (52) — `caminhoes/[id]/editar/page.tsx`,
+  `caminhoes/novo/page.tsx`, `caminhoes/acoes.ts`. **Achado à parte, fora do
+  escopo desta tarefa**: pelo menos mais quatro citações de linha de
+  `docs/navegacao.md` no código já estavam incorretas *antes* desta mudança
+  (ex.: `acoes.ts:14` cita "linha 51" para "Entrar", que nunca foi 51) — não
+  investigado a fundo nem corrigido, por não ter relação com o que esta
+  tarefa mexeu; fica como suspeita de um desvio de linha mais antigo e mais
+  amplo no arquivo, para outra sessão medir.
+- `docs/componentes.md` (ícone `barra-cobrancas.svg`) e o plano em
+  `docs/planos/` atualizados só no que é estado — layout do hub em si segue
+  sem confirmação do Design (ícone da barra, ícones das duas linhas).
+
+`npx tsc --noEmit` e `npm run lint` sem erro. Servidor local confirmou
+`/financeiro` compilando e redirecionando corretamente para `/entrar` sem
+sessão (nenhum erro de servidor nos logs) — não foi possível verificar
+visualmente com sessão autenticada nesta máquina (sem credencial de teste à
+mão); o fundador confere ao publicar. **`npm test` local, suíte inteira: 38
+arquivos, 764 passando, 8 pulados (Chromium, Windows — esperado), zero
+falhas, 995,31s** (nenhuma mudança em `src/lib/servicos` ou schema, mas
+medindo por rigor, não por suposição) — local, contra o banco de
+desenvolvimento, não a esteira (`CLAUDE.md` §2).
+
+**`/revisar`, primeiro passe: sete divergências, cinco lacunas.** Corrigidas
+no mesmo passe (contradição documento/código ou citação errada,
+`CLAUDE.md` §2): `docs/estilo.md` e `docs/especificacao.md` §4.8 ainda
+diziam "Cobranças"/"Mais" nos lugares que a própria tarefa mudou;
+`BarraDeNavegacao.tsx` tinha um comentário preso ao caso único de
+09/08/2026; faltava a linha "Financeiro" em `docs/componentes.md`, "Onde
+cada tela usa o quê"; o comentário de `financeiro/page.tsx` citava
+`docs/componentes.md` linha 277 como fonte de uma decisão que está, de
+verdade, em `docs/planos/item-11-despesas.md`; `financeiro/page.tsx` chamava
+`exigirSessao()` sem usar o retorno, ida a mais ao banco sem função,
+`layout.tsx` já garante sessão para o grupo inteiro — removida. **O achado
+mais importante: Cobranças virou tela de nível 2 (só alcançável pelo hub) e
+ficou sem "Voltar"**, contradizendo `docs/componentes.md` linha 269
+("`voltar.svg` no topo de toda tela de nível 2") — a primeira versão da
+construção tinha registrado isso como observação aceitável, apoiada num
+trecho do plano ("nenhuma tela é tocada") que não previa essa consequência;
+corrigido com `<BotaoVoltar href="/financeiro" />` em `cobrancas/page.tsx`.
+Detalhe completo de cada achado em `docs/planos/
+financeiro-unifica-cobrancas-e-despesas.md`, seção "Achados do `/revisar`".
+**Não corrigida, registrada como lacuna para o fundador confirmar**: manter
+`/cobrancas`/`/despesas` sem aninhar sob `/financeiro` diverge da resposta 1
+do plano aprovado ("a URL muda para algo como `/financeiro/cobrancas`") —
+decisão tomada ao construir, não levada ao fundador antes.
+
+**`/revisar`, segundo passe: quatro divergências, cinco lacunas — fecha
+aqui** (`CLAUDE.md` §2: nenhum achado do segundo passe muda comportamento
+hoje, todos são de documentação). Corrigidas no mesmo passe: este plano e
+"O que falta para este plano virar tarefa" ainda diziam "construção não
+começou" no mesmo commit que a construiu; segunda menção a "Cobranças" na
+barra em `docs/estilo.md` (a primeira já tinha sido corrigida no primeiro
+passe); `docs/navegacao.md` tinha Cobranças/Despesas dentro da tabela "Mais
+— cadastros" com "Chega de: Financeiro" — cabeçalho contradizendo a própria
+linha, resolvido com seção própria; e essa mesma edição deslocou de novo as
+linhas do arquivo, quebrando sete citações já corrigidas no primeiro passe
+e revelando três que a edição anterior já tinha quebrado sem eu notar —
+todas reconferidas contra o estado final e corrigidas juntas. **Dois achados
+verificados e não aceitos**: o rótulo "Financeiro" mede 51,4–53,3px
+(medido, `canvas.measureText`, fonte real do produto) contra 53,0–54,8px de
+"Cobranças" — mais estreito, não mais largo, sem risco novo de estouro no
+piso de 320px da barra; e o "Voltar" fixo de Cobranças/Despesas para
+`/financeiro` é o mesmo padrão já usado em `fretes/[id]/page.tsx` (fixo para
+`/fretes` mesmo com duas origens) e no próprio Despesas antes desta tarefa —
+não é exceção nova. Detalhe de cada achado em `docs/planos/
+financeiro-unifica-cobrancas-e-despesas.md`, seção "Segundo passe do
+`/revisar`".
+
+`npx tsc --noEmit` e `npm run lint` sem erro depois das correções dos dois
+passes. Servidor local confirmou `/cobrancas`, `/despesas` e
+`/caminhoes/novo` compilando sem erro depois do resync de citações.
+
+**Duas decisões do fundador, 13/09/2026, sobre os pontos acima:**
+"Pronto" no teclado numérico **fica como está por enquanto** — decisão
+tomada com o diagnóstico, sem correção; e a rota do Financeiro está
+**confirmada**, mantém `/cobrancas`/`/despesas` sem aninhar sob
+`/financeiro` — "os dois endereços já existem, já foram compartilhados, e
+mudar quebra qualquer link salvo, sem ganho nenhum" (`docs/planos/
+financeiro-unifica-cobrancas-e-despesas.md`).
+
+**Achado do fundador, registrado como decisão em aberto, `CLAUDE.md` §14**:
+citação de linha em comentário (`docs/navegacao.md linha N`,
+`docs/componentes.md linha N`) envelhece sozinha a cada inserção — já
+apontou pro lugar errado várias vezes nesta mesma tarefa, antes mesmo do
+Financeiro existir. O conserto certo não é renumerar (resolve até a próxima
+inserção); é trocar linha por seção/nome de tela/regra, que não se desloca.
+Não corrigido agora — fica para decidir depois, sem virar tarefa avulsa
+ainda (fundador pediu para terminar o Financeiro primeiro).
+
+Próximo: aprovar o commit do Financeiro — as duas outras pendências já
+foram decididas acima.
+
+---
+
+## 13/09/2026 — Vermelho do `95bb1b73` diagnosticado: instabilidade conhecida (P2028), sem rerun
+
+`/onde-paramos` desta sessão achou o `95bb1b73` ("Navega na mesma janela em vez
+de _blank...", 12/09 05:31) vermelho, cinco commits atrás do topo, sem
+diagnóstico no diário — bloqueio (`CLAUDE.md` §2, item 9, "por que 20 e não 1").
+
+**O que falhou.** `tests/relatorios.test.ts > 7. gerarRelatorio — a ação
+completa (Tarefa 3) > TODO frete finalizado incluído já estava faturado —
+nenhum título nasce, gerou_cobranca fica false`: `PrismaClientKnownRequestError:
+Transaction API error: Unable to start a transaction in the given time`, dentro
+do `Promise.all` que monta os dados do documento
+(`src/lib/servicos/relatorios.ts:458`, `db(empresaId).empresa.findUnique`). A
+segunda falha (`cobertura > rodou todas as verificações previstas`, 63 de 66)
+é o mecanismo do §3 item 4 funcionando: a exceção pulou três `conferencias++`,
+e o contador acusou — não é um defeito à parte, é o mesmo sintoma de sempre em
+cascata.
+
+**Classificação: mesma família já catalogada** (`CLAUDE.md` §2, "pool
+esgotado"/"fila serializada" — mensagem `PrismaClientKnownRequestError`
+explícita, não o quinto formato mudo). Não abre entrada própria no catálogo,
+por instrução do fundador: o formato é o mesmo.
+
+**Não são os testes nem o código do commit.** `git show 95bb1b73 --stat` só
+toca `src/lib/utils/link-externo.ts` (navegação do WhatsApp em app
+instalado) — nada em `relatorios.ts` ou no schema. `git diff 95bb1b73
+e3ce3eb9 -- src/lib/servicos/relatorios.ts tests/relatorios.test.ts` não
+mostra diferença nenhuma nos dois arquivos entre o commit que falhou e o
+seguinte.
+
+**Commit seguinte confirma instabilidade.** `e3ce3eb9` (a run seguinte que de
+fato terminou — `4766ca4d`, entre os dois, foi cancelada pela rotina do
+`concurrency: cancel-in-progress`, nunca chegou a rodar os testes), com o
+código idêntico nos dois arquivos acima, passou **38/38 arquivos, 764/764
+testes**, sem nenhum `FAIL`.
+
+**Rerun não disparado, por decisão do fundador — o commit seguinte já passou
+com o mesmo código, então o rerun não acrescentaria informação.** Conta contra
+a proporção do `CLAUDE.md` §2 mesmo sem rerun (não recalculei a proporção
+histórica completa nesta entrada, só registro o ponto).
+
+**Duração somada à série da lentidão sistêmica** (`docs/diario.md`, entrada de
+11/09/2026, "Investigação da lentidão sistêmica..."): 43,7min na run que
+falhou, 34,1min na seguinte — duas linhas novas na tabela daquela entrada, sem
+mudar a conclusão de lá (série ruidosa, não tendência limpa).
+
+Próximo: nada de tarefa nova. A investigação de `dashboard.total` espera
+tráfego real — o fundador vai gerar.
+
+---
+
 ## 12/09/2026 — Duas consultas repetidas removidas (tipo de operação e soma do mês)
 
 Construção do plano da entrada seguinte
@@ -344,6 +530,8 @@ uniforme ou concentrada:**
 | 03/09 `408b866` (sucesso) | 36 | 731 | 2000,95s (33,4min) |
 | 03/09 `efc26cd`, rerun (sucesso) | 35 | 712 | 2355,60s (39,3min) |
 | 10/09 `c2fb07d` (falhou) | 38 | 764 | 2858,07s (47,6min) |
+| 12/09 `95bb1b73` (falhou) | 38 | 764 | 2621,80s (43,7min) |
+| 12/09 `e3ce3eb9`, código idêntico (sucesso) | 38 | 764 | 2045,88s (34,1min) |
 
 **O quadro completo não sustenta "tendência monotônica".** Os "33 → 39 →
 47,6" citados são reais, mas são três pontos de uma série mais ruidosa: os

@@ -12,7 +12,7 @@ import {
 import { instanteDoDiaEmFortaleza } from "@/lib/utils/data-fortaleza";
 
 /**
- * Cadastro / edição de despesa — `docs/navegacao.md` linha 47: "+ Nova →
+ * Cadastro / edição de despesa — `docs/navegacao.md` linha 59: "+ Nova →
  * cadastro (valor e data obrigatórios, vínculo opcional a caminhão)".
  */
 

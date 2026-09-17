@@ -39,10 +39,13 @@ tomar agora."
 
 Isto fecha as três perguntas e a escolha entre opções — o resto deste
 arquivo guarda o raciocínio por trás (as opções descartadas, e por quê), útil
-para quem reabrir o assunto depois. **A construção em si (tela-hub,
-renomear a barra, tirar a linha de Mais) ainda não começou** — este plano
-só registra o que foi decidido; vira tarefa própria quando entrar na ordem
-de construção.
+para quem reabrir o assunto depois. **A construção em si (tela-hub, renomear
+a barra, tirar a linha de Mais) foi feita em 13/09/2026** — ver "Passo a
+passo de construção", abaixo. Até essa data, este parágrafo dizia "ainda não
+começou"; achado do segundo `/revisar` da mesma tarefa que construiu: o
+parágrafo continuou afirmando o estado anterior depois do código já ter
+entrado (`CLAUDE.md` §2, "corrigir o código no meio de escrever a correção
+do documento deixa o documento descrevendo o estado anterior").
 
 ## O que já existe hoje
 
@@ -210,7 +213,163 @@ viria registrar depois:
   decisão de tirar ou manter a linha é do fundador, com o Design registrando
   o desenho se algo visual mudar.
 
-## O que falta para este plano virar tarefa
+## Construção
 
-A escolha já foi feita (acima). Falta só abrir a tarefa de construção —
-nenhuma linha de código desta mudança entrou ainda.
+Feita em 13/09/2026 — ver "Passo a passo", abaixo. Até essa data, esta seção
+dizia "O que falta para este plano virar tarefa: a escolha já foi feita,
+falta só abrir a tarefa — nenhuma linha de código entrou ainda"; corrigida
+pelo mesmo motivo do parágrafo lá em cima.
+
+## Passo a passo de construção (executado em 13/09/2026)
+
+1. `financeiro/page.tsx` — tela nova, hub sem resumo próprio, duas linhas
+   (`ItemMenu`, mesmo componente de Mais): "Cobranças" → `/cobrancas`,
+   "Despesas" → `/despesas`. Ícone das duas reaproveita `barra-cobrancas.svg`
+   — mesmo precedente já usado para "Despesas" em Mais (nenhum ícone próprio
+   existe para nenhuma das duas; decisão do fundador de 01/09/2026 de não
+   travar tarefa em decisão visual pequena).
+2. `BarraDeNavegacao.tsx`: o item que apontava para `/cobrancas` com rótulo
+   "Cobranças" passou a apontar para `/financeiro` com rótulo "Financeiro" —
+   mesmo ícone (pergunta ao Design, em aberto).
+3. `mais/page.tsx`: linha "Despesas" removida da seção FERRAMENTAS —
+   resposta do fundador à pergunta 2, "sai".
+4. **Rotas de Cobranças e Despesas não mudaram** (`/cobrancas`, `/despesas`
+   continuam exatamente onde estavam) — decisão tomada ao construir, não
+   antecipada por este plano: a resposta à pergunta 1 tinha especulado "a
+   URL muda para algo como `/financeiro/cobrancas`", mas isso contradiria a
+   própria definição da Opção A ("nenhuma tela existente é tocada") e
+   exigiria mexer nos dois arquivos, em todo link que já aponta para eles
+   (dashboard, perfil do cliente, WhatsApp de cobrança) e no
+   destaque-de-aba da barra. Manter as rotas como estão é, além de menor
+   risco, consistente com o precedente que "Mais" já estabelece: suas
+   telas-filhas (`/clientes`, `/despesas` até aqui) nunca viveram
+   aninhadas sob `/mais`, e a barra também não fica marcada como ativa
+   nelas — o mesmo passa a valer para "Financeiro" e suas duas.
+5. **Voltar de Despesas mudou de `/mais` para `/financeiro`**
+   (`despesas/page.tsx`) — consequência direta de Despesas ter saído de
+   Mais; sem essa troca, "Voltar" levaria a um lugar de onde não existe
+   mais caminho para chegar aqui.
+6. `docs/navegacao.md`, `docs/componentes.md`, `docs/estilo.md` e
+   `docs/especificacao.md` atualizados só no que é **estado** (rota,
+   rótulo, de onde se chega) — o layout do hub em si segue sem confirmação
+   do Design.
+
+## Achados do `/revisar`, corrigidos no mesmo passe (13/09/2026)
+
+A primeira versão desta construção tinha "Cobranças não ganhou Voltar"
+registrado como observação, apoiada em "a Opção A foi aprovada como
+'nenhuma tela existente é tocada'". O `/revisar` corrigiu isso: virar tela
+de nível 2 (só alcançável pelo hub) coloca Cobranças sob uma regra já
+escrita e nunca opcional — `docs/componentes.md` linha 269, "`voltar.svg` no
+topo de toda tela de nível 2" —, não sob uma decisão de produto nova. Seguir
+"nenhuma tela é tocada" ao pé da letra aqui teria deixado a única tela de
+nível 2 do produto sem Voltar, contradizendo uma regra existente em nome de
+uma frase do plano que não previa essa consequência. Corrigido:
+`cobrancas/page.tsx` ganhou `<BotaoVoltar href="/financeiro" />`, mesmo
+padrão de Despesas.
+
+Também corrigidos, mesma categoria (contradição documento/código ou citação
+errada, `CLAUDE.md` §2, "corrige no passe"):
+
+- `financeiro/page.tsx` chamava `exigirSessao()` sem usar o retorno —
+  redundante e uma ida a mais ao banco por carregamento: `layout.tsx` já
+  garante que nenhuma tela deste grupo renderiza sem sessão. Removida.
+- O comentário do ícone reaproveitado em `financeiro/page.tsx` citava
+  `docs/componentes.md` linha 277 como fonte da decisão "nenhum ícone
+  próprio existe, não travar tarefa em decisão pequena" — essa linha só
+  lista arquivo/uso/tamanho, não motivo nenhum; a decisão de verdade está em
+  `docs/planos/item-11-despesas.md`. Citação corrigida.
+- `docs/estilo.md` e `docs/especificacao.md` §4.8 ainda diziam "Cobranças"/
+  "Mais" nos dois lugares que citam de onde a tela ou o ícone são
+  alcançados — ficaram desatualizados pela própria mudança desta tarefa
+  (`CLAUDE.md` §2, "quem cria o estado novo é quem relê o texto"). Os dois
+  corrigidos.
+- `BarraDeNavegacao.tsx`: o comentário do topo dizia "Fretes e Cobranças
+  apontam para telas provisórias" — verdade em 09/08/2026, falso desde que
+  as duas foram construídas, e agora também sem o rótulo "Cobranças" existir
+  na barra. Reescrito para não ficar preso ao caso único.
+- `docs/componentes.md`, "Onde cada tela usa o quê": faltava a linha
+  "Financeiro" — toda tela do inventário tem uma, incluindo "Mais", que é o
+  mesmo tipo de tela (hub sem principal).
+
+**Não corrigido, registrado como lacuna — decisão de rota que ficou
+diferente da resposta 1 do plano.** A resposta à pergunta 1 (acima)
+especulava "a URL muda para algo como `/financeiro/cobrancas`"; a
+construção manteve `/cobrancas` e `/despesas` como estavam, por ser
+consistente com "nenhuma tela existente é tocada" (a definição da própria
+Opção A) e com o precedente de "Mais" (suas telas-filhas nunca vivem
+aninhadas sob `/mais`). O `/revisar` apontou que isso é uma decisão que
+diverge do que o plano aprovado dizia, sem ter sido levada ao fundador antes
+de construir — registrado aqui para ele confirmar ou pedir o contrário, não
+desfeito por conta própria.
+
+**Precisão do segundo `/revisar`, 13/09/2026, sobre este último ponto**: a
+seção "Decisão do fundador" (acima) fecha só a Opção A e as perguntas 2 e 3
+— nunca decide a URL, em nenhum dos dois sentidos. "`/financeiro/cobrancas`"
+era só a análise de quem escreveu o plano, respondendo à pergunta 1, nunca
+aprovada nem recusada pelo fundador. Não é "a construção divergiu do
+aprovado" — é pergunta que nunca teve resposta, e devia ter sido feita antes
+de escolher, não decidida durante a construção.
+
+**Decisão do fundador, 13/09/2026: confirmado, mantém `/cobrancas` e
+`/despesas` sem aninhar.** Motivo, nas palavras dele: "os dois endereços já
+existem, já foram compartilhados, e mudar quebra qualquer link salvo — sem
+ganho nenhum, porque o hub já agrupa na navegação." Lacuna fechada — a
+escolha feita na construção (acima) é a decisão final, não provisória.
+
+## Segundo passe do `/revisar` (13/09/2026)
+
+Quatro divergências, cinco lacunas. Corrigidas no mesmo passe (mesma
+categoria do primeiro — contradição documento/documento, texto que a
+própria correção do primeiro passe deixou incompleto):
+
+- Este arquivo (linhas 42-45 e antiga "O que falta para este plano virar
+  tarefa") continuava dizendo "a construção ainda não começou"/"nenhuma
+  linha de código entrou", no mesmo commit em que a seção "Passo a passo de
+  construção" foi acrescentada — `CLAUDE.md` §2: corrigir código no meio de
+  escrever a correção do documento e não reler o texto contra o código que
+  passou a existir. Reescrito.
+- `docs/estilo.md` linha 666 tinha uma segunda menção a "Cobranças" na barra
+  (a primeira, linha 597, já tinha sido corrigida no primeiro passe) —
+  corrigida.
+- `docs/navegacao.md`: as linhas de Cobranças e Despesas viviam dentro da
+  tabela "## Mais — cadastros", com "Chega de: Financeiro" — cabeçalho da
+  seção contradizendo a própria linha, achado que o primeiro passe não tinha
+  visto. Corrigido com seção própria, "## Financeiro — cobranças e
+  despesas", logo depois de "Mais — cadastros".
+- Essa mesma edição deslocou (de novo) as linhas de `docs/navegacao.md`
+  abaixo do ponto de inserção — as sete citações de linha já corrigidas no
+  primeiro passe (`caminhoes/[id]/editar/page.tsx`, `caminhoes/novo/
+  page.tsx`, `caminhoes/acoes.ts`, `despesas/page.tsx`, `despesas/
+  acoes.ts`, `despesas/nova/page.tsx`, `despesas/[id]/page.tsx`) e três
+  citações de `docs/componentes.md` que a inserção da linha "Financeiro"
+  tinha deslocado sem eu ter visto no primeiro passe
+  (`despesas/FormularioDespesa.tsx`, duas · `despesas/ListaDespesas.tsx`,
+  uma) foram reconferidas contra o estado final dos dois arquivos e
+  corrigidas juntas.
+
+**Não corrigido, verificado por medição e considerado não-achado**: o
+`/revisar` apontou que o rótulo "Financeiro" (mais longo que "Cobranças")
+podia não caber no menor piso da barra (320px, `docs/estilo.md` linha
+270-272) sem medição. Medido com `canvas.measureText` no mesmo
+`font-family`/tamanho da barra (Archivo, 10.5px, pesos 600 e 700, a fonte
+real do produto — `src/app/layout.tsx`): "Financeiro" mede 51,4px (600) /
+53,3px (700), **mais estreito** que "Cobranças" (53,0px / 54,8px), que já
+estava em produção nesse mesmo espaço. Não é suposição — é a mesma medida,
+com o texto novo no lugar do antigo.
+
+**Não corrigido, em desacordo com o achado**: o `/revisar` apontou que
+`<BotaoVoltar href="/financeiro">` fixo em Cobranças/Despesas contradiz
+`docs/navegacao.md` linha 92 ("Voltar... leva de volta à origem"), já que as
+duas são alcançadas por mais caminhos que só o hub (pastilhas da dashboard,
+perfil do cliente). Discordo: é o padrão já usado em todo o produto, não uma
+exceção nova desta tarefa — `CabecalhoDeDetalhe href="/fretes"` em
+`fretes/[id]/page.tsx` já é fixo, mesmo "Detalhe do frete" chegando de duas
+origens (Fretes e histórico do perfil do cliente, `docs/navegacao.md` linha
+27); Despesas já tinha `Voltar` fixo para `/mais` antes desta tarefa, mesmo
+sendo alcançada também pelo card de Lucro da dashboard. "Leva de volta à
+origem" já é interpretado no produto inteiro como "leva ao caminho
+canônico", não "lembra de onde a pessoa veio" — não construído aqui, e
+mudar isso para Cobranças/Despesas sozinhas criaria a exceção, não o
+contrário. Fica registrado para o fundador decidir se quer revisitar o
+padrão inteiro — não é decisão para tomar sozinho numa tela só.

@@ -2,9 +2,10 @@ import Link from "next/link";
 import { FormularioCaminhao } from "../FormularioCaminhao";
 
 /**
- * Cadastro de caminhão — `docs/navegacao.md` linha 51: chega do "+ Novo" da
- * lista, do perfil (via editar) e de "Cadastrar '{busca}'" na lista sem
- * resultado.
+ * Cadastro de caminhão — `docs/navegacao.md` linha 64 (Formulário de
+ * caminhão, deslocada em 13/09/2026 pela linha nova do hub Financeiro):
+ * chega do "+ Novo" da lista, do perfil (via editar) e de "Cadastrar
+ * '{busca}'" na lista sem resultado.
  */
 export default async function Pagina({
   searchParams,

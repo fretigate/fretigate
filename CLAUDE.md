@@ -1639,6 +1639,28 @@ Nunca commitar exportação sem conferir: quatro das cinco tinham problema.
 
 Não invente resposta. Pergunte.
 
+- **Citação de linha em comentário envelhece sozinha — trocar por citação de
+  seção/nome, não corrigir número por número.** Achado do fundador,
+  13/09/2026, ao ver o segundo `/revisar` da construção do Financeiro
+  (`docs/planos/financeiro-unifica-cobrancas-e-despesas.md`) corrigir a
+  mesma classe de citação (`docs/navegacao.md linha N`, `docs/componentes.md
+  linha N`) pela segunda vez na mesma tarefa — inserir uma linha em
+  qualquer um dos dois arquivos desloca toda citação abaixo dela, e o
+  comentário nunca avisa sozinho que ficou apontando para o lugar errado.
+  Já aconteceu por acaso, sem relação com aquela tarefa: `caminhoes/
+  [id]/editar/page.tsx`, `caminhoes/novo/page.tsx`, `caminhoes/acoes.ts`,
+  vários arquivos de `despesas/` e `mais/page.tsx` citavam linhas de
+  `docs/navegacao.md`/`docs/componentes.md` que já não batiam com o
+  conteúdo antes mesmo de o Financeiro existir. **O conserto certo não é
+  renumerar** — isso resolve até a próxima inserção e volta a valer a
+  mesma pergunta. É trocar o número da linha por algo que não se move
+  quando o arquivo cresce: o nome da seção (`## Financeiro — cobranças e
+  despesas`), o nome da tela na tabela ("linha 'Despesas' de
+  `docs/navegacao.md`"), ou o nome do campo/regra citada. Não decidido
+  ainda: se a troca vale para os dois arquivos de uma vez, ou só para
+  citação nova a partir de agora, e se `docs/navegacao.md`/
+  `docs/componentes.md` precisam de âncoras próprias (títulos de linha
+  únicos) para isso funcionar bem em busca de texto.
 - **Revisão jurídica dos Termos e da Política de Privacidade — pendente, sem
   bloqueio de lançamento.** Publicados em 18/08/2026, decisão do fundador,
   com a forma de aceite atual (texto acima do botão Criar conta, sem caixa

@@ -38,9 +38,10 @@ type Props = {
 };
 
 /**
- * Cadastro / edição de despesa (item 11) — `docs/componentes.md` linha 478:
- * principal Salvar despesa, teclado numérico próprio para o valor, chips de
- * categoria e de vínculo.
+ * Cadastro / edição de despesa (item 11) — `docs/componentes.md` linha 479
+ * ("Despesas — cadastro", deslocada em 13/09/2026 pela linha nova
+ * "Financeiro"): principal Salvar despesa, teclado numérico próprio para o
+ * valor, chips de categoria e de vínculo.
  *
  * **Salvar e Arquivar rolam com o formulário, como em todo outro cadastro**
  * (`docs/componentes.md`, "Posição": "Formulários: o salvar fica no fim do
@@ -66,7 +67,7 @@ type Props = {
  * frete, cuja ordem nasce antes da execução.
  *
  * **Vínculo é só a caminhão, por chip** (decisão 1 do plano; chip, não
- * `FolhaDeBusca`, por `docs/componentes.md` linha 478 — "chips de categoria
+ * `FolhaDeBusca`, por `docs/componentes.md` linha 479 — "chips de categoria
  * e de vínculo", achado do `/revisar`) — mesmo mecanismo de `ChipEscolha`
  * da categoria, "Sem vínculo" como primeira opção. **O texto de apoio não
  * promete R$/km por caminhão** — achado do `/revisar`: a primeira versão

@@ -12,13 +12,14 @@ import { ListaDespesas, type DespesaParaLista } from "./ListaDespesas";
  * (`docs/planos/item-8-dashboard.md`), que só mostrava o estado vazio
  * explicando por que o Lucro não tinha número.
  *
- * `docs/navegacao.md` linha 47: chega de "Mais" (linha nova nesta tarefa,
- * `src/app/(app)/mais/page.tsx`) e do card de Lucro da dashboard em estado
- * de convite. **Voltar → `/mais`** — mesmo padrão de Clientes/Caminhões/
- * Motoristas (todos na mesma seção "Mais — cadastros" do mapa de
- * navegação); a versão provisória usava `/` porque "Mais" ainda não tinha
- * linha própria para cá (comentário removido nesta tarefa, junto da
- * substituição da tela inteira).
+ * `docs/navegacao.md` linha 59: chega do hub "Financeiro" e do card de Lucro
+ * da dashboard em estado de convite. **Voltar → `/financeiro`** — mudou em
+ * 13/09/2026 (`docs/planos/financeiro-unifica-cobrancas-e-despesas.md`,
+ * Opção A): a linha em Mais que trazia para cá foi removida, então voltar
+ * para "/mais" levaria a um lugar de onde não dá mais para chegar aqui. Até
+ * 13/09/2026 chegava de "Mais" (linha nova no item 11) e voltava para lá; a
+ * versão provisória, antes disso, usava `/` porque "Mais" ainda não tinha
+ * linha própria para cá.
  *
  * Só `periodo` (e `de`/`ate`) vira parâmetro de URL — mesma decisão de
  * "Meus fretes" (item 4, Tarefa 2): trocar Período dispara nova consulta ao
@@ -60,7 +61,7 @@ export default async function Pagina({
         className="flex items-center gap-10 px-20 pb-14"
         style={{ paddingTop: "var(--area-segura-topo)" }}
       >
-        <BotaoVoltar href="/mais" />
+        <BotaoVoltar href="/financeiro" />
         <span
           className="min-w-0 flex-1 text-titulo-tela font-bold tracking-[-0.01em] text-tinta-apoio-forte"
           style={{ fontVariationSettings: "'wdth' 96" }}

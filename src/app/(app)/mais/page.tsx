@@ -17,8 +17,7 @@ import { BotaoSairDaConta } from "../BotaoSairDaConta";
  * PROVISÓRIA: nasce com o nome da empresa, "Sair da conta" e a seção
  * CADASTROS, com "Clientes" (item 2, tarefa 5), "Caminhões" (tarefa 6) e
  * "Motoristas" (tarefa 7) — a seção FERRAMENTAS, com "Relatório do cliente"
- * (item 7, Tarefa 4) e "Despesas" (item 11, `docs/planos/
- * item-11-despesas.md`) — e a seção AJUSTES (item 10). **Corrigido nesta
+ * (item 7, Tarefa 4) — e a seção AJUSTES (item 10). **Corrigido nesta
  * tarefa**: a linha anterior ("Falta Despesas, Importar, Novidades,
  * Configurações, Usuários, Conta") já estava desatualizada antes desta
  * mudança — Configurações, Usuários e Conta entraram no item 10, sem que
@@ -27,6 +26,15 @@ import { BotaoSairDaConta } from "../BotaoSairDaConta";
  * Importar, Novidades. "A tela 'Mais' nasce só com as linhas que têm
  * destino; cada item seguinte acrescenta a sua" (`docs/planos/
  * item-2-cadastros.md`, tarefa 4).
+ *
+ * **"Despesas" entrou na FERRAMENTAS no item 11 (01/09/2026) e saiu em
+ * 13/09/2026**, quando virou uma das duas linhas do hub "Financeiro"
+ * (`docs/planos/financeiro-unifica-cobrancas-e-despesas.md`, Opção A) — a
+ * barra deixou de apontar para "Cobranças" direto e passou a apontar para
+ * esse hub. Mesmo critério já aplicado a "Cobranças", que nunca teve linha
+ * aqui por já estar na barra: Despesas não precisa de duas portas de
+ * entrada agora que também é alcançável pela barra (decisão do fundador,
+ * plano acima, pergunta 2).
  *
  * **Rótulo e ícone já previstos, não inferidos** — `docs/componentes.md`
  * linha 277: `barra-cobrancas.svg`, "linha 'Relatório do cliente' em Mais"
@@ -151,15 +159,6 @@ export default async function Pagina() {
             "Cobranças" da barra, reaproveitado aqui por `docs/componentes.md`
             linha 277 ("linha 'Relatório do cliente' em Mais"). */}
         <ItemMenu href="/relatorio" nome="Relatório do cliente">
-          <path d="M5.16 6.24h13.68v9.18a0.9 0.9 0 0 1 -0.9 0.9H6.06a0.9 0.9 0 0 1 -0.9 -0.9V6.24ZM8.04 9.3h7.92M8.04 12.36h4.5" />
-        </ItemMenu>
-        {/* Ícone reaproveitado de `barra-cobrancas.svg` (o mesmo de
-            "Relatório do cliente", acima) — item 11, `docs/planos/
-            item-11-despesas.md`: nenhum ícone em `docs/icones/` foi feito
-            para Despesas, e travar a tarefa numa decisão visual pequena
-            seria desproporcional (decisão do fundador, 01/09/2026). Pedido
-            ao Design: um ícone próprio, quando houver. */}
-        <ItemMenu href="/despesas" nome="Despesas">
           <path d="M5.16 6.24h13.68v9.18a0.9 0.9 0 0 1 -0.9 0.9H6.06a0.9 0.9 0 0 1 -0.9 -0.9V6.24ZM8.04 9.3h7.92M8.04 12.36h4.5" />
         </ItemMenu>
       </div>

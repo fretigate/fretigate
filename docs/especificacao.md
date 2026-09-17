@@ -462,7 +462,7 @@ Cadastro curto: data (chips Hoje · Ontem · Outra data — **nunca digitação 
 data**), categoria, valor, descrição, vínculo opcional a caminhão ou frete. Só
 valor e data obrigatórios.
 
-Entrada por "Mais" e pelo card de Lucro quando ele estiver no estado de convite.
+Entrada pelo hub "Financeiro" (era "Mais" até 13/09/2026, `docs/planos/financeiro-unifica-cobrancas-e-despesas.md`) e pelo card de Lucro quando ele estiver no estado de convite.
 
 ### 4.9 Conta da empresa e usuários
 
