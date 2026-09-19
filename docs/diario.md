@@ -6,6 +6,31 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 19/09/2026 — Plano: "Assinar" em `/planos` abre página em branco no iPhone
+
+Plano aprovado em `docs/planos/corrige-link-externo-segundo-toque.md`,
+commitado antes da construção. Investigação (medida, detalhe no plano): o
+botão usa a mesma peça do convite (`prepararJanelaExterna`), que já abre a
+janela antes do servidor responder — a hipótese "roda depois do `await`" não
+descreve o código. O defeito medido é outro: `window.open` com `noopener`
+devolve sempre `null` e deixa uma aba `about:blank` que ninguém redireciona,
+em todo navegador que não seja o app instalado, nos três chamadores (assinar,
+convite, reenviar convite). **Provavelmente não é o que o fundador viu** —
+o app instalado segue outro caminho, que não foi medido; se a página em
+branco continuar no iPhone depois do conserto, investiga-se de novo.
+
+Decidido: cortar o vínculo da janela à mão (`opener = null`, mantém o toque
+único e a proteção contra sequestro da aba, medido) no navegador comum, e
+segundo toque com o link pronto no app instalado — texto "Continuar: anual,
+R$ 1.164,00" em `/planos` e "Continuar no WhatsApp" no convite. Botão novo
+vai ao Design, construído provisório.
+
+Próximo: construir conforme o plano, `/revisar`, e pedir o commit. Depois,
+o fundador testa no iPhone — só então se declara corrigido para o app
+instalado.
+
+---
+
 ## 18/09/2026 — `/planos` dá 404 em produção: o build de `10b7b7e` nunca publicou
 
 Investigação a pedido do fundador. Três hipóteses na mesa: publicação
