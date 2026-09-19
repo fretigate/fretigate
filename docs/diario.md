@@ -6,6 +6,85 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 18/09/2026 — `/planos` dá 404 em produção: o build de `10b7b7e` nunca publicou
+
+Investigação a pedido do fundador. Três hipóteses na mesa: publicação
+falhou, rota nasceu no lugar errado, ou o 404 é o próprio `notFound()` de
+"só o dono acessa" (`page.tsx`, `exigirDono()` → `SemPermissao` →
+`notFound()`) — e o fundador estava logado como dono.
+
+**Nenhuma das três primeiras hipóteses do fundador era o mecanismo — a
+publicação simplesmente nunca aconteceu.** `vercel ls --prod` mostrou o
+deploy do commit `10b7b7e` (23 minutos antes da checagem) com status
+`Error`; a produção continuava servindo o deploy anterior, de antes deste
+commit existir — por isso `/planos` não é "existe e recusa", é "não
+existe". `vercel inspect <url> --logs` deu a causa: `next build` quebrou
+em "Collecting page data" para `/api/webhooks/kiwify`, porque
+`KIWIFY_CHECKOUT_URL_MENSAL`/`KIWIFY_CHECKOUT_URL_ANUAL` (novas nesta
+tarefa, `src/lib/utils/pagamento.ts`) não existem na Vercel de produção —
+confirmado com `vercel env ls production`, que lista `KIWIFY_WEBHOOK_TOKEN`
+(item 13, Tarefa 1) mas não as duas novas. É exatamente o mecanismo que
+`CLAUDE.md` §14 ("CONFERIR ANTES DE PUBLICAR — variáveis de ambiente na
+Vercel") já descrevia — ninguém tinha conferido o painel antes deste push.
+Detalhe e o texto exato do erro registrados naquele item.
+
+**A rota nasceu no lugar certo** (`src/app/(app)/planos/page.tsx` — grupo
+de rota não entra na URL) — não era a segunda hipótese.
+
+**A esteira do GitHub não teria acusado isto de jeito nenhum**: ela roda
+`npm test`/build contra o projeto de teste do Supabase, nunca fala com a
+Vercel. `10b7b7e` está verde na esteira (`/onde-paramos` desta sessão já
+confirmou) e mesmo assim a produção está quebrada — os dois sinais medem
+coisas diferentes, mesma classe de distinção que `CLAUDE.md` §2 já faz
+entre "suíte verde" e "esteira verde", agora um degrau acima: nem esteira
+verde garante publicação no ar.
+
+**Achado à parte, também levantado pelo fundador:** o produto não tem
+página de erro própria — 404 e erro inesperado caem na tela padrão do
+Next.js. Registrado como item 21 em `docs/especificacao.md` §9, com o
+requisito (dizer o que houve, dar caminho de volta) e a nota de que o
+desenho é do Design.
+
+**Corrigido no mesmo dia, autorizado pelo fundador.** `KIWIFY_CHECKOUT_URL_
+MENSAL`/`KIWIFY_CHECKOUT_URL_ANUAL` cadastradas na Vercel de produção
+(`vercel env add`, mesmos valores do `.env` local — não é segredo novo,
+são os dois links de checkout já em uso). `vercel redeploy` reconstruiu o
+deploy que tinha falhado sem precisar de commit novo (mesmo código-fonte,
+`10b7b7e`, só com a variável agora disponível) — `vercel ls --prod`
+confirma `state: READY`, e `curl` contra `app.fretigate.com/planos` sem
+sessão devolve `307` para `/entrar` (rota existe e está protegida), não
+mais o 404 do Next.js. Confirmação com sessão de dono fica para o
+fundador testar ao vivo.
+
+**Segundo achado do fundador, registrado como correção de ferramenta, não
+de produto:** esteira verde não prova publicação — os dois sinais medem
+coisas diferentes, e este caso só foi descoberto porque alguém tentou usar
+a tela, não porque algo avisou. `/onde-paramos` ganhou um item novo (6),
+mesmo formato do item 5 (esteira): confere `vercel ls --prod --format
+json` do commit mais recente de `main` **e** de qualquer commit mais
+antigo cujo deploy de produção ainda esteja com erro sem ninguém ter
+visto — reduzindo a lista a um deploy por commit (o mais recente de cada
+SHA), porque um commit pode ter mais de um deploy (o que falhou e o
+redeploy que corrigiu). Testado contra o estado real desta sessão: a
+lógica reduz corretamente `10b7b7e` para `READY` (o redeploy, mais novo
+que o erro), sem esconder o erro antigo se ele não tivesse sido corrigido.
+Detalhe em `.claude/commands/onde-paramos.md`, item 6.
+
+**Padrão registrado por pedido do fundador, 19/09/2026:** `CLAUDE.md` §2,
+"o que não é conferido automaticamente eventualmente passa despercebido".
+O fundador contou duas correções desse tipo em `/onde-paramos` (esteira,
+publicação); o histórico do comando tem cinco, todas listadas na tabela do
+§2 — inclusive as duas de pendência que some do diário. Registrado também o
+limite da conferência nova: detecta publicação que não foi ao ar, não
+publicação no ar com defeito em execução. Commit único com os quatro
+arquivos, aprovado pelo fundador.
+
+Próximo: nenhuma tarefa de código nova aqui. A compra de teste real
+continua sendo o próximo passo do fundador (mesma pendência da entrada
+anterior) — agora com `/planos` já respondendo em produção.
+
+---
+
 ## 18/09/2026 — Item 13, Tarefa 3 (continuação): tela de Planos + upgrade de dentro do produto
 
 Plano em `docs/planos/item-13-tarefa-3-tela-de-planos.md`. Pedido do
@@ -123,8 +202,9 @@ ciente, decisão de não bloquear o commit por elas):
   real), o formato do `s1` numa compra de verdade, e o fluxo inteiro de
   pagamento ponta a ponta.
 
-**Ainda não commitado** — aguardando aprovação do fundador (`CLAUDE.md`
-§2, item 8).
+**Commitado e enviado como `10b7b7e`** (linha corrigida em 19/09/2026 —
+dizia "ainda não commitado, aguardando aprovação", escrita antes do
+commit e nunca atualizada; `/onde-paramos` apontou a divergência).
 
 Próximo: aguardar a compra de teste real do fundador (fecha três
 pendências de uma vez, ver acima). Depois: "Minha assinatura", quando a

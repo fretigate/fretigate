@@ -353,6 +353,53 @@ você escreve.** O padrão é o meu.
   testada?" — é "o teste chega até a decisão que a rota toma sobre o quê
   passar pra função?". Serviço testado com rota não testada é cobertura
   parcial disfarçada de cobertura inteira.
+- **O que não é conferido automaticamente eventualmente passa despercebido —
+  e falha real sem sinal ensina a ignorar o sinal que existe.** Achado do
+  fundador, 19/09/2026, ao ver `/onde-paramos` ganhar a checagem da
+  publicação na Vercel depois de a esteira já ter ganhado a dela: a
+  publicação do `10b7b7e` falhou com a esteira **verde**, e só foi
+  descoberta porque o fundador tentou abrir `/planos` e deu 404. A esteira
+  testa o código e não a publicação — são dois sistemas, cada um confere só
+  o que é dele. Sem conferência do outro lado, a única detecção é alguém
+  esbarrar no defeito, e isso não é detecção.
+
+  O fundador contou duas vezes (esteira, publicação); o histórico do próprio
+  comando tem **cinco**, listadas por completo, não recortadas para bater
+  com o número dito:
+
+  | O que ficou invisível | Onde apareceu | Como ficou invisível | Conferido por |
+  |---|---|---|---|
+  | Esteira vermelha | 14 a 18/08/2026 | cinco commits seguidos; cada entrada do diário dizia só "`npm test` verdes" (local, outro banco) | `/onde-paramos` item 5, `gh run list` |
+  | Esteira vermelha, outro furo | `e183de5`, 20/08/2026 | o comando olhava só o run mais recente; um push seguinte tirou o vermelho da vista por um dia inteiro | item 5 passou a olhar os últimos 20 runs |
+  | Pendência esquecida no diário | varredura de segredo, 20/08/2026 | três entradas mais novas não a mencionavam e não tinham "Próximo" próprio | regra de subir até achar o fechamento |
+  | Pendência que some do texto | Tarefas 2 e 3 do item 13, 08/09/2026 | o "Próximo" parou de mencioná-las e uma entrada seguinte tratou o item como concluído, sem checar | verificação do plano do item, tarefa por tarefa |
+  | Publicação com erro | `10b7b7e`, 18/09/2026 | build da Vercel quebrou por variável faltando; produção ficou na versão anterior, sem aviso em lugar nenhum que alguém olhasse | item 6, `vercel ls --prod` |
+
+  Os dois primeiros são o mesmo sistema (a esteira) com furos diferentes; o
+  último é o primeiro sistema **externo** novo a entrar. Nenhum dos cinco foi
+  achado por conferência que já existisse — cada um virou uma conferência
+  **depois** de ter custado algo.
+
+  **O que procurar, da próxima vez, e a pergunta é feita antes do defeito:**
+  toda vez que o produto passar a depender de um sistema cujo estado de
+  falha só aparece no painel dele ou no cliente sentindo, pergunte **quem
+  vê isto quebrar, e quando**. Se a resposta for "quem por acaso olhar",
+  falta conferência — e ela custa pouco quando é escrita antes, e o dobro
+  quando é escrita depois do incidente.
+
+  **Onde isto já dá para saber que vai acontecer de novo**, e está registrado
+  no §14 sem conferência automática: a entrega do webhook da Kiwify (fórmula
+  da assinatura nunca medida — se estiver errada, toda entrega cai em 401 e
+  a Kiwify desiste depois de cinco tentativas, sem nada acusar) e o e-mail de
+  ativação de assinatura (se cair em spam, quem pagou não tem conta, e a
+  única rede é alguém rodar o comando de visibilidade).
+
+  **O limite da conferência nova, para ninguém ler "publicação conferida"
+  como mais do que é:** o item 6 de `/onde-paramos` detecta publicação que
+  **não foi ao ar** (`state: ERROR`). Não detecta publicação que foi ao ar
+  **com defeito em execução** — `NEXT_PUBLIC_APP_URL` errado, por exemplo,
+  dá `READY` e login quebrado (§14). E depende de `vercel` autenticado nesta
+  máquina, a mesma dependência que o item 5 já tem para `gh`.
 - **Corrigir o código no meio de escrever a correção do documento deixa o
   documento descrevendo o estado anterior — e a contradição só aparece para
   quem olha o resultado final, sem o histórico de como se chegou lá.**
@@ -1940,6 +1987,28 @@ Não invente resposta. Pergunte.
   `NEXT_PUBLIC_APP_URL` como a única origem confiável em produção. Sem
   este parágrafo, o sintoma lê como senha errada, e é fácil perder horas
   no lugar errado — foi o que aconteceu na primeira vez.
+
+  **Aconteceu de verdade em 18/09/2026, com `KIWIFY_CHECKOUT_URL_MENSAL`/
+  `KIWIFY_CHECKOUT_URL_ANUAL` (item 13, Tarefa 3).** O commit `10b7b7e` foi
+  publicado sem as duas variáveis existirem na Vercel de produção — a
+  tabela de "Ambientes" (§5) já previa as duas, mas ninguém tinha
+  conferido o painel antes do push. O build quebrou em
+  `/api/webhooks/kiwify` (`src/lib/utils/pagamento.ts:45`, "Failed to
+  collect page data") e a Vercel **não promoveu** a versão nova — a
+  produção continuou servindo o deploy anterior a este commit, sem
+  `/planos`. **Sintoma exato: `/planos` (e qualquer outra rota nova deste
+  commit) dá 404**, não porque a rota exista e recuse por permissão — a
+  rota simplesmente não existe na versão que está no ar. Na hora, só
+  `vercel ls --prod` (status `Error` no deploy mais recente) e `vercel
+  inspect <url> --logs` revelavam isso; nada no `git log` ou no diário
+  local avisava, porque o push e a esteira do GitHub passaram normalmente
+  — a esteira não fala com a Vercel. **Desde 19/09/2026, `/onde-paramos`
+  (item 6) confere isso sozinho** — ver `§2`, "o que não é conferido
+  automaticamente...". **Corrigido no mesmo dia, autorizado pelo
+  fundador**: as duas variáveis cadastradas na Vercel (`vercel env add`,
+  mesmos valores do `.env` local) e o deploy que tinha falhado
+  reconstruído com `vercel redeploy` — confirmado `state: READY` e
+  `/planos` respondendo (307 para `/entrar` sem sessão, não mais 404).
 - **CONFERIR ANTES DE PUBLICAR — a seed de municípios em produção.** Achado na
   tarefa 1 do item 2 (09/08/2026).
 

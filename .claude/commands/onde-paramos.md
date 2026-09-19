@@ -1,6 +1,6 @@
 ---
 description: Diz onde o trabalho parou e qual é a próxima tarefa, em até cinco linhas
-allowed-tools: Read, Grep, Glob, Bash(git log:*), Bash(git status:*), Bash(gh run list:*)
+allowed-tools: Read, Grep, Glob, Bash(git log:*), Bash(git status:*), Bash(gh run list:*), Bash(vercel ls:*)
 ---
 
 Responda **onde o trabalho parou**. Não comece nada.
@@ -148,6 +148,61 @@ Responda **onde o trabalho parou**. Não comece nada.
      guarda estado da anterior para contar quantas vezes isso já
      aconteceu — quem nota o padrão, se `gh` faltar repetidamente, é o
      fundador lendo várias respostas ao longo do tempo, não este comando.
+6. **A publicação na Vercel — do commit mais recente de `main`, E de
+   qualquer commit recente cujo deploy de produção ainda esteja com erro,
+   sem ninguém ter visto.** Esteira verde não é publicação no ar: são dois
+   sistemas diferentes, medindo coisas diferentes — a esteira do GitHub
+   fala com o projeto de teste do Supabase e nunca fala com a Vercel.
+
+   Registrado em 18/09/2026: o commit `10b7b7e` (Tarefa 3 do item 13) tinha
+   esteira **verde**, e mesmo assim a produção ficou uma hora inteira sem
+   publicar `/planos` — o build da Vercel quebrou por variável de ambiente
+   faltando (`CLAUDE.md` §14), e ninguém percebeu até o fundador tentar
+   abrir a tela e ver 404. É a mesma classe do buraco do `e183de5`
+   (20/08/2026, item 5 acima): falha real, sinal verde em todo lugar que
+   alguém olhava, porque ninguém olhava o lugar certo.
+
+   Rode: `vercel ls --prod --scope freti-gate --format json`
+
+   **Por que `--scope freti-gate` explícito, e não confiar em `vercel
+   switch` já ter sido rodado antes.** O escopo padrão da CLI é estado
+   global desta máquina, não deste comando — se ninguém rodou `vercel
+   switch` nesta sessão, `vercel ls` sem `--scope` pode responder sobre a
+   conta pessoal, vazia, em vez do time `freti-gate`. `--scope` na própria
+   chamada não depende de nenhum passo anterior ter acontecido.
+
+   O JSON traz uma lista de deploys de produção, mais recente primeiro,
+   cada um com `state` (`READY`, `ERROR`, `BUILDING`, `INITIALIZING`,
+   `QUEUED`, `CANCELED`) e `meta.githubCommitSha`. **Reduza a lista a um
+   item por commit** — para cada `githubCommitSha` distinto, o de maior
+   `createdAt` (o primeiro que aparecer, já que a lista vem ordenada) —
+   porque um commit pode ter mais de um deploy (o que falhou e o redeploy
+   que corrigiu), e só o mais recente de cada commit importa: um redeploy
+   bem-sucedido não apaga o registro do que falhou antes, diferente de um
+   rerun do GitHub Actions, que reescreve o `conclusion` do mesmo run.
+
+   Dois usos do resultado reduzido, mesma lógica do item 5:
+
+   (a) **O commit mais recente.** Ache, na lista reduzida, o item cujo
+   `githubCommitSha` bate com `git log origin/main -1 --format=%H`.
+   - `state: "READY"` — publicado, confirmado.
+   - `state: "ERROR"` — build quebrou, nada foi ao ar. Bloqueio: alguém
+     pode estar testando ou usando uma versão de produção mais velha que o
+     commit mais recente, sem saber.
+   - `state: "BUILDING"`/`"INITIALIZING"`/`"QUEUED"`, ou nenhum deploy
+     encontrado para esse SHA — ainda sem confirmação (push muito recente).
+   - `state: "CANCELED"` — trate como sem confirmação, mesmo raciocínio do
+     `cancelled` da esteira.
+
+   (b) **Qualquer commit, além do mais recente, cujo deploy mais recente
+   (já reduzido) tenha `state: "ERROR"`.** É um buraco do mesmo tipo do
+   `10b7b7e` — relate mesmo que commits seguintes tenham publicado bem,
+   porque a pergunta "quem usou o produto entre o commit quebrado e a
+   correção" não se responde sozinha.
+
+   **O comando falhou** (sem `vercel`, sem rede, sem login) — não bloqueia
+   a resposta, mas diga que não deu para checar a publicação. Mesma
+   dependência de ferramenta autenticada que o item 5 já assume para `gh`.
 
 ## O que responder
 
@@ -170,28 +225,34 @@ Exatamente estes três pontos, **em no máximo cinco linhas no total**:
 - Sem preâmbulo, sem título, sem repetir a pergunta.
 - **Ordem quando mais de uma coisa precisar vir "primeiro":** (1) diário e
   `git status` discordando — muda o que é "onde paramos" antes de qualquer
-  outra leitura fazer sentido; (2) esteira vermelha — do commit mais recente
-  ou de um commit mais antigo ainda não resolvido, os dois na mesma
-  prioridade; (3) o resto. Cada uma só aparece se acontecer; nunca as três
-  de uma vez em situação normal.
+  outra leitura fazer sentido; (2) esteira vermelha e/ou publicação na
+  Vercel com erro — do commit mais recente ou de um commit mais antigo
+  ainda não resolvido, os quatro casos na mesma prioridade; (3) o resto.
+  Cada uma só aparece se acontecer; nunca todas de uma vez em situação
+  normal.
 - Se o diário e o `git status` discordarem — árvore suja, commit que o diário
   não menciona — **diga isso primeiro**, porque muda o que é "onde paramos".
-- **Se a esteira estiver vermelha — do commit mais recente OU de um commit
-  mais antigo que a busca do item 5(b) achou —, diga isso logo em seguida**
-  (depois de eventual divergência diário/`git status`, antes de "última
-  tarefa concluída") — ninguém deveria empilhar trabalho novo em cima de
-  `main` quebrado sem saber, mesmo quando não bloqueia (`CLAUDE.md` §2,
-  item 9). Um vermelho de commit antigo (5b) é sempre dito, mesmo que o
-  commit mais recente (5a) esteja verde — é exatamente o caso que passava
-  despercebido antes desta correção. Para cada vermelho achado, dois casos:
+- **Se a esteira estiver vermelha OU a publicação na Vercel tiver `ERROR`
+  — do commit mais recente OU de um commit mais antigo que a busca dos
+  itens 5(b)/6(b) achou —, diga isso logo em seguida** (depois de eventual
+  divergência diário/`git status`, antes de "última tarefa concluída") —
+  ninguém deveria empilhar trabalho novo em cima de `main` quebrado, ou
+  usar/mostrar um produto publicado com uma versão mais velha que o último
+  commit, sem saber (`CLAUDE.md` §2, item 9). Um vermelho de commit antigo
+  (5b/6b) é sempre dito, mesmo que o commit mais recente esteja verde/
+  publicado — é exatamente o caso que passava despercebido antes desta
+  correção (esteira: `e183de5`, 20/08; Vercel: `10b7b7e`, 18/09). **Os
+  dois sinais são independentes** — esteira vermelha não implica Vercel
+  quebrada, nem o contrário; relate cada um pelo que ele mede. Para cada
+  vermelho achado (esteira ou Vercel), dois casos:
   - **O diário já tem o diagnóstico** (mesmo que de motivo alheio à
     próxima tarefa) — diga o motivo. Não é bloqueio por si só: o item 9
     já decidiu que motivo alheio não trava a próxima tarefa, só precisa
     ser sabido.
   - **O diário não tem diagnóstico nenhum** — isso, sim, é bloqueio: diga
     que precisa investigar antes de qualquer tarefa nova, porque ainda não
-    dá para saber se o defeito é da própria esteira, de uma tarefa
-    anterior, ou de motivo alheio.
+    dá para saber se o defeito é da própria esteira/publicação, de uma
+    tarefa anterior, ou de motivo alheio.
 - Não proponha plano, não sugira o próximo passo em detalhe, não comece a
   trabalhar. A pergunta é só "onde paramos".
 - Linguagem do fundador: ele não é desenvolvedor. Nome de tarefa, não de arquivo.

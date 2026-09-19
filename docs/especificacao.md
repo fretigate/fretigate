@@ -1596,6 +1596,16 @@ vez de ao lado cancelado.
     perdido — `arquivado_em` preenchido, nunca `DELETE` (`CLAUDE.md` §7).
     Registrado em 12/09/2026, achado ao investigar "onde vejo um frete
     arquivado depois", para depois do lançamento.
+21. Página de erro própria — hoje, quem cai numa rota que não existe ou
+    aciona um erro inesperado do servidor vê a tela padrão do Next.js, sem
+    nada do FretiGate. Precisa **dizer o que aconteceu** e **dar caminho de
+    volta** — nunca deixar a pessoa numa tela sem saída. Vale para os dois
+    casos, 404 e erro inesperado, não só um. Desenho ainda não existe — vai
+    para o Design. Registrado em 18/09/2026, achado ao investigar por que
+    `/planos` dava 404 em produção (`docs/diario.md`, mesma data): não era
+    este mecanismo (o 404 real veio de o deploy nunca ter publicado — ver
+    `CLAUDE.md` §14), mas a investigação expôs que o produto não tem
+    tratamento próprio para nenhum dos dois casos.
 
 Nada de 5 em diante começa antes de 1 a 4 funcionar de verdade.
 
