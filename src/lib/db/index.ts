@@ -285,13 +285,18 @@ export async function registrarPagamentoPendente(dados: {
   periodicidade: "mensal" | "anual";
   valorCentavos: number;
   recebidoEm: Date;
+  /** `s1` recebido no webhook, quando não bateu com nenhuma empresa
+   * existente — ver o comentário do campo em `prisma/schema.prisma`. Nulo
+   * no caso comum do Fluxo B (venda direta, sem `s1`). */
+  s1SemCorrespondencia?: string | null;
 }): Promise<LinhaPagamentoRegistrado> {
   const linhas = await clienteBase.$queryRaw<LinhaPagamentoRegistrado[]>`
     SELECT id, token, status FROM registrar_pagamento_pendente(
       ${dados.id}::uuid, ${dados.token}, ${dados.gateway}, ${dados.transacaoExterna},
       ${dados.emailComprador}, ${dados.nomeComprador}, ${dados.gatewayAssinanteId},
       ${dados.documentoComprador}, ${dados.periodicidade}::periodicidade_plano,
-      ${dados.valorCentavos}::integer, ${dados.recebidoEm}::timestamptz
+      ${dados.valorCentavos}::integer, ${dados.recebidoEm}::timestamptz,
+      ${dados.s1SemCorrespondencia ?? null}::text
     )`;
   const linha = linhas[0];
   if (!linha) {
@@ -350,6 +355,25 @@ export async function reivindicarPagamento(
     SELECT id, nome_comprador, periodicidade, gateway_assinante_id
       FROM reivindicar_pagamento(${token})`;
   return linhas[0] ?? null;
+}
+
+/**
+ * Reivindica um `SolicitacaoUpgrade` pelo token — uso único atômico, mesmo
+ * desenho de `reivindicarPagamento`: só marca `usado_em` (e devolve o
+ * `empresa_id`) se ainda não tiver sido usada e o prazo não tiver vencido,
+ * numa única instrução dentro da função `reivindicar_solicitacao_upgrade`
+ * (`prisma/migrations/20260918060000_pagamento_pendente_s1_sem_correspondencia`).
+ * Devolve `null` em qualquer outro caso — token inexistente, já usado, ou
+ * vencido. Nunca recebe nem lê `empresa_id` de fora: é exatamente o que
+ * esta função resolve, achado do `/revisar` (18/09/2026) sobre `CLAUDE.md`
+ * §3, "`empresa_id` vem sempre da sessão autenticada... nunca de URL,
+ * formulário, header ou body" — o `s1` do webhook carrega só este token
+ * opaco, nunca um identificador de empresa.
+ */
+export async function reivindicarSolicitacaoUpgrade(token: string): Promise<string | null> {
+  const linhas = await clienteBase.$queryRaw<{ empresa_id: string }[]>`
+    SELECT empresa_id FROM reivindicar_solicitacao_upgrade(${token})`;
+  return linhas[0]?.empresa_id ?? null;
 }
 
 /**

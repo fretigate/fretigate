@@ -114,11 +114,13 @@ para eventos como `carrinho_abandonado`, que não têm a maioria dos campos.
   real do fundador (próximo passo), capturando também a querystring/
   cabeçalhos da entrega, não só o corpo.
 - **`Commissions.charge_amount` no plano anual: total ou parcela?** O
-  plano anual vende "R$ 1.164 em até 12x de R$ 97,00" (`CLAUDE.md` §10).
-  Nenhuma fonte diz se o webhook de uma venda parcelada manda o valor
-  total ou o valor da parcela cobrada naquele evento — o payload de teste
-  genérico não tem parcelamento. `valor_centavos` grava o que vier, sem
-  essa distinção decidida. Medir contra a compra real do plano anual.
+  plano anual vende "R$ 1.164 à vista, ou 12x de R$ 120,38 com acréscimo
+  no cartão" (`CLAUDE.md` §10 — corrigido em 18/09/2026; esta linha dizia
+  "12x de R$ 97,00", número nunca medido contra o checkout real, só
+  suposto). Nenhuma fonte diz se o webhook de uma venda parcelada manda o
+  valor total ou o valor da parcela cobrada naquele evento — o payload de
+  teste genérico não tem parcelamento. `valor_centavos` grava o que vier,
+  sem essa distinção decidida. Medir contra a compra real do plano anual.
 - **`gateway_assinante_id` como `subscription_id`: o que acontece se a
   mesma pessoa cancelar e assinar de novo?** Achado real do `/revisar`,
   não teórico: `subscription_id` é por ASSINATURA, não por comprador — uma

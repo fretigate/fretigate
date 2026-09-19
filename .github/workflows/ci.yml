@@ -119,15 +119,19 @@ jobs:
       # `docs/diario.md`, 08/08/2026.
       #
       # RESEND_API_KEY, EMAIL_REMETENTE, EMAIL_RESPOSTA, NEXT_PUBLIC_APP_URL,
-      # SUPABASE_URL e KIWIFY_WEBHOOK_TOKEN são valor FIXO, não secret — de
-      # propósito. `src/lib/auth/index.ts`, `src/lib/email/index.ts`,
-      # `src/lib/servicos/comprovantes.ts` e `src/app/api/webhooks/kiwify/
-      # route.ts` (item 13, Tarefa 1) lançam erro no carregamento se
-      # qualquer uma faltar, mas nenhum teste desta suíte manda e-mail de
-      # verdade, assina sessão de cliente real, nem dispara a rota de
-      # webhook contra um endpoint da Kiwify de verdade — só precisam
-      # existir para o módulo carregar. Colocar chave de verdade do Resend
-      # aqui mandaria e-mail a cada execução da esteira, sem necessidade.
+      # SUPABASE_URL, KIWIFY_WEBHOOK_TOKEN e KIWIFY_CHECKOUT_URL_MENSAL/
+      # _ANUAL são valor FIXO, não secret — de propósito. `src/lib/auth/
+      # index.ts`, `src/lib/email/index.ts`, `src/lib/servicos/
+      # comprovantes.ts`, `src/app/api/webhooks/kiwify/route.ts` (item 13,
+      # Tarefa 1) e `src/lib/utils/pagamento.ts` (item 13, Tarefa 3, tela
+      # /planos) lançam erro no carregamento se qualquer uma faltar, mas
+      # nenhum teste desta suíte manda e-mail de verdade, assina sessão de
+      # cliente real, dispara a rota de webhook contra um endpoint da
+      # Kiwify de verdade, nem abre a tela de Planos num navegador — só
+      # precisam existir para o módulo carregar. Colocar chave de verdade
+      # do Resend aqui mandaria e-mail a cada execução da esteira, sem
+      # necessidade; o mesmo vale para os links de checkout reais, que não
+      # precisam apontar pra Kiwify nenhuma aqui.
       # EMAIL_REMETENTE/EMAIL_RESPOSTA em endereços diferentes de propósito
       # — mesmo padrão do valor real (subdomínio de envio / domínio raiz,
       # `docs/especificacao.md`), só que com valor fake. SUPABASE_URL é só o
@@ -159,6 +163,8 @@ jobs:
           BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET_CI }}
           NEXT_PUBLIC_APP_URL=http://localhost:3000
           KIWIFY_WEBHOOK_TOKEN=ci-nao-e-segredo-nenhuma-conta-kiwify-aponta-pra-ca
+          KIWIFY_CHECKOUT_URL_MENSAL=https://ci.invalido/nao-existe-mensal
+          KIWIFY_CHECKOUT_URL_ANUAL=https://ci.invalido/nao-existe-anual
           SUPABASE_URL=https://qutzsvrkaqvpluqxbhmp.supabase.co
           SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY_CI }}
           EOF

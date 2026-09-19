@@ -6,6 +6,132 @@ retomar sem reconstruir contexto.
 
 ---
 
+## 18/09/2026 — Item 13, Tarefa 3 (continuação): tela de Planos + upgrade de dentro do produto
+
+Plano em `docs/planos/item-13-tarefa-3-tela-de-planos.md`. Pedido do
+fundador: construir `/planos`, com os dois links reais de checkout da
+Kiwify (Mensal `xHd3Ef5`, Anual `CC4c1vO`). "Minha assinatura" fica de
+fora — depende da área de assinante da Kiwify, ainda não confirmada.
+
+**Achado com destaque, confirmado antes de escrever qualquer preço:** o
+checkout real do plano Anual cobra **12x de R$ 120,38, com acréscimo**
+(total R$ 1.444,56) — não os "12x de R$ 97,00, mesmo total" que
+`CLAUDE.md` §10 e outros documentos chegaram a descrever, número nunca
+medido contra o checkout de verdade. Corrigido em `CLAUDE.md` §10,
+`docs/navegacao.md`, `docs/componentes.md`, `docs/planos/
+item-13-assinatura.md` e `docs/planos/corrige-webhook-kiwify.md`. **A
+tela nasce sem o número do parcelamento** — o fundador vai conferir no
+painel da Kiwify se dá para configurar sem juro antes de decidir o que
+mostrar.
+
+**O `/revisar` levou quatro passes — os três primeiros acharam achado de
+rigor total (isolamento/dinheiro) em sequência, cada correção abrindo o
+próximo:**
+
+1. A primeira versão mandava o `empresa_id` **cru** no parâmetro `s1` da
+   URL de checkout, para o webhook reconhecer upgrade de empresa já
+   existente — violava `CLAUDE.md` §3 ("nunca de URL"): qualquer um podia
+   editar a URL antes de pagar e depois pedir reembolso, marcando a
+   assinatura de **outra** empresa como vencida.
+2. A correção (empresa_id **assinado** por HMAC, com prazo) ainda violava
+   o §3 na essência — o identificador continuava vindo do corpo do
+   webhook, só ficava mais difícil de forjar.
+3. A versão final segue o mesmo padrão que `Convite`/`fretigate_convite`
+   já usa para "não sei a empresa ainda": um **token opaco**, sem
+   informação nenhuma de empresa embutida. Tabela nova, `SolicitacaoUpgrade`
+   (domínio normal, isolada como qualquer outra — nasce com `empresa_id`
+   da sessão do dono). O papel `fretigate_pagamento` (já existente, item
+   13 Tarefa 1) ganhou uma função nova, `reivindicar_solicitacao_upgrade`
+   (`SECURITY DEFINER`, uso único, com prazo de 48h) para resolver o
+   token no banco, sem nunca receber `empresa_id` de fora.
+
+O quarto passe achou só documentação defasada (a versão HMAC ainda
+descrita em vários lugares depois de virar token), um campo
+`atualizado_em` faltando na tabela nova (`CLAUDE.md` §7), a Server Action
+usando `exigirDono()` à mão em vez de um envelope nomeado, e um
+componente de cabeçalho (`BotaoVoltar` + título) copiado pela terceira vez
+(`/assinatura-vencida`, `/limite-do-gratuito`, `/planos`) — todos
+corrigidos: `comoDonoSemPortao` (novo envelope, `src/lib/auth/acao.ts`,
+mesma ideia de `comoUsuarioLeitura` — precisa funcionar mesmo com
+assinatura vencida, é o próprio caminho de sair desse estado) e
+`CabecalhoComVoltar` (`src/components/ui/`, extraído das três cópias).
+
+**Antes do commit, o fundador perguntou se a suíte pegaria uma volta para
+a v1 — e a resposta medida foi não, até este ponto.** Todos os testes de
+`s1`/upgrade chamavam `resolverUpgradePorToken`/`criarSolicitacaoUpgrade`
+direto, do serviço — nenhum exercitava a ROTA (`api/webhooks/kiwify/
+route.ts`), onde o buraco da v1 de fato vivia. Medido, não suposto:
+reintroduzi a v1 de propósito em `route.ts`, o novo
+`tests/webhook-kiwify-upgrade.test.ts` reprovou exatamente na afirmação
+"a empresa não devia virar paga"; revertido para o token, roda verde.
+Detalhe em `docs/planos/item-13-tarefa-3-tela-de-planos.md`, seção
+"Testes". Esse foi o **quinto** achado corrigido antes do commit (rigor
+total — isolamento —, mesma regra de "corrige, quantos passes forem
+precisos" do `CLAUDE.md` §2), ainda que fora do ciclo formal do
+`/revisar` (veio de uma pergunta do fundador, não de um passe do
+subagente).
+
+**Suíte local inteira verde** (40 arquivos, 790 testes passando, 8
+pulados — Chromium no Windows, esperado) depois desta última rodada.
+
+**O fundador pediu para registrar a causa com destaque, porque é maior
+que este caso: um mecanismo pode estar coberto por teste e a ENTRADA dele
+não estar.** Catalogado como padrão a procurar de propósito em
+`CLAUDE.md` §2 (mesmo tratamento das outras entradas dessa lista —
+"componente copiado", "texto que envelhece calado" etc.). Verificado na
+hora, por pedido do fundador, se o mesmo formato aparece em outro lugar:
+**aparece.** `src/app/api/fretes/[id]/comprovante/route.ts` e
+`src/app/api/conta/logo/route.ts` são rota pública que chama serviço,
+com sessão/permissão, trava de tentativas e corte por `Content-Length`
+decididos **na rota** — e nenhum teste chama essas rotas, só as funções
+de serviço por trás (`enviarComprovante`/`enviarLogo`). Registrado como
+decisão em aberto no `CLAUDE.md` §14 — não corrigido agora, porque
+nenhuma das duas pertence a esta tarefa.
+
+**Reentrega do mesmo `order_approved` de um upgrade já resolvido —
+decisão final do fundador: fica como lacuna aceita.** Incômodo (e-mail de
+ativação redundante para quem já tem conta), não risco (nenhuma segunda
+empresa nasce, nenhum pagamento se perde) — e existe saída: a pessoa só
+vê "já existe uma conta com esse e-mail" e ignora o e-mail. Não é mais
+"a decidir depois", é "aceito assim".
+
+**Um `git checkout -- route.ts` quase apagou uma hora de trabalho não
+commitado desta sessão**, ao tentar desfazer uma simulação temporária da
+v1 no meio da investigação acima — `git checkout` volta ao último
+COMMIT, não à última edição minha, e nada daquele arquivo estava
+commitado ainda. Recuperado de uma cópia que eu tinha feito antes de
+mexer; nada se perdeu, mas o comando certo para desfazer uma edição
+própria, com trabalho não commitado no meio, é reverter à mão ou por uma
+cópia — nunca um comando que volta ao commit.
+
+**Pendências registradas no plano, não corrigidas agora** (fundador já
+ciente, decisão de não bloquear o commit por elas):
+- Validade de 48h do `SolicitacaoUpgrade` — **confirmada pelo fundador
+  antes do commit**: cobre quem abre o checkout e decide no dia seguinte,
+  e é curta o bastante para um token velho não ficar circulando.
+- Reentrega do mesmo `order_approved` de um upgrade já resolvido — ver
+  acima, lacuna aceita.
+- Nenhum rastro de pagamento nasce no caminho de upgrade (só muda colunas
+  de `Empresa`) — sem registro para reconciliação financeira.
+- `s1` é o mesmo slot de rastreio de afiliado da Kiwify — conflito futuro
+  se o item 17 for ligado.
+- `BotaoVoltar` de `/planos` sempre aponta pra `/mais`, mas a pílula que
+  levaria pra lá em Mais ainda não existe no código — hoje só se chega
+  por `/limite-do-gratuito` ou URL direta.
+- **A compra de teste real continua sendo o próximo passo do fundador** —
+  fecha de uma vez a fórmula da assinatura (nunca medida contra entrega
+  real), o formato do `s1` numa compra de verdade, e o fluxo inteiro de
+  pagamento ponta a ponta.
+
+**Ainda não commitado** — aguardando aprovação do fundador (`CLAUDE.md`
+§2, item 8).
+
+Próximo: aguardar a compra de teste real do fundador (fecha três
+pendências de uma vez, ver acima). Depois: "Minha assinatura", quando a
+área de assinante da Kiwify estiver confirmada.
+
+---
+
 ## 17/09/2026 — Financeiro ganha resumo de três números (Recebido · Pago · Sobrou)
 
 Construção do plano aprovado na entrada abaixo.

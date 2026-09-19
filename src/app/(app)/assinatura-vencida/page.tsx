@@ -1,5 +1,5 @@
 import { exigirSessao } from "@/lib/auth/sessao";
-import { BotaoVoltar } from "@/components/ui/BotaoVoltar";
+import { CabecalhoComVoltar } from "@/components/ui/CabecalhoComVoltar";
 
 /**
  * Assinatura vencida (item 13, Tarefa 3 — `docs/planos/
@@ -48,15 +48,7 @@ export default async function Pagina() {
       className="mx-auto flex min-h-full max-w-[480px] flex-col gap-24 px-20"
       style={{ paddingBottom: "var(--folga-rolagem)" }}
     >
-      <div className="flex items-center gap-10 pb-4" style={{ paddingTop: "var(--area-segura-topo)" }}>
-        <BotaoVoltar href="/" />
-        <span
-          className="min-w-0 flex-1 text-titulo-tela font-bold tracking-[-0.01em] text-tinta-apoio-forte"
-          style={{ fontVariationSettings: "'wdth' 96" }}
-        >
-          Assinatura vencida
-        </span>
-      </div>
+      <CabecalhoComVoltar href="/" titulo="Assinatura vencida" />
 
       <div className="rounded-campo bg-vencido-fundo px-16 py-16">
         <p className="text-apoio font-medium leading-[1.5] text-vencido-apoio">

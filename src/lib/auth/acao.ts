@@ -40,6 +40,13 @@ import { buscarStatusAssinatura } from "@/lib/servicos/empresas";
  * igualdade exata, está em `tests/bloqueio-de-escrita.test.ts`. Não existe
  * `comoDonoLeitura`: nenhuma ação de dono é leitura hoje, e a camada só
  * nasce quando a primeira precisar dela (`CLAUDE.md` §6).
+ *
+ * `comoDonoSemPortao` (item 13, Tarefa 3, continuação) é a segunda exceção
+ * nomeada — mesma ideia de `comoUsuarioLeitura`, mas para uma ação de
+ * ESCRITA de dono que precisa funcionar mesmo com a assinatura vencida,
+ * porque é o próprio caminho de sair desse estado (gerar o link de
+ * checkout em `/planos`). Lista fechada em `tests/
+ * bloqueio-de-escrita.test.ts`, mesmo padrão.
  */
 
 async function bloqueadoParaEscrita(empresaId: string): Promise<boolean> {
@@ -78,6 +85,31 @@ export function comoDono<A extends unknown[], R>(
   return async (...args: A) => {
     const sessao = await exigirDono();
     if (await bloqueadoParaEscrita(sessao.empresaId)) redirect("/assinatura-vencida");
+    return acao(sessao, ...args);
+  };
+}
+
+/**
+ * Igual a `comoDono`, sem o portão de escrita — exige o dono, nunca bloqueia
+ * por assinatura vencida. Mesmo raciocínio de `comoUsuarioLeitura` (acima),
+ * espelhado para dono: existe uma lista fechada, pequena, de ações que
+ * PRECISAM funcionar mesmo com a assinatura vencida, porque são o próprio
+ * caminho de sair desse estado — usar `comoDono` aqui trancaria a porta de
+ * saída (item 13, Tarefa 3, continuação, achado do `/revisar`, 18/09/2026:
+ * a primeira versão de `gerarLinkDeCheckoutAction` chamava `exigirDono()`
+ * à mão, contra `CLAUDE.md` §9, "toda ação de servidor usa o envelope...
+ * nunca verificação escrita à mão" — corrigido para este envelope nomeado,
+ * a mesma solução mais precisa que `comoUsuarioLeitura` já era para o caso
+ * de usuário comum).
+ *
+ * A lista fechada de quem usa isto, por igualdade exata, está em
+ * `tests/bloqueio-de-escrita.test.ts` — mesmo padrão de `comoUsuarioLeitura`.
+ */
+export function comoDonoSemPortao<A extends unknown[], R>(
+  acao: (sessao: Autenticado, ...args: A) => Promise<R>,
+): (...args: A) => Promise<R> {
+  return async (...args: A) => {
+    const sessao = await exigirDono();
     return acao(sessao, ...args);
   };
 }

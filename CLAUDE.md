@@ -310,6 +310,49 @@ você escreve.** O padrão é o meu.
   autoritativa (`/revisar`, ou qualquer subagente). Uma citação inventada
   que sustenta um achado correto ainda é uma citação inventada — e a próxima
   pessoa a ler pode confiar nela para um achado que não é tão sólido.
+- **Um mecanismo pode estar coberto por teste e a ENTRADA dele não estar —
+  a suíte passa verde a cada versão, inclusive na que tinha o furo, porque
+  ela nunca chegava perto do furo.** Achado do fundador, 18/09/2026,
+  perguntando por que a suíte passou nas três versões do `s1`
+  (`docs/planos/item-13-tarefa-3-tela-de-planos.md`), incluindo a primeira,
+  que mandava `empresa_id` cru na URL — violação direta do `CLAUDE.md` §3.
+  `tests/pagamentos.test.ts` sempre chamou `resolverUpgradePorToken`/
+  `atualizarAssinaturaPorUpgrade` **direto, do serviço** — nunca a ROTA
+  (`api/webhooks/kiwify/route.ts`), que é onde a decisão perigosa
+  ("tratar `s1` como token opaco" vs. "tratar `s1` como identificador")
+  de fato mora. Medido, não suposto: reintroduzi a v1 de propósito na
+  rota, a suíte inteira continuou verde — só o novo
+  `tests/webhook-kiwify-upgrade.test.ts` (que chama o `POST` exportado da
+  rota, não o serviço) reprovou, exatamente como devia.
+
+  **O porquê é estrutural, não descuido de quem escreveu o teste:** rota de
+  API roda fora do envelope `comoUsuario`/`comoDono` (§9 já registra isso)
+  e usa `next/headers()`/`headers()` direto, que só funciona dentro de um
+  pedido real — testar a rota exige mockar essas peças (mesmo padrão de
+  `tests/bloqueio-de-escrita.test.ts`), um passo a mais que testar a
+  função pura não pede. É mais fácil escrever o teste que cobre "a lógica
+  de negócio funciona" do que o teste que cobre "a decisão de segurança na
+  fronteira está ligada à lógica certa" — e o primeiro dá uma sensação de
+  cobertura que não é a mesma coisa.
+
+  **Verificado que o padrão se repete: `src/app/api/fretes/[id]/
+  comprovante/route.ts` e `src/app/api/conta/logo/route.ts` têm o mesmo
+  formato** — rota de API que faz a verificação de sessão/permissão, a
+  trava de tentativas e o corte por `Content-Length` (`CLAUDE.md` §4,
+  "rejeitar acima de 10 MB... antes de abrir o arquivo") **na rota**, e só
+  a função de serviço por trás (`enviarComprovante`/`enviarLogo`) tem
+  teste (`tests/isolamento/enviar-comprovante.test.ts`/`logo.test.ts`).
+  Nenhum teste chama essas duas rotas — se alguém remover o corte por
+  `Content-Length`, trocar `exigirDono()` por `exigirSessao()` na logo, ou
+  apagar a trava, nada acusa. Registrado como decisão em aberto no §14 —
+  não corrigido nesta tarefa, que não é sobre nenhuma das duas.
+
+  **O que procurar, da próxima vez:** toda vez que um mecanismo de
+  segurança tiver uma função de serviço testável E uma rota/entrada que
+  decide COMO chamar essa função, a pergunta não é só "a função está
+  testada?" — é "o teste chega até a decisão que a rota toma sobre o quê
+  passar pra função?". Serviço testado com rota não testada é cobertura
+  parcial disfarçada de cobertura inteira.
 - **Corrigir o código no meio de escrever a correção do documento deixa o
   documento descrevendo o estado anterior — e a contradição só aparece para
   quem olha o resultado final, sem o histórico de como se chegou lá.**
@@ -852,6 +895,7 @@ conferência antes de publicar continua necessária — ver a pendência
 | `SUPABASE_URL` | URL do projeto de desenvolvimento | **valor fixo em `ci.yml`** — URL do projeto de teste (`https://qutzsvrkaqvpluqxbhmp.supabase.co`), não é segredo por si só (o mesmo identificador de projeto já aparece no host de `DATABASE_URL`, que esse sim é secret) | **variável de ambiente da Vercel** — URL do projeto de produção, ainda não existe |
 | `SUPABASE_SERVICE_ROLE_KEY` | chave `service_role` do projeto de desenvolvimento (painel do Supabase → Project Settings → API) | **secret do GitHub** (`SUPABASE_SERVICE_ROLE_KEY_CI`) — chave `service_role` do projeto de teste | **variável de ambiente da Vercel** — chave `service_role` do projeto de produção, ainda não existe |
 | `KIWIFY_WEBHOOK_TOKEN` | token de segurança configurado no painel da Kiwify (Apps > Webhooks) do produto de teste/desenvolvimento | **valor fixo em `ci.yml`** (item 13, Tarefa 1) — `tests/pagamentos.test.ts` chama `src/lib/servicos/pagamentos.ts` direto, nunca a rota `api/webhooks/kiwify` por HTTP, então nenhum teste desta suíte dispara a checagem de token de verdade; a variável só precisa existir para o módulo carregar, mesmo motivo das demais fixas | **variável de ambiente da Vercel** — token do webhook configurado na Kiwify de produção |
+| `KIWIFY_CHECKOUT_URL_MENSAL`, `KIWIFY_CHECKOUT_URL_ANUAL` | links reais de checkout dos dois planos, copiados do painel da Kiwify (item 13, Tarefa 3 — tela `/planos`) | **valor fixo em `ci.yml`**, não aponta para a Kiwify de verdade — nenhum teste desta suíte abre a tela de Planos num navegador, a variável só precisa existir para `src/lib/utils/pagamento.ts` carregar | **variável de ambiente da Vercel** — os mesmos dois links reais |
 
 **Por que a maioria de e-mail/autenticação pode ser valor fixo na esteira, e
 as três do banco (mais `SUPABASE_SERVICE_ROLE_KEY`) não:** as três do banco
@@ -1313,7 +1357,7 @@ cada cadastro que falha na metade — caminho de execução. Migration e seed s�
 chamadas **por quem opera**, ao publicar. A distinção não é de risco percebido,
 é de quem dispara.
 
-São cinco papéis, e a separação é parte do desenho:
+São seis papéis, e a separação é parte do desenho:
 
 | Papel | Para quê | Enxerga |
 |---|---|---|
@@ -1321,6 +1365,7 @@ São cinco papéis, e a separação é parte do desenho:
 | `fretigate_auth` | só o Better Auth | as tabelas que existem para autenticar e não têm `empresa_id` (ver abaixo). **Nada** de domínio |
 | `fretigate_reversor` | só reverter cadastro incompleto (tarefa 8) | `DELETE`/`SELECT` em `empresa`, `SELECT` em `usuario` — nomeados, nunca `BYPASSRLS`. Dono de `reverter_cadastro_incompleto`, chamada por `fretigate_app` via `SECURITY DEFINER` |
 | `fretigate_convite` | só achar um `Convite` pelo token, antes de saber a empresa (item 10, Tarefa 1) | `SELECT` em `convite` — nomeado, nunca `BYPASSRLS`, via uma política só sua (`convite_busca_por_token`, `USING (true)`). Dono de `localizar_convite_por_token`, chamada por `fretigate_app` via `SECURITY DEFINER`, que devolve só `id`/`empresa_id`/`telefone`/`nome`/`papel`/`status` — nunca a linha inteira |
+| `fretigate_pagamento` | resolver identidade por token antes de saber a empresa, no domínio de pagamento (item 13, Tarefa 1) — `PagamentoPendente` (Fluxo B) e `SolicitacaoUpgrade` (upgrade de dentro do produto, item 13 Tarefa 3 continuação) | `SELECT`/`INSERT`/`UPDATE` só nas duas tabelas acima, nomeado, nunca `BYPASSRLS`, via políticas só suas (`USING (true) WITH CHECK (true)` — o papel também grava, a escrita real fica condicionada ao `WHERE` dentro de cada função). Dono de `registrar_pagamento_pendente`, `localizar_pagamento_por_token`, `reivindicar_pagamento`, `vincular_pagamento_a_empresa`, `marcar_email_de_pagamento_enviado`, `estornar_pagamento_pendente` e `reivindicar_solicitacao_upgrade`, todas chamadas por `fretigate_app` via `SECURITY DEFINER` |
 | `postgres` | **só migrations e comando de operação** (a seed de municípios) | tudo — por isso **não atende pedido de usuário** |
 
 **Por que `fretigate_reversor` existe, e não a função rodando como
@@ -1392,9 +1437,10 @@ achá-la pelo e-mail. Essa permissão é uma **política nomeada**, visível em
 `pg_policies` — nunca `BYPASSRLS`, que é atributo invisível e desliga o motor
 para todas as tabelas de uma vez.
 
-**Toda ação de servidor usa o envelope `comoUsuario`/`comoDono`, nunca
-verificação escrita à mão.** (`src/lib/auth/acao.ts`, tarefa 3 da auditoria de
-segurança, 18/08/2026). Antes, cada ação escrevia `const sessao = await
+**Toda ação de servidor usa um dos quatro envelopes — `comoUsuario`,
+`comoDono`, `comoUsuarioLeitura` ou `comoDonoSemPortao` —, nunca verificação
+escrita à mão.** (`src/lib/auth/acao.ts`, tarefa 3 da auditoria de segurança,
+18/08/2026). Antes, cada ação escrevia `const sessao = await
 exigirSessao();` na primeira linha — funcionava porque não existia outro jeito
 de conseguir `empresaId`, mas nada garantia que a linha continuasse ali numa
 ação nova, e nada distinguia uma ação que devesse exigir o dono
@@ -1402,6 +1448,16 @@ ação nova, e nada distinguia uma ação que devesse exigir o dono
 como primeiro parâmetro da ação: não tem como esquecer a verificação porque
 não existe verificação para escrever à mão. A escolha do envelope **é** a
 declaração de "esta ação exige dono" — não existe lista separada.
+
+Os dois primeiros (`comoUsuario`/`comoDono`) também aplicam o portão de
+escrita (abaixo). `comoUsuarioLeitura` (item 13, Tarefa 2) e
+`comoDonoSemPortao` (item 13, Tarefa 3, continuação) são as duas exceções
+NOMEADAS a esse portão — a mesma ideia, uma para sessão comum, outra para
+dono: exigem a sessão normalmente, mas nunca bloqueiam por assinatura
+vencida/encerrada. Cada uma tem lista fechada própria, por igualdade exata,
+em `tests/bloqueio-de-escrita.test.ts` — não é lista separada da "quais
+ações usam qual envelope" acima, é a prova de que a exceção ao portão está
+restrita ao que deveria estar.
 
 A lógica de verdade (achar a sessão pelo cabeçalho, checar `arquivado_em`,
 checar o papel) mora em `src/lib/auth/sessao-por-cabecalho.ts`, que recebe o
@@ -1421,7 +1477,8 @@ para `src/lib/auth` — mesmo mecanismo que já tranca
 escopo da regra, pelo mesmo motivo que `/tests` já pode SQL cru (§3).
 `tests/protecao-de-acoes.test.ts` lê o código-fonte de toda ação de servidor
 (varredura, não lista de arquivo à mão) e confere que cada exportação usa um
-dos dois envelopes, com só quatro exceções aprovadas — `sairDaConta` (sessão
+dos quatro envelopes, com só quatro exceções aprovadas (sem envelope
+nenhum, porque não existe sessão no momento) — `sairDaConta` (sessão
 pode já ter vencido), `criarConta` (cria a empresa; sessão não existe
 ainda), `aceitarConviteAction` (item 10, Tarefa 4 — cria o usuário a partir
 de um convite público, por token; mesmo motivo de `criarConta`) e
@@ -1467,14 +1524,35 @@ que ser trocar uma peça. O modelo ainda não está decidido (ver §14).
 
 ## 10. Preço, planos e limites
 
-- **Plano único**, R$ 197/mês ou R$ 1.164/ano (12x de R$ 97,00 — mesmo
-  total, parcelado; a Kiwify permite parcelar plano anual em até 12x).
+- **Plano único**, R$ 197/mês ou R$ 1.164/ano à vista (12x de R$ 120,38 no
+  cartão, com acréscimo — não é o mesmo total parcelado; a Kiwify permite
+  parcelar o plano anual em até 12x, mas cobra juro nisso).
   **Decisão de preço do fundador, 03/09/2026**, ao configurar os planos de
   verdade na Kiwify — não correção de documento: o valor decidido antes
   disso era R$ 149/R$ 840 (§14), que por sua vez já tinha corrigido a
   imprecisão anterior (R$ 990, nunca decisão — recomendação do fundador
   numa conversa). Esta linha muda o que estava decidido, não ajusta um
   documento para bater com o que já era decisão.
+
+  **Achado com destaque, 18/09/2026 — esta mesma linha estava errada sobre
+  o parcelamento, e ninguém tinha aberto o checkout de verdade para
+  conferir.** Construindo a tela de Planos (item 13, Tarefa 3), abri os
+  dois links de checkout reais em vez de confiar no que estava escrito
+  aqui — a mesma disciplina que o `/revisar` já cobra para citação e
+  explicação (`§2`, "explicação plausível não é explicação verificada"),
+  agora aplicada a uma afirmação de preço. O texto dizia "12x de R$ 97,00
+  — mesmo total, parcelado"; o checkout real da Kiwify (link do plano
+  anual) vem com o parcelamento **pré-selecionado em 12x de R$ 120,38**,
+  marcado com "\*Parcelamento com acréscimo" — total de R$ 1.444,56, quase
+  **R$ 281 a mais** que os R$ 1.164 à vista. Ninguém mentiu de propósito:
+  o valor R$ 97 (R$ 1.164 ÷ 12) sempre foi aritmética correta, só que
+  nunca foi o que a Kiwify cobra parcelado — a suposição "parcelar não
+  muda o total" nunca tinha sido medida contra o checkout de verdade.
+  Corrigido para o valor medido; **pendência em aberto**: o fundador vai
+  conferir no painel da Kiwify se dá para configurar o parcelamento sem
+  juro (ou limitado a menos parcelas, sem acréscimo) — se der, esta linha
+  volta a valer "mesmo total parcelado"; se não der, o texto da tela de
+  Planos precisa dizer "com juros", nunca esconder o acréscimo.
 - **Acesso gratuito permanente**, limitado a **1 caminhão**.
 
 | Limite | Gratuito | Pago |
@@ -1491,6 +1569,12 @@ por partes quando exceder.
 
 Cobrança por checkout de terceiro. **Não construir checkout próprio.**
 Assinatura vencida bloqueia escrita, mantém leitura e exportação por 90 dias.
+**Uma exceção nomeada:** gerar o link de checkout em `/planos`
+(`gerarLinkDeCheckoutAction`, `comoDonoSemPortao`) continua funcionando sob
+`vencida`/`encerrada` — é o próprio caminho de pagar e sair desse estado;
+bloquear aqui trancaria a porta de saída. A escrita em si
+(`SolicitacaoUpgrade`) não toca fretes, clientes nem cobrança — só registra
+a intenção de pagar.
 
 ---
 
@@ -1668,6 +1752,30 @@ Nunca commitar exportação sem conferir: quatro das cinco tinham problema.
 
 Não invente resposta. Pergunte.
 
+- ~~Validade de 48 horas do `SolicitacaoUpgrade`~~ — **RESOLVIDO em
+  18/09/2026, mesmo dia da construção (item 13, Tarefa 3, continuação).**
+  Decisão do fundador: 48h está bom — cobre quem abre o checkout e decide
+  no dia seguinte, e é curto o bastante para um token velho não ficar
+  circulando. Continua valendo o risco que motivou a pergunta: um
+  Pix/boleto que demorar mais que isso para compensar faz o `s1` do
+  webhook chegar com o token já vencido, caindo no Fluxo B em vez de
+  aplicar o upgrade — mandando "crie sua conta" para quem já tem conta e
+  já pagou. Se a compra de teste real revelar que isso acontece na
+  prática, o número volta à mesa.
+- **`src/app/api/fretes/[id]/comprovante/route.ts` e `src/app/api/conta/
+  logo/route.ts` não têm teste que chame a rota — só a função de serviço
+  por trás.** Achado em 18/09/2026, ao investigar o padrão que apareceu no
+  webhook da Kiwify (`CLAUDE.md` §2, "um mecanismo pode estar coberto por
+  teste e a entrada dele não estar"): as duas rotas fazem sessão/
+  permissão, trava de tentativas e o corte por `Content-Length` **na
+  rota**, e nada exercita essa camada — se alguém remover uma dessas
+  checagens, nenhum teste acusa. Não corrigido agora, porque nenhuma das
+  duas é parte da tarefa que achou o padrão (item 13). Fica para o
+  fundador decidir se vale escrever `tests/webhook-comprovante.test.ts`/
+  `webhook-logo.test.ts` (mesmo formato do novo `tests/
+  webhook-kiwify-upgrade.test.ts` — mockar `next/headers`, chamar o
+  `POST` exportado) como tarefa própria, ou aceitar como lacuna por mais
+  tempo.
 - **A regra do §8 "número incompleto não é exibido" generaliza para
   qualquer combinação de dinheiro com o mesmo risco, ou fica só nos dois
   casos hoje nomeados (Lucro, R$/km)?** Achado em 17/09/2026
@@ -1781,9 +1889,11 @@ Não invente resposta. Pergunte.
   visibilidade (item 13) é a única rede de segurança, e depende de alguém
   rodá-lo.
 - **CONFERIR ANTES DE PUBLICAR — variáveis de ambiente na Vercel.** Achado na
-  tarefa 9 (08/08/2026): nada verifica, hoje, que as onze variáveis da tabela
-  em "Ambientes" (§5, oito linhas desde o item 13, Tarefa 1) estão
-  configuradas na Vercel antes da primeira publicação. `src/lib/auth/index.ts`,
+  tarefa 9 (08/08/2026): nada verifica, hoje, que as variáveis da tabela em
+  "Ambientes" (§5 — a tabela cresce a cada tarefa que soma variável nova,
+  então esta frase não cita quantas são, para não ficar desatualizada de
+  novo) estão configuradas na Vercel antes da primeira publicação.
+  `src/lib/auth/index.ts`,
   `src/lib/email/index.ts` (mecanismo de envio, antes em
   `src/lib/auth/email.ts` — mudou de casa no item 13, Tarefa 1),
   `src/lib/servicos/comprovantes.ts`, (desde o item 10, Tarefa 4)

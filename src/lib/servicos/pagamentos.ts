@@ -10,6 +10,7 @@ import {
   marcarEmailDePagamentoEnviado,
   estornarPagamentoPendente as estornarPagamentoPendenteDb,
   localizarEmpresaPorAssinanteGateway,
+  reivindicarSolicitacaoUpgrade,
 } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { enviarEmail } from "@/lib/email";
@@ -23,6 +24,13 @@ import { criarEmpresaEDono } from "./criar-empresa-e-dono";
  * `SECURITY DEFINER` (`src/lib/db`) só fazem a operação atômica pedida —
  * ver o comentário do `model PagamentoPendente` em `prisma/schema.prisma`
  * para o porquê da tabela inteira ficar fora do isolamento por empresa.
+ *
+ * Também mora aqui o upgrade de dentro do produto (item 13, Tarefa 3,
+ * continuação — `criarSolicitacaoUpgrade`/`resolverUpgradePorToken`,
+ * abaixo): quem já tem conta e assina pela tela `/planos`, resolvido por
+ * `SolicitacaoUpgrade`, tabela de domínio normal e isolada — diferente de
+ * `PagamentoPendente`, aqui a empresa já é conhecida quando o registro
+ * nasce.
  */
 
 /**
@@ -48,6 +56,11 @@ export type DadosPagamentoAprovado = {
   periodicidade: "mensal" | "anual";
   valorCentavos: number;
   recebidoEm: Date;
+  /** `s1` recebido no webhook, quando não bateu com nenhuma empresa
+   * existente (upgrade de dentro do produto que falhou em achar a
+   * empresa) — sinal de que quem pagou provavelmente já tem conta. Nulo
+   * no caso comum do Fluxo B. */
+  s1SemCorrespondencia?: string | null;
 };
 
 /**
@@ -85,6 +98,7 @@ export async function registrarPagamento(
     periodicidade: dados.periodicidade,
     valorCentavos: dados.valorCentavos,
     recebidoEm: dados.recebidoEm,
+    s1SemCorrespondencia: dados.s1SemCorrespondencia ?? null,
   });
   return { id: resultado.id, token: resultado.token, status: resultado.status };
 }
@@ -180,6 +194,100 @@ export async function atualizarStatusAssinaturaPorAssinanteGateway(
     data: { status_assinatura: novoStatus },
   });
   return true;
+}
+
+/**
+ * Upgrade de dentro do produto (`docs/planos/item-13-assinatura.md`,
+ * "Upgrade de dentro do produto") — quem já tem conta gratuita e assina
+ * pela tela `/planos`. Diferente de `atualizarStatusAssinaturaPorAssinanteGateway`
+ * (que acha a empresa pelo `gateway_assinante_id`, para eventos DEPOIS do
+ * primeiro pagamento): aqui a empresa já é conhecida de antemão — quem
+ * chama (`resolverUpgradePorToken`, abaixo) já resolveu o `empresa_id` a
+ * partir de um `SolicitacaoUpgrade` reivindicado, nunca de um valor vindo
+ * direto do webhook.
+ *
+ * Grava `gateway_assinante_id` também, não só `plano`/`periodicidade`/
+ * `status_assinatura` — sem isso, os eventos futuros desta assinatura
+ * (`subscription_late`/`subscription_canceled`) não achariam mais esta
+ * empresa, porque são localizados por esse campo, não por `s1`.
+ *
+ * Devolve `false` se o `empresa_id` não corresponder a nenhuma empresa —
+ * nunca lança.
+ */
+export async function atualizarAssinaturaPorUpgrade(
+  empresaId: string,
+  dados: { periodicidade: "mensal" | "anual"; gatewayAssinanteId: string },
+): Promise<boolean> {
+  const empresa = await db(empresaId).empresa.findUnique({
+    where: { id: empresaId },
+    select: { id: true },
+  });
+  if (!empresa) return false;
+
+  await db(empresaId).empresa.update({
+    where: { id: empresaId },
+    data: {
+      plano: "pago",
+      periodicidade: dados.periodicidade,
+      status_assinatura: "ativa",
+      gateway_assinante_id: dados.gatewayAssinanteId,
+    },
+  });
+  return true;
+}
+
+/**
+ * Cria um `SolicitacaoUpgrade` — o registro que a tela `/planos` gera ao
+ * montar o link de checkout (`gerarLinkDeCheckoutAction`,
+ * `src/app/(app)/planos/acoes.ts`). Tabela de domínio normal (`db(empresaId)`,
+ * isolada como qualquer outra) — `empresa_id` vem da sessão do dono
+ * logado, nunca do que a URL de checkout carrega de volta.
+ *
+ * Validade de **48 horas** — generosa o bastante para um Pix/boleto
+ * demorar a compensar, curta o bastante para um link antigo não valer
+ * para sempre (achado do `/revisar`, 18/09/2026, sobre o valor original de
+ * uma assinatura HMAC que este mecanismo substituiu).
+ */
+const VALIDADE_SOLICITACAO_UPGRADE_MS = 48 * 60 * 60 * 1000;
+
+/** Mesmo gerador de `gerarTokenDePagamento` — hex, não base64url, mesmos
+ * 256 bits de entropia. Duplicado, não compartilhado: cada token deste
+ * produto (convite, pagamento, upgrade) tem o próprio gerador, mesmo
+ * sendo as duas linhas idênticas — precedente já estabelecido em
+ * `usuarios.ts`/`pagamentos.ts`. */
+function gerarTokenDeUpgrade(): string {
+  return randomBytes(32).toString("hex");
+}
+
+export async function criarSolicitacaoUpgrade(empresaId: string): Promise<{ token: string }> {
+  const token = gerarTokenDeUpgrade();
+  await db(empresaId).solicitacaoUpgrade.create({
+    data: {
+      id: uuidv7(),
+      token,
+      empresa_id: empresaId,
+      expira_em: new Date(Date.now() + VALIDADE_SOLICITACAO_UPGRADE_MS),
+    },
+  });
+  return { token };
+}
+
+/**
+ * Resolve um token de `s1` recebido no webhook para um upgrade de verdade
+ * — reivindica o `SolicitacaoUpgrade` (uso único, dentro do prazo) e, se
+ * achar, aplica `atualizarAssinaturaPorUpgrade`. Devolve `false` sem
+ * lançar em qualquer caso de falha (token inexistente, já usado, vencido,
+ * ou empresa que já não existe) — quem chama (a rota do webhook) decide o
+ * que fazer: hoje, tratar como se `s1` nunca tivesse vindo (Fluxo B),
+ * nunca perder o pagamento de vista.
+ */
+export async function resolverUpgradePorToken(
+  token: string,
+  dados: { periodicidade: "mensal" | "anual"; gatewayAssinanteId: string },
+): Promise<boolean> {
+  const empresaId = await reivindicarSolicitacaoUpgrade(token);
+  if (!empresaId) return false;
+  return atualizarAssinaturaPorUpgrade(empresaId, dados);
 }
 
 export type ConfirmacaoDeCompra =

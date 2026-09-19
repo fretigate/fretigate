@@ -20,6 +20,13 @@ import {
  * planejar) — este arquivo cobre as funções puras, sem servidor HTTP nem
  * banco: assinatura, extração de evento, mapeamento de periodicidade, e o
  * schema contra um payload real capturado (não fabricado).
+ *
+ * A leitura de `TrackingParameters.s1` para o upgrade de dentro do produto
+ * NÃO é testada aqui — desde a correção do achado do `/revisar`
+ * (18/09/2026), `s1` é um token opaco resolvido no banco
+ * (`reivindicarSolicitacaoUpgrade`, `src/lib/db`), não uma função pura
+ * deste arquivo. Ver `tests/pagamentos.test.ts` para o teste do mecanismo
+ * inteiro (`criarSolicitacaoUpgrade` → `resolverUpgradePorToken`).
  */
 
 let conferencias = 0;

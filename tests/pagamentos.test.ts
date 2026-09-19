@@ -8,6 +8,9 @@ import {
   ativarAssinatura,
   estornarPagamento,
   atualizarStatusAssinaturaPorAssinanteGateway,
+  atualizarAssinaturaPorUpgrade,
+  criarSolicitacaoUpgrade,
+  resolverUpgradePorToken,
 } from "@/lib/servicos/pagamentos";
 
 /**
@@ -30,7 +33,7 @@ const usuariosParaLimpar: string[] = [];
 const pagamentosParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 15;
+const CONFERENCIAS_ESPERADAS = 23;
 
 function gerarTransacaoExterna(sufixo: string): string {
   return `pagamentos-teste-${marca}-${sufixo}`;
@@ -103,6 +106,11 @@ afterAll(async () => {
     await raiz.query(`DELETE FROM "pagamento_pendente" WHERE id = ANY($1)`, [pagamentosParaLimpar]);
   }
   if (empresasParaLimpar.length) {
+    // `solicitacao_upgrade` também referencia `empresa` (RESTRICT) — sai
+    // antes dela, mesmo motivo de `pagamento_pendente` acima.
+    await raiz.query(`DELETE FROM "solicitacao_upgrade" WHERE empresa_id = ANY($1)`, [
+      empresasParaLimpar,
+    ]);
     await raiz.query(`DELETE FROM "empresa" WHERE id = ANY($1)`, [empresasParaLimpar]);
   }
   await raiz.end();
@@ -426,7 +434,117 @@ describe("5. atualizarStatusAssinaturaPorAssinanteGateway — eventos depois do 
   });
 });
 
-describe("6. fretigate_app não tem privilégio nenhum em pagamento_pendente", () => {
+describe("6. atualizarAssinaturaPorUpgrade — upgrade de dentro do produto (item 13, Tarefa 3)", () => {
+  it("empresa gratuita existente vira paga, com periodicidade, status e gateway certos", async () => {
+    const empresaId = await criarEmpresaDeTeste("upgrade-ok");
+    const gatewayAssinanteId = `assinante-upgrade-${marca}`;
+
+    const achou = await atualizarAssinaturaPorUpgrade(empresaId, {
+      periodicidade: "anual",
+      gatewayAssinanteId,
+    });
+    expect(achou).toBe(true);
+
+    const { rows } = await raiz.query(
+      `SELECT plano, periodicidade, status_assinatura, gateway_assinante_id
+         FROM "empresa" WHERE id = $1`,
+      [empresaId],
+    );
+    expect(rows[0]).toMatchObject({
+      plano: "pago",
+      periodicidade: "anual",
+      status_assinatura: "ativa",
+      gateway_assinante_id: gatewayAssinanteId,
+    });
+    conferencias++;
+  });
+
+  it("empresa_id que não existe devolve false, sem quebrar — s1 malformado ou de link velho", async () => {
+    const achou = await atualizarAssinaturaPorUpgrade(randomUUID(), {
+      periodicidade: "mensal",
+      gatewayAssinanteId: `assinante-que-nao-existe-${marca}`,
+    });
+    expect(achou).toBe(false);
+    conferencias++;
+  });
+
+  it("registrarPagamento grava s1_sem_correspondencia (o TOKEN, não um empresa_id) quando informado — visibilidade do fallback para o Fluxo B", async () => {
+    const tokenQueNaoResolveu = randomUUID();
+    const resultado = await registrarPagamentoDeTeste("s1-sem-correspondencia", {
+      s1SemCorrespondencia: tokenQueNaoResolveu,
+    });
+
+    const { rows } = await raiz.query(
+      `SELECT s1_sem_correspondencia FROM "pagamento_pendente" WHERE id = $1`,
+      [resultado.id],
+    );
+    expect(rows[0]!.s1_sem_correspondencia).toBe(tokenQueNaoResolveu);
+    conferencias++;
+  });
+
+  it("criarSolicitacaoUpgrade → resolverUpgradePorToken: o token gerado pela tela resolve para a mesma empresa e aplica o upgrade", async () => {
+    const empresaId = await criarEmpresaDeTeste("upgrade-token-ok");
+    const gatewayAssinanteId = `assinante-upgrade-token-${marca}`;
+
+    const { token } = await criarSolicitacaoUpgrade(empresaId);
+    const achou = await resolverUpgradePorToken(token, {
+      periodicidade: "mensal",
+      gatewayAssinanteId,
+    });
+    expect(achou).toBe(true);
+
+    const { rows } = await raiz.query(`SELECT plano FROM "empresa" WHERE id = $1`, [empresaId]);
+    expect(rows[0]!.plano).toBe("pago");
+    conferencias++;
+  });
+
+  it("um token já reivindicado não resolve de novo — uso único, mesmo reenviando o mesmo webhook", async () => {
+    const empresaId = await criarEmpresaDeTeste("upgrade-token-usado");
+    const { token } = await criarSolicitacaoUpgrade(empresaId);
+
+    const primeira = await resolverUpgradePorToken(token, {
+      periodicidade: "mensal",
+      gatewayAssinanteId: `assinante-${marca}-1`,
+    });
+    expect(primeira).toBe(true);
+
+    const segunda = await resolverUpgradePorToken(token, {
+      periodicidade: "anual",
+      gatewayAssinanteId: `assinante-${marca}-2`,
+    });
+    expect(segunda).toBe(false);
+    conferencias++;
+  });
+
+  it("um token vencido não resolve, mesmo existindo de verdade — janela de 48h expirada", async () => {
+    const empresaId = await criarEmpresaDeTeste("upgrade-token-vencido");
+    const { token } = await criarSolicitacaoUpgrade(empresaId);
+
+    // Move a expiração para o passado direto no banco — criarSolicitacaoUpgrade
+    // sempre grava 48h no futuro, então só assim dá pra testar o caminho vencido.
+    await raiz.query(`UPDATE "solicitacao_upgrade" SET expira_em = now() - interval '1 hour' WHERE token = $1`, [
+      token,
+    ]);
+
+    const achou = await resolverUpgradePorToken(token, {
+      periodicidade: "mensal",
+      gatewayAssinanteId: `assinante-vencido-${marca}`,
+    });
+    expect(achou).toBe(false);
+    conferencias++;
+  });
+
+  it("token que nunca existiu devolve false, sem quebrar", async () => {
+    const achou = await resolverUpgradePorToken(randomUUID(), {
+      periodicidade: "mensal",
+      gatewayAssinanteId: `assinante-inexistente-${marca}`,
+    });
+    expect(achou).toBe(false);
+    conferencias++;
+  });
+});
+
+describe("7. fretigate_app não tem privilégio nenhum em pagamento_pendente", () => {
   it("nenhum GRANT direto — todo acesso passa pelas funções SECURITY DEFINER", async () => {
     // Contraste do §3, adaptado a esta tabela: o mecanismo de proteção não
     // é `empresa_id = contexto` (não há isolamento por empresa a testar
@@ -439,6 +557,27 @@ describe("6. fretigate_app não tem privilégio nenhum em pagamento_pendente", (
          WHERE table_name = 'pagamento_pendente' AND grantee = 'fretigate_app'`,
     );
     expect(rows).toEqual([]);
+    conferencias++;
+  });
+});
+
+describe("8. reivindicar_solicitacao_upgrade não depende de postgres ignorar RLS", () => {
+  it("a função não é dona de `postgres`, e o dono não ignora RLS — achado do /revisar, 18/09/2026", async () => {
+    // Mesmo contraste de `localizar_convite_por_token`
+    // (`tests/usuarios.test.ts`)/`reverter_cadastro_incompleto`
+    // (`tests/cadastro.test.ts`): sem esta verificação, a regressão para
+    // "dono = postgres" (que tem `rolbypassrls`) passaria despercebida —
+    // o resultado observável de `resolverUpgradePorToken` continuaria
+    // idêntico, porque `postgres` ignoraria a política em vez de satisfazê-la.
+    const { rows } = await raiz.query<{ dono: string; bypassa_rls: boolean }>(
+      `SELECT p.proowner::regrole::text AS dono, r.rolbypassrls AS bypassa_rls
+         FROM pg_proc p
+         JOIN pg_roles r ON r.oid = p.proowner
+        WHERE p.proname = 'reivindicar_solicitacao_upgrade'`,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.dono).toBe("fretigate_pagamento");
+    expect(rows[0]!.bypassa_rls).toBe(false);
     conferencias++;
   });
 });

@@ -7,13 +7,14 @@ import { auth } from "@/lib/auth";
 import { emTransacao } from "@/lib/db";
 import { uuidv7 } from "uuidv7";
 import { criarTiposDeOperacaoIniciais } from "@/lib/servicos/tipos-de-operacao";
-import { comoUsuario, comoUsuarioLeitura, comoDono } from "@/lib/auth/acao";
+import { comoUsuario, comoUsuarioLeitura, comoDono, comoDonoSemPortao } from "@/lib/auth/acao";
 import {
   buscarSugestaoDeValorAction,
   listarDestinosDoClienteAction,
   buscarMunicipiosAction,
 } from "@/app/(app)/fretes/acoes";
 import { gerarRelatorioAction } from "@/app/(app)/relatorio/acoes";
+import { gerarLinkDeCheckoutAction } from "@/app/(app)/planos/acoes";
 
 /**
  * O portão de escrita para assinatura vencida (item 13, Tarefa 2 —
@@ -55,7 +56,7 @@ const empresasParaLimpar: string[] = [];
 const usuariosParaLimpar: string[] = [];
 
 let conferencias = 0;
-const CONFERENCIAS_ESPERADAS = 22;
+const CONFERENCIAS_ESPERADAS = 29;
 
 /**
  * `empresa_plano_coerente` (migration `20260806213650_planos_status_e_cnpj_unico`)
@@ -133,6 +134,12 @@ afterAll(async () => {
     await raiz.query(`DELETE FROM "usuario" WHERE id = ANY($1)`, [usuariosParaLimpar]);
   }
   if (empresasParaLimpar.length) {
+    // `solicitacao_upgrade` referencia `empresa` (RESTRICT) — sai antes
+    // dela; `gerarLinkDeCheckoutAction` (comoDonoSemPortao) cria uma linha
+    // de verdade no teste abaixo.
+    await raiz.query(`DELETE FROM "solicitacao_upgrade" WHERE empresa_id = ANY($1)`, [
+      empresasParaLimpar,
+    ]);
     await raiz.query(`DELETE FROM "empresa" WHERE id = ANY($1)`, [empresasParaLimpar]);
   }
   await raiz.end();
@@ -266,6 +273,34 @@ describe("o portão de escrita: comoUsuario/comoDono bloqueiam por padrão, como
     conferencias++;
   });
 
+  it("comoDonoSemPortao NUNCA bloqueia, mesmo sob vencida — segunda exceção nomeada (item 13, Tarefa 3, continuação)", async () => {
+    let chamadas = 0;
+    const acaoNova = comoDonoSemPortao(async () => {
+      chamadas++;
+      return "ok";
+    });
+    headersControlados.atual = cabecalhosPorEstado.vencida;
+    const resultado = await acaoNova();
+    expect(resultado).toBe("ok");
+    conferencias++;
+    expect(chamadas).toBe(1);
+    conferencias++;
+  });
+
+  it("comoDonoSemPortao, sob encerrada, também chega ao serviço", async () => {
+    let chamadas = 0;
+    const acaoNova = comoDonoSemPortao(async () => {
+      chamadas++;
+      return "ok";
+    });
+    headersControlados.atual = cabecalhosPorEstado.encerrada;
+    const resultado = await acaoNova();
+    expect(resultado).toBe("ok");
+    conferencias++;
+    expect(chamadas).toBe(1);
+    conferencias++;
+  });
+
   /**
    * As três ações reais que são leitura disfarçada de escrita (`fretes/
    * acoes.ts`) — chamadas de verdade, sob `vencida`, com entrada que nunca
@@ -290,6 +325,21 @@ describe("o portão de escrita: comoUsuario/comoDono bloqueiam por padrão, como
     headersControlados.atual = cabecalhosPorEstado.vencida;
     const resultado = await buscarMunicipiosAction("São Paulo");
     expect(Array.isArray(resultado)).toBe(true);
+    conferencias++;
+  });
+
+  /**
+   * `gerarLinkDeCheckoutAction` (comoDonoSemPortao de verdade) — é ESCRITA
+   * (cria um `SolicitacaoUpgrade`), mas precisa funcionar sob `vencida`
+   * porque é o próprio caminho de sair desse estado (item 13, Tarefa 3,
+   * continuação). Contraste com `gerarRelatorioAction`, logo abaixo: as
+   * duas são escrita real, uma bloqueia, a outra não — a diferença é a
+   * escolha do envelope, não o que a ação faz.
+   */
+  it("gerarLinkDeCheckoutAction (comoDonoSemPortao de verdade) funciona sob vencida", async () => {
+    headersControlados.atual = cabecalhosPorEstado.vencida;
+    const resultado = await gerarLinkDeCheckoutAction("mensal");
+    expect(resultado.ok).toBe(true);
     conferencias++;
   });
 
@@ -398,6 +448,80 @@ describe("a lista de ações comoUsuarioLeitura — igualdade exata, nos dois se
   });
 
   it("as três exceções, e só elas — igualdade exata nos dois sentidos", () => {
+    expect([...vistas].sort()).toEqual([...NOMES_ESPERADOS].sort());
+    conferencias++;
+  });
+});
+
+/**
+ * Mesma varredura acima, para `comoDonoSemPortao` (item 13, Tarefa 3,
+ * continuação) — pergunta própria, lista própria: "quais exportações usam
+ * `comoDonoSemPortao`". Duplicada, não parametrizada por cima da anterior
+ * — cada uma já é pequena, e uma função genérica só esconderia qual lista
+ * fechada está sendo provada em cada describe.
+ */
+describe("a lista de ações comoDonoSemPortao — igualdade exata, nos dois sentidos", () => {
+  const NOMES_ESPERADOS = ["gerarLinkDeCheckoutAction"];
+
+  const RAIZ_SRC = join(process.cwd(), "src");
+  const IGNORADOS = [join(RAIZ_SRC, "lib", "generated")];
+
+  function arquivosTs(dir: string): string[] {
+    const resultado: string[] = [];
+    for (const nome of readdirSync(dir)) {
+      const caminho = join(dir, nome);
+      if (IGNORADOS.includes(caminho)) continue;
+      const info = statSync(caminho);
+      if (info.isDirectory()) resultado.push(...arquivosTs(caminho));
+      else if (/\.(ts|tsx)$/.test(nome)) resultado.push(caminho);
+    }
+    return resultado;
+  }
+
+  function ehArquivoUseServer(fonte: ts.SourceFile): boolean {
+    const primeira = fonte.statements[0];
+    return (
+      !!primeira &&
+      ts.isExpressionStatement(primeira) &&
+      ts.isStringLiteral(primeira.expression) &&
+      primeira.expression.text === "use server"
+    );
+  }
+
+  /** Nome de toda exportação `export const nome = comoDonoSemPortao(...)`. */
+  function exportsComoDonoSemPortao(fonte: ts.SourceFile): string[] {
+    const nomes: string[] = [];
+    for (const stmt of fonte.statements) {
+      if (!ts.isVariableStatement(stmt)) continue;
+      const exportado = (ts.getModifiers(stmt) ?? []).some(
+        (m) => m.kind === ts.SyntaxKind.ExportKeyword,
+      );
+      if (!exportado) continue;
+      for (const decl of stmt.declarationList.declarations) {
+        if (!decl.initializer || !ts.isCallExpression(decl.initializer)) continue;
+        if (!ts.isIdentifier(decl.initializer.expression)) continue;
+        if (decl.initializer.expression.text !== "comoDonoSemPortao") continue;
+        if (!ts.isIdentifier(decl.name)) continue;
+        nomes.push(decl.name.text);
+      }
+    }
+    return nomes;
+  }
+
+  const vistas = new Set<string>();
+  for (const caminho of arquivosTs(RAIZ_SRC)) {
+    const texto = readFileSync(caminho, "utf8");
+    const fonte = ts.createSourceFile(caminho, texto, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    if (!ehArquivoUseServer(fonte)) continue;
+    for (const nome of exportsComoDonoSemPortao(fonte)) vistas.add(nome);
+  }
+
+  it("achou pelo menos uma ação comoDonoSemPortao de verdade (contraste: a varredura não está vazia por engano)", () => {
+    expect(vistas.size).toBeGreaterThan(0);
+    conferencias++;
+  });
+
+  it("a única exceção, e só ela — igualdade exata nos dois sentidos", () => {
     expect([...vistas].sort()).toEqual([...NOMES_ESPERADOS].sort());
     conferencias++;
   });

@@ -4,6 +4,7 @@ import {
   mandarEmailDeAtivacao,
   estornarPagamento,
   atualizarStatusAssinaturaPorAssinanteGateway,
+  resolverUpgradePorToken,
 } from "@/lib/servicos/pagamentos";
 import { travaDeWebhookKiwify } from "@/lib/servicos/trava-de-webhook";
 import {
@@ -39,8 +40,27 @@ import {
  * O que ainda falta bloqueando "pronto para produção" (`CLAUDE.md` §14):
  * a fórmula da assinatura (`assinaturaValida`, `verificacao-kiwify.ts`),
  * nunca medida contra a URL/querystring de uma entrega real — só o corpo
- * foi capturado até agora. Só uma compra real (com os cabeçalhos/
- * querystring capturados) revela isso.
+ * foi capturado até agora. O mesmo vale para o upgrade de dentro do
+ * produto (`s1`, abaixo): o FORMATO já está confirmado, mas nenhuma
+ * compra de verdade, feita pelo link de `/planos`, ainda passou por aqui.
+ * Uma compra real fecha as duas pendências de uma vez (`docs/planos/
+ * item-13-tarefa-3-tela-de-planos.md`).
+ *
+ * **Upgrade de dentro do produto** (item 13, Tarefa 3, continuação —
+ * `docs/planos/item-13-tarefa-3-tela-de-planos.md`): quando `s1` vem
+ * preenchido, é sempre um **token opaco** de um `SolicitacaoUpgrade` —
+ * nunca um `empresa_id`, cru ou assinado (achado do `/revisar`,
+ * 18/09/2026, sobre `CLAUDE.md` §3: "nunca de URL, formulário, header ou
+ * body"). `resolverUpgradePorToken` (`pagamentos.ts`) reivindica esse
+ * token no banco (uso único, com prazo) e só então aplica o upgrade —
+ * nenhum `empresa_id` passa por esta rota em momento nenhum. Se achar,
+ * muda a empresa direto para `pago`, sem criar `PagamentoPendente` nem
+ * mandar e-mail de ativação, porque a pessoa já tem conta. Se `s1` vier
+ * mas o token não resolver (vencido, já usado, ou nunca existiu), a rota
+ * cai no caminho de sempre (Fluxo B) — nunca perde o pagamento de vista —,
+ * gravando o token recebido em `PagamentoPendente.s1_sem_correspondencia`
+ * para o comando de visibilidade (`scripts/pagamentos-pendentes.mts`)
+ * avisar que quem pagou provavelmente já tem conta.
  *
  * Os valores de `Subscription.plan.frequency` dos dois planos reais
  * (Mensal/Anual) **já foram confirmados** (05/09/2026,
@@ -145,24 +165,8 @@ export async function POST(request: Request) {
   const transacaoExterna = corpo.order_id;
 
   if (EVENTOS_COMPRA_APROVADA.has(evento)) {
-    const comprador = extrairComprador(corpo);
-    if (!comprador) {
-      console.error("[webhook kiwify] compra aprovada sem dados do comprador");
-      return NextResponse.json({ erro: "Formato inesperado." }, { status: 400 });
-    }
-
-    // ⚠️ `s1`/tracking (empresa_id do upgrade de dentro do produto — ver
-    // "Upgrade de dentro do produto" no plano) ainda não tem campo
-    // confirmado no corpo. Por ora, todo `order_approved` vira
-    // `PagamentoPendente` (caminho do Fluxo B) — o caminho de upgrade com
-    // `s1` fica para quando a Tarefa 2 confirmar o campo de rastreio.
-    if (
-      !corpo.Product ||
-      !corpo.Commissions ||
-      !corpo.Subscription?.plan ||
-      !corpo.subscription_id
-    ) {
-      console.error("[webhook kiwify] compra aprovada sem produto, valor ou assinatura");
+    if (!corpo.Subscription?.plan || !corpo.subscription_id) {
+      console.error("[webhook kiwify] compra aprovada sem assinatura no corpo");
       return NextResponse.json({ erro: "Formato inesperado." }, { status: 400 });
     }
 
@@ -187,6 +191,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ erro: "Frequência não mapeada." }, { status: 500 });
     }
 
+    // Upgrade de dentro do produto — tentado ANTES do caminho do Fluxo B,
+    // porque não precisa de dados de comprador nem de valor (a Empresa já
+    // existe; `Commissions`/`Product` são só para quem nasce pelo Fluxo B).
+    // `s1`, quando vem, é sempre um token opaco de `SolicitacaoUpgrade` —
+    // `resolverUpgradePorToken` que resolve no banco, atomicamente; a rota
+    // nunca lê nem manipula `empresa_id` nenhum aqui.
+    const s1 = corpo.TrackingParameters?.s1 ?? null;
+    let s1SemCorrespondencia: string | null = null;
+
+    if (s1) {
+      const achou = await resolverUpgradePorToken(s1, {
+        periodicidade,
+        gatewayAssinanteId: corpo.subscription_id,
+      });
+      if (achou) {
+        return NextResponse.json({ ok: true });
+      }
+
+      // Token vencido, já usado, ou nunca existiu — nunca perde o
+      // pagamento de vista: cai no caminho de sempre (Fluxo B), abaixo.
+      // Registra o token recebido para o comando de visibilidade avisar
+      // que quem pagou provavelmente já tem conta (pedido do fundador,
+      // 18/09/2026).
+      console.error(
+        "[webhook kiwify] s1 não resolveu upgrade nenhum (vencido, já usado, ou inexistente) — tratando como Fluxo B",
+      );
+      s1SemCorrespondencia = s1;
+    }
+
+    const comprador = extrairComprador(corpo);
+    if (!comprador || !corpo.Product || !corpo.Commissions) {
+      console.error("[webhook kiwify] compra aprovada sem dados do comprador, produto ou valor");
+      return NextResponse.json({ erro: "Formato inesperado." }, { status: 400 });
+    }
+
     const pagamento = await registrarPagamento({
       gateway: "kiwify",
       transacaoExterna,
@@ -197,6 +236,7 @@ export async function POST(request: Request) {
       periodicidade,
       valorCentavos: corpo.Commissions.charge_amount,
       recebidoEm: new Date(),
+      s1SemCorrespondencia,
     });
 
     // Só manda o e-mail se o token ainda estiver 'pendente' — achado do

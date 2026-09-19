@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { exigirSessao } from "@/lib/auth/sessao";
-import { BotaoVoltar } from "@/components/ui/BotaoVoltar";
+import { CabecalhoComVoltar } from "@/components/ui/CabecalhoComVoltar";
 import { Botao } from "@/components/ui/Botao";
 
 /**
@@ -85,15 +85,7 @@ export default async function Pagina(props: PageProps<"/limite-do-gratuito">) {
       className="mx-auto flex min-h-full max-w-[480px] flex-col gap-24 px-20"
       style={{ paddingBottom: "var(--folga-rolagem)" }}
     >
-      <div className="flex items-center gap-10 pb-4" style={{ paddingTop: "var(--area-segura-topo)" }}>
-        <BotaoVoltar href={voltar} />
-        <span
-          className="min-w-0 flex-1 text-titulo-tela font-bold tracking-[-0.01em] text-tinta-apoio-forte"
-          style={{ fontVariationSettings: "'wdth' 96" }}
-        >
-          Limite do gratuito
-        </span>
-      </div>
+      <CabecalhoComVoltar href={voltar} titulo="Limite do gratuito" />
 
       <p className="text-apoio font-medium leading-[1.5] text-tinta-apoio">
         {TEXTO_POR_TIPO[resultadoTipo.data]}

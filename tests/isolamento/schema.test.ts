@@ -203,6 +203,27 @@ const POLITICAS_ESPERADAS: Record<string, Politica[]> = {
       comCheck: "true",
     },
   ],
+  // `SolicitacaoUpgrade` (item 13, Tarefa 3, continuação — achado do
+  // `/revisar`, 18/09/2026): DIFERENTE de `pagamento_pendente` — aqui
+  // `empresa_id` é conhecido desde a criação (o dono logado gera o token
+  // em `/planos`), então é tabela de domínio normal, isolada como
+  // qualquer outra. A segunda política, só para `fretigate_pagamento`, é
+  // o mesmo caso de `convite_busca_por_token`: o webhook resolve o token
+  // ANTES de saber a empresa, então precisa de alcance amplo restrito a um
+  // papel que só existe para `reivindicar_solicitacao_upgrade` — `WITH
+  // CHECK (true)`, não `(false)`, porque esse papel também grava
+  // (`usado_em`), mesmo desenho de `pagamento_pendente_acesso`.
+  solicitacao_upgrade: [
+    politicaDeIsolamento("solicitacao_upgrade", "empresa_id"),
+    {
+      nome: "solicitacao_upgrade_reivindicacao",
+      tipo: "PERMISSIVE",
+      papeis: ["fretigate_pagamento"],
+      comando: "ALL",
+      usando: "true",
+      comCheck: "true",
+    },
+  ],
   session: [politicaDeAutenticacao("session")],
   account: [politicaDeAutenticacao("account")],
   verification: [politicaDeAutenticacao("verification")],

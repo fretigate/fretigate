@@ -142,6 +142,11 @@ const TABELAS_DO_LACO: Record<
       where: { empresa_id: { in: [A, B] } },
       select: { empresa_id: true },
     }),
+  solicitacao_upgrade: (empresaId) =>
+    db(empresaId).solicitacaoUpgrade.findMany({
+      where: { empresa_id: { in: [A, B] } },
+      select: { empresa_id: true },
+    }),
 };
 
 const semear = async (id: string, nome: string) => {
@@ -273,6 +278,17 @@ const semear = async (id: string, nome: string) => {
      VALUES (gen_random_uuid(), $1, now(), 10000)`,
     [id],
   );
+  // Um SolicitacaoUpgrade por empresa (item 13, Tarefa 3, continuação —
+  // achado do `/revisar`, 18/09/2026), mesma razão acima: só o suficiente
+  // para ter uma linha para tentar vazar. A regra de negócio (token único,
+  // uso único, prazo) é testada em `tests/pagamentos.test.ts`. `token` leva
+  // a marca de execução, mesmo motivo de `convite` acima — é `UNIQUE` na
+  // tabela inteira, não por empresa.
+  await raiz.query(
+    `INSERT INTO "solicitacao_upgrade" (id, empresa_id, token, expira_em)
+     VALUES (gen_random_uuid(), $1, $2, now() + interval '48 hours')`,
+    [id, `upgrade-${id}-${marca}`],
+  );
 };
 
 beforeAll(async () => {
@@ -298,6 +314,7 @@ afterAll(async () => {
   // então pode sair em qualquer ponto antes dela; `despesa` (item 11), nesta
   // semente, também só referencia `empresa` (`veiculo_id`/`servico_id`
   // nulos), mesmo caso de `convite`.
+  await raiz.query(`DELETE FROM "solicitacao_upgrade" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "despesa" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "convite" WHERE empresa_id IN ($1,$2)`, [A, B]);
   await raiz.query(`DELETE FROM "cobranca_enviada" WHERE empresa_id IN ($1,$2)`, [A, B]);

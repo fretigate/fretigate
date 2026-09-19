@@ -76,7 +76,10 @@ const schemaComissoes = z.object({
    * cliente pagou), mas isso não foi medido contra uma venda real dos
    * planos Mensal/Anual — só contra o payload de teste genérico. Também
    * não confirmado: se o plano anual (12x) manda o total (R$ 1.164) ou a
-   * parcela (R$ 97) — lacuna registrada no plano. `.int()` recusa
+   * parcela (o checkout real cobra 12x de R$ 120,38, com acréscimo — nunca
+   * R$ 97, que era um cálculo sem juro que a Kiwify não pratica; achado
+   * ao construir a tela de Planos, `CLAUDE.md` §10) — lacuna registrada no
+   * plano. `.int()` recusa
    * qualquer valor não inteiro em vez de arredondar em silêncio —
    * dinheiro nunca aceita decimal flutuante (`CLAUDE.md` §7). */
   charge_amount: z.number().int(),
@@ -94,6 +97,28 @@ const schemaPlano = z.object({
 
 const schemaAssinatura = z.object({
   plan: schemaPlano.optional(),
+});
+
+/**
+ * Rastreio da Kiwify — `s1`/`s2`/`s3`/`sck`/`src`/`utm_*`, pensados
+ * originalmente para afiliado (`docs/planos/item-13-assinatura.md`),
+ * reaproveitado só `s1` para carregar o **token opaco** do upgrade de
+ * dentro do produto (tela `/planos`, `?s1=<token>` na URL de checkout —
+ * `SolicitacaoUpgrade`, `prisma/schema.prisma`; nunca um `empresa_id`,
+ * cru ou assinado — achado do `/revisar`, 18/09/2026, sobre `CLAUDE.md`
+ * §3). **`s1` já está confirmado no FORMATO** — presente no payload real
+ * capturado via "Testar Webhook" (03/09/2026, `tests/
+ * verificacao-kiwify.test.ts`, `PAYLOAD_REAL_DE_TESTE`), ainda que sempre
+ * `null` ali (nenhuma venda de teste carrega rastreio). O que continua sem
+ * medir: que uma compra de verdade, feita pelo link de `/planos`, chegue
+ * com o mesmo valor no mesmo campo — só o formato foi confirmado até
+ * hoje, nunca um `s1` preenchido de verdade. Os outros campos deste bloco
+ * (`s2`/`s3`/`sck`/`src`/`utm_source`/`utm_medium`/`utm_campaign`/
+ * `utm_content`/`utm_term`, nunca lidos) ficam de fora do schema — não têm
+ * uso hoje.
+ */
+const schemaTracking = z.object({
+  s1: z.string().nullish(),
 });
 
 /**
@@ -115,6 +140,7 @@ export const schemaWebhook = z.object({
    * cancelamento) — `Customer` não tem `id` nenhum no payload real, então
    * é este campo, não o comprador, que localiza a empresa depois. */
   subscription_id: z.string().optional(),
+  TrackingParameters: schemaTracking.optional(),
 });
 
 export type CorpoWebhook = z.infer<typeof schemaWebhook>;

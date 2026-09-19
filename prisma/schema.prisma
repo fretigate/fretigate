@@ -185,6 +185,7 @@ model Empresa {
   convites           Convite[]
   despesas           Despesa[]
   pagamentos_pendentes PagamentoPendente[]
+  solicitacoes_upgrade SolicitacaoUpgrade[]
 
   @@map("empresa")
 }
@@ -1271,10 +1272,55 @@ model PagamentoPendente {
   /// saiu, aguardando clique" de "e-mail nunca saiu — foco aqui primeiro".
   email_enviado_em DateTime? @db.Timestamptz(6)
 
+  /// O TOKEN (`SolicitacaoUpgrade.token`) recebido no `s1` do webhook
+  /// quando ele NÃO resolveu upgrade nenhum — vencido, já usado, ou nunca
+  /// existiu (link velho, bug). Sinal de que quem pagou provavelmente já
+  /// tem conta (o link de checkout só carrega `s1` de dentro do produto,
+  /// `/planos`, dono logado; `docs/planos/item-13-tarefa-3-tela-de-planos.md`).
+  /// Nulo no caso comum do Fluxo B (venda direta, sem `s1` nenhum). Texto,
+  /// não `uuid` — o `s1` nunca carrega um `empresa_id`, nem cru nem
+  /// assinado, desde a correção do achado do `/revisar` (18/09/2026): é
+  /// sempre um token opaco, resolvido no banco por
+  /// `reivindicar_solicitacao_upgrade`. Só diagnóstico para o comando de
+  /// visibilidade (`scripts/pagamentos-pendentes.mts`) — nunca usado para
+  /// achar a empresa de novo, porque a tentativa já falhou antes deste
+  /// registro nascer.
+  s1_sem_correspondencia String?
+
   criado_em     DateTime @default(now()) @db.Timestamptz(6)
   atualizado_em DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   @@map("pagamento_pendente")
+}
+
+/// O pedido de upgrade de dentro do produto (item 13, Tarefa 3, continuação
+/// — `docs/planos/item-13-tarefa-3-tela-de-planos.md`, achado do `/revisar`
+/// em 18/09/2026). Nasce quando o dono, logado, toca em "Assinar o anual/
+/// mensal" em `/planos` — `empresa_id` já é conhecido nesse momento (vem da
+/// sessão, `CLAUDE.md` §3), então esta é uma tabela de domínio normal,
+/// isolada como qualquer outra.
+///
+/// O `token` vai embutido no parâmetro de rastreio `s1` da URL de checkout.
+/// O webhook resolve esse token DEPOIS — sem nunca ter recebido o
+/// `empresa_id` em lugar nenhum do pedido — pela mesma razão de
+/// `Convite`/`fretigate_convite`: `empresa_id` nunca viaja fora da sessão
+/// autenticada, nem mesmo assinado. `reivindicar_solicitacao_upgrade`
+/// (SECURITY DEFINER, papel `fretigate_pagamento`) resolve o token e marca
+/// `usado_em` atomicamente — uso único, e só dentro do prazo.
+model SolicitacaoUpgrade {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  token String @unique
+
+  empresa_id String  @db.Uuid
+  empresa    Empresa @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+
+  criado_em     DateTime  @default(now()) @db.Timestamptz(6)
+  atualizado_em DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  expira_em     DateTime  @db.Timestamptz(6)
+  usado_em      DateTime? @db.Timestamptz(6)
+
+  @@map("solicitacao_upgrade")
 }
 
 // ---------------------------------------------------------------------------

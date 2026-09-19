@@ -88,6 +88,7 @@ async function listar() {
       valor_centavos: true,
       recebido_em: true,
       email_enviado_em: true,
+      s1_sem_correspondencia: true,
     },
   });
 
@@ -102,10 +103,25 @@ async function listar() {
       ? `e-mail enviado há ${horasDesde(p.email_enviado_em)}`
       : "⚠️  E-MAIL NUNCA SAIU";
     const valor = (p.valor_centavos / 100).toFixed(2).replace(".", ",");
+    // Chegou com `s1` (o TOKEN de um `SolicitacaoUpgrade` do upgrade de
+    // dentro do produto, `/planos` — nunca um `empresa_id`, desde a
+    // correção do achado do `/revisar`, 18/09/2026) que não resolveu
+    // upgrade nenhum (vencido, já usado, ou nunca existiu) — sinal de que
+    // quem pagou provavelmente já tem conta, mesmo caindo aqui no Fluxo B
+    // (nunca perde o pagamento de vista; ver `docs/planos/
+    // item-13-tarefa-3-tela-de-planos.md`). Pedido do fundador, 18/09/2026.
+    // Só os 8 primeiros caracteres — `CLAUDE.md` §4, "log nunca contém...
+    // token", ao pé da letra: o token já está morto neste ponto (só chega
+    // aqui depois de `reivindicar_solicitacao_upgrade` recusar), mas a
+    // regra não abre exceção para token morto, e o prefixo já basta para
+    // achar a linha certa em `solicitacao_upgrade` se precisar investigar.
+    const avisoUpgrade = p.s1_sem_correspondencia
+      ? `\n    ⚠️  CHEGOU COM s1=${p.s1_sem_correspondencia.slice(0, 8)}… — pode já ter conta`
+      : "";
     console.log(
       `  ${p.id}\n` +
         `    ${p.nome_comprador} <${p.email_comprador}> — ${p.periodicidade}, R$ ${valor}\n` +
-        `    recebido há ${horasDesde(p.recebido_em)} — ${situacaoEmail}\n`,
+        `    recebido há ${horasDesde(p.recebido_em)} — ${situacaoEmail}${avisoUpgrade}\n`,
     );
   }
   console.log(

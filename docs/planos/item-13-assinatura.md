@@ -98,11 +98,18 @@ decidido.** O parágrafo anterior corrigiu um documento (`docs/navegacao.md`
 mostrava R$ 990 por engano, quando o decidido já era R$ 840); este aqui é
 diferente: ao configurar os planos de verdade no painel da Kiwify
 (03/09/2026, depois da construção da Tarefa 1), o fundador **decidiu** o
-preço novo: **Mensal R$ 197, Anual R$ 1.164** (parcelável em até 12x de
-R$ 97,00 — recurso padrão da Kiwify para plano acima de bimestral, não
-desconto). Confirmado pelo fundador como mudança de preço de verdade, não
-engano de cadastro — ver `docs/diario.md`, mesma data, para o registro
-explícito da decisão.
+preço novo: **Mensal R$ 197, Anual R$ 1.164** (parcelável em até 12x —
+na hora, sem checkout real pra conferir, a suposição registrada aqui era
+R$ 97,00, "recurso padrão da Kiwify... não desconto". Confirmado pelo
+fundador como mudança de preço de verdade, não engano de cadastro — ver
+`docs/diario.md`, mesma data, para o registro explícito da decisão.
+
+**Correção, 18/09/2026 (item 13, Tarefa 3, continuação):** o parcelamento
+de R$ 97,00 acima nunca foi medido contra o checkout real — só suposto. O
+checkout de verdade do plano Anual cobra **12x de R$ 120,38, com
+acréscimo** (total R$ 1.444,56, quase R$ 281 a mais que os R$ 1.164 à
+vista) — não é "recurso padrão sem desconto" como este parágrafo supunha,
+é juro de parcelamento de verdade. Valor certo em `CLAUDE.md` §10.
 
 **Isso desatualiza coisas fora deste repositório**, apontado pelo
 fundador ao aprovar: a página de vendas (ainda não existe), o briefing de

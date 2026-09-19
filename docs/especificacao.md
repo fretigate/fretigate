@@ -863,8 +863,8 @@ deliberada:
 |---|---|
 | `ativa` | Acesso completo. |
 | `inadimplente` | O pagamento falhou e está em retentativa. **Acesso continua liberado**, com aviso para atualizar a forma de pagamento. Bloquear aqui empurra para fora quem não escolheu sair. |
-| `vencida` | Retentativa esgotada. **Escrita bloqueada**; leitura e exportação mantidas por 90 dias (§10 do `CLAUDE.md`). |
-| `encerrada` | Passados os 90 dias. |
+| `vencida` | Retentativa esgotada. **Escrita bloqueada**; leitura e exportação mantidas por 90 dias (§10 do `CLAUDE.md`). **Exceção nomeada:** gerar o link de checkout em `/planos` continua liberado — é o próprio caminho de pagar e sair deste estado (`comoDonoSemPortao`, `CLAUDE.md` §9/§10). |
+| `encerrada` | Passados os 90 dias. Mesma exceção de `vencida` acima. |
 
 **Plano gratuito fica sempre `ativa`.** Isso não é convenção: é restrição no
 banco (`empresa_plano_coerente`), junto com "gratuito não tem periodicidade" e
@@ -1017,7 +1017,7 @@ nasce só quando a pessoa aceita — é ela quem digita, em
 `nome_comprador` · `gateway_assinante_id` · `documento_comprador` ·
 `periodicidade` · `valor_centavos` · `status` (`pendente` · `aceito` ·
 `estornado`) · `empresa_id` (nulo até aceito) · `recebido_em` · `aceito_em` ·
-`estornado_em` · `email_enviado_em`
+`estornado_em` · `email_enviado_em` · `s1_sem_correspondencia`
 
 O pagamento que ainda não é conta (item 13 — `docs/planos/
 item-13-assinatura.md`). Nasce do evento `order_approved` da Kiwify
@@ -1055,6 +1055,52 @@ Kiwify) é assinatura HMAC-SHA1 na querystring da URL, verificada em
 `assinaturaValida` (`src/lib/servicos/verificacao-kiwify.ts`) — mecanismo
 e lacuna (a fórmula ainda não foi medida contra a URL de uma entrega real)
 documentados em `docs/planos/corrige-webhook-kiwify.md` e `CLAUDE.md` §14.
+
+**Upgrade de dentro do produto — o outro caminho que gera `order_approved`,
+sem passar por esta tabela.** Quando alguém já tem conta gratuita e assina
+pela tela `/planos`, o dono, logado, gera um `SolicitacaoUpgrade` (entidade
+própria, ver abaixo) — o `token` dele, opaco, vai embutido no parâmetro de
+rastreio `s1` da URL de checkout (`docs/planos/item-13-assinatura.md`,
+"Upgrade de dentro do produto"). **Nunca um `empresa_id`, cru ou assinado**
+— corrigido no mesmo commit em que nasceu, achado do `/revisar`,
+18/09/2026: `s1` viaja numa URL que a própria pessoa que paga pode editar,
+e qualquer forma de `empresa_id` ali (mesmo assinado contra forjadura)
+ainda violava `CLAUDE.md` §3 ("nunca de URL") na essência — o identificador
+continuava vindo do corpo do webhook. A correção final segue o mesmo
+padrão já usado para `Convite`/`fretigate_convite`: o webhook resolve o
+token NO BANCO (`reivindicar_solicitacao_upgrade`, `SECURITY DEFINER`, uso
+único e com prazo) e só então, com o `empresa_id` que essa função devolve,
+atualiza `plano`/`periodicidade`/`status_assinatura`/`gateway_assinante_id`
+**direto na `Empresa`** — nenhum `PagamentoPendente` nasce, nenhum e-mail
+de ativação sai, porque a pessoa já tem conta. `s1_sem_correspondencia` é
+o caso em que isso falha: o token não resolveu (vencido, já usado, ou
+nunca existiu). A rota nunca descarta o pagamento nesse caso — cai no
+caminho comum do Fluxo B (cria `PagamentoPendente`, manda e-mail de
+ativação), mas grava o TOKEN recebido nesta coluna, só para o comando de
+visibilidade (`scripts/pagamentos-pendentes.mts`) avisar que quem pagou
+provavelmente já tem conta.
+
+### SolicitacaoUpgrade
+`token` · `empresa_id` · `criado_em` · `atualizado_em` · `expira_em` ·
+`usado_em` (nulo até reivindicada)
+
+O pedido de upgrade de dentro do produto (item 13, Tarefa 3, continuação —
+achado do `/revisar`, 18/09/2026). Nasce quando o dono, logado, toca em
+"Assinar o anual/mensal" em `/planos` (`gerarLinkDeCheckoutAction`,
+`comoDonoSemPortao` — funciona mesmo com `status_assinatura: vencida`, de
+propósito: é o próprio caminho de sair desse estado). `empresa_id` já é
+conhecido nesse momento (vem da sessão), então **é tabela de domínio
+normal, isolada como qualquer outra** — diferente de `PagamentoPendente`,
+que fica fora do isolamento porque não existe empresa ainda.
+
+A segunda metade do mecanismo (resolver o token sem saber a empresa) é do
+webhook, sem sessão nenhuma — por isso o papel `fretigate_pagamento` (já
+existente, `CLAUDE.md` §9) ganhou uma segunda política, só para ele,
+restrita à função `reivindicar_solicitacao_upgrade`: uso único e com
+prazo, numa única instrução atômica (`UPDATE ... WHERE usado_em IS NULL
+AND expira_em > now()`), mesmo desenho de `reivindicar_pagamento`. Validade
+de **48 horas** — número da construção, ainda sem confirmação do fundador
+(`CLAUDE.md` §14).
 
 ### Municipio
 Tabela global, base do IBGE, 5.570 registros.
