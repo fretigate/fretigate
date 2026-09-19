@@ -3,6 +3,7 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Botao } from "@/components/ui/Botao";
+import { BotaoContinuarExterno } from "@/components/ui/BotaoContinuarExterno";
 import { CampoTexto } from "@/components/ui/CampoTexto";
 import { linkWhatsapp, normalizarTelefone } from "@/lib/utils/telefone";
 import { prepararJanelaExterna } from "@/lib/utils/link-externo";
@@ -26,28 +27,23 @@ import { criarConviteAction } from "../acoes";
  * cliente enfraqueceria a garantia de token imprevisível):
  * `prepararJanelaExterna()` (`src/lib/utils/link-externo.ts`) — em
  * navegador comum, abre uma aba em branco **antes** do `await` (ainda
- * dentro da cadeia de gesto do toque) e a redireciona depois; em standalone
- * não abre nada agora, só guarda a intenção e navega a própria janela
- * quando o link estiver pronto — mesmo raciocínio de
- * `AcaoOrdemDeServico.tsx`/`AcaoCobrarNoWhatsApp.tsx` (achado do fundador,
- * app instalado no iPhone, 12/09/2026): uma aba `_blank` aberta agora e
- * redirecionada depois ainda faz o WebKit abrir o Safari de verdade para
- * hospedá-la, o mesmo defeito por outro caminho.
+ * dentro da cadeia de gesto do toque) e a redireciona depois, sem `noopener`
+ * de propósito (com ele a aba ficava em branco para sempre — medido,
+ * 19/09/2026); quando não há aba para redirecionar (app instalado, aba
+ * bloqueada, navegador que não respeitou o corte do vínculo) não abre nada, e quando o link chega o
+ * mecanismo devolve `"precisa-de-toque"`: a tela **não sai daqui** e mostra
+ * o segundo toque, `BotaoContinuarExterno`, com o link pronto. Os campos
+ * somem nesse estado — sem isso, um segundo envio criaria um convite
+ * duplicado. **Provisório**, sem confirmação do Design
+ * (`docs/planos/corrige-link-externo-segundo-toque.md`).
  *
- * **Testado com emulação de celular no Browser pane; o fundador confirma no
- * aparelho dele antes de considerar o mecanismo fechado** — o caminho de
- * navegador comum já tinha um defeito real de navegador de celular
- * corrigido antes (`AcaoOrdemDeServico.tsx`, achado do `/revisar` na Tarefa
- * 2 do item 5), e emulação de desktop não reproduz nem aquele bloqueio nem
- * o de standalone no iOS de verdade (`CLAUDE.md` §1: "quem mede é ele, no
- * aparelho dele"). **Não declarado corrigido** para o caso standalone até
- * essa confirmação.
+ * **Não declarado corrigido para o app instalado** até o fundador testar no
+ * iPhone (`CLAUDE.md` §1: "quem mede é ele, no aparelho dele") — emulação de
+ * desktop não reproduz o comportamento do iOS.
  *
- * Se o navegador ainda assim bloquear a aba (`janela === null` — pode
- * acontecer mesmo com a técnica, em navegador comum configurado para
- * bloquear tudo; nunca acontece em standalone, que não abre aba nenhuma), o
- * convite já foi criado e continua acessível pela lista, em "Ver o que ela
- * recebe" — nunca se perde, só a abertura automática falha.
+ * Se o navegador bloquear a aba, cai no mesmo segundo toque. O convite já
+ * foi criado a essa altura e continua acessível pela lista, em "Ver o que
+ * ela recebe" — nunca se perde.
  */
 export function FormularioConvite({ empresaNome }: { empresaNome: string }) {
   const router = useRouter();
@@ -57,6 +53,7 @@ export function FormularioConvite({ empresaNome }: { empresaNome: string }) {
   const [erroTelefone, setErroTelefone] = useState<string | undefined>();
   const [erroGeral, setErroGeral] = useState<string | undefined>();
   const [criando, setCriando] = useState(false);
+  const [linkPronto, setLinkPronto] = useState<string | null>(null);
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -87,24 +84,28 @@ export function FormularioConvite({ empresaNome }: { empresaNome: string }) {
     try {
       const resultado = await criarConviteAction({ nome: nomeLimpo, telefone: telefone.trim() });
       if (!resultado.ok) {
-        janela?.fechar();
+        janela.fechar();
         setErroGeral(resultado.erro);
         setCriando(false);
         return;
       }
 
-      if (janela) {
-        const mensagem = montarMensagemConvite({
-          nomeConvidado: resultado.convite.nome,
-          nomeEmpresa: empresaNome,
-          link: linkDeAceiteDoConvite(resultado.convite.token),
-        });
-        janela.redirecionarPara(linkWhatsapp(normalizado.digitos, mensagem));
+      const mensagem = montarMensagemConvite({
+        nomeConvidado: resultado.convite.nome,
+        nomeEmpresa: empresaNome,
+        link: linkDeAceiteDoConvite(resultado.convite.token),
+      });
+      const link = linkWhatsapp(normalizado.digitos, mensagem);
+
+      if (janela.redirecionarPara(link) === "precisa-de-toque") {
+        setLinkPronto(link);
+        setCriando(false);
+        return;
       }
 
       router.push("/conta/usuarios");
     } catch {
-      janela?.fechar();
+      janela.fechar();
       setErroGeral("Não deu para criar o convite agora.");
       setCriando(false);
     }
@@ -118,22 +119,26 @@ export function FormularioConvite({ empresaNome }: { empresaNome: string }) {
 
   return (
     <form onSubmit={enviar} className="mt-16 flex flex-col gap-16">
-      <CampoTexto
-        rotulo="Nome"
-        name="nome"
-        value={nome}
-        erro={erroNome}
-        onChange={(evento: ChangeEvent<HTMLInputElement>) => setNome(evento.target.value)}
-      />
-      <CampoTexto
-        rotulo="WhatsApp"
-        name="telefone"
-        type="tel"
-        autoComplete="tel"
-        value={telefone}
-        erro={erroTelefone}
-        onChange={(evento: ChangeEvent<HTMLInputElement>) => setTelefone(evento.target.value)}
-      />
+      {linkPronto ? null : (
+        <>
+          <CampoTexto
+            rotulo="Nome"
+            name="nome"
+            value={nome}
+            erro={erroNome}
+            onChange={(evento: ChangeEvent<HTMLInputElement>) => setNome(evento.target.value)}
+          />
+          <CampoTexto
+            rotulo="WhatsApp"
+            name="telefone"
+            type="tel"
+            autoComplete="tel"
+            value={telefone}
+            erro={erroTelefone}
+            onChange={(evento: ChangeEvent<HTMLInputElement>) => setTelefone(evento.target.value)}
+          />
+        </>
+      )}
 
       <div className="flex flex-col gap-6">
         <span className="px-4 text-eyebrow font-bold uppercase tracking-[.16em] text-tinta-apoio">
@@ -146,9 +151,15 @@ export function FormularioConvite({ empresaNome }: { empresaNome: string }) {
 
       {erroGeral ? <span className="text-apoio font-medium text-vencido">{erroGeral}</span> : null}
 
-      <Botao variante="principal" type="submit" carregando={criando}>
-        Mandar convite no WhatsApp
-      </Botao>
+      {linkPronto ? (
+        <BotaoContinuarExterno href={linkPronto} destino="whatsapp">
+          Continuar no WhatsApp
+        </BotaoContinuarExterno>
+      ) : (
+        <Botao variante="principal" type="submit" carregando={criando}>
+          Mandar convite no WhatsApp
+        </Botao>
+      )}
     </form>
   );
 }

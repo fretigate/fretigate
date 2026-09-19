@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Botao } from "@/components/ui/Botao";
+import { BotaoContinuarExterno } from "@/components/ui/BotaoContinuarExterno";
 import { LinhaDeLista } from "@/components/ui/LinhaDeLista";
 import { PilulaEmLinha } from "@/components/ui/PilulaEmLinha";
 import { AvisoDoSistema } from "@/components/ui/AvisoDoSistema";
@@ -28,13 +29,24 @@ import { cancelarConviteAction, reenviarConviteAction } from "./acoes";
  * **"Reenviar" regenera o token e reabre o WhatsApp** — mesmo mecanismo de
  * `FormularioConvite.tsx` (aba em branco antes do `await`, ver o comentário
  * lá): reenviar significa mandar de novo, não só trocar o token em
- * silêncio.
+ * silêncio. Quando não há aba para redirecionar (app instalado, aba
+ * bloqueada, navegador que não respeitou o corte do vínculo), o segundo
+ * toque — `BotaoContinuarExterno`, em formato de pílula — toma o lugar de
+ * "Reenviar" **na própria linha do convite**: é onde a pessoa acabou de
+ * tocar, e é o padrão das ações daquela linha (nada de botão principal numa
+ * lista, nada de bloco de ação — `docs/componentes.md`, "Listas: sem bloco
+ * de ação"). Cancelar o convite tira a linha, e o botão com ela: o link dele
+ * já não vale. Fica até a lista ser recarregada — o link é o do token
+ * atual, então tocar de novo reenvia a mesma mensagem.
+ * **Provisório**, sem confirmação do Design
+ * (`docs/planos/corrige-link-externo-segundo-toque.md`).
  *
  * **Achado do `/revisar`: o estado local (`convitesAtuais`) tinha que
  * atualizar SEMPRE que `reenviarConviteAction` tivesse sucesso, não só no
  * caminho feliz.** A primeira versão só chamava `setConvitesAtuais` depois
- * de abrir o WhatsApp — os dois ramos de cima (telefone que não normaliza,
- * ou `janela` bloqueada pelo navegador) devolviam antes disso. O convite já
+ * de abrir o WhatsApp — o ramo de cima (telefone que não normaliza; na
+ * época, também `janela` bloqueada pelo navegador) devolvia antes disso.
+ * O convite já
  * tinha sido renovado no banco nesse ponto (o token velho já não vale mais
  * — é a mesma reivindicação de uso único de `aceitarConvite`), então "Ver o
  * que ela recebe" continuava abrindo o token MORTO, mostrando "Este convite
@@ -68,21 +80,23 @@ export function ListaUsuarios({
   const [reenviando, setReenviando] = useState<string | null>(null);
   const [cancelando, setCancelando] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [linkPronto, setLinkPronto] = useState<{ conviteId: string; url: string } | null>(null);
 
   async function reenviar(convite: Convite) {
     if (reenviando) return;
     setReenviando(convite.id);
+    setLinkPronto(null);
 
     // ORDEM É REGRA — a janela se prepara antes do `await`, dentro da cadeia
-    // de gesto do toque (mesmo mecanismo de `FormularioConvite.tsx`). Em
-    // standalone, `prepararJanelaExterna` não abre nada agora — só guarda a
-    // intenção de navegar quando o link estiver pronto (`link-externo.ts`).
+    // de gesto do toque (mesmo mecanismo de `FormularioConvite.tsx`). No app
+    // instalado, `prepararJanelaExterna` não abre nada, e quando o link chega
+    // devolve `"precisa-de-toque"` (`link-externo.ts`).
     const janela = prepararJanelaExterna();
 
     try {
       const resultado = await reenviarConviteAction(convite.id);
       if (!resultado.ok) {
-        janela?.fechar();
+        janela.fechar();
         setAviso(resultado.erro);
         return;
       }
@@ -95,8 +109,8 @@ export function ListaUsuarios({
       );
 
       const normalizado = normalizarTelefone(resultado.convite.telefone);
-      if (!normalizado.ok || !janela) {
-        janela?.fechar();
+      if (!normalizado.ok) {
+        janela.fechar();
         // O link antigo já não serve mais para quem o recebeu — precisa
         // dizer isso, não só que "algo deu errado" (pedido do fundador).
         setAviso(
@@ -110,9 +124,12 @@ export function ListaUsuarios({
         nomeEmpresa: empresaNome,
         link: linkDeAceiteDoConvite(resultado.convite.token),
       });
-      janela.redirecionarPara(linkWhatsapp(normalizado.digitos, mensagem));
+      const link = linkWhatsapp(normalizado.digitos, mensagem);
+      if (janela.redirecionarPara(link) === "precisa-de-toque") {
+        setLinkPronto({ conviteId: convite.id, url: link });
+      }
     } catch {
-      janela?.fechar();
+      janela.fechar();
       setAviso("Não deu para reenviar agora.");
     } finally {
       setReenviando(null);
@@ -170,9 +187,15 @@ export function ListaUsuarios({
                 apoio={convite.telefone}
                 rodape={
                   <div className="flex flex-wrap items-center gap-10">
-                    <PilulaEmLinha carregando={reenviando === convite.id} onClick={() => reenviar(convite)}>
-                      Reenviar
-                    </PilulaEmLinha>
+                    {linkPronto?.conviteId === convite.id ? (
+                      <BotaoContinuarExterno formato="pilula" href={linkPronto.url} destino="whatsapp">
+                        Continuar no WhatsApp
+                      </BotaoContinuarExterno>
+                    ) : (
+                      <PilulaEmLinha carregando={reenviando === convite.id} onClick={() => reenviar(convite)}>
+                        Reenviar
+                      </PilulaEmLinha>
+                    )}
                     <PilulaEmLinha onClick={() => abrirPreviaDoConvite(convite.token)}>
                       Ver o que ela recebe
                     </PilulaEmLinha>

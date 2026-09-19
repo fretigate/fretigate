@@ -97,7 +97,9 @@ ainda não for `null`, a janela é fechada e o caminho cai no segundo toque
 **Segundo toque — um componente só, não três cópias (`CLAUDE.md` §2,
 terceiro padrão):** `src/components/ui/BotaoContinuarExterno.tsx`, um
 `Botao` principal com `href` (o inventário já aceita link com a aparência de
-botão — `docs/componentes.md` 01, `src/components/ui/Botao.tsx`) e:
+botão — `docs/componentes.md` 01, `src/components/ui/Botao.tsx`) ou, no
+formato `"pilula"`, uma `PilulaEmLinha` com `href` (usada na linha do convite,
+abaixo), e:
 
 - `destino="navegador"` (pagamento): `target="_blank"` com `rel="noopener
   noreferrer"` — no app instalado o iOS entrega ao Safari de verdade, com
@@ -124,9 +126,20 @@ o iOS aceita entregar direto ao aplicativo, e a saída que
   some), e **os campos deixam de aparecer** — sem isso, um segundo envio
   criaria um convite duplicado com o mesmo formulário. Fica a prévia da
   mensagem e o segundo toque.
-- Reenviar convite (`ListaUsuarios.tsx`): o segundo toque aparece num bloco
-  abaixo da lista, não dentro da linha (uma linha de lista não comporta um
-  botão principal de 60px).
+- Reenviar convite (`ListaUsuarios.tsx`): o segundo toque é uma **pílula em
+  linha** (`PilulaEmLinha` com `href`, formato `"pilula"` do mesmo
+  componente) que toma o lugar de "Reenviar" **na própria linha do
+  convite**. **Revisto em 19/09/2026, depois do segundo passe do
+  `/revisar`:** a primeira versão, aprovada em conversa, era um botão
+  principal num bloco abaixo das listas — contrariava `CLAUDE.md` §8 ("bloco
+  de ações antes de listas") e `docs/componentes.md` ("Listas: sem bloco de
+  ação"), e a saída seria escrever uma exceção nomeada no §8, que enfraquece
+  a regra (`CLAUDE.md` §2, "procure primeiro a solução mais precisa que não
+  precisa de exceção"). A pílula na linha não precisa de exceção, fica onde
+  a pessoa acabou de tocar (que era o argumento a favor do bloco embaixo,
+  porque no topo ele apareceria fora da tela), e o defeito de um botão
+  sobrevivendo ao cancelamento do convite — achado do primeiro passe — some
+  por construção: cancelar tira a linha, e a pílula com ela.
 
 ## Textos (escolha do fundador)
 
@@ -165,34 +178,60 @@ coincidência de estado envelhece calado"), e o item do convite em
 ## O que vai ao Design
 
 O segundo toque muda o que três telas contêm. Construído **provisório**,
-com a variante que já existe (`Botao` principal com `href`), sem valor novo
-de `docs/estilo.md`:
+com as variantes que já existem (`Botao` principal com `href`, e
+`PilulaEmLinha` com `href`), sem valor novo de `docs/estilo.md`. As três
+linhas do inventário de `docs/componentes.md` foram escritas como
+**provisório, pendente do Design**, no precedente da Folha de estorno —
+registrar que a peça existe hoje é estado, do repositório; decidir o desenho
+continua sendo do Design (`CLAUDE.md` §13):
 
-1. O botão "Continuar: anual, R$ …" / "Continuar no WhatsApp" — entra no
-   inventário de `docs/componentes.md`? Com que nome?
+1. O botão "Continuar: anual, R$ …" / "Continuar no WhatsApp" — nome e lugar
+   no inventário.
 2. `/planos`: o que acontece com os botões "Assinar" depois do link gerado, e
    como trocar de plano sem sair da tela.
 3. Convite novo: a tela pós-criação (hoje: prévia + botão, sem campos, sem
    nenhum texto novo).
-4. Reenviar: onde o segundo toque aparece (hoje: bloco abaixo da lista).
+4. Reenviar: o nome da pílula que toma o lugar de "Reenviar", e o que a linha
+   mostra depois de tocar (hoje: a pílula fica até a lista ser recarregada).
 
 Entra na lista "o que foi pedido ao Design" do diário desta tarefa
 (`CLAUDE.md` §13).
 
 ## Verificação — e o que só o fundador consegue medir
 
-- **Navegador comum (Chrome de computador):** o caminho da janela sem
-  `noopener` + `opener = null` é medido de novo, depois de construído, com o
-  código real do mecanismo (não com a página de teste): a aba abre,
-  navega para uma origem de fora, `window.opener` é nulo lá, e o app não é
-  sequestrado.
+- **Navegador comum (Chrome de computador) — medido, 19/09/2026, com o
+  código real do mecanismo** (empacotado com esbuild e chamado como as telas
+  chamam: janela dentro do toque, redirecionamento depois de uma pausa; duas
+  origens): devolveu `"navegou"`, a página de fora enxergou `window.opener`
+  nulo, e o app não foi sequestrado. A **guarda de falha fechada**, simulada
+  com um navegador que ignora `opener = null`: fechou a aba e devolveu
+  `"precisa-de-toque"`, sem navegar.
+- **Teste permanente da lógica de decisão** (`tests/link-externo.test.ts`,
+  janela falsa, seis caminhos): navegador comum, `fechar()`, app instalado
+  por `navigator.standalone`, app instalado por media query, aba bloqueada, e
+  corte que não pega. **Prova a lógica, não o navegador** — está escrito no
+  próprio arquivo. Sensibilidade medida à mão e revertida: sem a guarda, o
+  teste do corte que não pega reprova; com `noopener` de volta na chamada, o
+  de navegador comum reprova (a contagem de verificações acusa nos dois).
+  Local; a esteira ainda não rodou este arquivo.
+- **Largura do botão de `/planos`** (lacuna do segundo passe): medida a
+  **largura do texto**, não do botão renderizado no aparelho — canvas no
+  Chrome, fonte real (Archivo 700, 17px): "Continuar: anual, R$ 1.164,00" =
+  239 px, "Continuar: mensal, R$ 197,00" = 236 px, contra 237 px do
+  "Mandar convite no WhatsApp", que já existe. Numa tela de 320 px sobram
+  280 px (tela menos as duas margens de 20 px), então cabe com folga de
+  41 px. Não se auditou o resto do inventário para dizer se é o rótulo mais
+  longo do produto. **O fundador confere no iPhone.**
 - **App instalado (iPhone):** **não dá para medir sem o aparelho**, e o
   projeto não tem suíte de tela (`CLAUDE.md` §14, "Entradas de navegação não
-  têm cobertura automatizada"). Nenhum dos três é declarado corrigido para o
-  app instalado antes de o fundador testar no iPhone — mesmo critério da
-  correção de 12/09/2026. **Se a página em branco continuar lá, é outra
-  coisa**, e se investiga de novo sem presumir que este conserto a resolveu.
-- Antes de commitar o código: `npx tsc --noEmit`, `npm run lint`, `/revisar`.
+  têm cobertura automatizada") — as telas em si também não foram
+  exercitadas dentro do app, porque exigem login. Nenhum dos três é
+  declarado corrigido para o app instalado antes de o fundador testar no
+  iPhone — mesmo critério da correção de 12/09/2026. **Se a página em
+  branco continuar lá, é outra coisa**, e se investiga de novo sem presumir
+  que este conserto a resolveu.
+- Antes de commitar o código: `npx tsc --noEmit`, `npm run lint`,
+  `/revisar` (dois passes).
 
 ## Fora do escopo
 

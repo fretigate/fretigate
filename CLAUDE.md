@@ -2364,7 +2364,9 @@ Não invente resposta. Pergunte.
   promovê-las a mecanismo permanente se a resposta mostrar que vale a pena —
   decisão nova, não herdada desta.
 - **Convite por WhatsApp não entrega direto no app instalado do iPhone —
-  diagnosticado em 12/09/2026, correção adiada de propósito.** Achado do
+  diagnosticado em 12/09/2026, correção adiada de propósito; segundo toque
+  construído em 19/09/2026, aguardando teste no iPhone (ver o último
+  parágrafo desta entrada).** Achado do
   fundador: convidar do app instalado abriu uma página do
   `api.whatsapp.com` (com prévia da mensagem e um botão "Abrir app"), não o
   WhatsApp direto, e voltar da conversa deixou o navegador nessa página, não
@@ -2382,7 +2384,7 @@ Não invente resposta. Pergunte.
   dele ("o link já existe antes do primeiro `await`") não vale para o
   convite.
 
-  **A saída identificada, não construída ainda:** um segundo toque — depois
+  **A saída identificada (construída em 19/09/2026, ver abaixo):** um segundo toque — depois
   que o servidor responde e o link existe de verdade, mostrar um botão real
   ("Abrir WhatsApp" ou similar) que a pessoa toca; esse segundo toque nasce
   já com o link pronto, síncrono, do jeito que o iOS aceita. Custa um toque
@@ -2394,7 +2396,28 @@ Não invente resposta. Pergunte.
   investigação do desempenho do dashboard (`dashboard.total` nunca fecha,
   ver `docs/planos/investiga-dashboard-total-nao-fecha.md`) é prioridade
   maior. **Gatilho para voltar:** quando a investigação de desempenho
-  fechar.
+  fechar. *(Superado em 19/09/2026 — ver o parágrafo seguinte.)*
+
+  **Construído em 19/09/2026 (`docs/planos/corrige-link-externo-segundo-toque.md`),
+  aguardando teste no iPhone.** O gatilho acima deixou de valer porque o
+  fundador viu o botão "Assinar" de `/planos` quebrar pela mesma peça
+  (`prepararJanelaExterna`). No app instalado, ela deixou de navegar
+  depois de o servidor responder: devolve `"precisa-de-toque"` e a tela
+  mostra **Continuar no WhatsApp** (`BotaoContinuarExterno`), um toque real
+  com o link pronto — convite novo, reenviar e o checkout de `/planos`
+  (este com texto próprio e abrindo no navegador). O mesmo mecanismo tinha,
+  em navegador comum, **um defeito à parte, medido no mesmo dia**:
+  `window.open` com `noopener` devolve sempre `null` e deixa uma aba em
+  branco que ninguém redireciona — corrigido cortando o vínculo da janela à
+  mão (`opener = null`, com guarda que cai no segundo toque se o navegador
+  não respeitar). **Provavelmente não é o que o fundador viu no iPhone**
+  (o app instalado segue outro caminho, não medido). **Não declarado
+  corrigido para o app instalado até o fundador testar no aparelho; se a
+  página em branco continuar lá, é outra coisa, e se investiga de novo sem
+  presumir que foi resolvido.** A lógica de decisão do mecanismo tem teste
+  permanente (`tests/link-externo.test.ts`, janela falsa): prova o que o
+  código pede ao navegador e que a guarda de falha fechada existe — **não**
+  prova o comportamento do navegador, nem o do iPhone.
 - **Branch protection no GitHub, exigindo o check da esteira passar antes de
   qualquer coisa entrar em `main` — decidido, gatilho é o lançamento do
   MVP, não uma data.** Decisão do fundador, 18/08/2026, junto da criação do

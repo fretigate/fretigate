@@ -42,7 +42,7 @@
  * correção vale para os dois — mas o Android fica como pendência de teste,
  * não como suposição de que já funciona.
  */
-function estaEmModoStandalone(): boolean {
+export function estaEmModoStandalone(): boolean {
   if (typeof window === "undefined") return false;
   const legadoIOS = (window.navigator as unknown as { standalone?: boolean }).standalone === true;
   return legadoIOS || window.matchMedia?.("(display-mode: standalone)").matches === true;
@@ -56,48 +56,74 @@ export function abrirLinkExterno(url: string): void {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-/** Uma janela (ou a janela atual, em standalone) que ainda não sabe para onde vai. */
+/**
+ * O que aconteceu quando o link ficou pronto: `"navegou"` (a janela que já
+ * estava aberta foi para o endereço) ou `"precisa-de-toque"` (não havia
+ * janela para navegar — quem chamou precisa mostrar o segundo toque, com o
+ * link pronto, ver `BotaoContinuarExterno`).
+ */
+export type ResultadoDoRedirecionamento = "navegou" | "precisa-de-toque";
+
+/** Uma janela que ainda não sabe para onde vai — ou a falta dela. */
 export type JanelaExterna = {
-  /** Navega para `url` agora que ela existe. */
-  redirecionarPara: (url: string) => void;
-  /** Fecha a aba aberta — sem efeito em standalone, que nunca abriu uma. */
+  /** Navega a janela para `url` agora que o link existe, se houver janela. */
+  redirecionarPara: (url: string) => ResultadoDoRedirecionamento;
+  /** Fecha a aba aberta — sem efeito quando não havia aba. */
   fechar: () => void;
 };
 
-/**
- * A mesma técnica de `AcaoOrdemDeServico.tsx`/`AcaoCobrarNoWhatsApp.tsx`
- * (abrir a janela ANTES do `await`, dentro da cadeia de gesto do toque,
- * porque o link do WhatsApp só existe DEPOIS que o servidor cria o
- * `Convite`) — mas com o mesmo problema de standalone destas duas: uma aba
- * `_blank` aberta agora, redirecionada para `wa.me` depois, ainda faz o
- * WebKit abrir o Safari de verdade para hospedá-la (`abrirLinkExterno`,
- * acima, explica o mecanismo completo).
- *
- * Em standalone não existe "abrir a aba antes e redirecionar depois" —
- * não tem segunda janela para abrir. Em vez disso, esta função não abre
- * nada: guarda a intenção, e quando `redirecionarPara` for chamado (depois
- * do `await`), navega a MESMA janela — sem bloqueio de pop-up para
- * evitar, porque não é `window.open`. Devolve `null` só no caminho de
- * navegador comum, quando o navegador bloqueou a aba (`window.open`
- * devolveu `null`); em standalone nunca devolve `null` — não há bloqueio de
- * pop-up para uma navegação que não abre janela nenhuma.
- */
-export function prepararJanelaExterna(): JanelaExterna | null {
-  if (estaEmModoStandalone()) {
-    return {
-      redirecionarPara: (url) => {
-        window.location.href = url;
-      },
-      fechar: () => {},
-    };
-  }
+const SEM_JANELA: JanelaExterna = {
+  redirecionarPara: () => "precisa-de-toque",
+  fechar: () => {},
+};
 
-  const janela = window.open("", "_blank", "noopener,noreferrer");
-  if (!janela) return null;
+/**
+ * Para o link que só existe DEPOIS de o servidor responder (convite, checkout
+ * — o token é gerado lá, nunca no cliente). Chamada dentro do gesto do toque,
+ * antes do `await`.
+ *
+ * **Navegador comum:** abre uma aba em branco agora e a redireciona depois —
+ * um toque só. **Sem `noopener` de propósito**: com `noopener`,
+ * `window.open` devolve sempre `null` mas abre a aba mesmo assim, e sem a
+ * janela nas mãos não há como redirecioná-la — sobrava uma aba `about:blank`
+ * para sempre (medido, Chrome, 19/09/2026,
+ * `docs/planos/corrige-link-externo-segundo-toque.md`). O que o `noopener`
+ * protege — a página de fora sequestrar a aba do app por `window.opener` —
+ * é mantido cortando o vínculo à mão, `opener = null`, ainda em branco e
+ * antes de navegar (medido: a página de fora enxerga `opener` nulo).
+ * **O que se perde, sabendo:** o destino recebe o domínio de origem (o
+ * `noreferrer` deixa de valer nesse caminho) e a aba não fica isolada num
+ * grupo de contexto separado (não medido).
+ *
+ * **Falha fechada:** só o Chrome de computador foi medido. Se, depois de
+ * cortar, `opener` ainda não for `null` (um navegador que não respeite),
+ * a aba é fechada e o caminho vira segundo toque — nunca se navega para site
+ * de terceiro com a ligação viva.
+ *
+ * **App instalado:** não abre nada. Navegar a mesma janela depois do
+ * `await` não é toque para o iOS — o segundo toque, com o link pronto, é o
+ * caminho (`abrirLinkExterno`, acima, explica por que também não se abre uma
+ * segunda janela). **Não medido no iPhone.**
+ *
+ * **Navegador que bloqueou a aba** (`window.open` devolveu `null` de
+ * verdade, agora que o `noopener` não o causa mais): também segundo toque.
+ */
+export function prepararJanelaExterna(): JanelaExterna {
+  if (estaEmModoStandalone()) return SEM_JANELA;
+
+  const janela = window.open("", "_blank");
+  if (!janela) return SEM_JANELA;
+
+  janela.opener = null;
+  if (janela.opener !== null) {
+    janela.close();
+    return SEM_JANELA;
+  }
 
   return {
     redirecionarPara: (url) => {
       janela.location.href = url;
+      return "navegou";
     },
     fechar: () => janela.close(),
   };

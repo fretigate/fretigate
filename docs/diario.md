@@ -25,9 +25,86 @@ segundo toque com o link pronto no app instalado — texto "Continuar: anual,
 R$ 1.164,00" em `/planos` e "Continuar no WhatsApp" no convite. Botão novo
 vai ao Design, construído provisório.
 
-Próximo: construir conforme o plano, `/revisar`, e pedir o commit. Depois,
-o fundador testa no iPhone — só então se declara corrigido para o app
-instalado.
+**Construído** (`link-externo.ts`, `BotaoContinuarExterno.tsx`,
+`TelaPlanos.tsx`, `FormularioConvite.tsx`, `ListaUsuarios.tsx`). Os dois
+comentários falsos (`link-externo.ts`, cabeçalho de `TelaPlanos.tsx`) foram
+corrigidos, e os comentários equivalentes do convite e do reenviar também.
+Duas coisas que o plano já nomeava como desvio do que foi aprovado em
+conversa: o navegador que **bloqueia** a aba também cai no segundo toque, e o
+botão de `/planos` mostra "R$ 1.164,00" (com centavos, igual ao cartão da
+tela), não "R$ 1.164".
+
+**Segunda medição, com o código real do mecanismo** (empacotado com esbuild,
+chamado como as telas chamam — janela dentro do toque, redirecionamento
+depois de uma pausa; Chrome de computador, duas origens): retornou
+`"navegou"`, a página de fora enxergou `window.opener` nulo e a aba do app
+não foi sequestrada. **A guarda de falha fechada**, simulada com um navegador
+que ignora `opener = null`: fechou a aba e devolveu `"precisa-de-toque"`, sem
+navegar. **Não foi possível exercitar as telas dentro do app** — exigem
+login, e entrar com senha não é algo que eu faça; só o mecanismo foi medido,
+mais `tsc --noEmit` e `eslint` limpos (local).
+
+**`/revisar`, primeiro passe** (onze achados, seis divergências e cinco
+lacunas): o botão novo não estava no
+inventário (`docs/componentes.md`, três linhas, agora escritas como
+**provisório, pendente do Design**, no precedente da Folha de estorno);
+`CLAUDE.md` §14 e `docs/navegacao.md` ainda descreviam o comportamento
+anterior (atualizados); e um defeito real meu — **cancelar um convite não
+tirava o botão "Continuar no WhatsApp"**, que abriria o WhatsApp com um link
+já morto.
+
+**`/revisar`, segundo passe** (duas divergências, duas lacunas). O bloco
+com o botão principal abaixo das listas contrariava `CLAUDE.md` §8 ("bloco
+de ações antes de listas") e `docs/componentes.md` ("Listas: sem bloco de
+ação"), e a saída seria uma exceção nomeada no §8 — que enfraquece a regra.
+**Decisão do fundador:** em vez de exceção, o segundo toque virou uma
+**pílula em linha** (`PilulaEmLinha` com `href`) que toma o lugar de
+"Reenviar" na própria linha do convite — onde a pessoa acabou de tocar, sem
+botão principal em lista, e o defeito do link morto **some por construção**
+(cancelar tira a linha e a pílula com ela; a correção que eu ia fazer saiu do
+código). De novo uma regra que parecia pedir exceção e tinha uma solução mais
+precisa (`CLAUDE.md` §2, primeiro item — o fundador contou "a terceira ou
+quarta vez"; o número não foi conferido no histórico).
+As linhas de `docs/componentes.md` e `docs/navegacao.md` diziam "só no app
+instalado, ou com a aba bloqueada", mas há um terceiro caminho (a guarda
+contra navegador que não respeita o corte do vínculo): reescritas como
+"quando não há aba para redirecionar", e os dois comentários de código que
+repetiam a frase.
+
+**Teste permanente** (`tests/link-externo.test.ts`, janela falsa, seis
+caminhos + cobertura): navegador comum, `fechar()`, app instalado por
+`navigator.standalone`, app instalado por media query, aba bloqueada, corte
+que não pega. **Prova a lógica de decisão, não o navegador** — dito no
+próprio arquivo. **Sensibilidade medida:** sem a guarda, o teste do corte que
+não pega reprova; com `noopener` de volta na chamada, o de navegador comum
+reprova; nos dois casos a contagem de verificações também acusa (5 de 6). As
+duas mutações foram revertidas e o arquivo do mecanismo voltou byte a byte
+(mesmo hash). **Local**; a esteira ainda não rodou este arquivo.
+
+**Largura do botão de `/planos`:** medida a largura do **texto** (canvas,
+Archivo 700 17px), não do botão no aparelho — 239 px, contra 237 px do
+"Mandar convite no WhatsApp" que já existe, e 280 px disponíveis numa tela de
+320 px. Cabe. **O fundador confere no iPhone.**
+
+**O que foi pedido ao Design** (`CLAUDE.md` §13):
+1. O botão do segundo toque — nome e lugar no inventário. Hoje:
+   "Continuar no WhatsApp" (convite novo e a pílula do reenviar),
+   "Continuar: {plano}, R$ {valor}" (`/planos`); `Botao` principal com `href`
+   e `PilulaEmLinha` com `href`, sem valor novo.
+2. `/planos`: como trocar de plano depois do link gerado (hoje só saindo da
+   tela).
+3. Convite novo: a tela pós-criação (hoje: prévia + botão, sem campos).
+4. Reenviar: o nome da pílula e o que a linha mostra depois de tocar (hoje:
+   a pílula fica até a lista ser recarregada).
+
+**Achado à parte, não corrigido:** `gerarLinkDeCheckoutAction` engole o erro
+sem registrar em log.
+
+Próximo: o fundador aprova o commit (segundo passe do `/revisar` fechado — só
+sobrou o que a decisão dele resolveu), publica, e **testa no iPhone** — só aí
+se declara corrigido para o app instalado. Se a página em branco continuar, é
+outra coisa: investiga-se de novo, sem partir da suposição de que foi
+resolvido.
 
 ---
 

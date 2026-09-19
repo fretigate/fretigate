@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Botao } from "@/components/ui/Botao";
+import { BotaoContinuarExterno } from "@/components/ui/BotaoContinuarExterno";
 import { prepararJanelaExterna } from "@/lib/utils/link-externo";
 import { formatarCentavos } from "@/lib/utils/dinheiro";
 import { gerarLinkDeCheckoutAction } from "./acoes";
@@ -14,13 +15,16 @@ import { gerarLinkDeCheckoutAction } from "./acoes";
  * uso único (`SolicitacaoUpgrade`) é criado.
  *
  * **`prepararJanelaExterna`, não `abrirLinkExterno` direto** — mesmo
- * padrão de `FormularioConvite.tsx` (achado do `/revisar`, 18/09/2026): a
- * janela abre EM BRANCO, síncrona com o toque, antes do `await` da Server
- * Action — só depois ela é redirecionada para a URL real. Sem isso, o
- * navegador de celular trata a abertura como não vinda de um gesto do
- * usuário (a pausa assíncrona quebra a cadeia de confiança do toque) e
- * bloqueia, ou (no app instalado) abre o Safari por fora para hospedar uma
- * aba que o standalone não tem onde pôr.
+ * padrão de `FormularioConvite.tsx`: em navegador comum, uma aba em branco
+ * abre síncrona com o toque, antes do `await` da Server Action, e é
+ * redirecionada para o checkout quando o link chega — um toque só. Sem isso,
+ * o navegador trata a abertura depois da pausa como não vinda de um gesto do
+ * usuário e bloqueia. **Quando não há aba para preparar (app instalado, aba bloqueada, navegador que não respeitou o corte do vínculo)** — o
+ * mecanismo devolve `"precisa-de-toque"` e a tela mostra o segundo toque
+ * (`BotaoContinuarExterno`), com o link já pronto, no lugar dos dois botões
+ * "Assinar". **Provisório**: como trocar de plano depois do link gerado não
+ * está desenhado (`docs/planos/corrige-link-externo-segundo-toque.md`).
+ * Não medido no iPhone — só o fundador consegue medir.
  *
  * **Estado carregando obrigatório** (`CLAUDE.md` §8) — diferente da
  * primeira versão desta tela: agora os botões chamam o servidor de
@@ -38,11 +42,14 @@ const ANUAL_CENTAVOS = 116_400;
 const MENSAL_CENTAVOS = 19_700;
 const ECONOMIA_CENTAVOS = MENSAL_CENTAVOS * 12 - ANUAL_CENTAVOS;
 
-export function TelaPlanos() {
-  const [carregando, setCarregando] = useState<"mensal" | "anual" | null>(null);
-  const [erro, setErro] = useState<string | undefined>();
+type Plano = "mensal" | "anual";
 
-  async function assinar(plano: "mensal" | "anual") {
+export function TelaPlanos() {
+  const [carregando, setCarregando] = useState<Plano | null>(null);
+  const [erro, setErro] = useState<string | undefined>();
+  const [linkPronto, setLinkPronto] = useState<{ plano: Plano; url: string } | null>(null);
+
+  async function assinar(plano: Plano) {
     if (carregando) return;
     setErro(undefined);
     setCarregando(plano);
@@ -54,15 +61,15 @@ export function TelaPlanos() {
     try {
       const resultado = await gerarLinkDeCheckoutAction(plano);
       if (!resultado.ok) {
-        janela?.fechar();
+        janela.fechar();
         setErro(resultado.erro);
         return;
       }
-      if (janela) {
-        janela.redirecionarPara(resultado.url);
+      if (janela.redirecionarPara(resultado.url) === "precisa-de-toque") {
+        setLinkPronto({ plano, url: resultado.url });
       }
     } catch {
-      janela?.fechar();
+      janela.fechar();
       setErro("Não deu para gerar o link agora.");
     } finally {
       setCarregando(null);
@@ -98,24 +105,31 @@ export function TelaPlanos() {
 
       {erro ? <span className="text-apoio font-medium text-vencido">{erro}</span> : null}
 
-      <div className="flex flex-col gap-10">
-        <Botao
-          variante="principal"
-          carregando={carregando === "anual"}
-          disabled={carregando === "mensal"}
-          onClick={() => assinar("anual")}
-        >
-          Assinar o anual
-        </Botao>
-        <Botao
-          variante="secundaria"
-          carregando={carregando === "mensal"}
-          disabled={carregando === "anual"}
-          onClick={() => assinar("mensal")}
-        >
-          Assinar o mensal
-        </Botao>
-      </div>
+      {linkPronto ? (
+        <BotaoContinuarExterno href={linkPronto.url} destino="navegador">
+          Continuar: {linkPronto.plano}, R${" "}
+          {formatarCentavos(linkPronto.plano === "anual" ? ANUAL_CENTAVOS : MENSAL_CENTAVOS)}
+        </BotaoContinuarExterno>
+      ) : (
+        <div className="flex flex-col gap-10">
+          <Botao
+            variante="principal"
+            carregando={carregando === "anual"}
+            disabled={carregando === "mensal"}
+            onClick={() => assinar("anual")}
+          >
+            Assinar o anual
+          </Botao>
+          <Botao
+            variante="secundaria"
+            carregando={carregando === "mensal"}
+            disabled={carregando === "anual"}
+            onClick={() => assinar("mensal")}
+          >
+            Assinar o mensal
+          </Botao>
+        </div>
+      )}
     </div>
   );
 }
